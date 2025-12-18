@@ -139,7 +139,8 @@
     "upload":"Upload",
     "update":"Update",
     "save":"Save",
-    "check":"Check"
+    "check":"Check",
+    "edit":"Edit"
   },
   "label": {
     "email": "E-mail",
@@ -211,7 +212,8 @@
     "mobileNo":"Mobile No",
     "faxNo":"Fax No",
     "siteName":"Site Name",
-    "siteCode":"Site code"
+    "siteCode":"Site code",
+    "live":"Live"
   },
   "statuses": {
     "activated": "Activated",
