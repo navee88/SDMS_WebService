@@ -3,6 +3,8 @@ import { Search, ChevronDown, FileText, SquarePen } from 'lucide-react';
 import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import { useLanguage } from '../../../../../Context/LanguageContext';
 import { useTranslation } from "react-i18next";
+import { useCallback } from 'react'; // Add useCallback to existing imports
+import Errordialog from "../../../../Layout/Common/Errordialog";
 
 
 const InstrumentGrid = () => {
@@ -326,23 +328,23 @@ const UsersPage = () => {
   const userColumns = useMemo(() => [
     {
       key: 'clientName',
-      label: t('label.clientName'),
+      label: 'Client Name',
       width: 180,
       enableSearch: true,
       render: (row) => <span className="text-gray-700">{row.clientName}</span>
     },
     {
       key: 'instrument',
-      label: t('label.instrument'),
+      label: 'Instrument',
       width: 250,
       enableSearch: true,
       render: (row) => <span className="text-gray-700">{row.instrument}</span>
     },
     {
       key: 'storageName',
-      label: t('label.storageName'),
+      label: 'Storage Name',
       width: 120,
-      enableSearch: true, 
+      enableSearch: true,
       render: (row) => <span className="text-gray-700">{row.storageName}</span>
     }
   ], []);
@@ -401,6 +403,29 @@ function FailedQueue() {
 
   const { currentLanguage, changeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
+  // Add state for information dialog
+  const [infoDialog, setInfoDialog] = useState({
+    open: false,
+    message: "",
+    type: "information"
+  });
+
+  // Function to show information dialog
+  const showInfoDialog = useCallback((message, type = "information") => {
+    setInfoDialog({
+      open: true,
+      message,
+      type
+    });
+  }, []);
+
+  // Function to close information dialog
+  const closeInfoDialog = useCallback(() => {
+    setInfoDialog(prev => ({
+      ...prev,
+      open: false
+    }));
+  }, []);
 
   const ActionButton = ({ icon: Icon, label, disabled, onClick, className = "" }) => (
     <button
@@ -424,10 +449,21 @@ function FailedQueue() {
   return (
 
     <div className="px-4 font-roboto h-[calc(100vh-150px)] flex flex-col">
-
+      {/* Information Dialog */}
+      {infoDialog.open && (
+        <Errordialog
+          message={infoDialog.message}
+          type={infoDialog.type}
+          onClose={closeInfoDialog}
+        />
+      )}
       {/* Top Action Buttons (same place) */}
       <div className="flex justify-end gap-2 mt-4">
-        <ActionButton icon={FileText} label={t('button.viewDetails')} />
+        <ActionButton
+          icon={FileText}
+          label={t('button.viewDetails')}
+          onClick={() => showInfoDialog("No records found here!", "information")}
+        />
       </div>
 
       {/* UsersPage takes full width & height */}
