@@ -7,6 +7,9 @@ import { useNavigate } from "react-router-dom";
 import { useCallback } from 'react';
 import Errordialog from "../../../../Layout/Common/Errordialog";
 import CustomPopup from '../../../../Layout/Common/Popup';
+import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
+import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
+import AnimatedTextarea from '../../../../Layout/Common/AnimatedTextarea';
 
 const UsersPage = () => {
     const [userData, setUserData] = useState([]);
@@ -115,7 +118,7 @@ const UsersPage = () => {
         },
         {
             key: 'live',
-            label: 'Live',
+            label: t("label.live"),
             width: 100,
             enableSearch: true,
             render: (row) => (
@@ -187,7 +190,18 @@ const UsersPage = () => {
 function UploadQueue() {
     const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
+    const [reason, setReason] = useState("Activated");
+    const [userName, setUserName] = useState("");
+    const [password, setPassword] = useState("");
+    const [comments, setComments] = useState("");
+    const [showError, setShowError] = useState(false);
 
+
+
+    const handleReason = (value) => {
+        const actualValue = value?.target?.value || value?.value || value;
+        setReason(actualValue);
+    };
 
     // Add state for information dialog
     const [infoDialog, setInfoDialog] = useState({
@@ -236,90 +250,96 @@ function UploadQueue() {
 
     // Handler to open popup
     const handleUpdateScheduleMode = () => {
-        setActivePopup("Update Schedule Mode");
+        setActivePopup("Audit Trail");
     };
 
     // Handler to close popup and show info dialog
     const handlePopupClose = () => {
         setActivePopup(null);
         // Show info dialog after closing popup
-        showInfoDialog("Schedule mode popup closed", "information");
+        showInfoDialog("Schedule mode popup closed", "success");
     };
 
     // Handler to submit form
     const handlePopupSubmit = () => {
+        if (!comments.trim()) {
+            setShowError(true);
+            return;
+        }
+
         if (!scheduleMode) {
             showInfoDialog("Please select a schedule mode", "information");
             return;
         }
 
-        // Your update logic here
-        console.log("Updating schedule mode:", scheduleMode);
+        console.log("Comments:", comments);
 
-        // Close popup
-        setActivePopup(null);
-
-        // Show success message
-        showInfoDialog("Schedule mode updated successfully", "success");
-
-        // Reset form
+        setShowError(false);
+        setComments("");
         setScheduleMode("");
+
+        showInfoDialog("Schedule mode updated successfully", "success");
+        setActivePopup(null);
     };
 
+
     const POPUP_CONTENTS = {
-        "Update Schedule Mode": (
+        "Audit Trail": (
             <div className="flex flex-col gap-4 p-2">
                 {/* Username Field */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-gray-700">
-                        Username <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="text"
+                    <AnimatedInput
+                        label="Username"
+                        name="username"
                         value="Administrator"
+                        required
                         disabled
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 bg-gray-50"
+                        showError={showError}
+                        onChange={(e) => setUserName(e.target.value)}
                     />
+
                 </div>
 
                 {/* Password Field */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-gray-700">
-                        Password <span className="text-red-500">*</span>
-                    </label>
-                    <input
+                    <AnimatedInput
+                        label="Password"
+                        name="user_password_secure"
                         type="password"
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                        placeholder="Enter password"
+                        value={password}
+                        autoComplete="new-password"
+                        required
+                        showError={showError}
+                        onChange={(e) => {
+                            setPassword(e.target.value);
+                            if (showError) setShowError(false);
+                        }}
                     />
                 </div>
 
+
                 {/* Reason Field */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-gray-700">
-                        Reason <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                        value={scheduleMode}
-                        onChange={(e) => setScheduleMode(e.target.value)}
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                    >
-                        <option value="">Select Reason</option>
-                        <option value="Activated">Activated</option>
-                        <option value="Deactivated">Deactivated</option>
-                        <option value="Modified">Modified</option>
-                    </select>
+                    <AnimatedDropdown
+                        label={t("label.reason")}
+                        value={reason}
+                        options={["Activated", "Deactivated", "Modified"]}
+                        onChange={handleReason}
+                        // isSearchable={true}
+                        allowFreeInput={true}
+                        required={true}
+                    />
                 </div>
 
                 {/* Comments Field */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-gray-700">
-                        Comments <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                        rows="3"
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:border-blue-500 transition-colors"
-                        placeholder="Enter comments"
+                    <AnimatedTextarea
+                        label="Comments"
+                        name="comments"
+                        value={comments}
+                        required
+                        showError={showError}
+                        onChange={(e) => setComments(e.target.value)}
                     />
                 </div>
 
@@ -327,7 +347,7 @@ function UploadQueue() {
                 <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200">
                     <button
                         onClick={handlePopupSubmit}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-sm font-semibold rounded transition-colors"
                     >
                         <CheckSquare className="w-4 h-4" /> Submit
                     </button>
@@ -359,7 +379,7 @@ function UploadQueue() {
                 <ActionButton
                     icon={FileText}
                     label={t('button.viewDetails')}
-                    onClick={() => showInfoDialog("Please select a record to view details", "information")}
+                    onClick={() => showInfoDialog("No records found here!", "information")}
                 />
                 <ActionButton
                     icon={SquarePen}

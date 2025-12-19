@@ -596,35 +596,35 @@ const UsersPage = () => {
     const userColumns = useMemo(() => [
         {
             key: 'taskId',
-            label: 'Task ID',
+            label: t('label.taskId'),
             width: 80,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.taskID}</span>
         },
         {
             key: 'fileSource',
-            label: 'File Source',
+            label: t('label.fileSource'),
             width: 120,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.fileSource}</span>
         },
         {
             key: 'fileName',
-            label: 'File Name',
+            label: t('label.fileName'),
             width: 120,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.fileName}</span>
         },
         {
             key: 'fileStatus',
-            label: 'File Status',
+            label: t('label.fileStatus'),
             width: 120,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.fileStatus}</span>
         },
         {
             key: 'transactionOn',
-            label: 'Transaction On',
+            label: t('label.transactionOn'),
             width: 120,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.transactionOn}</span>
