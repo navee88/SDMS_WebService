@@ -24,7 +24,7 @@ import { useML } from "../../Services/useML";
 
  
 const loginSchema = z.object({
-  username: z.string().trim().min(1, "Please enter username."),
+  username: z.string().trim().min(1, "login.enterusername"),
   password: z.string().min(1, "Please enter password."),
   site: z.string(),
   domain: z.string(),
@@ -520,8 +520,8 @@ showDialog(msg, "warning");
             autoComplete="off"
             className="w-full text-sm font-semibold border-b-2 border-gray-300 focus:border-blue-500 outline-none"
           />
-          {errors.username && <p className="text-red-500 text-sm">{getErrorMessage('login.enterusername')}</p>}
-        </div>
+            {errors.username && <p className="text-red-500 text-sm">{getErrorMessage(errors.username)}</p>}
+          </div>
 
         <div className="mb-6">
           <label className="text-sm font-medium text-gray-600">{t('login.password')}</label>
