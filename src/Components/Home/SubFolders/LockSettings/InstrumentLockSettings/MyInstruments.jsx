@@ -506,12 +506,12 @@ export default function MyInstrumentsPage() {
               label={t("instrumentlocktag.refresh") || "Refresh"}
             />
           </div>
-            <div className="w-full h-[300px] overflow-hidden [&>*]:!p-0 [&>*]:!m-0 rounded-none">
+            <div className="w-full overflow-hidden [&>*]:!p-0 [&>*]:!m-0 rounded-none">
               <GridLayout
                 columns={lockedInstrumentsColumns}
                 data={lockedInstruments}
                 onRowSelect={handleInstrumentSelect}
-                hidePagination={true}
+                hidePagination={false}
               />
             </div>
         </div>
@@ -540,12 +540,12 @@ export default function MyInstrumentsPage() {
               label={t("instrumentlocktag.refresh") || "Refresh"}
             />
           </div>
-            <div className="w-full h-[300px] overflow-hidden [&>*]:!p-0 [&>*]:!m-0 rounded-none">
+            <div className="w-full overflow-hidden [&>*]:!p-0 [&>*]:!m-0 rounded-none">
               <GridLayout
                 columns={filesColumns}
                 data={files}
                 onRowSelect={handleFileSelect}
-                hidePagination={true}
+                hidePagination={false}
               />
           </div>
         </div>
