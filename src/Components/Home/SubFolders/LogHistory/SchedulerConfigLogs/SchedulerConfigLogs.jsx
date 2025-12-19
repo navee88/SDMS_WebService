@@ -582,21 +582,21 @@ const UsersPage = () => {
     const userColumns = useMemo(() => [
         {
             key: 'clientName',
-            label: 'Client Name',
+            label: t('label.clientName'),
             width: 120,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.clientName}</span>
         },
         {
             key: 'taskName',
-            label: 'Task Name',
+            label: t('label.taskName'),
             width: 120,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.taskName}</span>
         },
         {
             key: 'sourcePath',
-            label: 'Source Path',
+            label: t('label.sourcePath'),
             width: 120,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.sourcePath}</span>

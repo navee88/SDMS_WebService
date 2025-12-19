@@ -583,21 +583,21 @@ const UsersPage = () => {
     const userColumns = useMemo(() => [
         {
             key: 'clientName',
-            label: 'Client Name',
+            label: t('label.clientName'),
             width: 120,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.clientName}</span>
         },
         {
             key: 'taskStatus',
-            label: 'Task Status',
+            label: t('label.taskStatus'),
             width: 120,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.taskStatus}</span>
         },
         {
             key: 'fileName',
-            label: 'File Name',
+            label: t('label.fileName'),
             width: 120,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.fileName}</span>

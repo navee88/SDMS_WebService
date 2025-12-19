@@ -584,21 +584,21 @@ const UsersPage = () => {
     const userColumns = useMemo(() => [
         {
             key: 'clientName',
-            label: 'Client Name',
+            label: t('label.clientName'),
             width: 180, // Adjust
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.clientName}</span>
         },
         {
             key: 'taskType',
-            label: 'Task Type',
+            label: t('label.taskType'),
             width: 250,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.taskType}</span>
         },
         {
             key: 'fileName',
-            label: 'File Name',
+            label: t('label.fileName'),
             width: 120,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.fileName}</span>

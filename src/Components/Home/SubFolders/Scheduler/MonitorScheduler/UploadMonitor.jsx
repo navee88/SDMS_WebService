@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
-import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
 import { useLanguage } from '../../../../../Context/LanguageContext';
 import { useTranslation } from "react-i18next";
 
