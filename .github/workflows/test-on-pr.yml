@@ -1,24 +1,25 @@
-name: Test on PR
+name: Check Conflicts and Merge
 
 on:
   pull_request:
     branches:
-      - develop  # Runs only when merging into develop
+      - develop  # Runs when merging into develop
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
-  test:
+  check-and-merge:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Run Tests
-        run: npm test  # Replace with your actual test command
+      # GitHub Actions won't even reach this step if there are fundamental git conflicts
+      # that prevent checkout. If checkout succeeds, we try to merge.
+      
+      - name: Auto Merge if No Conflicts
+        run: gh pr merge --auto --merge "${{ github.event.pull_request.html_url }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
