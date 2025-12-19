@@ -1,0 +1,31 @@
+name: Daily Backup (Develop to Backup)
+
+on:
+  schedule:
+    # Runs at 18:30 UTC daily (which is 00:00 AM IST the next day)
+    - cron: '30 18 * * *'
+  workflow_dispatch: # Allows you to trigger this manually button click
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Backup branch
+        uses: actions/checkout@v4
+        with:
+          ref: Backup # Check out the target branch
+          fetch-depth: 0 # Fetch all history for merging
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+
+      - name: Merge Develop into Backup
+        run: |
+          git fetch origin develop
+          # Merge develop into the current (Backup) branch
+          git merge origin/develop --no-edit
+          git push origin Backup
