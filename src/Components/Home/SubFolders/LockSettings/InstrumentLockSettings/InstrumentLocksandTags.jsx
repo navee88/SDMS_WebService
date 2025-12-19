@@ -140,6 +140,7 @@ const InlineCheckbox = ({ label, checked, onChange, disabled }) => (
 );
 
 // Tag Grid Component with Tooltip Popup
+// Tag Grid Component with Tooltip Popup
 const TagGrid = ({ tags, onTagValueClick, isLocked, t }) => {
   const [tooltipState, setTooltipState] = useState({
     isOpen: false,
@@ -147,30 +148,57 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t }) => {
     position: { top: 0, left: 0 },
     searchTerm: '',
     selectedValue: '',
-    options: []
+    options: [],
+    popupType: 'simple' // 'simple' or 'lookingFor'
   });
 
   const handleEditClick = (tag, index, event) => {
     if (!isLocked && tag.editable) {
       const rect = event.currentTarget.getBoundingClientRect();
       
-      const options = tag.options && tag.options.length > 0 ? tag.options : [
-        { value: 'Pantoprazole tablets IP', label: 'Pantoprazole tablets IP' },
-        { value: 'Caffeine Oral Citrate', label: 'Caffeine Oral Citrate' },
-        { value: 'Assay by HPLC', label: 'Assay by HPLC' },
-        { value: 'Dissolution', label: 'Dissolution' }
-      ];
+      // Determine popup type based on tag name or any other condition
+      const popupType = tag.tagName.toLowerCase().includes('qc') || 
+                       tag.tagName.toLowerCase().includes('sample') && tag.tagName.toLowerCase() !== 'sample' 
+                       ? 'lookingFor' : 'simple';
+      
+      // Different options for different tag types
+      let options = [];
+      if (tag.options && tag.options.length > 0) {
+        options = tag.options;
+      } else if (popupType === 'lookingFor') {
+        // Options for second image style (QC tags)
+        options = [
+          { value: 'Pantoprazole tablets IP', label: 'Pantoprazole tablets IP' },
+          { value: 'Caffeine Oral Citrate', label: 'Caffeine Oral Citrate' },
+          { value: 'Assay by HPLC', label: 'Assay by HPLC' },
+          { value: 'Dissolution', label: 'Dissolution' },
+          { value: 'QC Sample A', label: 'QC Sample A' },
+          { value: 'QC Sample B', label: 'QC Sample B' },
+          { value: 'Standard Solution', label: 'Standard Solution' }
+        ];
+      } else {
+        // Options for first image style (Sample/Test tags)
+        options = [
+          { value: 'Shunti', label: 'Shunti' },
+          { value: 'Cancel', label: 'Cancel' },
+          { value: 'Sample A', label: 'Sample A' },
+          { value: 'Sample B', label: 'Sample B' },
+          { value: 'Test Batch 1', label: 'Test Batch 1' },
+          { value: 'Test Batch 2', label: 'Test Batch 2' }
+        ];
+      }
 
       setTooltipState({
         isOpen: true,
         tagIndex: index,
         position: {
-          top: rect.top - 200,
-          left: rect.left - 355
+          top: rect.top - (popupType === 'lookingFor' ? 200 : 150),
+          left: rect.left - (popupType === 'lookingFor' ? 355 : 300)
         },
         searchTerm: '',
         selectedValue: tag.value || '',
-        options: options
+        options: options,
+        popupType: popupType
       });
     }
   };
@@ -185,7 +213,8 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t }) => {
       position: { top: 0, left: 0 },
       searchTerm: '',
       selectedValue: '',
-      options: []
+      options: [],
+      popupType: 'simple'
     });
   };
 
@@ -196,7 +225,8 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t }) => {
       position: { top: 0, left: 0 },
       searchTerm: '',
       selectedValue: '',
-      options: []
+      options: [],
+      popupType: 'simple'
     });
   };
 
@@ -222,7 +252,7 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t }) => {
     <>
       <div className="border border-gray-300 rounded relative">
         <div className="grid grid-cols-2 bg-[#f7fafc] border-b border-gray-300">
-          <div className="px-4 py-2.5 text-[13px] text-[#4b4b4b]  font-semibold font-verdana">
+          <div className="px-4 py-2.5 text-[13px] text-[#4b4b4b] font-semibold font-verdana">
             {t('instrumentlocktag.tagName')}
           </div>
           <div className="px-4 py-2.5 text-[13px] text-[#4b4b4b] font-semibold font-verdana">
@@ -232,9 +262,9 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t }) => {
         
         <div className="bg-white min-h-[250px]">
           {tags.length === 0 ? (
-            <div className="px-4 py-12 text-center text-[12px] text-[#4b4b4b] font-verdana">            
-            {t('instrumentlocktag.noTagValue')}
-</div>
+            <div className="px-4 py-12 text-center text-[12px] text-[#4b4b4b] font-verdana">
+              {t('instrumentlocktag.noTagValue')}
+            </div>
           ) : (
             tags.map((tag, idx) => (
               <div 
@@ -244,7 +274,7 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t }) => {
                   !tag.value ? 'bg-[#fff]' : 'hover:bg-gray-50'
                 }`}
               >
-                <div className="px-4 py-15 text-[11px] font-semibold text-[#4b4b4b]  flex items-center" style={{ fontFamily: 'Verdana, Arial, sans-serif' }}>
+                <div className="px-4 py-3 text-[11px] font-semibold text-[#4b4b4b] flex items-center" style={{ fontFamily: 'Verdana, Arial, sans-serif' }}>
                   {tag.tagName}
                   {tag.required && <span className="text-red-500 ml-1">*</span>}
                 </div>
@@ -268,39 +298,71 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t }) => {
 
       {tooltipState.isOpen && (
         <div 
-          className="fixed z-[100] bg-white border border-gray-300 rounded shadow-xl w-[350px]"
+          className="fixed z-[100] bg-white border border-gray-300 rounded shadow-xl"
           style={{
             top: `${Math.max(20, tooltipState.position.top)}px`,
-            left: `${Math.max(20, tooltipState.position.left)}px`
+            left: `${Math.max(20, tooltipState.position.left)}px`,
+            width: tooltipState.popupType === 'lookingFor' ? '400px' : '350px'
           }}
         >
-          <div className="p-1 ">
-           
-            <div className="mb-2">
-              <input
-                type="text"
-                placeholder="Looking for"
-                value={tooltipState.searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full h-8 px-3 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-[#4A6FA5]"
-                autoFocus
-                style={{ fontFamily: 'Verdana, Arial, sans-serif' }}
-              />
-            </div>
+          <div className="p-4">
+            {/* Different header based on popup type */}
+            {tooltipState.popupType === 'lookingFor' ? (
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-[#4A6FA5] mb-2 font-roboto">Search and Select</h4>
+                <div className="mb-2">
+                  <label className="block text-xs text-[#4A6FA5] mb-1 font-semibold font-roboto">
+                    Looking for
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Search options..."
+                    value={tooltipState.searchTerm}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="w-full h-9 px-3 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-[#4A6FA5]"
+                    autoFocus
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif' }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="mb-3">
+                <h4 className="text-sm font-semibold text-[#4A6FA5] mb-1 font-roboto">Select Value</h4>
+                {/* Simple search for first image style */}
+                <input
+                  type="text"
+                  placeholder="Type to filter..."
+                  value={tooltipState.searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="w-full h-8 px-3 text-xs border border-gray-300 rounded mb-2 focus:outline-none focus:border-blue-500 text-[#4A6FA5]"
+                  autoFocus
+                  style={{ fontFamily: 'Verdana, Arial, sans-serif' }}
+                />
+              </div>
+            )}
             
-            <div className="max-h-52 overflow-y-auto border border-gray-300 rounded mb-3">
+            <div className={`overflow-y-auto border border-gray-300 rounded mb-4 ${
+              tooltipState.popupType === 'lookingFor' ? 'max-h-64' : 'max-h-48'
+            }`}>
               {filteredOptions.length === 0 ? (
-                <div className="text-center py-8 text-xs text-gray-500 font-roboto">No options available</div>
+                <div className="text-center py-8 text-xs text-gray-500 font-roboto">
+                  {tooltipState.popupType === 'lookingFor' ? 'No items found' : 'No options available'}
+                </div>
               ) : (
                 filteredOptions.map((option, idx) => (
                   <div
                     key={idx}
                     onClick={() => handleOptionClick(option.value)}
                     onDoubleClick={handleTooltipSubmit}
-                    className={`px-3 py-2 text-xs cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0 ${
-                      tooltipState.selectedValue === option.value ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-[#4A6FA5]'
+                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-200 last:border-b-0 ${
+                      tooltipState.selectedValue === option.value 
+                        ? 'bg-blue-50 text-blue-700 font-semibold' 
+                        : 'text-[#4A6FA5]'
                     }`}
-                    style={{ fontFamily: 'Verdana, Arial, sans-serif' }}
+                    style={{ 
+                      fontFamily: 'Verdana, Arial, sans-serif',
+                      fontSize: tooltipState.popupType === 'lookingFor' ? '13px' : '12px'
+                    }}
                   >
                     {option.label}
                   </div>
@@ -312,14 +374,14 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t }) => {
               <button
                 onClick={handleTooltipSubmit}
                 disabled={!tooltipState.selectedValue}
-                className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1 font-roboto"
+                className="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 font-roboto"
               >
                 <CheckSquare className="w-3.5 h-3.5" />
                 {t('button.submit')}
               </button>
               <button
                 onClick={handleTooltipClose}
-                className="px-3 py-1.5 bg-white border border-gray-300 text-[#4A6FA5] text-xs rounded hover:bg-gray-50 flex items-center gap-1 font-roboto"
+                className="px-4 py-2 bg-white border border-gray-300 text-[#4A6FA5] text-xs font-semibold rounded hover:bg-gray-50 flex items-center gap-2 font-roboto"
               >
                 <X className="w-3.5 h-3.5" />
                 {t('button.cancel')}
