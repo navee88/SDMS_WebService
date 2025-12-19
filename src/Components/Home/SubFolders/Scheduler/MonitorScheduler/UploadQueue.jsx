@@ -6,10 +6,9 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useCallback } from 'react';
 import Errordialog from "../../../../Layout/Common/Errordialog";
-import CustomPopup from '../../../../Layout/Common/Popup';
 import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
-import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
 import AnimatedTextarea from '../../../../Layout/Common/AnimatedTextarea';
+import AuditTrail from '../../../../Layout/Common/AuditTrail';
 
 const UsersPage = () => {
     const [userData, setUserData] = useState([]);
@@ -195,7 +194,7 @@ function UploadQueue() {
     const [password, setPassword] = useState("");
     const [comments, setComments] = useState("");
     const [showError, setShowError] = useState(false);
-
+    const [showAudit, setShowAudit] = useState(false);
 
 
     const handleReason = (value) => {
@@ -250,14 +249,21 @@ function UploadQueue() {
 
     // Handler to open popup
     const handleUpdateScheduleMode = () => {
-        setActivePopup("Audit Trail");
+        setShowAudit("Audit Trail");
+    };
+
+    // ADD this handler:
+    const handleAuthorizedUpdate = (auditData) => {
+        console.log("Audit info:", auditData);
+        // Your schedule mode update logic here
+        setShowAudit(false);
     };
 
     // Handler to close popup and show info dialog
     const handlePopupClose = () => {
         setActivePopup(null);
         // Show info dialog after closing popup
-        showInfoDialog("Schedule mode popup closed", "success");
+        // showInfoDialog("Schedule mode popup closed", "success");
     };
 
     // Handler to submit form
@@ -268,7 +274,7 @@ function UploadQueue() {
         }
 
         if (!scheduleMode) {
-            showInfoDialog("Please select a schedule mode", "information");
+            // showInfoDialog("Please select a schedule mode", "information");
             return;
         }
 
@@ -278,90 +284,11 @@ function UploadQueue() {
         setComments("");
         setScheduleMode("");
 
-        showInfoDialog("Schedule mode updated successfully", "success");
+        // showInfoDialog("Schedule mode updated successfully", "success");
         setActivePopup(null);
     };
 
-
-    const POPUP_CONTENTS = {
-        "Audit Trail": (
-            <div className="flex flex-col gap-4 p-2">
-                {/* Username Field */}
-                <div className="flex flex-col gap-2">
-                    <AnimatedInput
-                        label="Username"
-                        name="username"
-                        value="Administrator"
-                        required
-                        disabled
-                        showError={showError}
-                        onChange={(e) => setUserName(e.target.value)}
-                    />
-
-                </div>
-
-                {/* Password Field */}
-                <div className="flex flex-col gap-2">
-                    <AnimatedInput
-                        label="Password"
-                        name="user_password_secure"
-                        type="password"
-                        value={password}
-                        autoComplete="new-password"
-                        required
-                        showError={showError}
-                        onChange={(e) => {
-                            setPassword(e.target.value);
-                            if (showError) setShowError(false);
-                        }}
-                    />
-                </div>
-
-
-                {/* Reason Field */}
-                <div className="flex flex-col gap-2">
-                    <AnimatedDropdown
-                        label={t("label.reason")}
-                        value={reason}
-                        options={["Activated", "Deactivated", "Modified"]}
-                        onChange={handleReason}
-                        // isSearchable={true}
-                        allowFreeInput={true}
-                        required={true}
-                    />
-                </div>
-
-                {/* Comments Field */}
-                <div className="flex flex-col gap-2">
-                    <AnimatedTextarea
-                        label="Comments"
-                        name="comments"
-                        value={comments}
-                        required
-                        showError={showError}
-                        onChange={(e) => setComments(e.target.value)}
-                    />
-                </div>
-
-                {/* Buttons */}
-                <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200">
-                    <button
-                        onClick={handlePopupSubmit}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-sm font-semibold rounded transition-colors"
-                    >
-                        <CheckSquare className="w-4 h-4" /> Submit
-                    </button>
-                    <button
-                        onClick={handlePopupClose}
-                        className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
-                    >
-                        Close
-                    </button>
-                </div>
-            </div>
-        )
-    };
-
+   
 
     return (
         <div className="px-4 font-roboto h-[calc(100vh-150px)] flex flex-col">
@@ -393,12 +320,14 @@ function UploadQueue() {
                 <UsersPage />
             </div>
 
-            {/* Add CustomPopup */}
-            <CustomPopup
-                isOpen={!!activePopup}
-                onClose={handlePopupClose}
-                title={activePopup || ""}
-                content={activePopup ? POPUP_CONTENTS[activePopup] : null}
+           
+
+            {/* Audit Trail */}
+            <AuditTrail
+                isOpen={showAudit}
+                onClose={() => setShowAudit(false)}
+                onAuthorized={handleAuthorizedUpdate}
+                actionLabel="Submit"
             />
         </div>
     );

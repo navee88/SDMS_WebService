@@ -1,255 +1,19 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, ChevronDown, FileText, SquarePen, Plus, Edit } from 'lucide-react';
+import { Search, ChevronDown, FileText, SquarePen, Plus, Edit, SquareCheckBig } from 'lucide-react';
 import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import { useLanguage } from '../../../../../Context/LanguageContext';
 import { useTranslation } from "react-i18next";
-
-
-
-const InstrumentGrid = () => {
-    const [sortMenuOpen, setSortMenuOpen] = useState(false);
-    const [sortOrder, setSortOrder] = useState(null);
-    const [data, setData] = useState([]);
-    const [filteredData, setFilteredData] = useState([]);
-    const [searchValues, setSearchValues] = useState({
-        siteName: '',
-        siteCode: '',  
-    });
-    const [focusedInput, setFocusedInput] = useState(null);
-    const [hoveredColumn, setHoveredColumn] = useState(null);
-    const [selectedRow, setSelectedRow] = useState(null);
-
-
-
-    // Simulate API call
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    const fetchData = async () => {
-        // Simulated API response
-        const apiData = [
-            { id: 1, siteName: 'MU-001', siteCode: 'CU-Summary1 (CU-Summary1)', live: true },
-            { id: 2, siteName: 'MU-002', siteCode: 'CU-Summary1 (CU-Summary1)', live: true },
-            { id: 3, siteName: 'MU-003', siteCode: 'MU-Summary1 (MU-Summary1)', live: true },
-            { id: 4, siteName: 'MU-004', siteCode: 'AU-Summary1 (AU-Summary1)', live: true },
-            { id: 5, siteName: 'MU-005', siteCode: 'CU-Summary1 (CU-Summary1)', live: true },
-            { id: 6, siteName: 'MU-006', siteCode: 'CU-Summary1 (CU-Summary1)', live: false },
-            { id: 7, siteName: 'MU-007', siteCode: 'CU-Summary1 (CU-Summary1)', live: true },
-        ];
-        setData(apiData);
-        setFilteredData(apiData);
-    };
-
-    useEffect(() => {
-        filterData();
-    }, [searchValues, data]);
-
-    const filterData = () => {
-        let filtered = [...data];
-
-        if (searchValues.siteName) {
-            filtered = filtered.filter(item =>
-                item.siteName.toLowerCase().includes(searchValues.siteName.toLowerCase())
-            );
-        }
-
-        if (searchValues.siteCode) {
-            filtered = filtered.filter(item =>
-                item.siteCode.toLowerCase().includes(searchValues.siteCode.toLowerCase())
-            );
-        }
-
-        if (searchValues.live) {
-            const searchLower = searchValues.live.toLowerCase();
-            filtered = filtered.filter(item => {
-                const liveText = item.live ? 'true' : 'false';
-                return liveText.includes(searchLower);
-            });
-        }
-
-        setFilteredData(filtered);
-    };
-
-    const handleSort = (order) => {
-        const sorted = [...filteredData].sort((a, b) => {
-            if (order === 'asc') {
-                return a.siteCode.localeCompare(b.siteCode);
-            } else if (order === 'desc') {
-                return b.siteCode.localeCompare(a.siteCode);
-            }
-            return 0;
-        });
-        setFilteredData(sorted);
-        setSortOrder(order);
-        setSortMenuOpen(false);
-    };
-
-    const handleRemoveSort = () => {
-        filterData();
-        setSortOrder(null);
-        setSortMenuOpen(false);
-    };
-
-    const handleSearchChange = (column, value) => {
-        setSearchValues(prev => ({
-            ...prev,
-            [column]: value
-        }));
-    };
-
-    const clearSearch = (column) => {
-        setSearchValues(prev => ({
-            ...prev,
-            [column]: ''
-        }));
-    };
-
-    return (
-        <div className="bg-white border border-gray-300 rounded-lg overflow-hidden flex flex-col h-full">
-            {/* Header */}
-            <div className="grid grid-cols-3 border-b border-gray-300 bg-white">
-                <div
-                    className="px-4 py-3 font-semibold text-sm text-gray-700 border-r border-gray-300 relative"
-                    onMouseEnter={() => setHoveredColumn('siteName')}
-                    onMouseLeave={() => setHoveredColumn(null)}
-                >
-                    <div className="flex items-center justify-between">
-                        <span>Client Name</span>
-                    </div>
-                </div>
-                <div
-                    className="px-4 py-3 font-semibold text-sm text-gray-700 border-r border-gray-300 relative"
-                    onMouseEnter={() => setHoveredColumn('siteCode')}
-                    onMouseLeave={() => setHoveredColumn(null)}
-                >
-                    <div className="flex items-center justify-between">
-                        <span>siteCode</span>
-                        {hoveredColumn === 'siteCode' && (
-                            <button
-                                onClick={() => setSortMenuOpen(!sortMenuOpen)}
-                                className="hover:bg-gray-100 p-1 rounded"
-                            >
-                                <ChevronDown className="w-4 h-4" />
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Sort Dropdown Menu */}
-                    {sortMenuOpen && (
-                        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 shadow-lg z-10 w-48">
-                            <button
-                                onClick={() => handleSort('asc')}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                            >
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M12 5v14M5 12l7-7 7 7" />
-                                </svg>
-                                Sort Ascending
-                            </button>
-                            <button
-                                onClick={() => handleSort('desc')}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                            >
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M12 19V5M5 12l7 7 7-7" />
-                                </svg>
-                                Sort Descending
-                            </button>
-                            <button
-                                onClick={handleRemoveSort}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                            >
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M18 6L6 18M6 6l12 12" />
-                                </svg>
-                                Remove Sort
-                            </button>
-                        </div>
-                    )}
-                </div>
-                <div
-                    className="px-4 py-3 font-semibold text-sm text-gray-700 flex items-center justify-between"
-                    onMouseEnter={() => setHoveredColumn('live')}
-                    onMouseLeave={() => setHoveredColumn(null)}
-                >
-                    <span>live</span>
-                </div>
-            </div>
-
-            {/* Search Row */}
-            <div className="grid grid-cols-3 border-b border-gray-300 bg-gray-50">
-                <div className="px-4 py-1 border-r border-gray-300">
-                    <div className="relative">
-                        {focusedInput !== 'siteName' && !searchValues.siteName && (
-                            <Search className="w-4 h-4 absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        )}
-                        <input
-                            type="text"
-                            value={searchValues.siteCode}
-                            onChange={(e) => handleSearchChange('siteName', e.target.value)}
-                            onFocus={() => setFocusedInput('siteName')}
-                            onBlur={() => setFocusedInput(null)}
-                            className={`w-full ${focusedInput === 'siteName' || searchValues.siteName ? 'pl-2' : 'pl-8'} pr-2 py-1 text-sm border-0 border-b-2 ${focusedInput === 'siteName' ? 'border-blue-500' : 'border-gray-300'
-                                } focus:outline-none bg-transparent`}
-                        />
-                    </div>
-                </div>
-                <div className="px-4 py-1 border-r border-gray-300">
-                    <div className="relative">
-                        {focusedInput !== 'siteCode' && !searchValues.siteCode && (
-                            <Search className="w-4 h-4 absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        )}
-                        <input
-                            type="text"
-                            value={searchValues.siteCode}
-                            onChange={(e) => handleSearchChange('siteCode', e.target.value)}
-                            onFocus={() => setFocusedInput('siteCode')}
-                            onBlur={() => setFocusedInput(null)}
-                            className={`w-full ${focusedInput === 'siteCode' || searchValues.siteCode ? 'pl-2' : 'pl-8'} pr-2 py-1 text-sm border-0 border-b-2 ${focusedInput === 'siteCode' ? 'border-blue-500' : 'border-gray-300'
-                                } focus:outline-none bg-transparent`}
-                        />
-                    </div>
-                </div>
-                <div className="px-4 py-2">
-                    {/* Empty - no search for live column */}
-                </div>
-            </div>
-            <div className="overflow-y-auto flex-1">
-                {/* Data Rows */}
-                {filteredData.map((row, index) => (
-                    <div
-                        key={row.id}
-                        onClick={() => setSelectedRow(row.id)}
-                        className={`grid grid-cols-3 border-b border-gray-200 cursor-pointer ${selectedRow === row.id ? 'bg-[#EEF2F9]' : 'hover:bg-gray-50'
-                            }`}
-
-                    >
-                        <div className="px-4 py-2 text-sm text-gray-700 border-r border-gray-200 font-medium">
-                            {row.siteName}
-                        </div>
-                        <div className="px-4 py-2 text-sm text-gray-700 border-r border-gray-200">
-                            {row.siteCode}
-                        </div>
-                        <div className="px-4 py-2 text-center">
-                            {row.live && (
-                                <span className="text-gray-700 text-lg">✓</span>
-                            )}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-
+import AuditTrail from '../../../../Layout/Common/AuditTrail';
+import CustomPopup from '../../../../Layout/Common/Popup';
+import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
+import AnimatedTextarea from '../../../../Layout/Common/AnimatedTextarea';
 
 const UsersPage = () => {
     const [userData, setUserData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const { currentLanguage, changeLanguage, languages } = useLanguage();
+    const [activePopup, setActivePopup] = useState(null);
     const { t } = useTranslation();
 
     const mockData = [
@@ -338,7 +102,7 @@ const UsersPage = () => {
                 </span>
             )
         },
-         {
+        {
             key: 'siteName',
             label: t('label.siteName'),
             width: 200,
@@ -405,6 +169,51 @@ const UsersPage = () => {
 function Site() {
     const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
+    const [activePopup, setActivePopup] = useState(null);
+    const [formData, setFormData] = useState({
+        siteCode: '',
+        siteName: '',
+        siteAddress: '',
+        contactPerson: '',
+        mobileNo: '',
+        faxNo: '',
+        email: ''
+    });
+
+
+    const handleAddClick = () => {
+        setActivePopup("Add Site"); // Change from setShowAddPopUp
+        setFormData({}); // Reset form
+    };
+
+    const handleEditClick = () => {
+        setActivePopup("Edit Site");
+        // If editing, you can pre-fill formData with selected row data
+    };
+
+    const openAddPopup = () => {
+        console.log("Open ADD popup here");
+        // setShowAddPopup(true);
+    };
+
+    // Handler to close popup
+    const handlePopupClose = () => {
+        setActivePopup(null); // Change from setShowAddPopUp(null)
+    };
+
+    const handleInputChange = (field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handlePopupSubmit = () => {
+        console.log("Form Data:", formData);
+        // Do your API call or validation here
+        setActivePopup(null); // Close popup
+    };
+
 
     const ActionButton = ({ icon: Icon, label, disabled, onClick, className = "" }) => (
         <button
@@ -424,20 +233,201 @@ function Site() {
         </button>
     );
 
+    const PrimaryButton = ({ icon: Icon, label, onClick }) => (
+        <button
+            onClick={onClick}
+            className="flex items-center gap-1 px-2.5 py-2 hover:scale-90 transition-all bg-white text-[#2883FE] text-[11px] font-bold rounded shadow-sm border border-transparent hover:bg-blue-50  whitespace-nowrap"
+        >
+            <Icon className="w-4 h-4 stroke-[3]" />
+            <span>{label}</span>
+        </button>
+    );
+    const POPUP_CONTENTS = {
+        "Add Site": (
+            <div className="flex flex-col gap-4 p-2">
+                {/* Row 1: Site Code & Mobile No */}
+                <div className="flex gap-4">
+                    <AnimatedInput
+                        label={t("label.siteCode")}
+                        name="siteCode"
+                        value={formData.siteCode || ''}
+                        required
+                        onChange={(e) => handleInputChange('siteCode', e.target.value)}
+                    />
+                    <AnimatedInput
+                        label={t("label.mobileNo")}
+                        name="mobileNo"
+                        value={formData.mobileNo || ''}
+                        onChange={(e) => handleInputChange('mobileNo', e.target.value)}
+                    />
+                </div>
+
+                {/* Row 2: Site Name & Fax No */}
+                <div className="flex gap-4">
+                    <AnimatedInput
+                        label={t("label.siteName")}
+                        name="siteName"
+                        value={formData.siteName || ''}
+                        required
+                        onChange={(e) => handleInputChange('siteName', e.target.value)}
+                    />
+                    <AnimatedInput
+                        label={t("label.faxNo")}
+                        name="faxNo"
+                        value={formData.faxNo || ''}
+                        onChange={(e) => handleInputChange('faxNo', e.target.value)}
+                    />
+                </div>
+
+                {/* Row 3: Site Address & E-mail */}
+                <div className="flex gap-4">
+                    <AnimatedTextarea
+                        label={t("label.siteAddress")}
+                        name="siteAddress"
+                        value={formData.siteAddress || ''}
+                        onChange={(e) => handleInputChange('siteAddress', e.target.value)}
+                    />
+                    <AnimatedInput
+                        label={t("label.email")}
+                        name="email"
+                        value={formData.email || ''}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                    />
+                </div>
+
+                {/* Row 4: Contact Person (full width) */}
+                <AnimatedInput
+                    label={t("label.contactPerson")}
+                    name="contactPerson"
+                    value={formData.contactPerson || ''}
+                    onChange={(e) => handleInputChange('contactPerson', e.target.value)}
+                />
+
+                <div className="flex justify-end gap-3 pt-3">
+                    <button
+                        onClick={handlePopupSubmit}
+                        className="flex items-center gap-2 px-3 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-xs font-semibold rounded transition-colors"
+                    >
+                        <SquareCheckBig className="w-4 h-4" /> {t("button.save")}
+                    </button>
+                    <button
+                        onClick={handlePopupSubmit}
+                        className="flex items-center gap-2 px-3 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-xs font-semibold rounded transition-colors"
+                    >
+                        {t("button.reset")}
+                    </button>
+                    <button
+                        onClick={handlePopupClose}
+                        className="px-3 py-2 bg-white border border-gray-300 text-[#8092A4] hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
+                    >
+                        {t("button.close")}
+                    </button>
+                </div>
+            </div>
+        ),
+        "Edit Site": (
+            <div className="flex flex-col gap-4 p-2">
+                <div className="flex flex-col gap-6">
+                    <AnimatedInput
+                        label={t("label.siteCode")}
+                        name="siteCode"
+                        value={formData.siteCode || ''}
+                        required
+                        onChange={(e) => handleInputChange('siteCode', e.target.value)}
+                    />
+
+                    <AnimatedInput
+                        label={t("label.siteName")}
+                        name="siteName"
+                        value={formData.siteName || ''}
+                        required
+                        onChange={(e) => handleInputChange('siteName', e.target.value)}
+                    />
+
+                    <AnimatedInput
+                        label={t("label.siteAddress")}
+                        name="siteAddress"
+                        value={formData.siteAddress || ''}
+                        onChange={(e) => handleInputChange('siteAddress', e.target.value)}
+                    />
+
+                    <AnimatedInput
+                        label={t("label.contactPerson")}
+                        name="contactPerson"
+                        value={formData.contactPerson || ''}
+                        onChange={(e) => handleInputChange('contactPerson', e.target.value)}
+                    />
+                </div>
+
+                <div className="flex flex-col gap-6">
+
+                    <AnimatedInput
+                        label={t("label.mobileNo")}
+                        name="mobileNo"
+                        value={formData.mobileNo || ''}
+                        onChange={(e) => handleInputChange('mobileNo', e.target.value)}
+                    />
+
+                    <AnimatedInput
+                        label={t("label.faxNo")}
+                        name="faxNo"
+                        value={formData.faxNo || ''}
+                        onChange={(e) => handleInputChange('faxNo', e.target.value)}
+                    />
+
+                    <AnimatedInput
+                        label={t("label.email")}
+                        name="email"
+                        value={formData.email || ''}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                    />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3">
+                    <button
+                        onClick={handlePopupSubmit}
+                        className="flex items-center gap-2 px-3 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-xs font-semibold rounded transition-colors"
+                    >
+                        <SquareCheckBig className="w-4 h-4" /> {t("button.save")}
+                    </button>
+                    <button
+                        onClick={handlePopupSubmit}
+                        className="flex items-center gap-2 px-3 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-xs font-semibold rounded transition-colors"
+                    >
+                        {t("button.reset")}
+                    </button>
+                    <button
+                        onClick={handlePopupClose}
+                        className="px-3 py-2 bg-white border border-gray-300 text-[#8092A4] hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
+                    >
+                        {t("button.close")}
+                    </button>
+                </div>
+            </div>
+        )
+    };
 
     return (
         <div className="px-4 font-roboto h-[calc(100vh-150px)] flex flex-col">
 
             {/* Top Action Buttons (same place) */}
             <div className="flex justify-end gap-2 mt-4">
-                <ActionButton icon={Plus} label={t('button.add')} />
-                <ActionButton icon={Edit} label={t('button.edit')} />
+                <ActionButton icon={Plus} label={t('button.add')} onClick={handleAddClick} />
+                <ActionButton icon={Edit} label={t('button.edit')} onClick={handleEditClick} />
             </div>
 
             {/* UsersPage takes full width & height */}
             <div className="flex-1 overflow-hidden">
                 <UsersPage />
             </div>
+
+            {/* CustomPopup */}
+            <CustomPopup
+                isOpen={!!activePopup}
+                onClose={handlePopupClose}
+                title={activePopup || ""}
+                content={activePopup ? POPUP_CONTENTS[activePopup] : null}
+            />
 
         </div>
     );
