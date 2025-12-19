@@ -1,0 +1,31 @@
+name: Weekly Release (Backup to Main)
+
+on:
+  schedule:
+    # Runs at 18:30 UTC on Saturday (which is 00:00 AM IST Sunday)
+    - cron: '30 18 * * 6'
+  workflow_dispatch:
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main # Check out the target branch
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+
+      - name: Merge Backup into Main
+        run: |
+          git fetch origin Backup
+          # Merge Backup into the current (main) branch
+          git merge origin/Backup --no-edit
+          git push origin main
