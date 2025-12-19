@@ -768,11 +768,11 @@ export default function InstrumentDataPage() {
               />
             </div>
             {/* Simple wrapper with border and no radius */}
-            <div className="w-full h-[300px] overflow-hidden [&>*]:!p-0 [&>*]:!m-0 rounded-none">
+            <div className="w-full overflow-hidden [&>*]:!p-0 [&>*]:!m-0 rounded-none">
               <GridLayout
                 columns={mergeColumns}
                 data={mergeRows}
-                hidePagination={true}
+                hidePagination={false}
               />
             </div>
           </>
@@ -791,11 +791,11 @@ export default function InstrumentDataPage() {
               />
             </div>
             {/* Simple wrapper with border and no radius */}
-            <div className="w-full h-[300px] overflow-hidden [&>*]:!p-0 [&>*]:!m-0 rounded-none">
+            <div className="w-full overflow-hidden [&>*]:!p-0 [&>*]:!m-0 rounded-none">
               <GridLayout
                 columns={nullDataColumns}
                 data={nullDataRows}
-                hidePagination={true}
+                hidePagination={false}
               />
             </div>
           </>
@@ -815,11 +815,11 @@ export default function InstrumentDataPage() {
           />
         </div>
         {/* Simple wrapper with border and no radius */}
-        <div className="w-full h-[400px] overflow-hidden [&>*]:!p-0 [&>*]:!m-0 rounded-none">
+        <div className="w-full overflow-hidden [&>*]:!p-0 [&>*]:!m-0 rounded-none">
           <GridLayout
             columns={fileColumns}
             data={files}
-            hidePagination={true}
+            hidePagination={false}
           />
         </div>
       </div>
