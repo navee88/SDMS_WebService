@@ -175,7 +175,7 @@ const UsersPage = () => {
 
 
     return (
-        <div className="flex flex-col">
+        <div className="flex flex-col mt-2">
             <GridLayout
                 columns={userColumns}
                 data={userData}
@@ -189,18 +189,12 @@ const UsersPage = () => {
 function UploadQueue() {
     const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
-    const [reason, setReason] = useState("Activated");
     const [userName, setUserName] = useState("");
     const [password, setPassword] = useState("");
     const [comments, setComments] = useState("");
     const [showError, setShowError] = useState(false);
     const [showAudit, setShowAudit] = useState(false);
 
-
-    const handleReason = (value) => {
-        const actualValue = value?.target?.value || value?.value || value;
-        setReason(actualValue);
-    };
 
     // Add state for information dialog
     const [infoDialog, setInfoDialog] = useState({
