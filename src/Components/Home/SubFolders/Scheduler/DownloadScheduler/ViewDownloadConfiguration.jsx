@@ -5,10 +5,11 @@ import { RiDeleteBin6Line } from "react-icons/ri";
 import { TiExport } from "react-icons/ti";
 import { BsCheck2Square } from "react-icons/bs";
 import { useTranslation } from "react-i18next";
+import * as XLSX from "xlsx"; // Add this import
 
 import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
-import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import Errordialog from "../../../../Layout/Common/Errordialog";
+import AuditTrail from "../../../../Layout/Common/AuditTrail";
 
 export default function ViewDownloadConfiguration() {
   const { t } = useTranslation();
@@ -22,14 +23,7 @@ export default function ViewDownloadConfiguration() {
 
   /* ---------- AUDIT POPUP ---------- */
   const [showAudit, setShowAudit] = useState(false);
-  const [auditForm, setAuditForm] = useState({
-    username: t("login.administrator"),
-    password: "",
-    reason: "",
-    comments: "",
-    command: "View Download Scheduler",
-  });
-  const [errors, setErrors] = useState({});
+  const [auditAction, setAuditAction] = useState("");
 
   /* ---------- BUTTON ---------- */
   const PrimaryButton = ({ icon: Icon, label, onClick }) => (
@@ -75,10 +69,323 @@ export default function ViewDownloadConfiguration() {
       ];
 
       setData(mockData);
-      setSelectedRow(mockData[0]);
+      setSelectedRow(mockData[0]); // select first row initially
       setLoading(false);
     }, 300);
   }, []);
+
+  /* ---------- EXPORT TO EXCEL FUNCTION ---------- */
+  const handleExport = () => {
+    try {
+      if (!data || data.length === 0) {
+        setErrorMessage(t("errormsg.noresultsfound"));
+        setShowErrorDialog(true);
+        return;
+      }
+
+      // Prepare data for export - include all columns from grid and detail panel
+      const exportData = data.map((row) => ({
+        [t("label.instrument")]: row.instrument,
+        [t("label.taskId")]: row.taskId,
+        [t("label.sourcePath")]: row.sourcePath,
+        [t("scheduler.uncStatus")]: row.uncStatus ? "✓" : "✗",
+        [t("label.clientName")]: row.downloadClientName,
+        [t("scheduler.destinationpath")]: row.downloadPath,
+        [t("label.taskStatus")]: t(`statuses.${row.taskStatus}`),
+        [t("label.filter")]: row.taskFilter,
+        [t("label.comments")]: row.taskCompleted,
+        [t("label.username")]: row.uncUsername || "-",
+      }));
+
+      // Create worksheet
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      
+      // Set column widths
+      const colWidths = [
+        { wch: 20 }, // Instrument
+        { wch: 10 }, // Task ID
+        { wch: 30 }, // Source Path
+        { wch: 10 }, // UNC Status
+        { wch: 15 }, // Client Name
+        { wch: 30 }, // Download Path
+        { wch: 15 }, // Task Status
+        { wch: 15 }, // Filter
+        { wch: 20 }, // Comments
+        { wch: 15 }, // Username
+      ];
+      worksheet["!cols"] = colWidths;
+
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Download Configuration");
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split("T")[0];
+      const fileName = `Download_Configuration_${timestamp}.xlsx`;
+
+      // Export to Excel
+      XLSX.writeFile(workbook, fileName);
+
+
+
+    } catch (error) {
+      console.error("Export error:", error);
+      setErrorMessage(t("errormsg.exportFailed"));
+      setShowErrorDialog(true);
+    }
+  };
+
+  /* ---------- PRINT FUNCTION ---------- */
+  const handlePrint = () => {
+    if (!data || data.length === 0) {
+      setErrorMessage(t("errormsg.noresultsfound"));
+      setShowErrorDialog(true);
+      return;
+    }
+
+    // Create print content
+    const printWindow = window.open('', '_blank');
+    
+    // Get current date and time
+    const now = new Date();
+    const printDate = now.toLocaleDateString();
+    const printTime = now.toLocaleTimeString();
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Download Configuration - Print</title>
+        <style>
+          @media print {
+            @page {
+              margin: 20px;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 20px;
+            }
+            .print-header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 2px solid #000;
+              padding-bottom: 10px;
+            }
+            .print-title {
+              font-size: 24px;
+              font-weight: bold;
+              color: #333;
+              margin-bottom: 5px;
+            }
+            .print-subtitle {
+              font-size: 16px;
+              color: #666;
+              margin-bottom: 10px;
+            }
+            .print-meta {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 20px;
+              font-size: 12px;
+              color: #555;
+            }
+            .print-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+            }
+            .print-table th {
+              background-color: #f4f6f8;
+              color: #333;
+              font-weight: bold;
+              padding: 10px;
+              text-align: left;
+              border: 1px solid #ddd;
+            }
+            .print-table td {
+              padding: 8px 10px;
+              border: 1px solid #ddd;
+              font-size: 12px;
+            }
+            .print-table tr:nth-child(even) {
+              background-color: #f9f9f9;
+            }
+            .print-footer {
+              margin-top: 30px;
+              padding-top: 10px;
+              border-top: 1px solid #ddd;
+              font-size: 11px;
+              color: #777;
+              text-align: center;
+            }
+            .status-active {
+              color: #28a745;
+              font-weight: bold;
+            }
+            .status-inactive {
+              color: #dc3545;
+              font-weight: bold;
+            }
+            .unc-true::before {
+              content: "✓";
+              color: #28a745;
+              font-weight: bold;
+            }
+            .unc-false::before {
+              content: "✗";
+              color: #dc3545;
+            }
+          }
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+          }
+          .print-header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+          }
+          .print-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+          }
+          .print-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 10px;
+          }
+          .print-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #555;
+          }
+          .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+          .print-table th {
+            background-color: #f4f6f8;
+            color: #333;
+            font-weight: bold;
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+          }
+          .print-table td {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            font-size: 12px;
+          }
+          .print-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+          }
+          .print-footer {
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            font-size: 11px;
+            color: #777;
+            text-align: center;
+          }
+          .status-active {
+            color: #28a745;
+            font-weight: bold;
+          }
+          .status-inactive {
+            color: #dc3545;
+            font-weight: bold;
+          }
+          .unc-true::before {
+            content: "✓";
+            color: #28a745;
+            font-weight: bold;
+          }
+          .unc-false::before {
+            content: "✗";
+            color: #dc3545;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-header">
+          <div class="print-title">Download Configuration</div>
+          <div class="print-subtitle">View Download Configuration Report</div>
+        </div>
+        
+        <div class="print-meta">
+          <div>
+            <strong>Report Date:</strong> ${printDate}<br>
+            <strong>Report Time:</strong> ${printTime}<br>
+          </div>
+          <div>
+            <strong>Total Records:</strong> ${data.length}<br>
+            <strong>Generated By:</strong> System Administrator
+          </div>
+        </div>
+
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th>${t("label.instrument")}</th>
+              <th>${t("label.taskId")}</th>
+              <th>${t("label.sourcePath")}</th>
+              <th>${t("scheduler.uncStatus")}</th>
+              <th>${t("label.clientName")}</th>
+              <th>${t("scheduler.destinationpath")}</th>
+              <th>${t("label.taskStatus")}</th>
+              <th>${t("label.filter")}</th>
+              <th>${t("label.comments")}</th>
+              <th>${t("label.username")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map(row => `
+              <tr>
+                <td>${row.instrument}</td>
+                <td>${row.taskId}</td>
+                <td>${row.sourcePath}</td>
+                <td class="unc-${row.uncStatus}">${row.uncStatus ? '✓' : '✗'}</td>
+                <td>${row.downloadClientName}</td>
+                <td>${row.downloadPath}</td>
+                <td class="${row.taskStatus === 'active' ? 'status-active' : 'status-inactive'}">
+                  ${t(`statuses.${row.taskStatus}`)}
+                </td>
+                <td>${row.taskFilter}</td>
+                <td>${row.taskCompleted}</td>
+                <td>${row.uncUsername || "-"}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="print-footer">
+          <p>Generated by SDMS - Download Configuration Module</p>
+          <p>Page 1 of 1</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Wait for content to load before printing
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.onafterprint = () => {
+        printWindow.close();
+      };
+    };
+  };
 
   /* ---------- GRID COLUMNS ---------- */
   const columns = useMemo(
@@ -88,29 +395,42 @@ export default function ViewDownloadConfiguration() {
         label: t("label.instrument"),
         width: 190,
         enableSearch: true,
+        render: (row) => (
+          <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
+            {row.instrument}
+          </span>
+        ),
       },
       {
         key: "taskId",
         label: t("label.taskId"),
         width: 120,
         enableSearch: true,
+        render: (row) => (
+          <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
+            {row.taskId}
+          </span>
+        ),
       },
       {
         key: "sourcePath",
         label: t("label.sourcePath"),
         width: 230,
         enableSearch: true,
+        render: (row) => (
+          <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
+            {row.sourcePath}
+          </span>
+        ),
       },
       {
         key: "uncStatus",
         label: t("scheduler.uncStatus"),
         width: 160,
-        render: (row) => (
-          <input type="checkbox" checked={row.uncStatus} readOnly />
-        ),
+        render: (row) => <input type="checkbox" checked={row.uncStatus} readOnly />,
       },
     ],
-    [t]
+    [selectedRow, t]
   );
 
   /* ---------- ACTION HANDLER ---------- */
@@ -133,29 +453,14 @@ export default function ViewDownloadConfiguration() {
       return;
     }
 
-    setShowAudit(true);
-  };
-
-  /* ---------- AUDIT VALIDATION ---------- */
-  const validateAudit = () => {
-    const e = {};
-    if (!auditForm.password) e.password = true;
-    if (!auditForm.reason) e.reason = true;
-    if (!auditForm.comments) e.comments = true;
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const submitAudit = () => {
-    if (!validateAudit()) return;
-    setShowAudit(false);
-    setErrors({});
+    setErrorMessage(t("statuses.activated"));
+    setShowErrorDialog(true);
   };
 
   /* ---------- DETAIL PANEL ---------- */
   const DetailRow = ({ label, value }) => (
     <div className="grid grid-cols-2 gap-4 text-[13px]">
-      <div className="font-semibold text-[#405F7D]">{label}</div>
+      <div className="font-semibold text-700 text-[#405F7D]">{label}</div>
       <div className="font-semibold">{value || "-"}</div>
     </div>
   );
@@ -174,6 +479,29 @@ export default function ViewDownloadConfiguration() {
     </div>
   );
 
+  /* ---------- HANDLER FOR AUDITTRAIL SUBMIT ---------- */
+  const handleAuthorized = (auditData) => {
+    console.log("Authorized Data:", auditData, "Action:", auditAction, "Row:", selectedRow);
+
+    // Here you can update your backend or row state
+    // Example: mark row as authorized
+    if (auditAction === "ACTIVE") {
+      setData((prev) =>
+        prev.map((r) =>
+          r.id === selectedRow.id ? { ...r, taskStatus: "active" } : r
+        )
+      );
+    } else if (auditAction === "INACTIVE") {
+      setData((prev) =>
+        prev.map((r) =>
+          r.id === selectedRow.id ? { ...r, taskStatus: "inactive" } : r
+        )
+      );
+    }
+
+    setShowAudit(false);
+  };
+
   return (
     <div className="bg-white p-4 space-y-4">
       {/* ACTION BUTTONS */}
@@ -182,8 +510,8 @@ export default function ViewDownloadConfiguration() {
         <PrimaryButton icon={FaCheck} label={t("scheduler.activate")} onClick={() => handleAction("ACTIVE")} />
         <PrimaryButton icon={MdOutlineThumbDown} label={t("scheduler.deactivate")} onClick={() => handleAction("INACTIVE")} />
         <PrimaryButton icon={RiDeleteBin6Line} label={t("scheduler.retire")} onClick={() => handleAction("RETIRE")} />
-        <PrimaryButton icon={TiExport} label={t("button.export")} />
-        <PrimaryButton icon={MdPrint} label={t("button.print")} />
+        <PrimaryButton icon={TiExport} label={t("button.export")} onClick={handleExport} />
+        <PrimaryButton icon={MdPrint} label={t("button.print")} onClick={handlePrint} />
       </div>
 
       {/* GRID */}
@@ -200,7 +528,7 @@ export default function ViewDownloadConfiguration() {
           onRowClick={(row) => setSelectedRow(row)}
           rowClassName={(row) =>
             row.id === selectedRow?.id
-              ? "bg-blue-50 border-l-4 border-blue-600"
+              ? "bg-blue-50 border-l-4 border-blue-600 font-semibold"
               : ""
           }
         />
@@ -216,69 +544,11 @@ export default function ViewDownloadConfiguration() {
 
       {/* AUDIT POPUP */}
       {showAudit && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center pt-16 z-50">
-          <div className="bg-white w-[600px] rounded shadow-lg flex flex-col">
-            <div className="px-4 py-2 border-b bg-blue-400/10">
-              <h2 className="font-semibold text-blue-700">
-                {t("Auditpopup.audittrail")}
-              </h2>
-            </div>
-
-            <div className="p-5 space-y-5 text-sm">
-              <div>
-                <label>{t("label.username")} *</label>
-                <input disabled value={auditForm.username} className="w-full border-b" />
-              </div>
-
-              <div>
-                <label>{t("login.password")} *</label>
-                <input
-                  type="password"
-                  className={`w-full border-b ${errors.password ? "border-red-500" : ""}`}
-                  onChange={(e) =>
-                    setAuditForm({ ...auditForm, password: e.target.value })
-                  }
-                />
-              </div>
-
-              <div>
-                <label>{t("Auditpopup.reason")} *</label>
-                <AnimatedDropdown
-                  options={[
-                    t("statuses.activated"),
-                    t("statuses.deactivated"),
-                    t("Auditpopup.information"),
-                  ]}
-                  onChange={(e) =>
-                    setAuditForm({ ...auditForm, reason: e.target.value })
-                  }
-                />
-              </div>
-
-              <div>
-                <label>{t("Auditpopup.comments")} *</label>
-                <textarea
-                  className={`w-full border-b ${errors.comments ? "border-red-500" : ""}`}
-                  onChange={(e) =>
-                    setAuditForm({ ...auditForm, comments: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 px-5 py-3 border-t">
-              <button
-                onClick={submitAudit}
-                className="bg-blue-500 text-white px-3 py-1.5 rounded"
-              >
-                <BsCheck2Square size={16} /> {t("button.submit")}
-              </button>
-              <button onClick={() => setShowAudit(false)}>
-                {t("button.close")}
-              </button>
-            </div>
-          </div>
-        </div>
+        <AuditTrail
+          isOpen={showAudit}
+          onClose={() => setShowAudit(false)}
+          onAuthorized={handleAuthorized}
+        />
       )}
     </div>
   );
