@@ -456,7 +456,7 @@ const Domain = () => {
                     columns={columns}
                     data={domainData}
                     renderDetailPanel={renderDomainDetail}
-                    onRowSelect={handleRowSelect}
+                    onRowClick={handleRowSelect}
                     searchable={false}
                     selectable={true}
                     hidePagination={false}

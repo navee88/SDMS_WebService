@@ -680,7 +680,7 @@ const DeactivedTask = () => {
                     columns={columns}
                     data={schedulerData}
                     renderDetailPanel={renderSchedulerDetail}
-                    onRowSelect={handleRowSelect}
+                    onRowClick={handleRowSelect}
                     searchable={false}
                     selectable={true}
                     hidePagination={false}

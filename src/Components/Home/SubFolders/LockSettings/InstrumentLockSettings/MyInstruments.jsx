@@ -544,7 +544,7 @@ export default function MyInstrumentsPage() {
               <GridLayout
                 columns={filesColumns}
                 data={files}
-                onRowSelect={handleFileSelect}
+                onRowClick={handleFileSelect}
                 hidePagination={false}
               />
           </div>
