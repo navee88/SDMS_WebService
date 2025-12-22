@@ -10,11 +10,13 @@ import CustomPopup from './Popup';
 const AuditTrail = ({
     isOpen,
     onClose,
-    onAuthorized,   //called only after password success
-    actionLabel = "Submit"
+    onAuthorized,
+    actionLabel = "Submit",
+    defaultReason = "Activated",
+    disableReason = false
 }) => {
     const [password, setPassword] = useState("");
-    const [reason, setReason] = useState("Activated");
+    const [reason, setReason] = useState(defaultReason);
     const [comments, setComments] = useState("");
     const [showError, setShowError] = useState(false);
     const [userName, setUserName] = useState("");
@@ -126,11 +128,11 @@ const AuditTrail = ({
                             <AnimatedDropdown
                                 label={t("label.reason")}
                                 value={reason}
-                                options={["Activated", "Deactivated", "Modified"]}
+                                options={["Activated", "Deactivated", "Modified", "Reviewed"]}
                                 onChange={handleReason}
-                                // isSearchable={true}
                                 allowFreeInput={true}
                                 required={true}
+                                disabled={disableReason}
                             />
                         </div>
 

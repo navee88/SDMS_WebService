@@ -8,8 +8,8 @@ import CustomPopup from '../../../../Layout/Common/Popup';
 import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
 import AnimatedTextarea from '../../../../Layout/Common/AnimatedTextarea';
 
-const UsersPage = () => {
-    const [userData, setUserData] = useState([]);
+const UsersPage = ({ onRowClick, userData, setUserData }) => {
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const { currentLanguage, changeLanguage, languages } = useLanguage();
@@ -85,8 +85,11 @@ const UsersPage = () => {
         setTimeout(() => {
             setUserData(mockData);
             setLoading(false);
+            // Select first record after data is loaded
+            if (mockData.length > 0 && onRowClick) {
+                onRowClick(mockData[0]);
+            }
         }, 300);
-
     }, []);
 
 
@@ -160,6 +163,7 @@ const UsersPage = () => {
                 columns={userColumns}
                 data={userData}
                 renderDetailPanel={renderUserDetail}
+                onRowClick={onRowClick}
             />
         </div>
     );
@@ -179,6 +183,12 @@ function Site() {
         faxNo: '',
         email: ''
     });
+    const [selectedRecord, setSelectedRecord] = useState(null);
+    const [validationErrors, setValidationErrors] = useState({});
+
+    const [showAuditTrail, setShowAuditTrail] = useState(false);
+    const [pendingFormData, setPendingFormData] = useState(null);
+    const [userData, setUserData] = useState([]);
 
 
     const handleAddClick = () => {
@@ -187,8 +197,18 @@ function Site() {
     };
 
     const handleEditClick = () => {
-        setActivePopup("Edit Site");
-        // If editing, you can pre-fill formData with selected row data
+        if (selectedRecord) {
+            setActivePopup("Edit Site");
+            setFormData({
+                siteCode: selectedRecord.siteCode,
+                siteName: selectedRecord.siteName,
+                siteAddress: selectedRecord.siteAddress || '',
+                contactPerson: selectedRecord.contactPerson || '',
+                mobileNo: selectedRecord.mobileNo || '',
+                faxNo: selectedRecord.faxNo || '',
+                email: selectedRecord.email || ''
+            });
+        }
     };
 
     const openAddPopup = () => {
@@ -196,9 +216,9 @@ function Site() {
         // setShowAddPopup(true);
     };
 
-    // Handler to close popup
     const handlePopupClose = () => {
-        setActivePopup(null); // Change from setShowAddPopUp(null)
+        setActivePopup(null);
+        setValidationErrors({});
     };
 
     const handleInputChange = (field, value) => {
@@ -206,23 +226,72 @@ function Site() {
             ...prev,
             [field]: value
         }));
+        // Clear error when user types
+        if (validationErrors[field]) {
+            setValidationErrors(prev => ({
+                ...prev,
+                [field]: false
+            }));
+        }
     };
 
     const handlePopupSubmit = () => {
-        console.log("Form Data:", formData);
-        // Do your API call or validation here
-        setActivePopup(null); // Close popup
+        // Validate required fields
+        const errors = {};
+        if (!formData.siteCode || formData.siteCode.trim() === '') {
+            errors.siteCode = true;
+        }
+        if (!formData.siteName || formData.siteName.trim() === '') {
+            errors.siteName = true;
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setValidationErrors(errors);
+            return;
+        }
+
+        // Store form data and show audit trail
+        setPendingFormData(formData);
+        setShowAuditTrail(true);
     };
 
+    const handleRowClick = (record) => {
+        setSelectedRecord(record);
+    };
 
+    const handleAuditAuthorized = (auditData) => {
+        console.log("Audit Data:", auditData);
+        console.log("Form Data to Save:", pendingFormData);
+
+        // Update grid data
+        setUserData(prevData =>
+            prevData.map(item =>
+                item.id === selectedRecord.id
+                    ? { ...item, ...pendingFormData }
+                    : item
+            )
+        );
+
+        // Update selected record
+        setSelectedRecord(prev => ({
+            ...prev,
+            ...pendingFormData
+        }));
+
+        // Close both popups
+        setShowAuditTrail(false);
+        setActivePopup(null);
+        setValidationErrors({});
+        setPendingFormData(null);
+    };
     const ActionButton = ({ icon: Icon, label, disabled, onClick, className = "" }) => (
         <button
             onClick={onClick}
             disabled={disabled}
-            className={`flex items-center gap-1.5 px-2 py-2 text-[11px] font-bold rounded whitespace-nowrap
+            className={`flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold rounded whitespace-nowrap
       hover:scale-90 transition-all
       ${disabled
-                    ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+                    ? "bg-slate-100 text-[#2883FE] opacity-65 cursor-not-allowed"
                     : "bg-[#f1f5f9] text-[#2883FE] hover:bg-[#E6F0FF]"
                 }
       ${className}
@@ -244,66 +313,88 @@ function Site() {
     );
     const POPUP_CONTENTS = {
         "Add Site": (
-            <div className="flex flex-col gap-4 p-2">
+            <div className="flex flex-col gap-3 p-2">
                 {/* Row 1: Site Code & Mobile No */}
                 <div className="flex gap-4">
-                    <AnimatedInput
-                        label={t("label.siteCode")}
-                        name="siteCode"
-                        value={formData.siteCode || ''}
-                        required
-                        onChange={(e) => handleInputChange('siteCode', e.target.value)}
-                    />
-                    <AnimatedInput
-                        label={t("label.mobileNo")}
-                        name="mobileNo"
-                        value={formData.mobileNo || ''}
-                        onChange={(e) => handleInputChange('mobileNo', e.target.value)}
-                    />
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.siteCode")}
+                            name="siteCode"
+                            value={formData.siteCode || ''}
+                            required
+                            showError={validationErrors.siteCode}
+                            onChange={(e) => handleInputChange('siteCode', e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.mobileNo")}
+                            name="mobileNo"
+                            value={formData.mobileNo || ''}
+
+                            onChange={(e) => handleInputChange('mobileNo', e.target.value)}
+                        />
+                    </div>
                 </div>
 
                 {/* Row 2: Site Name & Fax No */}
                 <div className="flex gap-4">
-                    <AnimatedInput
-                        label={t("label.siteName")}
-                        name="siteName"
-                        value={formData.siteName || ''}
-                        required
-                        onChange={(e) => handleInputChange('siteName', e.target.value)}
-                    />
-                    <AnimatedInput
-                        label={t("label.faxNo")}
-                        name="faxNo"
-                        value={formData.faxNo || ''}
-                        onChange={(e) => handleInputChange('faxNo', e.target.value)}
-                    />
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.siteName")}
+                            name="siteName"
+                            value={formData.siteName || ''}
+                            showError={validationErrors.siteName}
+                            required
+                            onChange={(e) => handleInputChange('siteName', e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.faxNo")}
+                            name="faxNo"
+                            value={formData.faxNo || ''}
+                            onChange={(e) => handleInputChange('faxNo', e.target.value)}
+                        />
+                    </div>
                 </div>
 
                 {/* Row 3: Site Address & E-mail */}
                 <div className="flex gap-4">
-                    <AnimatedTextarea
-                        label={t("label.siteAddress")}
-                        name="siteAddress"
-                        value={formData.siteAddress || ''}
-                        onChange={(e) => handleInputChange('siteAddress', e.target.value)}
-                    />
-                    <AnimatedInput
-                        label={t("label.email")}
-                        name="email"
-                        value={formData.email || ''}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                    />
+                    <div className="flex-1">
+                        <AnimatedTextarea
+                            label={t("label.siteAddress")}
+                            name="siteAddress"
+                            value={formData.siteAddress || ''}
+                            onChange={(e) => handleInputChange('siteAddress', e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.email")}
+                            name="email"
+                            value={formData.email || ''}
+                            onChange={(e) => handleInputChange('email', e.target.value)}
+                        />
+                    </div>
                 </div>
 
                 {/* Row 4: Contact Person (full width) */}
-                <AnimatedInput
-                    label={t("label.contactPerson")}
-                    name="contactPerson"
-                    value={formData.contactPerson || ''}
-                    onChange={(e) => handleInputChange('contactPerson', e.target.value)}
-                />
+                <div className="flex gap-4">
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.contactPerson")}
+                            name="contactPerson"
+                            value={formData.contactPerson || ''}
+                            onChange={(e) => handleInputChange('contactPerson', e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1"></div> {/* Empty div to maintain layout */}
+                </div>
 
-                <div className="flex justify-end gap-3 pt-3">
+                <hr className="border-t border-gray-300 my-2 -mx-6" />
+
+                <div className="flex justify-end gap-2 pt-1">
                     <button
                         onClick={handlePopupSubmit}
                         className="flex items-center gap-2 px-3 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-xs font-semibold rounded transition-colors"
@@ -326,64 +417,86 @@ function Site() {
             </div>
         ),
         "Edit Site": (
-            <div className="flex flex-col gap-4 p-2">
-                <div className="flex flex-col gap-6">
-                    <AnimatedInput
-                        label={t("label.siteCode")}
-                        name="siteCode"
-                        value={formData.siteCode || ''}
-                        required
-                        onChange={(e) => handleInputChange('siteCode', e.target.value)}
-                    />
-
-                    <AnimatedInput
-                        label={t("label.siteName")}
-                        name="siteName"
-                        value={formData.siteName || ''}
-                        required
-                        onChange={(e) => handleInputChange('siteName', e.target.value)}
-                    />
-
-                    <AnimatedInput
-                        label={t("label.siteAddress")}
-                        name="siteAddress"
-                        value={formData.siteAddress || ''}
-                        onChange={(e) => handleInputChange('siteAddress', e.target.value)}
-                    />
-
-                    <AnimatedInput
-                        label={t("label.contactPerson")}
-                        name="contactPerson"
-                        value={formData.contactPerson || ''}
-                        onChange={(e) => handleInputChange('contactPerson', e.target.value)}
-                    />
+            <div className="flex flex-col gap-3 p-2">
+                {/* Row 1: Site Code & Mobile No */}
+                <div className="flex gap-4">
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.siteCode")}
+                            name="siteCode"
+                            value={formData.siteCode || ''}
+                            required
+                            disabled={true}
+                            onChange={(e) => handleInputChange('siteCode', e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.mobileNo")}
+                            name="mobileNo"
+                            value={formData.mobileNo || ''}
+                            onChange={(e) => handleInputChange('mobileNo', e.target.value)}
+                        />
+                    </div>
                 </div>
 
-                <div className="flex flex-col gap-6">
-
-                    <AnimatedInput
-                        label={t("label.mobileNo")}
-                        name="mobileNo"
-                        value={formData.mobileNo || ''}
-                        onChange={(e) => handleInputChange('mobileNo', e.target.value)}
-                    />
-
-                    <AnimatedInput
-                        label={t("label.faxNo")}
-                        name="faxNo"
-                        value={formData.faxNo || ''}
-                        onChange={(e) => handleInputChange('faxNo', e.target.value)}
-                    />
-
-                    <AnimatedInput
-                        label={t("label.email")}
-                        name="email"
-                        value={formData.email || ''}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                    />
+                {/* Row 2: Site Name & Fax No */}
+                <div className="flex gap-4">
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.siteName")}
+                            name="siteName"
+                            value={formData.siteName || ''}
+                            required
+                            onChange={(e) => handleInputChange('siteName', e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.faxNo")}
+                            name="faxNo"
+                            value={formData.faxNo || ''}
+                            onChange={(e) => handleInputChange('faxNo', e.target.value)}
+                        />
+                    </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-3">
+                {/* Row 3: Site Address & E-mail */}
+                <div className="flex gap-4">
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.siteAddress")}
+                            name="siteAddress"
+                            value={formData.siteAddress || ''}
+                            onChange={(e) => handleInputChange('siteAddress', e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.email")}
+                            name="email"
+                            value={formData.email || ''}
+                            onChange={(e) => handleInputChange('email', e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                {/* Row 4: Contact Person (full width) */}
+                <div className="flex gap-4">
+                    <div className="flex-1">
+                        <AnimatedInput
+                            label={t("label.contactPerson")}
+                            name="contactPerson"
+                            value={formData.contactPerson || ''}
+                            onChange={(e) => handleInputChange('contactPerson', e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1"></div> {/* Empty div to maintain layout */}
+                </div>
+
+                <hr className="border-t border-gray-300 my-2 -mx-6" />
+
+                <div className="flex justify-end gap-2 pt-1">
                     <button
                         onClick={handlePopupSubmit}
                         className="flex items-center gap-2 px-3 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-xs font-semibold rounded transition-colors"
@@ -404,7 +517,7 @@ function Site() {
                     </button>
                 </div>
             </div>
-        )
+        ),
     };
 
     return (
@@ -413,12 +526,11 @@ function Site() {
             {/* Top Action Buttons (same place) */}
             <div className="flex justify-end gap-2 mt-4">
                 <ActionButton icon={Plus} label={t('button.add')} onClick={handleAddClick} />
-                <ActionButton icon={Edit} label={t('button.edit')} onClick={handleEditClick} />
+                <ActionButton icon={Edit} label={t('button.edit')} onClick={handleEditClick} disabled={!selectedRecord} />
             </div>
 
-            {/* UsersPage takes full width & height */}
             <div className="flex-1 overflow-hidden">
-                <UsersPage />
+                <UsersPage onRowClick={handleRowClick} userData={userData} setUserData={setUserData} />
             </div>
 
             {/* CustomPopup */}
@@ -427,6 +539,14 @@ function Site() {
                 onClose={handlePopupClose}
                 title={activePopup || ""}
                 content={activePopup ? POPUP_CONTENTS[activePopup] : null}
+            />
+
+            {/* AuditTrail Popup */}
+            <AuditTrail
+                isOpen={showAuditTrail}
+                onClose={() => setShowAuditTrail(false)}
+                onAuthorized={handleAuditAuthorized}
+                actionLabel="Submit"
             />
 
         </div>
