@@ -9,7 +9,7 @@ import CustomPopup from '../../../../Layout/Common/Popup';
 const ActivatedTask = () => {
     const [schedulerData, setSchedulerData] = useState([]);
     const [selectedScheduler, setSelectedScheduler] = useState(null);
-    const [selectedRowId, setSelectedRowId] = useState(null);
+    const [selectedRowId, setSelectedRowId] = useState(0);
     const [loading, setLoading] = useState(true);
     const [infoDialog, setInfoDialog] = useState({
         open: false,
@@ -566,7 +566,7 @@ const ActivatedTask = () => {
                     columns={columns}
                     data={schedulerData}
                     renderDetailPanel={renderSchedulerDetail}
-                    onRowSelect={handleRowSelect}
+                    onRowClick={handleRowSelect}
                     searchable={false}
                     selectable={true}
                     hidePagination={false}

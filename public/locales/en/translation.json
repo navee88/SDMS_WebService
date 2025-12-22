@@ -141,7 +141,8 @@
     "update":"Update",
     "save":"Save",
     "check":"Check",
-    "edit":"Edit"
+    "edit":"Edit",
+    "authorize":"Authorize"
   },
   "label": {
     "email": "E-mail",
@@ -216,7 +217,10 @@
     "siteCode":"Site code",
     "live":"Live",
     "taskType" : "Task Type",
-    "taskName":"Task Name"
+    "taskName":"Task Name",
+    "deletionmarkedon": "Deletion Marked On",
+    "modifiedOn":"Modified On",
+    "serialNo":"Serial No"
   },
   "statuses": {
     "activated": "Activated",
@@ -231,7 +235,8 @@
     "reviewed": "Reviewed",
     "started": "Started",
     "stopped": "Stopped",
-    "client":"Client"
+    "client":"Client",
+    "status":"Status"
  
   },
  
@@ -664,6 +669,34 @@
     "assigneduser": "Assigned User",
     "edit": "Edit",
     "submit": "Submit",
-    "close": "Close"
+    "close": "Close",
+    "lookingfor": "Looking for",
+    "username": "Username",
+    "password": "Password",
+    "nodata": "No Data to display",
+    "chat": "Chat",
+    "refresh": "Refresh",
+    "logout": "Logout",
+    "lastloggedonutc": "Last Logged On (UTC)",
+    "passwordexpiredonutc": "Password Expiry Date (UTC)",
+    "createdonutc": "Created On (UTC)",
+    "modifiedonutc": "Modified On (UTC)",
+    "refreshsuccess": "Online users refreshed successfully",
+    "unauthorizedlogout": "You are not authorized to force logout users",
+    "userinactive": "Selected user is already inactive",
+    "forcelogoutsuccess": "Force logout successful for",
+    "forcelogoutfailed": "Force logout failed",
+    "confirmlogout": "Confirm Logout",
+    "logoutconfirmation": "Are you sure you want to force logout user",
+    "confirm": "Confirm",
+    "initiatechat": "Initiating chat with",
+    "nogroup": "No Group",
+    "active": "Active",
+    "inactive": "InActive",
+    "modulename": "Module Name",
+    "taskname": "Task Name",
+    "delete":"Delete"
+
+    
   }
 }

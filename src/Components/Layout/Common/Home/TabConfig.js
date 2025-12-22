@@ -42,7 +42,7 @@ import UserGroup from "../../../Home/SubFolders/UserManagementFolder/UserManagem
 import UserMaster from "../../../Home/SubFolders/UserManagementFolder/UserManagement/UserMaster";
 import UserRights from "../../../Home/SubFolders/UserManagementFolder/UserManagement/UserRights";
 import OnlineUsers from "../../../Home/SubFolders/UserManagementFolder/UserManagement/OnlineUsers";
-import Passwordpolicy from "../../../../Pages/Home/UserManagment/Passwordpolicy";
+import PasswordPolicy from "../../../Home/SubFolders/UserManagementFolder/PasswordPolicy/PasswordPolicy"; //deletee
 import DataScheduler from "../../../Home/SubFolders/Scheduler/DataScheduler/DataScheduler";
 import DeactivatedTask from "../../../Home/SubFolders/Scheduler/ViewEditScheduler/DeactivatedTask";
 import ActivatedTask from "../../../Home/SubFolders/Scheduler/ViewEditScheduler/ActivatedTask";
@@ -139,7 +139,7 @@ export const tabConfig = {
   },
   //completed
   PasswordPolicy:{
-    "Password Policy": { content: <Passwordpolicy /> },
+    "Password Policy": { content: <PasswordPolicy /> },//change to pages
   },
     //completed
   AuditTrailHistory: {

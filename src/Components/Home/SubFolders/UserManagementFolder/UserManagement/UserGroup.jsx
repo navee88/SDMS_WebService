@@ -199,10 +199,11 @@ const UserGroup = () => {
             key: 'L01UserGroupName',
             label: t('usermanagement.usergroupname'),
             width: 200,
-            EnableSearch:true,
+            enableSearch:true,
             render: (row, isSelected) => (
                 <div style={{ 
                     fontSize: '12px', 
+                    fontFamily:'verdana',
                     color: '#374151',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -217,10 +218,12 @@ const UserGroup = () => {
             key: 'gStatus',
             label: t('usermanagement.userstatus'),
             width: 150,
-            EnableSearch:true,
+            
+            enableSearch:true,
             render: (row, isSelected) => (
                 <div style={{ 
                     fontSize: '12px', 
+                    fontFamily:'verdana',
                     color: row.gStatus === 'Active' ? '#0a7350' : '#ef4444',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -397,12 +400,12 @@ const UserGroup = () => {
             </div>
 
             {/* Main GridLayout with Details Panel */}
-            <div style={{ flex: 1 ,fontFamily: 'verdana, sans-serif',}}>
+            <div style={{ flex: 1 }}>
                 <GridLayout
                     columns={columns}
                     data={userGroupData}
                     renderDetailPanel={renderGroupDetail}
-                    onRowSelect={handleRowSelect}
+                    onRowClick={handleRowSelect}
                     searchable={false}
                     selectable={true}
                     hidePagination={false}

@@ -773,6 +773,7 @@ export default function InstrumentDataPage() {
                 columns={mergeColumns}
                 data={mergeRows}
                 hidePagination={false}
+                // onRowClick={}
               />
             </div>
           </>
