@@ -142,7 +142,8 @@
     "save":"Save",
     "check":"Check",
     "edit":"Edit",
-    "authorize":"Authorize"
+    "authorize":"Authorize",
+    "open":"Open"
   },
   "label": {
     "email": "E-mail",
@@ -220,7 +221,9 @@
     "taskName":"Task Name",
     "deletionmarkedon": "Deletion Marked On",
     "modifiedOn":"Modified On",
-    "serialNo":"Serial No"
+    "serialNo":"Serial No",
+    "name":"Name" ,
+    "CRDate":"CRDate"
   },
   "statuses": {
     "activated": "Activated",
