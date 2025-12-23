@@ -634,10 +634,10 @@ export default function ServerFileDeleteScheduler() {
 
       {/* ---------------- ACTION BUTTONS ---------------- */}
       <div className="flex justify-end gap-2 p-4 pb-0">
-        <ActionButton icon={FaCheck} label={t("usermanagement.selectall")} onClick={handleSelectAll} bgColor="bg-gray-500/10" textColor="text-blue-500" />
-        <ActionButton icon={FaRegCircleCheck } label={t("button.authorize")} onClick={handleAuthorize} bgColor="bg-gray-500/10" textColor="text-blue-500" />
-        <ActionButton icon={MdPrint} label={t("button.print")} onClick={handlePrint} bgColor="bg-gray-500/10" textColor="text-blue-500" />
-        <ActionButton icon={TiExport} label={t("button.export")} onClick={handleExport} bgColor="bg-gray-500/10" textColor="text-blue-500" />
+        <ActionButton icon={FaCheck} label={t("usermanagement.selectall")} onClick={handleSelectAll} bgColor="bg-gray-500/10" textColor="text-blue-600" />
+        <ActionButton icon={FaRegCircleCheck } label={t("button.authorize")} onClick={handleAuthorize} bgColor="bg-gray-500/10" textColor="text-blue-600" />
+        <ActionButton icon={MdPrint} label={t("button.print")} onClick={handlePrint} bgColor="bg-gray-500/10" textColor="text-blue-600" />
+        <ActionButton icon={TiExport} label={t("button.export")} onClick={handleExport} bgColor="bg-gray-500/10" textColor="text-blue-600" />
       </div>
 
       <GridLayout
