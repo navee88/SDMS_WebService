@@ -143,6 +143,7 @@
     "check":"Check",
     "edit":"Edit",
     "authorize":"Authorize",
+    "retry":"Retry",
     "open":"Open"
   },
   "label": {
@@ -222,8 +223,9 @@
     "deletionmarkedon": "Deletion Marked On",
     "modifiedOn":"Modified On",
     "serialNo":"Serial No",
-    "name":"Name" ,
-    "CRDate":"CRDate"
+    "name":"Name",
+    "CRDate":"CRDate",
+    "serviceName":"Service Name"
   },
   "statuses": {
     "activated": "Activated",
@@ -698,8 +700,8 @@
     "inactive": "InActive",
     "modulename": "Module Name",
     "taskname": "Task Name",
-    "delete":"Delete"
-
-    
+    "delete":"Delete",
+    "nogroupsavailable": "No Groups Available"
+        
   }
 }

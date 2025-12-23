@@ -4,9 +4,15 @@ import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import Errordialog from "../../../../Layout/Common/Errordialog";
 import { MdOutlineThumbUp } from "react-icons/md";
 import { BsCheck2Square } from "react-icons/bs";
+import { useDownloadScheduler } from "../../../../../Context/DownloadSchedulerContext";
+import { useEffect } from "react";
+
+
+
  
 export default function AutoDownloadConfiguration() {
   const { t } = useTranslation();
+  const { autoConfigData } = useDownloadScheduler();
  
   const [pathType, setPathType] = useState("LOCAL"); // LOCAL | UNC
   const isUNC = pathType === "UNC";
@@ -16,6 +22,12 @@ export default function AutoDownloadConfiguration() {
   const [clientName, setClientName] = useState("");
   const [downloadPath, setDownloadPath] = useState("");
   const [structureType, setStructureType] = useState("");
+  const [filter, setFilter] = useState("");
+const [sourcePath, setSourcePath] = useState("");
+const [uncStatus, setUncStatus] = useState("");
+const [username, setUsername] = useState("");
+const [fileSettings, setFileSettings] = useState("");
+
  
   // 🔹 Error states
   const [instrumentError, setInstrumentError] = useState(false);
@@ -26,6 +38,23 @@ export default function AutoDownloadConfiguration() {
   // 🔹 Popup
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+useEffect(() => {
+  if (!autoConfigData) return;
+
+  setInstrument(autoConfigData.instrument ?? "");
+  setClientName(autoConfigData.clientName ?? "");
+  setDownloadPath(autoConfigData.downloadPath ?? "");
+  setFilter(autoConfigData.filter ?? "");
+  setSourcePath(autoConfigData.sourcepath ?? "");
+  setUsername(autoConfigData.username ?? "");
+  setFileSettings(autoConfigData.filesettings ?? "");
+
+  // ✅ THIS IS THE KEY LINE
+  setPathType(autoConfigData.uncStatus ? "UNC" : "LOCAL");
+}, [autoConfigData]);
+
+
+
  
   const handleSave = () => {
     let hasError = false;
@@ -156,7 +185,13 @@ export default function AutoDownloadConfiguration() {
               {t("scheduler.sourcepath")} <span className="text-red-500">*</span>
             </label>
             <div className="w-80">
-              <AnimatedDropdown options={["Daily", "Weekly"]} />
+              <AnimatedDropdown
+                  value={sourcePath}
+                  options={["Daily", "Weekly"]}
+                  allowFreeInput
+                  onChange={(e) => setSourcePath(e.target.value)}
+                />
+
             </div>
           </div>
  
@@ -200,9 +235,11 @@ export default function AutoDownloadConfiguration() {
               {t("label.filter")}
             </label>
             <input
-              defaultValue="*.*"
-              className="w-full border-b py-2 focus:outline-none focus:border-blue-500"
-            />
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="w-full border-b py-2 focus:outline-none focus:border-blue-500"
+              />
+
           </div>
  
           {/* Toggle */}
@@ -260,12 +297,13 @@ export default function AutoDownloadConfiguration() {
             </label>
             <div className="w-80">
               <AnimatedDropdown
-                value={structureType}
+                value={fileSettings}
                 options={["Original", "File Only"]}
                 required
                 showError={structureError}
+                allowFreeInput
                 onChange={(e) => {
-                  setStructureType(e.target.value);
+                  setFileSettings(e.target.value);
                   setStructureError(false);
                 }}
               />

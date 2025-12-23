@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState ,useEffect} from "react";
 import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
 import { FaFilter } from "react-icons/fa";
@@ -28,9 +28,10 @@ const [appliedFilters, setAppliedFilters] = useState({
 
 
 
-  const [selectedRow, setSelectedRow] = useState(null);
-  const [refreshCount, setRefreshCount] = useState(0);
+  const [selectedRow, setSelectedRow] = useState(1);
   const [isFilterApplied, setIsFilterApplied] = useState(false); // Track if filter is applied
+
+
   const handleDraftChange = (e) => {
   setDraftFilters({
     ...draftFilters,
@@ -38,15 +39,9 @@ const [appliedFilters, setAppliedFilters] = useState({
   });
 };
 
-
-  const handleFilterChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
-  };
-
   /* ------------------ FILTER FUNCTION ------------------ */
 const handleFilterClick = () => {
   setAppliedFilters(draftFilters); // 🔥 APPLY ONLY HERE
-  setSelectedRow(null);
 };
 
 
@@ -62,7 +57,6 @@ const handleRefreshClick = () => {
     service: "All",
   });
 
-  setSelectedRow(null);
 };
 
 
@@ -83,9 +77,9 @@ const handleRefreshClick = () => {
         client: "AGD54",
         serviceName: "RoboticsServiceManager",
         status: "Running",
-        lastModified: "-",
-        startTime: "-",
-        runningTime: "-"
+        lastModified: "2024-11-21 16:29:56",
+        startTime: "2025-10-06 10:04:40",
+        runningTime: "2025-10-07 11:44:44"
       },
       {
         id: 3,
@@ -123,6 +117,13 @@ const handleRefreshClick = () => {
     return clientMatch && serviceMatch;
   });
 }, [originalData, appliedFilters]);
+  useEffect(() => {
+  if (filteredData.length > 0) {
+    setSelectedRow(filteredData[0]); // 🔥 select first row
+  } else {
+    setSelectedRow(null);
+  }
+}, [filteredData]);
 
 
   /* ------------------ GRID COLUMNS ------------------ */
@@ -192,19 +193,24 @@ const handleRefreshClick = () => {
   return (
     <div className="bg-white p-4 space-y-4">
       {/* ---------- FILTER BAR ---------- */}
-      <div className="flex items-end gap-4">
+      <div className="flex pl-4 items-end gap-4">
+        <label className="mb-5 block text-gray-600 text-[13px] font-semibold">
+                  {t("label.clientName")}
+                </label>
         <div className="w-60">
-                <AnimatedDropdown
-          label="Client Name"
+          <AnimatedDropdown
+          
           name="client"
           value={draftFilters.client}
           options={clientOptions}
           onChange={handleDraftChange}
         />
         </div>
+        <label className="mb-5 block text-gray-600 text-[13px] font-semibold">
+                  {t("label.serviceName")}
+                </label>
         <div className="w-60">
             <AnimatedDropdown
-              label="Service Name"
               name="service"
               value={draftFilters.service}
               options={serviceOptions}
@@ -217,14 +223,14 @@ const handleRefreshClick = () => {
             icon={FaFilter}
             label={t("button.filter")}
             bgColor="bg-gray-500/10"
-            textColor="text-blue-700"
+            textColor="text-blue-600"
             onClick={handleFilterClick}
           />
           <ActionButton
             icon={IoMdRefresh}
             label={t("button.refresh")}
             bgColor="bg-gray-500/10"
-            textColor="text-blue-700"
+            textColor="text-blue-600"
             onClick={handleRefreshClick}
           />
         </div>
@@ -259,7 +265,7 @@ const ActionButton = ({ icon: Icon, label, bgColor, textColor, onClick }) => (
     onClick={onClick}
     className={`flex items-center gap-1 px-3 py-2 text-[12px] font-bold rounded ${bgColor} ${textColor}`}
   >
-    {Icon && <Icon size={14} />}
+    {Icon && <Icon className="w-4 h-4" />} 
     {label}
   </button>
 );
