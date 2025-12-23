@@ -142,7 +142,9 @@
     "save":"Save",
     "check":"Check",
     "edit":"Edit",
-    "authorize":"Authorize"
+    "authorize":"Authorize",
+    "retry":"Retry",
+    "open":"Open"
   },
   "label": {
     "email": "E-mail",
@@ -220,7 +222,10 @@
     "taskName":"Task Name",
     "deletionmarkedon": "Deletion Marked On",
     "modifiedOn":"Modified On",
-    "serialNo":"Serial No"
+    "serialNo":"Serial No",
+    "name":"Name",
+    "CRDate":"CRDate",
+    "serviceName":"Service Name"
   },
   "statuses": {
     "activated": "Activated",
@@ -695,8 +700,8 @@
     "inactive": "InActive",
     "modulename": "Module Name",
     "taskname": "Task Name",
-    "delete":"Delete"
-
-    
+    "delete":"Delete",
+    "nogroupsavailable": "No Groups Available"
+        
   }
 }
