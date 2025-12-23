@@ -10,6 +10,10 @@ import * as XLSX from "xlsx"; // Add this import
 import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
 import Errordialog from "../../../../Layout/Common/Errordialog";
 import AuditTrail from "../../../../Layout/Common/AuditTrail";
+import { useDownloadScheduler } from "../../../../../Context/DownloadSchedulerContext";
+
+
+
 
 export default function ViewDownloadConfiguration() {
   const { t } = useTranslation();
@@ -24,6 +28,10 @@ export default function ViewDownloadConfiguration() {
   /* ---------- AUDIT POPUP ---------- */
   const [showAudit, setShowAudit] = useState(false);
   const [auditAction, setAuditAction] = useState("");
+  const {
+  setAutoConfigData,
+  setActiveTabIndex
+} = useDownloadScheduler();
 
   /* ---------- BUTTON ---------- */
   const PrimaryButton = ({ icon: Icon, label, onClick }) => (
@@ -52,6 +60,8 @@ export default function ViewDownloadConfiguration() {
           taskFilter: "*.*",
           taskCompleted: "completed",
           uncUsername: "",
+          fileSettings: "Original",
+
         },
         {
           id: 2,
@@ -65,6 +75,8 @@ export default function ViewDownloadConfiguration() {
           taskFilter: "*.csv",
           taskCompleted: "pending",
           uncUsername: "admin",
+          fileSettings: "Original",
+
         },
       ];
 
@@ -134,7 +146,7 @@ export default function ViewDownloadConfiguration() {
       setShowErrorDialog(true);
     }
   };
-
+console.log(selectedRow);
   /* ---------- PRINT FUNCTION ---------- */
   const handlePrint = () => {
     if (!data || data.length === 0) {
@@ -480,27 +492,25 @@ export default function ViewDownloadConfiguration() {
   );
 
   /* ---------- HANDLER FOR AUDITTRAIL SUBMIT ---------- */
-  const handleAuthorized = (auditData) => {
-    console.log("Authorized Data:", auditData, "Action:", auditAction, "Row:", selectedRow);
+  const handleAuthorized = () => {
+  // 1️⃣ send selected row
+  setAutoConfigData({
+    instrument: selectedRow.instrument,
+    clientName: selectedRow.downloadClientName,
+    downloadPath: selectedRow.downloadPath,
+    filter: selectedRow.taskFilter,
+    sourcepath: selectedRow.sourcePath,
+  uncStatus: selectedRow.uncStatus,
+  username: selectedRow.uncUsername,
+  filesettings: selectedRow.fileSettings,
+    });
 
-    // Here you can update your backend or row state
-    // Example: mark row as authorized
-    if (auditAction === "ACTIVE") {
-      setData((prev) =>
-        prev.map((r) =>
-          r.id === selectedRow.id ? { ...r, taskStatus: "active" } : r
-        )
-      );
-    } else if (auditAction === "INACTIVE") {
-      setData((prev) =>
-        prev.map((r) =>
-          r.id === selectedRow.id ? { ...r, taskStatus: "inactive" } : r
-        )
-      );
-    }
+  // 2️⃣ switch to Auto Download Configuration tab
+  setActiveTabIndex(0);
 
-    setShowAudit(false);
-  };
+  setShowAudit(false);
+};
+
 
   return (
     <div className="bg-white p-4 space-y-4">
