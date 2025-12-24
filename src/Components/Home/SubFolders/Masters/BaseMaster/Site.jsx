@@ -255,6 +255,36 @@ function Site() {
         setShowAuditTrail(true);
     };
 
+    const handlePopupReset = () => {
+        if (activePopup === "Edit Site" && selectedRecord) {
+            // Reset to original values (keep siteCode)
+            setFormData({
+                siteCode: selectedRecord.siteCode,
+                siteName: '',
+                siteAddress:'',
+                contactPerson: '',
+                mobileNo:'',
+                faxNo: '',
+                email:''
+            });
+        } else {
+            // For Add Site clear everything
+            setFormData({
+                siteCode: '',
+                siteName: '',
+                siteAddress: '',
+                contactPerson: '',
+                mobileNo: '',
+                faxNo: '',
+                email: ''
+            });
+        }
+
+        // Clear validation errors also
+        setValidationErrors({});
+    };
+
+
     const handleRowClick = (record) => {
         setSelectedRecord(record);
     };
@@ -402,7 +432,7 @@ function Site() {
                         <SquareCheckBig className="w-4 h-4" /> {t("button.save")}
                     </button>
                     <button
-                        onClick={handlePopupSubmit}
+                        onClick={handlePopupReset}
                         className="flex items-center gap-2 px-3 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-xs font-semibold rounded transition-colors"
                     >
                         {t("button.reset")}
@@ -504,7 +534,7 @@ function Site() {
                         <SquareCheckBig className="w-4 h-4" /> {t("button.save")}
                     </button>
                     <button
-                        onClick={handlePopupSubmit}
+                        onClick={handlePopupReset}
                         className="flex items-center gap-2 px-3 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-xs font-semibold rounded transition-colors"
                     >
                         {t("button.reset")}

@@ -257,7 +257,7 @@ const getCurrentDate = () => {
 
 
 
-const UsersPage = () => {
+const UsersPage = ({ filters, refreshKey }) => {
   const [userData, setUserData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -330,12 +330,31 @@ const UsersPage = () => {
 
   useEffect(() => {
     setLoading(true);
+
+    // MOCK FILTERING (local)
+    let filteredData = mockData;
+
+    if (filters?.fromDate && filters?.toDate) {
+      // example condition – customize later
+      filteredData = mockData.filter(item =>
+        item.instrument // placeholder logic
+      );
+    }
+
     setTimeout(() => {
-      setUserData(mockData);
+      setUserData(filteredData);
       setLoading(false);
     }, 300);
 
-  }, []);
+    //  API 
+    /*
+    axios.post('/api/upload-monitor/data', filters)
+      .then(res => setUserData(res.data))
+      .finally(() => setLoading(false));
+    */
+
+  }, [filters, refreshKey]);
+
 
   const userColumns = useMemo(() => [
     {
@@ -396,7 +415,7 @@ const UsersPage = () => {
   }
 
 
-  return ( 
+  return (
     <div className="flex flex-col mt-2">
       <GridLayout
         columns={userColumns}
@@ -421,6 +440,15 @@ const UploadMonitor = () => {
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
   const [filename, setFilename] = useState("");
+  // filter and refresh state
+  const [filters, setFilters] = useState({
+    recordsDuration,
+    fromDate,
+    toDate,
+  });
+
+  const [refreshKey, setRefreshKey] = useState(0);
+
 
 
   const menuRef = useRef(null);
@@ -567,6 +595,19 @@ const UploadMonitor = () => {
   const { currentLanguage, changeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
 
+  const handleFilter = () => {
+    const payload = {
+      duration: recordsDuration,
+      fromDate,
+      toDate,
+    };
+    setFilters(payload);
+  };
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-15px)] font-roboto rounded-md">
       <div className="bg-[#f0f2f5] px-4 pt-4 pb-2 relative rounded-t-md z-20">
@@ -606,8 +647,9 @@ const UploadMonitor = () => {
 
 
             <div className="flex items-end gap-2 pb-2 ml-4">
-              <PrimaryButton icon={Filter} label={t('button.filter')} />
-              <PrimaryButton icon={RefreshCw} label={t('button.refresh')} />
+              <PrimaryButton icon={Filter} label={t('button.filter')} onClick={handleFilter} />
+              <PrimaryButton icon={RefreshCw} label={t('button.refresh')} onClick={handleRefresh} />
+
             </div>
           </div>
         ) : (
@@ -635,7 +677,7 @@ const UploadMonitor = () => {
       <div className="px-4 font-roboto h-[calc(100vh-150px)] flex flex-col">
         {/* UsersPage takes full width & height */}
         <div className="flex-1 overflow-hidden">
-          <UsersPage />
+          <UsersPage filters={filters} refreshKey={refreshKey} />
         </div>
       </div>
 
