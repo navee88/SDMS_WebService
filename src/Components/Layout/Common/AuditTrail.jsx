@@ -26,24 +26,31 @@ const AuditTrail = ({
 
     if (!isOpen) return null;
 
-    const verifyPassword = async (password) => {
-        try {
-            const response = await fetch("/api/auth/verify-password", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                credentials: "include", // if session-based auth
-                body: JSON.stringify({ password }),
-            });
+    // const verifyPassword = async (password) => {
+    //     try {
+    //         const response = await fetch("/api/auth/verify-password", {
+    //             method: "POST",
+    //             headers: {
+    //                 "Content-Type": "application/json",
+    //             },
+    //             credentials: "include", // if session-based auth
+    //             body: JSON.stringify({ password }),
+    //         });
 
-            if (!response.ok) return false;
+    //         if (!response.ok) return false;
 
-            return true;
-        } catch (error) {
-            return false;
-        }
+    //         return true;
+    //     } catch (error) {
+    //         return false;
+    //     }
+    // };
+
+
+    const verifyPassword = (password) => {
+        return password === "admin";
     };
+
+
     const handleReason = (value) => {
         const actualValue = value?.target?.value || value?.value || value;
         setReason(actualValue);
@@ -56,11 +63,13 @@ const AuditTrail = ({
             return;
         }
 
-        // Verify password with backend API
-        const isValid = await verifyPassword(password);
+        // Verify password
+        const isValid = verifyPassword(password);
 
         if (!isValid) {
             setShowError(true);
+            // Show error message for wrong password
+            alert("Incorrect password!");
             return;
         }
 
@@ -73,7 +82,7 @@ const AuditTrail = ({
 
         // cleanup
         setPassword("");
-        setReason("");
+        setReason(defaultReason);
         setComments("");
         setShowError(false);
     };

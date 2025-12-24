@@ -12,6 +12,7 @@ import {
     PackageOpen,
     PackageOpenIcon,
     ArchiveIcon,
+    SquareCheckBig,
 } from 'lucide-react';
 import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
 import exportIcon from "../../../../../Assests/Icons/export-icon.png"
@@ -20,6 +21,160 @@ import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import { useLanguage } from '../../../../../Context/LanguageContext';
 import AuditTrail from '../../../../Layout/Common/AuditTrail';
 import Errordialog from '../../../../Layout/Common/Errordialog';
+import CustomPopup from '../../../../Layout/Common/Popup';
+
+
+const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => {
+    const [selectedArchiveId, setSelectedArchiveId] = useState(archiveList.length > 0 ? archiveList[0].id : null);
+    const { t } = useTranslation();
+
+    const handleRowClick = (id) => {
+        setSelectedArchiveId(id);
+    };
+
+    const archiveColumns = useMemo(() => [
+        {
+            key: 'name',
+            label: t("label.name"),
+            width: 200,
+            enableSearch: true,
+            render: (row) => (
+                <span className={`text-gray-700 ${selectedArchiveId === row.id ? 'font-bold text-blue-600' : ''}`}>
+                    {row.name}
+                </span>
+            )
+        },
+        {
+            key: 'createDate',
+            label: t("label.CRDate"),
+            width: 150,
+            enableSearch: true,
+            render: (row) => (
+                <span className={`text-gray-700 ${selectedArchiveId === row.id ? 'font-bold text-blue-600' : ''}`}>
+                    {row.createDate}
+                </span>
+            )
+        }
+    ], [selectedArchiveId, t]);
+
+    const handleOpen = () => {
+        if (!selectedArchiveId) {
+            alert('Please select an archive');
+            return;
+        }
+        const selectedArchive = archiveList.find(a => a.id === selectedArchiveId);
+        if (!selectedArchive) {
+            alert('Archive not found');
+            return;
+        }
+        onArchiveSelect(selectedArchive);
+        onClose();
+    };
+
+    return (
+        <CustomPopup
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Open Archive"
+            content={
+                <div className="p-4">
+                    <div className="mb-4" style={{ height: '400px' }}>
+                        <GridLayout
+                            columns={archiveColumns}
+                            data={archiveList}
+                            onRowClick={handleRowClick}
+                            selectedRows={selectedArchiveId ? [selectedArchiveId] : []}
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200">
+                        <button
+                            onClick={handleOpen}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-sm font-semibold rounded transition-colors"
+                        >
+                            <CheckSquare className="w-4 h-4" /> {t("button.open")}
+                        </button>
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
+                        >
+                            {t("button.close")}
+                        </button>
+                    </div>
+                </div>
+            }
+        />
+    );
+};
+
+
+// const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => {
+//     const [selectedArchiveId, setSelectedArchiveId] = useState(null);
+//     const { t } = useTranslation();
+
+//     const handleRowSelection = (id) => {
+//         setSelectedArchiveId(id);
+//     };
+
+//     const archiveColumns = useMemo(() => [
+//         {
+//             key: 'name',
+//             label: t("label.name"),
+//             width: 120,
+//             enableSearch: true,
+//             render: (row) => <span className="text-gray-700">{row.name}</span>
+//         },
+//         {
+//             key: 'createDate',
+//             label: t("label.CRDate"),
+//             width: 120,
+//             enableSearch: true,
+//             render: (row) => <span className="text-gray-700">{row.createDate}</span>
+//         }
+//     ], [selectedArchiveId, t]);
+
+//     const handleOpen = () => {
+//         if (!selectedArchiveId) {
+//             alert('Please select an archive');
+//             return;
+//         }
+//         const selectedArchive = archiveList.find(a => a.id === selectedArchiveId);
+//         onArchiveSelect(selectedArchive.name);
+//     };
+
+//     return (
+//         <CustomPopup
+//             isOpen={isOpen}
+//             onClose={onClose}
+//             title="Open Archive"
+//             content={
+//                 <div className="p-4">
+//                     <div className="mb-4" style={{ height: '650px' }}>
+//                         <GridLayout
+//                             columns={archiveColumns}
+//                             data={archiveList}
+//                             onRowClick={handleRowSelection}
+//                             selectedRows={selectedArchiveId ? [selectedArchiveId] : []}
+//                         />
+//                     </div>
+//                     <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200">
+//                         <button
+//                             onClick={handleOpen}
+//                             className="flex items-center gap-2 px-4 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-sm font-semibold rounded transition-colors"
+//                         >
+//                             <CheckSquare className="w-4 h-4" /> {t("button.open")}
+//                         </button>
+//                         <button
+//                             onClick={onClose}
+//                             className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
+//                         >
+//                             {t("button.close")}
+//                         </button>
+//                     </div>
+//                 </div>
+//             }
+//         />
+//     );
+// };
 
 const ACTION_ICONS = {
     "Open": FolderOpen,
@@ -396,7 +551,7 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.reason}</span>
         }
-    ], [selectedRows,t]);
+    ], [selectedRows, t]);
 
     const reviewHistoryColumns = useMemo(() => [
         {
@@ -408,7 +563,7 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
         {
             key: 'moduleName',
             label: t('label.moduleName'),
-            width: 150,
+            width: 180,
             render: (row) => <span className="text-gray-700">{row.moduleName}</span>
         },
         {
@@ -426,7 +581,7 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
         {
             key: 'reviewStatus',
             label: t('label.reviewStatus'),
-            width: 150,
+            width: 180,
             render: (row) => <span className="text-gray-700">{row.reviewStatus}</span>
         },
         {
@@ -531,7 +686,7 @@ const MOCK_DATA = [
     {
         id: 1,
         select: false,
-        moduleName: "User Management",
+        moduleName: "Audit Trail",
         actions: "Create",
         transactionOn: "08/12/2025",
         reviewStatus: "Pending",
@@ -563,7 +718,7 @@ const MOCK_DATA = [
     {
         id: 3,
         select: false,
-        moduleName: "Instrument Setup",
+        moduleName: "Audit Trail",
         actions: "Delete",
         transactionOn: "07/12/2025",
         reviewStatus: "Rejected",
@@ -712,6 +867,39 @@ const AuditTrailHistory = () => {
     const [showReviewHistory, setShowReviewHistory] = useState(false);
     const [showAuditTrail, setShowAuditTrail] = useState(false);
     const [errorDialog, setErrorDialog] = useState({ show: false, message: "", type: "" });
+    const [showCreateArchiveDialog, setShowCreateArchiveDialog] = useState(false);
+    const [showOpenArchiveDialog, setShowOpenArchiveDialog] = useState(false);
+    const [showOpenArchivePopup, setShowOpenArchivePopup] = useState(false);
+    const [selectedArchiveName, setSelectedArchiveName] = useState("");
+    const [showCreateAuditLog, setShowCreateAuditLog] = useState(false);
+    const [showOpenAuditLog, setShowOpenAuditLog] = useState(false);
+    const [archiveList, setArchiveList] = useState([
+        {
+            id: 1,
+            name: "CFRArchiving_5_20251223",
+            createDate: "2025-12-23 14:02:07"
+        },
+        {
+            id: 2,
+            name: "CFRArchiving_4_20251223",
+            createDate: "2025-12-23 13:19:36"
+        },
+        {
+            id: 3,
+            name: "CFRArchiving_3_20251223",
+            createDate: "2025-12-23 13:18:43"
+        },
+        {
+            id: 4,
+            name: "CFRArchiving_2_20251223",
+            createDate: "2025-12-23 13:17:52"
+        },
+        {
+            id: 5,
+            name: "CFRArchiving_1_20251222",
+            createDate: "2025-12-22 18:22:00"
+        }
+    ]);
 
 
     const menuRef = useRef(null);
@@ -907,6 +1095,17 @@ const AuditTrailHistory = () => {
         setShowAuditTrail(true);
     };
 
+    const handleCreateArchieve = () => {
+
+        setErrorDialog({
+            show: true,
+            message: "Do you want to Create an Archive?",
+            type: "information"
+        });
+
+        setShowAuditTrail(true);
+    }
+
     const handleAuditTrailAuthorized = (data) => {
         // Update the selected rows with review status
         setUserData(prev => prev.map(row =>
@@ -917,8 +1116,137 @@ const AuditTrailHistory = () => {
         setShowAuditTrail(false);
         setSelectedRows([]);
     };
+
+    const handleCreateArchive = () => {
+        setShowCreateArchiveDialog(true);
+    };
+
+    const handleCreateArchiveConfirm = () => {
+        setShowCreateArchiveDialog(false);
+        setShowCreateAuditLog(true);
+    };
+
+    const handleArchiveAuditLogAuthorized = (data) => {
+        const newArchive = {
+            id: archiveList.length + 1,
+            name: `CFRArchiving_${archiveList.length + 1}_${new Date().toISOString().split('T')[0].replace(/-/g, '')}`,
+            createDate: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        };
+        setArchiveList(prev => [newArchive, ...prev]);
+        setShowCreateAuditLog(false);
+
+        // Show success message and keep the current data visible
+        setErrorDialog({
+            show: true,
+            message: `Archive "${newArchive.name}" created successfully!`,
+            type: "success"
+        });
+    };
+
+    const handleOpenArchive = () => {
+        setShowOpenArchiveDialog(true);
+    };
+
+    const handleOpenArchiveConfirm = () => {
+        setShowOpenArchiveDialog(false);
+        setShowOpenAuditLog(true);
+    };
+
+    const handleOpenArchiveAuditLogAuthorized = (data) => {
+        setShowOpenAuditLog(false);
+        setShowOpenArchivePopup(true);
+    };
+
+    const handleArchiveSelect = (archive) => {
+        setSelectedArchiveName(archive.name);
+        setShowOpenArchivePopup(false);
+
+        // Load archived data - filter or load specific archived records
+        // For now, showing the original data. You can filter by archive.id or load from backend
+        const archivedData = MOCK_DATA.filter(row => row.id <= 5); // Example: load specific archived records
+
+        setUserData(archivedData);
+        setShowReviewHistory(false);
+        setSelectedRows([]);
+    };
+
+    //Reset Function
+    const handleReset = () => {
+        setSelectedUser("All");
+        setSelectedModule("All");
+        setSelectedAuditType("All");
+        setRecordsDuration("Current Date");
+        setFromDate(today);
+        setToDate(today);
+        setSelectedRows([]);
+        setShowReviewHistory(false);
+        setSelectedArchiveName("");
+
+        // Reset to original mock data
+        // setLoading(true);
+        // setTimeout(() => {
+        //     setUserData(MOCK_DATA);
+        //     setLoading(false);
+        // }, 300);
+    };
+
+
+    const handleFilter = () => {
+        setLoading(true);
+
+        setTimeout(() => {
+            let filteredData = [...MOCK_DATA];
+
+            // Filter by User Name
+            if (selectedUser !== "All") {
+                filteredData = filteredData.filter(row =>
+                    row.userName && row.userName.toLowerCase().includes(selectedUser.toLowerCase())
+                );
+            }
+
+            // Filter by Module Name
+            if (selectedModule !== "All") {
+                filteredData = filteredData.filter(row =>
+                    row.moduleName && row.moduleName.toLowerCase().includes(selectedModule.toLowerCase())
+                );
+            }
+
+            // Filter by Audit Type
+            if (selectedAuditType !== "All") {
+                // You can add logic based on your audit type field
+                // For now, keeping all data for "All"
+            }
+
+            // Filter by Date Range
+            const { startDate, endDate } = getDateRange(recordsDuration, fromDate, toDate);
+
+            filteredData = filteredData.filter(row => {
+                if (!row.transactionOn) return false;
+
+                const rowDate = row.transactionOn; // Format: "08/12/2025"
+
+                // Convert to comparable format
+                const [rowDay, rowMonth, rowYear] = rowDate.split('/');
+                const rowDateObj = new Date(`${rowYear}-${rowMonth}-${rowDay}`);
+
+                const [startDay, startMonth, startYear] = startDate.split('/');
+                const startDateObj = new Date(`${startYear}-${startMonth}-${startDay}`);
+
+                const [endDay, endMonth, endYear] = endDate.split('/');
+                const endDateObj = new Date(`${endYear}-${endMonth}-${endDay}`);
+
+                return rowDateObj >= startDateObj && rowDateObj <= endDateObj;
+            });
+
+            setUserData(filteredData);
+            setLoading(false);
+            setSelectedRows([]);
+            setShowReviewHistory(false);
+        }, 300);
+    };
     return (
         <div className="flex flex-col w-full font-roboto rounded-md">
+
             <div className="bg-[#f0f2f5] px-4 pt-4 pb-2 relative rounded-t-md z-20">
                 {isOpen ? (
                     <div className="flex flex-wrap items-end gap-3.5 mb-2">
@@ -991,8 +1319,8 @@ const AuditTrailHistory = () => {
                             </>
                         )}
                         <div className="flex items-end gap-2 pb-2 ml-4">
-                            <PrimaryButton icon={Filter} label={t('button.filter')} />
-                            <PrimaryButton icon={RotateCwIcon} label={t('button.reset')} />
+                            <PrimaryButton icon={Filter} label={t('button.filter')} onClick={handleFilter}/>
+                            <PrimaryButton icon={RotateCwIcon} label={t('button.reset')} onClick={handleReset} />
                         </div>
                     </div>
                 ) : (
@@ -1034,10 +1362,17 @@ const AuditTrailHistory = () => {
 
             {/* Buttons */}
             <div className="flex flex-wrap justify-center gap-2 mt-4">
+                {selectedArchiveName && (
+                    <div className="px-4 py-2 font-roboto">
+                        <span className="font-bold text-xs text-[#000000]">Archival name: </span>
+                        <span className="font-bold text-xs text-[#405F7D]">{selectedArchiveName}</span>
+                    </div>
+                )}
+
                 <ActionButton icon={History} label={t('button.reviewHistory')} onClick={handleReviewHistory} />
                 <ActionButton icon={FileText} label={t('button.review')} onClick={handleReview} />
-                <ActionButton icon={ArchiveIcon} label={t('button.createArchieve')} />
-                <ActionButton icon={PackageOpenIcon} label={t('button.openArchieve')} />
+                <ActionButton icon={ArchiveIcon} label={t('button.createArchieve')} onClick={handleCreateArchive} />
+                <ActionButton icon={PackageOpenIcon} label={t('button.openArchieve')} onClick={handleOpenArchive} />
                 <ActionButton icon={Upload} label={t('button.export')} />
                 <ActionButton icon={Printer} label={t('button.print')} />
             </div>
@@ -1073,6 +1408,53 @@ const AuditTrailHistory = () => {
                     message={errorDialog.message}
                     type={errorDialog.type}
                     onClose={() => setErrorDialog({ show: false, message: "", type: "" })}
+                />
+            )}
+
+            {showCreateArchiveDialog && (
+                <Errordialog
+                    message="Do you want to create archive?"
+                    type="information"
+                    onClose={handleCreateArchiveConfirm}
+                />
+            )}
+
+            {showOpenArchiveDialog && (
+                <Errordialog
+                    message="Do you want to open archive?"
+                    type="information"
+                    onClose={handleOpenArchiveConfirm}
+                />
+            )}
+
+            {showCreateAuditLog && (
+                <AuditTrail
+                    isOpen={showCreateAuditLog}
+                    onClose={() => setShowCreateAuditLog(false)}
+                    onAuthorized={handleArchiveAuditLogAuthorized}
+                    actionLabel="Submit"
+                    defaultReason="Archive Created"
+                    disableReason={true}
+                />
+            )}
+
+            {showOpenAuditLog && (
+                <AuditTrail
+                    isOpen={showOpenAuditLog}
+                    onClose={() => setShowOpenAuditLog(false)}
+                    onAuthorized={handleOpenArchiveAuditLogAuthorized}
+                    actionLabel="Submit"
+                    defaultReason="Archive Opened"
+                    disableReason={true}
+                />
+            )}
+
+            {showOpenArchivePopup && (
+                <OpenArchivePopup
+                    isOpen={showOpenArchivePopup}
+                    onClose={() => setShowOpenArchivePopup(false)}
+                    archiveList={archiveList}
+                    onArchiveSelect={handleArchiveSelect}
                 />
             )}
         </div>

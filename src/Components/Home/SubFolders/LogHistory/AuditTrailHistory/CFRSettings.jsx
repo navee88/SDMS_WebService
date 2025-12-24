@@ -3,30 +3,34 @@ import { useTranslation } from "react-i18next";
 import { Plus, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../../../../Context/LanguageContext';
 import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
+import AuditTrail from '../../../../Layout/Common/AuditTrail';
 
 function CFRSettings() {
   const { currentLanguage, changeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Activated');
+  const [newReason, setNewReason] = useState('');
+  const [showInputError, setShowInputError] = useState(false);
+  const [showAuditTrail, setShowAuditTrail] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null); // 'add' or 'remove'
+  // Initialize with all statuses in state
+  const [allStatuses, setAllStatuses] = useState([
+    t('statuses.activated'),
+    t('statuses.approved'),
+    t('statuses.checked'),
+    t('statuses.created'),
+    t('statuses.deactivated'),
+    t('statuses.mapped'),
+    t('statuses.modified'),
+    t('statuses.notApproved'),
+    t('statuses.retired'),
+    t('statuses.reviewed'),
+    t('statuses.started'),
+    t('statuses.stopped'),
+  ]);
 
- const statuses = [
-  t('statuses.activated'),
-  t('statuses.approved'),
-  t('statuses.checked'),
-  t('statuses.created'),
-  t('statuses.deactivated'),
-  t('statuses.mapped'),
-  t('statuses.modified'),
-  t('statuses.notApproved'),
-  t('statuses.retired'),
-  t('statuses.reviewed'),
-  t('statuses.started'),
-  t('statuses.stopped'),
-];
-
-
-  const filteredStatuses = statuses.filter(status =>
+  const filteredStatuses = allStatuses.filter(status =>
     status.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -61,7 +65,7 @@ function CFRSettings() {
               disabled
               className="peer hidden"
             />
-            <span className="w-[20.8px] h-[22.8px] border border-gray-400 bg-gray-300 flex items-center justify-center peer-checked:bg-gray-300 peer-checked:border-gray-400">
+            <span className="w-[17.8px] h-[17.8px] border border-gray-400 bg-gray-300 flex items-center justify-center peer-checked:bg-gray-300 peer-checked:border-gray-400">
               <svg
                 className="w-5 h-5 text-[#0049B0]"
                 fill="none"
@@ -85,6 +89,13 @@ function CFRSettings() {
                 <AnimatedInput
                   label=""
                   name="EnterReasonsToAdd"
+                  value={newReason}
+                  onChange={(e) => {
+                    setNewReason(e.target.value);
+                    if (showInputError) setShowInputError(false); // Clear error on type
+                  }}
+                  showError={showInputError}
+                  required={true}
                   labelColor="text-[#0049B0]"
                   labelSize="text-sm"
                   labelWeight="font-bold"
@@ -93,8 +104,29 @@ function CFRSettings() {
 
               {/* Buttons */}
               <div className="flex gap-3 ml-auto">
-                <ActionButton icon={Plus} label={t('button.add')} />
-                <ActionButton icon={Trash2} label={t('button.remove')} />
+                <ActionButton
+                  icon={Plus}
+                  label={t('button.add')}
+                  onClick={() => {
+                    if (!newReason.trim()) {
+                      setShowInputError(true);
+                      return;
+                    }
+                    setPendingAction('add');
+                    setShowAuditTrail(true);
+                  }}
+                />
+                <ActionButton
+                  icon={Trash2}
+                  label={t('button.remove')}
+                  onClick={() => {
+                    if (!selectedStatus) {
+                      return;
+                    }
+                    setPendingAction('remove');
+                    setShowAuditTrail(true);
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -115,7 +147,7 @@ function CFRSettings() {
             </div>
 
             {/* Status List */}
-            <div className="max-h-[400px] overflow-y-auto bg-white">
+            <div className="h-[350px] overflow-y-auto bg-white">
               {filteredStatuses.map((status, index) => (
                 <div
                   key={status}
@@ -138,6 +170,28 @@ function CFRSettings() {
           </div>
         </div>
       </div>
+
+      <AuditTrail
+        isOpen={showAuditTrail}
+        onClose={() => {
+          setShowAuditTrail(false);
+          setPendingAction(null);
+        }}
+        onAuthorized={(auditData) => {
+          if (pendingAction === 'add') {
+            setAllStatuses([...allStatuses, newReason.trim()]);
+            setNewReason('');
+            setShowInputError(false);
+          } else if (pendingAction === 'remove') {
+            setAllStatuses(allStatuses.filter(s => s !== selectedStatus));
+            // Select first remaining status or empty
+            setSelectedStatus(allStatuses.filter(s => s !== selectedStatus)[0] || '');
+          }
+          setShowAuditTrail(false);
+          setPendingAction(null);
+        }}
+        actionLabel={pendingAction === 'add' ? 'Add Reason' : 'Remove Reason'}
+      />
     </div>
   );
 }
