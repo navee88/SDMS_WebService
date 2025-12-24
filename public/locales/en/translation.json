@@ -241,7 +241,8 @@
     "started": "Started",
     "stopped": "Stopped",
     "client":"Client",
-    "status":"Status"
+    "status":"Status",
+    "active":"Active"
  
   },
  
@@ -310,8 +311,8 @@
   "clickhere": "click here ",
   "tobrowseoraccesscamera": " to browse or access camera ",
   "toaddfile": " to add file",
-  "tagName":"Tag Name",
-  "tagValue":"Tag Value",
+  "tagName":"TagName",
+  "tagValue":"TagValue",
   "noTagValue":"No Tag Value"
 },
 
