@@ -3,6 +3,13 @@ import { useTranslation } from "react-i18next";
 import { RefreshCw, Lock, Unlock, Check, Upload, X, Camera, Plus, RotateCcw } from "lucide-react";
 import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
 
+// Add at the top with other imports
+import servicecall from '../../../../../Services/servicecall';
+import { CF_decrypt } from '../../../../../Components/Common/encryptiondecryption';
+
+// Get postData from servicecall
+
+
 // Unified PrimaryButton component with variant support
 const PrimaryButton = ({ 
   icon: Icon, 
@@ -129,7 +136,7 @@ const FileUploadDropzone = ({ onFilesAdded, files, onRemoveFile, onUpload, onRes
           onClick={onReset}
           icon={RotateCcw}
           label={t("button.reset") || "Reset"}
-    variant="primary"  // Added this line
+          variant="primary"
           className="px-4"
         />
         <PrimaryButton
@@ -137,8 +144,7 @@ const FileUploadDropzone = ({ onFilesAdded, files, onRemoveFile, onUpload, onRes
           disabled={files.length === 0}
           icon={Upload}
           label={t("button.upload") || "Upload"}
-              variant="primary"  // Added this line
-
+          variant="primary"
           className="px-4"
         />
       </div>
@@ -167,7 +173,44 @@ const InfoBox = ({ data }) => (
 
 export default function MyInstrumentsPage() {
   const { t } = useTranslation();
+const { postData } = servicecall();
 
+// Helper function for AJAX calls - ONLY ONE DEFINITION
+const makeAjaxCall = async (url, passObjDet) => {
+  try {
+    // Remove leading slash if present (postData doesn't need it)
+    const endpoint = url.replace(/^\//, '');
+    
+    const response = await postData(endpoint, passObjDet);
+    
+    if (!response) {
+      console.error('No response from API');
+      return null;
+    }
+    
+    // Handle decryption
+    if (typeof response === 'string' && response.length > 50) {
+      try {
+        const decrypted = CF_decrypt(response);
+        return JSON.parse(decrypted);
+      } catch (decryptError) {
+        console.error('Failed to decrypt response:', decryptError);
+        // Try to parse as plain JSON
+        try {
+          return JSON.parse(response);
+        } catch (parseError) {
+          console.error('Failed to parse response:', parseError);
+          return response;
+        }
+      }
+    }
+    
+    return response;
+  } catch (error) {
+    console.error("AJAX call failed:", error);
+    throw error;
+  }
+};
   const [lockedInstruments, setLockedInstruments] = useState([]);
   const [selectedInstrument, setSelectedInstrument] = useState(null);
   const [files, setFiles] = useState([]);
@@ -468,26 +511,6 @@ export default function MyInstrumentsPage() {
     } catch (error) {
       console.error("Error uploading files:", error);
       alert("Error uploading files");
-    }
-  };
-
-  // Helper function for AJAX calls
-  const makeAjaxCall = async (url, passObjDet) => {
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ passObj: passObjDet })
-      });
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      return await response.json();
-    } catch (error) {
-      console.error("AJAX call failed:", error);
-      throw error;
     }
   };
 
