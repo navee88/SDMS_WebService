@@ -6,14 +6,14 @@ import {
     UploadIcon,
     Search,
 } from 'lucide-react';
-
-
-
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import { useTranslation } from "react-i18next";
 import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
 import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
 import { useLanguage } from '../../../../../Context/LanguageContext';
 import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
+import Errordialog from '../../../../Layout/Common/Errordialog';
 
 const ACTION_ICONS = {
     "Open": FolderOpen,
@@ -259,8 +259,7 @@ const getCurrentDate = () => {
     return `${year}-${month}-${day}`;
 };
 
-
-const UsersPage = () => {
+const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) => {
     const [userData, setUserData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -336,14 +335,46 @@ const UsersPage = () => {
     //     fetchUsers();
     //   }, []);
 
+    // useEffect(() => {
+    //     setLoading(true);
+    //     setTimeout(() => {
+    //         setUserData(mockData);
+    //         setLoading(false);
+    //     }, 300);
+
+    // }, []);
+
+    const filteredData = useMemo(() => {
+        let data = mockData;
+
+        if (filters?.fileName) {
+            data = data.filter(item =>
+                item.fileName.toLowerCase().includes(filters.fileName.toLowerCase())
+            );
+        }
+
+        if (filters?.clientName) {
+            data = data.filter(item =>
+                item.clientName === filters.clientName
+            );
+        }
+
+        return data;
+    }, [filters, refreshKey]);
+
     useEffect(() => {
         setLoading(true);
-        setTimeout(() => {
-            setUserData(mockData);
+
+        const timer = setTimeout(() => {
+            setUserData(filteredData);
+            if (onDataCountChange) {
+                onDataCountChange(filteredData.length);
+            }
             setLoading(false);
         }, 300);
 
-    }, []);
+        return () => clearTimeout(timer);
+    }, [filteredData, onDataCountChange]);
 
     const userColumns = useMemo(() => [
         {
@@ -362,13 +393,54 @@ const UsersPage = () => {
         },
         {
             key: 'fileName',
-           label: t('label.fileName'),
+            label: t('label.fileName'),
             width: 120,
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.fileName}</span>
         }
     ], []);
 
+    useEffect(() => {
+        if (exportTrigger === 0) return;
+        if (!userData.length) return;
+
+        const headers = userColumns.map(col => col.label);
+
+        const rows = userData.map(row =>
+            userColumns.map(col => row[col.key] ?? "")
+        );
+
+        const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+        const colWidths = userColumns.map((col) => {
+            const headerLength = col.label.length;
+            const maxDataLength = Math.max(
+                ...userData.map(row => {
+                    const value = String(row[col.key] ?? "");
+                    return value.length;
+                }),
+                0
+            );
+            const maxLength = Math.max(headerLength, maxDataLength);
+            return { wch: maxLength + 2 };
+        });
+
+        worksheet['!cols'] = colWidths;
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Upload Logs");
+
+        const excelBuffer = XLSX.write(workbook, {
+            bookType: "xlsx",
+            type: "array"
+        });
+
+        const file = new Blob([excelBuffer], {
+            type: "application/octet-stream"
+        });
+
+        saveAs(file, `Download_Error_Logs_${Date.now()}.xlsx`);
+    }, [exportTrigger, userData, userColumns]);
 
     const renderUserDetail = (user) => (
         <div className="space-y-3 text-[12px]">
@@ -438,6 +510,11 @@ const DownloadErrorLogs = () => {
     const [selectedClient, setSelectedClient] = useState(options[0]);
     const [task, setTask] = useState("");
     const [fileName, setFileName] = useState("");
+    const [filters, setFilters] = useState({});
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [exportTrigger, setExportTrigger] = useState(0);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [dataCount, setDataCount] = useState(0);
 
 
     const menuRef = useRef(null);
@@ -582,6 +659,30 @@ const DownloadErrorLogs = () => {
 
     const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
+
+    const handleFilter = () => {
+        const payload = {
+            clientName: selectedClient,
+            task,
+            fileName,
+            recordsDuration,
+            fromDate,
+            toDate
+        };
+        setFilters(payload);
+    };
+
+    const handleRefresh = () => {
+        setRefreshKey(prev => prev + 1);
+    };
+
+    const handleExport = () => {
+        if (dataCount === 0) {
+            setShowErrorDialog(true);
+            return;
+        }
+        setExportTrigger(prev => prev + 1);
+    };
     return (
         <div className="flex flex-col w-full font-roboto rounded-md font-[roboto]">
             <div className="bg-[#f0f2f5] px-4 pt-4 pb-2 relative rounded-t-md z-20">
@@ -655,9 +756,9 @@ const DownloadErrorLogs = () => {
                             </>
                         )}
                         <div className="flex items-end gap-2 pb-2 ml-4">
-                            <PrimaryButton icon={Filter} label={t('button.filter')} />
-                            <PrimaryButton icon={RefreshCw} label={t('button.refresh')} />
-                            <PrimaryButton icon={UploadIcon} label={t('button.export')} />
+                            <PrimaryButton icon={Filter} label={t('button.filter')} onClick={handleFilter} />
+                            <PrimaryButton icon={RefreshCw} label={t('button.refresh')} onClick={handleRefresh} />
+                            <PrimaryButton icon={UploadIcon} label={t('button.export')} onClick={handleExport} />
                         </div>
                     </div>
                 ) : (
@@ -694,10 +795,21 @@ const DownloadErrorLogs = () => {
             <div className="px-4 font-roboto h-[calc(100vh-150px)] flex flex-col">
                 {/* UsersPage takes full width & height */}
                 <div className="flex-1 overflow-hidden">
-                    <UsersPage />
+                    <UsersPage
+                        filters={filters}
+                        refreshKey={refreshKey}
+                        exportTrigger={exportTrigger}
+                        onDataCountChange={setDataCount}
+                    />
                 </div>
             </div>
-
+            {showErrorDialog && (
+                <Errordialog
+                    message="Select an existing record."
+                    type="information"
+                    onClose={() => setShowErrorDialog(false)}
+                />
+            )}
 
         </div>
     )

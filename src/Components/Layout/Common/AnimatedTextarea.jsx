@@ -19,7 +19,7 @@ const AnimatedTextarea = ({
   return (
     <div className="relative mb-4">
       {label && (
-        <label className="mb-1 block text-xs font-semibold text-gray-600">
+        <label className="mb-1 block text-xs font-roboto font-semibold text-gray-600">
           {label}
           {required && <span className="ml-1 text-red-700">*</span>}
         </label>

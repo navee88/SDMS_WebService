@@ -22,7 +22,8 @@ import { useLanguage } from '../../../../../Context/LanguageContext';
 import AuditTrail from '../../../../Layout/Common/AuditTrail';
 import Errordialog from '../../../../Layout/Common/Errordialog';
 import CustomPopup from '../../../../Layout/Common/Popup';
-
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => {
     const [selectedArchiveId, setSelectedArchiveId] = useState(archiveList.length > 0 ? archiveList[0].id : null);
@@ -421,7 +422,7 @@ const getCurrentDate = () => {
 };
 
 
-const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showReviewHistory, loading }) => {
+const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showReviewHistory, loading, userColumns, reviewHistoryColumns, exportTrigger }) => {
     const [error, setError] = useState(null);
     const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
@@ -452,158 +453,68 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
 
     // }, []);
 
-    const handleRowSelection = (id) => {
-        console.log('Before:', selectedRows);
-        setSelectedRows(prev => {
-            const newState = prev.includes(id)
-                ? prev.filter(rowId => rowId !== id)
-                : [...prev, id];
-            console.log('After:', newState);
-            return newState;
+    useEffect(() => {
+        if (exportTrigger === 0) return;
+        if (!userData.length) return;
+
+        const columnsToExport = showReviewHistory ? reviewHistoryColumns : userColumns;
+
+        const headers = columnsToExport
+            .filter(col => col.key !== 'select')
+            .map(col => col.label);
+
+        const rows = userData.map((row, index) =>
+            columnsToExport
+                .filter(col => col.key !== 'select')
+                .map(col => {
+                    if (col.key === 'serialNo') return index + 1;
+                    return row[col.key] ?? "";
+                })
+        );
+
+        const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+        const colWidths = columnsToExport
+            .filter(col => col.key !== 'select')
+            .map((col) => {
+                const headerLength = col.label.length;
+                const maxDataLength = Math.max(
+                    ...userData.map((row, index) => {
+                        let value;
+                        if (col.key === 'serialNo') {
+                            value = String(index + 1);
+                        } else {
+                            value = String(row[col.key] ?? "");
+                        }
+                        return value.length;
+                    }),
+                    0
+                );
+                const maxLength = Math.max(headerLength, maxDataLength);
+                return { wch: maxLength + 2 };
+            });
+
+        worksheet['!cols'] = colWidths;
+
+        const workbook = XLSX.utils.book_new();
+        const sheetName = showReviewHistory ? "Review History" : "Audit Trail History";
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+        const excelBuffer = XLSX.write(workbook, {
+            bookType: "xlsx",
+            type: "array"
         });
-    };
-    const userColumns = useMemo(() => [
-        {
-            key: 'select',
-            label: t('label.select'),
-            width: 150,
-            render: (row) => (
-                <label className="inline-flex items-center" onClick={() => handleRowSelection(row.id)}  >
-                    <span
-                        className="
-            w-4 h-4
-            border border-gray-400
-            flex items-center justify-center
-            bg-white
-          "
-                    >
-                        {selectedRows.includes(row.id) && (
-                            <svg
-                                className="w-3 h-3 text-black"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                        )}
-                    </span>
-                </label>
-            )
-        },
-        {
-            key: 'moduleName',
-            label: t('label.moduleName'),
-            width: 150,
-            enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.moduleName}</span>
-        },
-        {
-            key: 'actions',
-            label: t('label.actions'),
-            width: 150,
-            enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.actions}</span>
-        },
-        {
-            key: 'transactionOn',
-            label: t('label.transactionOn'),
-            width: 200,
-            inputType: 'date',
-            enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.transactionOn}</span>
-        },
-        {
-            key: 'reviewStatus',
-            label: t('label.reviewStatus'),
-            width: 150,
-            enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.reviewStatus}</span>
-        },
-        {
-            key: 'requestedClient',
-            label: t('label.requestedClient'),
-            width: 200,
-            enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.requestedClient}</span>
-        },
-        {
-            key: 'affectedClient',
-            label: t('label.affectedClient'),
-            width: 200,
-            enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.affectedClient}</span>
-        },
-        {
-            key: 'instrumentName',
-            label: t('label.instrumentName'),
-            width: 200,
-            enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.instrumentName}</span>
-        },
-        {
-            key: 'reason',
-            label: t('label.reason'),
-            width: 150,
-            enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.reason}</span>
-        }
-    ], [selectedRows, t]);
 
-    const reviewHistoryColumns = useMemo(() => [
-        {
-            key: 'serialNo',
-            label: t('label.serialNo'),
-            width: 100,
-            render: (row, index) => <span className="text-gray-700">{index + 1}</span>
-        },
-        {
-            key: 'moduleName',
-            label: t('label.moduleName'),
-            width: 180,
-            render: (row) => <span className="text-gray-700">{row.moduleName}</span>
-        },
-        {
-            key: 'actions',
-            label: t('label.actions'),
-            width: 150,
-            render: (row) => <span className="text-gray-700">{row.actions}</span>
-        },
-        {
-            key: 'comments',
-            label: t('label.comments'),
-            width: 200,
-            render: (row) => <span className="text-gray-700">{row.comments}</span>
-        },
-        {
-            key: 'reviewStatus',
-            label: t('label.reviewStatus'),
-            width: 180,
-            render: (row) => <span className="text-gray-700">{row.reviewStatus}</span>
-        },
-        {
-            key: 'reviewComments',
-            label: t('label.reviewComments'),
-            width: 200,
-            render: (row) => <span className="text-gray-700">{row.reviewComments}</span>
-        },
-        {
-            key: 'reviewedBy',
-            label: t('label.reviewedBy'),
-            width: 150,
-            render: (row) => <span className="text-gray-700">{row.reviewedBy}</span>
-        },
-        {
-            key: 'reviewedDate',
-            label: t('label.reviewedDate'),
-            width: 150,
-            render: (row) => <span className="text-gray-700">{row.reviewedDate}</span>
-        }
-    ], [t]);
+        const file = new Blob([excelBuffer], {
+            type: "application/octet-stream"
+        });
 
+        const fileName = showReviewHistory
+            ? `Review_History_${Date.now()}.xlsx`
+            : `Audit_Trail_History_${Date.now()}.xlsx`;
+
+        saveAs(file, fileName);
+    }, [exportTrigger, userData, userColumns, reviewHistoryColumns, showReviewHistory]);
 
 
     const renderUserDetail = (user) => (
@@ -858,6 +769,7 @@ const AuditTrailHistory = () => {
     const [filename, setFilename] = useState("");
     const [userData, setUserData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [exportTrigger, setExportTrigger] = useState(0);
 
     const [selectedUser, setSelectedUser] = useState("All");
     const [selectedModule, setSelectedModule] = useState("All");
@@ -1053,6 +965,146 @@ const AuditTrailHistory = () => {
     const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
 
+    // Add column definitions HERE (before any functions)
+    const userColumns = useMemo(() => [
+        {
+            key: 'select',
+            label: t('label.select'),
+            width: 150,
+            render: (row) => (
+                <label className="inline-flex items-center" onClick={() => handleRowSelection(row.id)}  >
+                    <span className="w-4 h-4 border border-gray-400 flex items-center justify-center bg-white">
+                        {selectedRows.includes(row.id) && (
+                            <svg className="w-3 h-3 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                        )}
+                    </span>
+                </label>
+            )
+        },
+        {
+            key: 'moduleName',
+            label: t('label.moduleName'),
+            width: 150,
+            enableSearch: true,
+            render: (row) => <span className="text-gray-700">{row.moduleName}</span>
+        },
+        {
+            key: 'actions',
+            label: t('label.actions'),
+            width: 150,
+            enableSearch: true,
+            render: (row) => <span className="text-gray-700">{row.actions}</span>
+        },
+        {
+            key: 'transactionOn',
+            label: t('label.transactionOn'),
+            width: 200,
+            inputType: 'date',
+            enableSearch: true,
+            render: (row) => <span className="text-gray-700">{row.transactionOn}</span>
+        },
+        {
+            key: 'reviewStatus',
+            label: t('label.reviewStatus'),
+            width: 150,
+            enableSearch: true,
+            render: (row) => <span className="text-gray-700">{row.reviewStatus}</span>
+        },
+        {
+            key: 'requestedClient',
+            label: t('label.requestedClient'),
+            width: 200,
+            enableSearch: true,
+            render: (row) => <span className="text-gray-700">{row.requestedClient}</span>
+        },
+        {
+            key: 'affectedClient',
+            label: t('label.affectedClient'),
+            width: 200,
+            enableSearch: true,
+            render: (row) => <span className="text-gray-700">{row.affectedClient}</span>
+        },
+        {
+            key: 'instrumentName',
+            label: t('label.instrumentName'),
+            width: 200,
+            enableSearch: true,
+            render: (row) => <span className="text-gray-700">{row.instrumentName}</span>
+        },
+        {
+            key: 'reason',
+            label: t('label.reason'),
+            width: 150,
+            enableSearch: true,
+            render: (row) => <span className="text-gray-700">{row.reason}</span>
+        }
+    ], [selectedRows, t]);
+
+    const reviewHistoryColumns = useMemo(() => [
+        {
+            key: 'serialNo',
+            label: t('label.serialNo'),
+            width: 100,
+            render: (row, index) => <span className="text-gray-700">{index + 1}</span>
+        },
+        {
+            key: 'moduleName',
+            label: t('label.moduleName'),
+            width: 180,
+            render: (row) => <span className="text-gray-700">{row.moduleName}</span>
+        },
+        {
+            key: 'actions',
+            label: t('label.actions'),
+            width: 150,
+            render: (row) => <span className="text-gray-700">{row.actions}</span>
+        },
+        {
+            key: 'comments',
+            label: t('label.comments'),
+            width: 200,
+            render: (row) => <span className="text-gray-700">{row.comments}</span>
+        },
+        {
+            key: 'reviewStatus',
+            label: t('label.reviewStatus'),
+            width: 180,
+            render: (row) => <span className="text-gray-700">{row.reviewStatus}</span>
+        },
+        {
+            key: 'reviewComments',
+            label: t('label.reviewComments'),
+            width: 200,
+            render: (row) => <span className="text-gray-700">{row.reviewComments}</span>
+        },
+        {
+            key: 'reviewedBy',
+            label: t('label.reviewedBy'),
+            width: 150,
+            render: (row) => <span className="text-gray-700">{row.reviewedBy}</span>
+        },
+        {
+            key: 'reviewedDate',
+            label: t('label.reviewedDate'),
+            width: 150,
+            render: (row) => <span className="text-gray-700">{row.reviewedDate}</span>
+        }
+    ], [t]);
+
+    // Add handleRowSelection here too
+    const handleRowSelection = (id) => {
+        console.log('Before:', selectedRows);
+        setSelectedRows(prev => {
+            const newState = prev.includes(id)
+                ? prev.filter(rowId => rowId !== id)
+                : [...prev, id];
+            console.log('After:', newState);
+            return newState;
+        });
+    };
+
     const ActionButton = ({ icon: Icon, label, disabled, onClick, className = "" }) => (
         <button
             onClick={onClick}
@@ -1190,7 +1242,148 @@ const AuditTrailHistory = () => {
         // }, 300);
     };
 
+    const handlePrint = () => {
+        const columnsToShow = showReviewHistory ? reviewHistoryColumns : userColumns;
+        const dataToShow = showReviewHistory
+            ? userData.filter(row => selectedRows.includes(row.id))
+            : userData;
 
+        const tableHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Audit Trail History</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                    font-family: 'Roboto', Arial, sans-serif; 
+                    padding: 30px;
+                    background-color: #ffffff;
+                }
+                h1 { 
+                    text-align: center; 
+                    color: #2883FE; 
+                    margin-bottom: 30px;
+                    font-size: 28px;
+                    font-weight: 600;
+                }
+                .print-info {
+                    text-align: right;
+                    color: #666;
+                    font-size: 12px;
+                    margin-bottom: 15px;
+                }
+                table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin-top: 20px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                th, td { 
+                    border: 1px solid #ddd; 
+                    padding: 12px 8px; 
+                    text-align: left;
+                    font-size: 13px;
+                }
+                th { 
+                    background-color: #f9f9f9; 
+                    color: #000000; 
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    font-size: 12px;
+                    letter-spacing: 0.5px;
+                }
+                tr:nth-child(even) { 
+                    background-color: #fafafa; 
+                }
+                tr:hover {
+                    background-color: #f5f5f5;
+                }
+                td {
+                    color: #333;
+                }
+                @media print {
+                    body { 
+                        padding: 15px;
+                    }
+                    table {
+                        box-shadow: none;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="print-info">
+                Printed on: ${new Date().toLocaleString()}
+            </div>
+            <h1>Audit Trail History</h1>
+            <table>
+                <thead>
+                    <tr>
+                        ${columnsToShow
+                .filter(col => col.key !== 'select')
+                .map(col => `<th>${col.label}</th>`)
+                .join('')}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${dataToShow.map((row, index) => `
+                        <tr>
+                            ${columnsToShow
+                        .filter(col => col.key !== 'select')
+                        .map(col => {
+                            if (col.key === 'serialNo') return `<td>${index + 1}</td>`;
+                            return `<td>${row[col.key] || ''}</td>`;
+                        })
+                        .join('')}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <script>
+                window.onload = function() { 
+                    setTimeout(function() {
+                        window.print();
+                    }, 250);
+                }
+                
+                window.onafterprint = function() {
+                    setTimeout(function() {
+                        window.close();
+                    }, 500);
+                };
+                
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        window.close();
+                    }
+                });
+            </script>
+        </body>
+        </html>
+    `;
+
+        const printWindow = window.open('', 'PrintWindow', 'width=1200,height=800,left=100,top=50');
+        if (printWindow) {
+            printWindow.document.write(tableHTML);
+            printWindow.document.close();
+            printWindow.focus();
+        } else {
+            alert('Please allow popups for this site to print.');
+        }
+    };
+
+    const handleExport = () => {
+        if (userData.length === 0) {
+            setErrorDialog({
+                show: true,
+                message: "No data available to export.",
+                type: "information"
+            });
+            return;
+        }
+        setExportTrigger(prev => prev + 1);
+    };
     const handleFilter = () => {
         setLoading(true);
 
@@ -1319,7 +1512,7 @@ const AuditTrailHistory = () => {
                             </>
                         )}
                         <div className="flex items-end gap-2 pb-2 ml-4">
-                            <PrimaryButton icon={Filter} label={t('button.filter')} onClick={handleFilter}/>
+                            <PrimaryButton icon={Filter} label={t('button.filter')} onClick={handleFilter} />
                             <PrimaryButton icon={RotateCwIcon} label={t('button.reset')} onClick={handleReset} />
                         </div>
                     </div>
@@ -1373,8 +1566,8 @@ const AuditTrailHistory = () => {
                 <ActionButton icon={FileText} label={t('button.review')} onClick={handleReview} />
                 <ActionButton icon={ArchiveIcon} label={t('button.createArchieve')} onClick={handleCreateArchive} />
                 <ActionButton icon={PackageOpenIcon} label={t('button.openArchieve')} onClick={handleOpenArchive} />
-                <ActionButton icon={Upload} label={t('button.export')} />
-                <ActionButton icon={Printer} label={t('button.print')} />
+                <ActionButton icon={Upload} label={t('button.export')} onClick={handleExport} />
+                <ActionButton icon={Printer} label={t('button.print')} onClick={handlePrint} />
             </div>
 
 
@@ -1388,6 +1581,9 @@ const AuditTrailHistory = () => {
                         setSelectedRows={setSelectedRows}
                         showReviewHistory={showReviewHistory}
                         loading={loading}
+                        userColumns={userColumns}
+                        reviewHistoryColumns={reviewHistoryColumns}
+                        exportTrigger={exportTrigger}
                     />
                 </div>
             </div>
