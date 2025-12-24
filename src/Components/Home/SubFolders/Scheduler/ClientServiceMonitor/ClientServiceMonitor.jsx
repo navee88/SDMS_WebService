@@ -2,8 +2,9 @@ import React, { useMemo, useState ,useEffect} from "react";
 import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
 import { FaFilter } from "react-icons/fa";
-import { IoMdRefresh } from "react-icons/io";
+
 import { useTranslation } from "react-i18next";
+import { HiRefresh } from "react-icons/hi";
 
 const ClientServiceMonitor = () => {
   const { t } = useTranslation();
@@ -194,7 +195,7 @@ const handleRefreshClick = () => {
     <div className="bg-white p-4 space-y-4">
       {/* ---------- FILTER BAR ---------- */}
       <div className="flex pl-4 items-end gap-4">
-        <label className="mb-5 block text-gray-600 text-[13px] font-semibold">
+        <label className="mb-5 block text-[#405f7d] text-[12px] font-semibold font-roboto">
                   {t("label.clientName")}
                 </label>
         <div className="w-60">
@@ -206,7 +207,7 @@ const handleRefreshClick = () => {
           onChange={handleDraftChange}
         />
         </div>
-        <label className="mb-5 block text-gray-600 text-[13px] font-semibold">
+        <label className="mb-5 block text-[#405f7d] text-[12px] font-semibold font-roboto">
                   {t("label.serviceName")}
                 </label>
         <div className="w-60">
@@ -222,15 +223,11 @@ const handleRefreshClick = () => {
           <ActionButton
             icon={FaFilter}
             label={t("button.filter")}
-            bgColor="bg-gray-500/10"
-            textColor="text-blue-600"
             onClick={handleFilterClick}
           />
           <ActionButton
-            icon={IoMdRefresh}
+            icon={HiRefresh}
             label={t("button.refresh")}
-            bgColor="bg-gray-500/10"
-            textColor="text-blue-600"
             onClick={handleRefreshClick}
           />
         </div>
@@ -260,21 +257,21 @@ const handleRefreshClick = () => {
 };
 
 /* ------------------ ACTION BUTTON ------------------ */
-const ActionButton = ({ icon: Icon, label, bgColor, textColor, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center gap-1 px-3 py-2 text-[12px] font-bold rounded ${bgColor} ${textColor}`}
-  >
-    {Icon && <Icon className="w-4 h-4" />} 
-    {label}
-  </button>
-);
+const ActionButton = ({ icon: Icon, label, onClick }) => (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1 px-[12px] py-[7px]  bg-[#f0f2f5] text-[#2883fe] font-roboto text-[11px] font-bold rounded shadow-sm"
+    >
+      <Icon className="w-4 h-4"  />
+      <span className="leading-none">{label}</span>
+    </button>
+  );
 
 /* ------------------ DETAIL ROW ------------------ */
 const Detail = ({ label, value }) => (
-  <div className="grid grid-cols-2 text-[13px]">
-    <span className="font-semibold text-[#405F7D]">{label}</span>
-    <span className="font-semibold text-black">{value || "-"}</span>
+  <div className="grid grid-cols-2">
+    <span className="font-bold text-[12px] text-[#405F7D] font-roboto">{label}</span>
+    <span className="font-bold text-[12px] text-[#353f49] font-roboto">{value || "-"}</span>
   </div>
 );
 

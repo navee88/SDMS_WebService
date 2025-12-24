@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { FaFilter } from "react-icons/fa";
-import { IoMdRefresh } from "react-icons/io";
+import { HiRefresh } from "react-icons/hi";
 import { LuChevronsDown, LuChevronsUp } from "react-icons/lu";
 import { TiExport } from "react-icons/ti";
 import { MdPrint } from "react-icons/md";
 import { FaRegCircleCheck } from "react-icons/fa6";
-import { FaCheck } from "react-icons/fa6";
+import { FaCheck } from "react-icons/fa";
 import * as XLSX from "xlsx"; // Add this import for Excel export
 
 import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
@@ -492,31 +492,28 @@ export default function LocalFileDeleteScheduler() {
 
   /* ------------------ AUTHORIZE ------------------ */
   const handleAuthorize = () => {
-    if (!selectedRow) {
-      setDialogMessage(t("errormsg.noresultsfound"));
-      setDialogType("information");
-      setShowDialog(true);
-      return;
-    }
+  const selectedRows = filteredData.filter(row => row.selected);
 
-    if (!selectedRow.authorized) {
-      const updatedData = filteredData.map((r) =>
-        r.id === selectedRow.id ? { ...r, authorized: true } : r
-      );
-      setFilteredData(updatedData);
-
-      setDialogMessage(
-        `${selectedRow.fileName} ${t("statuses.approved")}`
-      );
-      setDialogType("success");
-    } else {
-      setDialogMessage(
-        `${selectedRow.fileName} ${t("statuses.approved")}`
-      );
-      setDialogType("information");
-    }
+  if (selectedRows.length === 0) {
+    setDialogMessage(t("errormsg.noresultsfound"));
+    setDialogType("information");
     setShowDialog(true);
-  };
+    return;
+  }
+
+  // 🔥 Remove selected rows from grid
+  const remainingData = filteredData.filter(row => !row.selected);
+
+  setFilteredData(remainingData);
+  setSelectedRow(remainingData[0] || null);
+
+  setDialogMessage(
+    `${selectedRows.length} ${t("statuses.recordsAuthorized")}`
+  );
+  setDialogType("success");
+  setShowDialog(true);
+};
+
 
   /* ------------------ DETAILS PANEL ------------------ */
   const DetailsPanel = ({ row }) => (
@@ -532,11 +529,11 @@ export default function LocalFileDeleteScheduler() {
   return (
     <div className="flex flex-col gap-3">
       {/* ---------------- FILTER BAR ---------------- */}
-      <div className="relative bg-[#f4f6f8] p-5 rounded">
+      <div className="relative bg-[#f4f6f8] px-5 py-2 pb-2 rounded">
         {isOpen ? (
-          <div className="flex flex-wrap items-start gap-3">
-            <div className="w-50">
-              <label className="text-sm font-medium text-gray-600">
+          <div className="flex flex-wrap items-start gap-8">
+            <div className="w-55">
+              <label className="mb-1 block text-[#405f7d] text-[12px] font-semibold font-roboto">
                 {t("label.clientName")}
               </label>
               <div className="mt-2">
@@ -548,8 +545,8 @@ export default function LocalFileDeleteScheduler() {
               </div>
             </div>
 
-            <div className="w-50">
-              <label className="text-sm font-medium text-gray-600">
+            <div className="w-55">
+              <label className="mb-1 block text-[#405f7d] text-[12px] font-semibold font-roboto">
                 {t("label.recordsDuration")}
               </label>
               <div className="mt-2">
@@ -596,20 +593,16 @@ export default function LocalFileDeleteScheduler() {
               </>
             )}
 
-            <div className="flex gap-2 pt-5">
-              <ActionButton
+            <div className="flex gap-2 pt-6">
+              <PrimaryButton
                 icon={FaFilter}
                 label={t("button.filter")}
                 onClick={handleFilter}
-                bgColor="bg-white"
-                textColor="text-blue-500"
               />
-              <ActionButton
-                icon={IoMdRefresh}
+              <PrimaryButton
+                icon={HiRefresh}
                 label={t("button.refresh")}
                 onClick={handleRefresh}
-                bgColor="bg-white"
-                textColor="text-blue-500"
               />
             </div>
           </div>
@@ -632,10 +625,10 @@ export default function LocalFileDeleteScheduler() {
 
       {/* ---------------- ACTION BUTTONS ---------------- */}
       <div className="flex justify-end gap-2 p-4 pb-0">
-        <ActionButton icon={FaCheck} label={t("usermanagement.selectall")} onClick={handleSelectAll} bgColor="bg-gray-500/10" textColor="text-blue-600" />
-        <ActionButton icon={FaRegCircleCheck } label={t("button.authorize")} onClick={handleAuthorize} bgColor="bg-gray-500/10" textColor="text-blue-600" />
-        <ActionButton icon={MdPrint} label={t("button.print")} onClick={handlePrint} bgColor="bg-gray-500/10" textColor="text-blue-600" />
-        <ActionButton icon={TiExport} label={t("button.export")} onClick={handleExport} bgColor="bg-gray-500/10" textColor="text-blue-600" />
+        <ActionButton icon={FaCheck} label={t("usermanagement.selectall")} onClick={handleSelectAll} />
+        <ActionButton icon={FaRegCircleCheck } label={t("button.authorize")} onClick={handleAuthorize} />
+        <ActionButton icon={MdPrint} label={t("button.print")} onClick={handlePrint} />
+        <ActionButton icon={TiExport} label={t("button.export")} onClick={handleExport} />
       </div>
 
       <GridLayout
@@ -660,7 +653,7 @@ export default function LocalFileDeleteScheduler() {
 /* ------------------ SMALL COMPONENTS ------------------ */
 const CalendarInput = ({ label, value, onChange, min, max }) => (
   <div className="w-55">
-    <label className="block text-sm  font-medium text-gray-600  mt-1">
+    <label className="block text-[#405f7d] text-[12px] font-semibold font-roboto">
       {label}
     </label>
     <div className="mt-2">
@@ -676,23 +669,36 @@ const CalendarInput = ({ label, value, onChange, min, max }) => (
   </div>
 );
 
-const ActionButton = ({ icon: Icon, label, bgColor, textColor, onClick }) => (
-  <button onClick={onClick} className={`flex items-center gap-1 px-3 py-2 text-[12px] font-bold rounded ${bgColor} ${textColor}`}>
-    {Icon && <Icon size={14} />}
-    {label}
-  </button>
-);
+  const ActionButton = ({ icon: Icon, label, onClick }) => (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1 px-[12px] py-[7px]  bg-[#f0f2f5] text-[#2883fe] font-roboto text-[11px] font-bold rounded shadow-sm"
+    >
+      <Icon className="w-4 h-4"  />
+      <span className="leading-none">{label}</span>
+    </button>
+  );
+
+const PrimaryButton =  ({ icon: Icon, label, onClick }) => (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1 px-[12px] py-[7px] bg-[#ffffff] text-[#2883fe] font-roboto text-[11px] font-bold rounded shadow-sm"
+    >
+      <Icon className="w-4 h-4"  />
+      <span className="leading-none">{label}</span>
+    </button>
+  );
 
 const Detail = ({ label, value }) => (
-  <div className="grid grid-cols-2 text-[13px]">
-    <span className="font-semibold text-700 text-[#405F7D]">{label}</span>
-    <span className="font-semibold text-black">{value || "-"}</span>
+  <div className="grid grid-cols-2">
+    <span className="font-bold text-[12px] text-[#405F7D] font-roboto">{label}</span>
+    <span className="font-bold text-[12px] text-[#353f49] font-roboto">{value || "-"}</span>
   </div>
 );
 const SummaryItem = ({ label, value }) => ( 
-<div className="flex gap-2 items-center"> 
-  <span className="text-xs font-bold text-slate-600">{label}:</span> 
-  <span className="text-xs font-bold text-blue-600">{value || "---"}</span> 
+<div className="flex gap-2 items-center "> 
+  <span className="mb-1 block text-[#405f7d] text-[12px] font-semibold font-roboto">{label}:</span> 
+  <span className="mb-1 block text-[#0e5bca] text-[12px] font-semibold font-roboto">{value || "---"}</span> 
   </div> 
   );
   const formatDisplayDate = (dateStr) => {

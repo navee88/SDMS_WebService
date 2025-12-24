@@ -3,7 +3,6 @@ import { FaFileAlt, FaCheck } from "react-icons/fa";
 import { MdOutlineThumbDown, MdPrint } from "react-icons/md";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { TiExport } from "react-icons/ti";
-import { BsCheck2Square } from "react-icons/bs";
 import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx"; // Add this import
 
@@ -11,6 +10,7 @@ import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
 import Errordialog from "../../../../Layout/Common/Errordialog";
 import AuditTrail from "../../../../Layout/Common/AuditTrail";
 import { useDownloadScheduler } from "../../../../../Context/DownloadSchedulerContext";
+import { dom } from "@fortawesome/fontawesome-svg-core";
 
 
 
@@ -30,17 +30,18 @@ export default function ViewDownloadConfiguration() {
   const [auditAction, setAuditAction] = useState("");
   const {
   setAutoConfigData,
-  setActiveTabIndex
+  setActiveTabIndex,
+  setOpenedFromView,
 } = useDownloadScheduler();
 
   /* ---------- BUTTON ---------- */
-  const PrimaryButton = ({ icon: Icon, label, onClick }) => (
+  const ActionButton = ({ icon: Icon, label, onClick }) => (
     <button
       onClick={onClick}
-      className="flex items-center gap-1 px-2.5 py-2 bg-gray-500/10 text-blue-600 text-[11px] font-bold rounded shadow-sm"
+      className="flex items-center gap-1 px-[12px] py-[6px]  bg-[#f0f2f5] text-[#2883fe] font-roboto text-[11px] font-bold rounded shadow-sm"
     >
-      <Icon className="w-4 h-4" />
-      {label}
+      <Icon className="w-4 h-4"  />
+      <span className="leading-none">{label}</span>
     </button>
   );
 
@@ -75,6 +76,8 @@ export default function ViewDownloadConfiguration() {
           taskFilter: "*.csv",
           taskCompleted: "pending",
           uncUsername: "admin",
+          uncPassword: "password123",
+          uncDomain: "SDMS",
           fileSettings: "Original",
 
         },
@@ -350,12 +353,6 @@ console.log(selectedRow);
               <th>${t("label.taskId")}</th>
               <th>${t("label.sourcePath")}</th>
               <th>${t("scheduler.uncStatus")}</th>
-              <th>${t("label.clientName")}</th>
-              <th>${t("scheduler.destinationpath")}</th>
-              <th>${t("label.taskStatus")}</th>
-              <th>${t("label.filter")}</th>
-              <th>${t("label.comments")}</th>
-              <th>${t("label.username")}</th>
             </tr>
           </thead>
           <tbody>
@@ -364,15 +361,7 @@ console.log(selectedRow);
                 <td>${row.instrument}</td>
                 <td>${row.taskId}</td>
                 <td>${row.sourcePath}</td>
-                <td class="unc-${row.uncStatus}">${row.uncStatus ? '✓' : '✗'}</td>
-                <td>${row.downloadClientName}</td>
-                <td>${row.downloadPath}</td>
-                <td class="${row.taskStatus === 'active' ? 'status-active' : 'status-inactive'}">
-                  ${t(`statuses.${row.taskStatus}`)}
-                </td>
-                <td>${row.taskFilter}</td>
-                <td>${row.taskCompleted}</td>
-                <td>${row.uncUsername || "-"}</td>
+                <td class="unc-${row.uncStatus}">${row.uncStatus ? 'True' : 'False'}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -471,9 +460,9 @@ console.log(selectedRow);
 
   /* ---------- DETAIL PANEL ---------- */
   const DetailRow = ({ label, value }) => (
-    <div className="grid grid-cols-2 gap-4 text-[13px]">
-      <div className="font-semibold text-700 text-[#405F7D]">{label}</div>
-      <div className="font-semibold">{value || "-"}</div>
+    <div className="grid grid-cols-2 gap-4 ">
+      <div className="font-bold text-[12px] text-[#405F7D] font-roboto">{label}</div>
+      <div className="font-bold text-[12px] text-[#353f49] font-roboto">{value || "-"}</div>
     </div>
   );
 
@@ -492,36 +481,39 @@ console.log(selectedRow);
   );
 
   /* ---------- HANDLER FOR AUDITTRAIL SUBMIT ---------- */
-  const handleAuthorized = () => {
-  // 1️⃣ send selected row
+
+
+const handleAuthorized = () => {
   setAutoConfigData({
     instrument: selectedRow.instrument,
     clientName: selectedRow.downloadClientName,
     downloadPath: selectedRow.downloadPath,
     filter: selectedRow.taskFilter,
     sourcepath: selectedRow.sourcePath,
-  uncStatus: selectedRow.uncStatus,
-  username: selectedRow.uncUsername,
-  filesettings: selectedRow.fileSettings,
-    });
+    uncStatus: selectedRow.uncStatus,
+    username: selectedRow.uncUsername,
+    password: selectedRow.uncPassword,
+    domain: selectedRow.uncDomain,
+    filesettings: selectedRow.fileSettings,
+  });
 
-  // 2️⃣ switch to Auto Download Configuration tab
-  setActiveTabIndex(0);
-
+  setOpenedFromView(true);   // ✅ mark entry
+  setActiveTabIndex(0);      // AutoDownloadConfiguration
   setShowAudit(false);
 };
 
 
+
   return (
-    <div className="bg-white p-4 space-y-4">
+    <div className="bg-white p-3 space-y-4">
       {/* ACTION BUTTONS */}
-      <div className="flex justify-end gap-2">
-        <PrimaryButton icon={FaFileAlt} label={t("scheduler.view")} onClick={() => setShowAudit(true)} />
-        <PrimaryButton icon={FaCheck} label={t("scheduler.activate")} onClick={() => handleAction("ACTIVE")} />
-        <PrimaryButton icon={MdOutlineThumbDown} label={t("scheduler.deactivate")} onClick={() => handleAction("INACTIVE")} />
-        <PrimaryButton icon={RiDeleteBin6Line} label={t("scheduler.retire")} onClick={() => handleAction("RETIRE")} />
-        <PrimaryButton icon={TiExport} label={t("button.export")} onClick={handleExport} />
-        <PrimaryButton icon={MdPrint} label={t("button.print")} onClick={handlePrint} />
+      <div className="flex justify-end pr-2 gap-2">
+        <ActionButton icon={FaFileAlt} label={t("scheduler.view")} onClick={() => setShowAudit(true)} />
+        <ActionButton icon={FaCheck} label={t("scheduler.active")} onClick={() => handleAction("ACTIVE")} />
+        <ActionButton icon={MdOutlineThumbDown} label={t("scheduler.deactive")} onClick={() => handleAction("INACTIVE")} />
+        <ActionButton icon={RiDeleteBin6Line} label={t("scheduler.retire")} onClick={() => handleAction("RETIRE")} />
+        <ActionButton icon={TiExport} label={t("button.export")} onClick={handleExport} />
+        <ActionButton icon={MdPrint} label={t("button.print")} onClick={handlePrint} />
       </div>
 
       {/* GRID */}

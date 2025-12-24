@@ -6,6 +6,9 @@ export const DownloadSchedulerProvider = ({ children }) => {
   const [autoConfigData, setAutoConfigData] = useState(null);
   const [activeTabIndex, setActiveTabIndex] = useState(0);
 
+  // ✅ NEW FLAG
+  const [openedFromView, setOpenedFromView] = useState(false);
+
   const clearAutoConfigData = () => setAutoConfigData(null);
 
   return (
@@ -16,6 +19,10 @@ export const DownloadSchedulerProvider = ({ children }) => {
         clearAutoConfigData,
         activeTabIndex,
         setActiveTabIndex,
+
+        // ✅ expose new flag
+        openedFromView,
+        setOpenedFromView,
       }}
     >
       {children}
