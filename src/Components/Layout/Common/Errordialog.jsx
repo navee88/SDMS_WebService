@@ -27,8 +27,13 @@ function Errordialog({ message, type = "", onClose }) {
       break;
     case "information":
       headerColor = "bg-[#60c1de]";
-      title = t('Auditpopup.information');;
+      title = t('Auditpopup.information');
       buttoncolor = "bg-[#60c1de]";
+      break;
+      case "confirmation":
+      headerColor = "bg-[#d5d5d5]";
+      title = t('Auditpopup.confirmation');
+      buttoncolor = "bg-[#d5d5d5]";
       break;
     default:
       headerColor = "bg-orange-600/80";

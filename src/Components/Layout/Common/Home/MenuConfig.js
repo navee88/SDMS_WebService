@@ -6,8 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSitemap } from "@fortawesome/free-solid-svg-icons";
 import { FaUser, FaCog } from "react-icons/fa";
 
-
-
+// ✅ IMPORT ALL COMPONENTS AS REFERENCES (NOT JSX)
 import DataExplorer from "../../../../Pages/Home/FTP/DataExplorer";
 import Searchserverdata from "../../../../Pages/Home/FTP/Searchserverdata";
 import UserManagement from "../../../../Pages/Home/UserManagment/UserManagement";
@@ -33,14 +32,13 @@ import ClientServiceMonitor from "../../../../Pages/Home/Scheduler/ClientService
 import Configuration from "../../../../Pages/Home/Storage/Configuration";
 import Rights from "../../../../Pages/Home/Storage/Rights";
 
-
 export const menuConfig = [
   {
     icon: <LiaFolderOpen />,
     label: "FTP Data View",
     subItems: [
-      { label: "Data Explorer", content: <DataExplorer /> },
-      { label: "Search Server Data", content: <Searchserverdata /> },
+      { label: "Data Explorer", content: DataExplorer },        
+      { label: "Search Server Data", content: Searchserverdata }, 
     ],
   },
 
@@ -48,7 +46,7 @@ export const menuConfig = [
     icon: <GiPadlock />,
     label: "Lock Settings",
     subItems: [
-      { label: "Instrument Lock Settings", content: <InstrumentLockSettings/> },
+      { label: "Instrument Lock Settings", content: InstrumentLockSettings },
     ],
   },
 
@@ -56,13 +54,13 @@ export const menuConfig = [
     icon: <RiCalendarScheduleLine />,
     label: "Scheduler",
     subItems: [
-      { label: "Data Scheduler", content: <div><DataScheduler/></div> },
-      { label: "View Edit Scheduler", content: <div><ViewEditScheduler/></div> },
-      { label: "Monitor Scheduler", content: <MonitorScheduler/> },
-      { label: "Local File Delete Scheduler", content: <div><LocalFileDeleteScheduler/></div> },
-      { label: "Server File Delete Scheduler", content: <div><ServerFileDeleteScheduler/></div> },
-      { label: "Download Scheduler", content: <DownloadScheduler/> },
-      { label: "Client Service Monitor", content: <div><ClientServiceMonitor/></div> },
+      { label: "Data Scheduler", content: DataScheduler },
+      { label: "View Edit Scheduler", content: ViewEditScheduler },
+      { label: "Monitor Scheduler", content: MonitorScheduler },
+      { label: "Local File Delete Scheduler", content: LocalFileDeleteScheduler },
+      { label: "Server File Delete Scheduler", content: ServerFileDeleteScheduler },
+      { label: "Download Scheduler", content: DownloadScheduler },
+      { label: "Client Service Monitor", content: ClientServiceMonitor },
     ],
   },
 
@@ -70,9 +68,9 @@ export const menuConfig = [
     icon: <FontAwesomeIcon icon={faSitemap} />,
     label: "Masters",
     subItems: [
-      { label: "Base Master", content: <div><BaseMaster/></div> },
-      { label: "Tags and Templates", content: <div><TagsAndTemplates/></div> },
-      { label: "Parent Parser Key", content: <div><ParentParserKey/></div> },
+      { label: "Base Master", content: BaseMaster },
+      { label: "Tags and Templates", content: TagsAndTemplates },
+      { label: "Parent Parser Key", content: ParentParserKey },
     ],
   },
 
@@ -80,8 +78,8 @@ export const menuConfig = [
     icon: <RiFileCloudLine />,
     label: "Storage",
     subItems: [
-      { label: "Configuration", content: <div><Configuration/></div> },
-      { label: "Rights", content: <div><Rights/></div> },
+      { label: "Configuration", content: Configuration },
+      { label: "Rights", content: Rights },
     ],
   },
 
@@ -89,8 +87,8 @@ export const menuConfig = [
     icon: <FaUser />,
     label: "User Management",
     subItems: [
-      { label: "User Management", content: <UserManagement /> },
-      { label: "Password Policy", content: <Passwordpolicy /> },
+      { label: "User Management", content: UserManagement },
+      { label: "Password Policy", content: Passwordpolicy },
     ],
   },
 
@@ -98,13 +96,13 @@ export const menuConfig = [
     icon: <LuFileSearch />,
     label: "Log History",
     subItems: [
-      { label: "Audit Trail History", content: <AuditTrailHistory/> },
-      { label: "Download Logs", content: <div> <DownloadLogs/> </div> },
-      { label: "Upload Logs", content: <div><UploadLogs/></div> },
-      { label: "Restore Logs", content: <div><RestoreLogs/></div> },
-      { label: "Server & Local File Delete", content: <div><ServerAndLocalFileDeleteLogs/></div> },
-      { label: "Scheduler Config. Logs", content: <div><SchedulerConfigLogs/></div> },
-      { label: "Instrument Logs", content: <div><InstrumentLogs/></div> },
+      { label: "Audit Trail History", content: AuditTrailHistory },
+      { label: "Download Logs", content: DownloadLogs },
+      { label: "Upload Logs", content: UploadLogs },
+      { label: "Restore Logs", content: RestoreLogs },
+      { label: "Server & Local File Delete", content: ServerAndLocalFileDeleteLogs },
+      { label: "Scheduler Config. Logs", content: SchedulerConfigLogs },
+      { label: "Instrument Logs", content: InstrumentLogs },
     ],
   },
 
@@ -112,11 +110,11 @@ export const menuConfig = [
     icon: <FaCog />,
     label: "Settings",
     subItems: [
-      { label: "Preferences", content: <div>Preferences</div> },
-      { label: "License Information", content: <div>License Information</div> },
-      { label: "Workflow Setup", content: <div>Workflow Setup</div> },
-      { label: "Audit Trail Configuration", content: <div>Audit Trail Configuration</div> },
-      { label: "Maintenance", content: <div>Maintenance</div> },
+      { label: "Preferences", content: () => <div>Preferences</div> },
+      { label: "License Information", content: () => <div>License Information</div> },
+      { label: "Workflow Setup", content: () => <div>Workflow Setup</div> },
+      { label: "Audit Trail Configuration", content: () => <div>Audit Trail Configuration</div> },
+      { label: "Maintenance", content: () => <div>Maintenance</div> },
     ],
   },
 ];

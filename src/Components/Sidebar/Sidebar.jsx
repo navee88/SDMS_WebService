@@ -50,7 +50,7 @@ function Sidebar({ menuItems, selectedIndex, selectedSub, setSelectedIndex, setS
   };
 
   return (
-    <div className="flex relative">
+    <div className="flex relative z-50">
       
       <div ref={sidebarRef} className="mt-[7px] w-16 flex flex-col items-center rounded-bl-3xl relative z-20">
         {menuItems.map((item, idx) => {

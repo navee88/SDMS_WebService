@@ -1,417 +1,623 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useToggle, useWindowSize, useLocalStorage } from "@uidotdev/usehooks";
 import {
-  Filter, RotateCcw, RefreshCw, Settings, ChevronUp, ChevronDown, X, CheckSquare,
-  FolderDown, Upload, FolderUp, FileClock, History, Tag, FileText, FolderOpen, Download,
-  CheckCircle, List, MoreVertical, MousePointer2
-} from 'lucide-react';
+  Filter,
+  RotateCcw,
+  RefreshCw,
+  Settings,
+  ChevronUp,
+  ChevronDown,
+  CheckSquare,
+  MoreVertical,
+  Loader2,
+} from "lucide-react";
 
-import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
-import FtpLayout from '../../../../Layout/Common/Home/Grid/FtpLayout';
-import CustomPopup from '../../../../Layout/Common/Popup';
+import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
+import FtpLayout from "../../../../Layout/Common/Home/Grid/FtpLayout";
+import CustomPopup from "./PopupModal";
+import Errordialog from "../../../../Layout/Common/Errordialog";
+import { useServerDataApi, INITIAL_FILTER_STATE } from "./useServerDataApi";
+import ConfigModal from "./ConfigModal";
+import UsersPage from "../../../../Layout/Common/Home/Userpage";
+import PopupContentResolver from "./PopupContent";
 
-// --- CONSTANTS ---
-const ACTION_ICONS = {
-  "Open": FolderOpen,
-  "File Download": Download,
-  "Restore": RotateCcw,
-  "Folder Download": FolderDown,
-  "File Upload": Upload,
-  "Folder Upload": FolderUp,
-  "Version History": FileClock,
-  "Workflow History": History,
-  "Tag": Tag,
-  "Audit Trail History": List,
-  "Attribute": FileText,
-  "Multi-File Select": MousePointer2,
-  "Work Complete": CheckCircle
+import {
+  ACTION_ICONS,
+  ALL_ACTION_ORDER,
+  INITIAL_CONFIG_STATE,
+  getCurrentDate,
+} from "./Constantdata";
+
+
+const SummaryItem = React.memo(({ label, value }) => {
+  let displayValue = "---";
+
+  if (value) {
+    if (typeof value === "object") {
+      displayValue = value.label || value.value || value.name || "---";
+    } else {
+      displayValue = String(value);
+    }
+  }
+
+  return (
+    <div className="flex flex-col">
+      <span className="text-[11px] text-slate-500 font-semibold">{label}</span>
+      <span className="text-[12px] text-slate-800 font-bold truncate" title={displayValue}>
+        {displayValue}
+      </span>
+    </div>
+  );
+});
+
+const getFromToDates = (duration) => {
+  const today = new Date();
+  const to = new Date(today);
+  const from = new Date(today);
+
+  switch (duration) {
+    case "Last 7 Days":
+      from.setDate(today.getDate() - 7);
+      break;
+    case "Last 30 Days":
+      from.setDate(today.getDate() - 30);
+      break;
+    case "Last 1 Year":
+      from.setFullYear(today.getFullYear() - 1);
+      break;
+    case "Current Date":
+      break;
+    default:
+      return null;
+  }
+
+  return {
+    from: from.toISOString().split("T")[0],
+    to: to.toISOString().split("T")[0],
+  };
 };
 
-const ALL_ACTION_ORDER = [
-  "Open", "File Download", "Restore", "Folder Download", "File Upload", 
-  "Folder Upload", "Version History", "Work Complete", "Workflow History", 
-  "Tag", "Audit Trail History", "Attribute", "Multi-File Select"
-];
+const formatDisplayDate = (dateStr) => {
+  if (!dateStr) return "---";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "---";
+  return d.toLocaleDateString("en-GB");
+};
 
-const CUSTOM_FILTERS = ["Instrument", "Workflow Status", "Task Status"];
-const CUSTOM_COLUMNS = ["Parser Status"];
 
-// --- HELPER COMPONENTS ---
-const CheckboxItem = ({ label, checked, onChange }) => (
-  <label className="flex items-center justify-between py-2 hover:bg-slate-50 px-2 rounded cursor-pointer group transition-colors mr-2">
-    <span className="text-slate-700 font-medium text-sm select-none group-hover:text-blue-700">{label}</span>
-    <input
-      type="checkbox"
-      checked={!!checked}
-      onChange={() => onChange(label)}
-      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-    />
-  </label>
-);
 
-const PrimaryButton = ({ icon: Icon, label, onClick }) => (
+const PrimaryButton = React.memo(({ icon: Icon, label, onClick }) => (
   <button
     onClick={onClick}
     className="flex items-center gap-1 px-2.5 py-2 hover:scale-95 transition-all bg-white text-blue-600 text-[11px] font-bold rounded shadow-sm border border-transparent hover:bg-blue-50 whitespace-nowrap"
   >
-    <Icon className="w-4 h-4 stroke-[3]" />
+    <Icon className="w-4 h-4 stroke-3" />
     <span>{label}</span>
   </button>
-);
+));
 
-const ActionButton = ({ icon: Icon, label, disabled, onClick, className = "" }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`flex items-center gap-1.5 px-2 py-2 text-[11px] font-bold rounded whitespace-nowrap hover:scale-95 transition-all
-      ${disabled
+const ActionButton = React.memo(({ icon: Icon, label, disabled, className = "" }) => (
+  <div
+    className={`flex items-center gap-1.5 px-2 py-2 text-[11px] font-bold rounded whitespace-nowrap transition-all ${
+      disabled
         ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-        : "bg-[#f1f5f9] text-[#1d8cf8] hover:bg-blue-100"
-      }
-      ${className}
-    `}
+        : "bg-[#f1f5f9] text-[#1d8cf8] hover:bg-blue-100 hover:scale-95 cursor-pointer"
+    } ${className}`}
   >
-    {Icon && <Icon className="w-3.5 h-3.5" />}
+    <Icon className="w-3.5 h-3.5" />
     <span>{label}</span>
-  </button>
-);
+  </div>
+));
 
-const DatePicker = ({ label, value, onChange, max }) => (
+const DatePicker = React.memo(({ label, value, onChange, max }) => (
   <div className="flex flex-col w-full">
-    <label className="block text-xs font-semibold text-slate-600 mb-1.5">{label}</label>
+    <label className="text-[11px] text-slate-500 font-semibold">{label}</label>
     <input
       type="date"
       value={value}
+      onChange={onChange}
       max={max}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-transparent border-b border-slate-300 pb-1 text-sm text-slate-800 font-medium focus:outline-none focus:border-blue-500"
+      className="px-2 py-1 border rounded text-[12px]"
     />
   </div>
-);
+));
 
-const ConfigModal = ({ onClose, currentVisibility, onSave }) => {
-  const [tempVisibility, setTempVisibility] = useState({ ...currentVisibility });
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartPos = useRef({ x: 0, y: 0 });
-
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    dragStartPos.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDragging) return;
-      setPosition({ x: e.clientX - dragStartPos.current.x, y: e.clientY - dragStartPos.current.y });
-    };
-    const handleMouseUp = () => setIsDragging(false);
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+const ActionWrapper = React.memo(({ disabled, onClick, showDialog, isLoading, children }) => {
+  const handleClick = useCallback(() => {
+    if (isLoading) return;
+    if (disabled) {
+      showDialog("Selected menu item has been disabled.", "information");
+      return;
     }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging]);
-
-  const toggleVisibility = (label) => {
-    setTempVisibility(prev => ({ ...prev, [label]: !prev[label] }));
-  };
-
-  const handleSubmit = () => {
-    onSave(tempVisibility);
-    onClose();
-  };
-
-  const scrollbarStyles = {
-    scrollbarWidth: 'thin',
-    scrollbarColor: '#cbd5e1 #f1f5f9'
-  };
+    if (onClick) onClick();
+  }, [disabled, isLoading, onClick, showDialog]);
 
   return (
-    <>
-      <style>
-        {`
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 3px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-          }
-        `}
-      </style>
-
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
-        <div
-          style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
-          className="bg-white w-[650px] max-w-[95%] rounded-md shadow-2xl flex flex-col max-h-[90vh] border border-slate-200"
-        >
-          <div
-            onMouseDown={handleMouseDown}
-            className="flex items-center justify-between px-6 py-3 border-b border-slate-100 cursor-move bg-slate-50/50 rounded-t-md select-none"
-          >
-            <h2 className="text-xl font-semibold text-blue-700">Configuration</h2>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="px-6 pt-[20px] overflow-hidden">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-blue-800 font-bold mb-3">Custom Filter</h3>
-                  <div className="space-y-1">
-                    {CUSTOM_FILTERS.map(item => (
-                      <CheckboxItem
-                        key={item}
-                        label={item}
-                        checked={tempVisibility[item]}
-                        onChange={toggleVisibility}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-blue-800 font-bold mb-3">Custom Column</h3>
-                  <div className="space-y-1">
-                    {CUSTOM_COLUMNS.map(item => (
-                      <CheckboxItem
-                        key={item}
-                        label={item}
-                        checked={tempVisibility[item]}
-                        onChange={toggleVisibility}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="md:border-l md:border-slate-200 md:pl-8 flex flex-col">
-                <h3 className="text-blue-800 font-bold mb-3">Custom Actions</h3>
-                <div
-                  className="space-y-1 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar"
-                  style={scrollbarStyles}
-                >
-                  {ALL_ACTION_ORDER.map(item => (
-                    <CheckboxItem
-                      key={item}
-                      label={item}
-                      checked={tempVisibility[item]}
-                      onChange={toggleVisibility}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 px-6 py-4 border-t text-[13px] border-slate-100 bg-slate-50/50 rounded-b-md mt-4">
-            <button onClick={handleSubmit} className="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 flex items-center gap-2 transition-colors shadow-sm">
-              <CheckSquare className="w-3.5 h-3.5" /> Submit
-            </button>
-            <button onClick={onClose} className="px-4 py-2 bg-white border border-slate-300 text-slate-600 font-medium rounded hover:bg-slate-50 transition-colors shadow-sm">
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
+    <div
+      onClick={handleClick}
+      className={`inline-block transition-all ${
+        isLoading ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:scale-95"
+      }`}
+    >
+      {children}
+    </div>
   );
-};
-
-
-const getCurrentDate = () => {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+});
 
 // --- MAIN COMPONENT ---
-const ServerData = () => {
-  const today = getCurrentDate();
-  const [hideEmpty, setHideEmpty] = useState(true);
-  const [isOpen, setIsOpen] = useState(true);
-  const [showConfig, setShowConfig] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
+export default function ServerData() {
+  const navigate = useNavigate();
+  const { width } = useWindowSize();
+  const [isFilterOpen, toggleFilter] = useToggle(true);
+  const [isConfigOpen, toggleConfig] = useToggle(false);
+  const [isMenuOpen, toggleMenu] = useToggle(false);
+
+  const [savedFilters, setSavedFilters] = useLocalStorage(
+    "serverDataFilters",
+    INITIAL_FILTER_STATE
+  );
+
+  const {
+    ftpGroups,
+    clients,
+    instruments,
+    workflowStatuses,
+    loadInitialData,
+    applyLocalStorageFilters,
+    isLoadingApi,
+    isHiddenRetire,
+    changeClientName,
+    getInstrumentmappedClientID,
+  } = useServerDataApi();
+
+  const [dialogData, setDialogData] = useState({ open: false, message: "", type: "" });
+
+  // Use separate state for Form (edit mode) vs Applied (view mode)
+  const [filterForm, setFilterForm] = useState(INITIAL_FILTER_STATE);
+  const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTER_STATE);
+
+  const [hasFiltered, setHasFiltered] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [loadingScope, setLoadingScope] = useState("both");
+  const [isGridLoading, setIsGridLoading] = useState(true);
+  const [isLeftLoading, setIsLeftLoading] = useState(true);
+  const [leftPanelData, setLeftPanelData] = useState(null);
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [gridData, setGridData] = useState([]);
+  const [fileTagsData, setFileTagsData] = useState([]);
+  const [fileParsedData, setFileParsedData] = useState([]);
+  const [activePopup, setActivePopup] = useState(null);
   const [visibleCount, setVisibleCount] = useState(9);
-  const [recordsDuration, setRecordsDuration] = useState("Current Date");
-  const [fromDate, setFromDate] = useState(today);
-  const [toDate, setToDate] = useState(today);
+  const autoInstrumentSetRef = useRef(false);
 
-  // --- GENERIC POPUP STATE ---
-  const [activePopup, setActivePopup] = useState(null); // Stores "File Upload", "Tag", etc.
-  const [selectedFile, setSelectedFile] = useState(null);
-  const fileInputRef = useRef(null);
+  const [configState, setConfigState] = useState(INITIAL_CONFIG_STATE);
 
-  const menuRef = useRef(null);
   const actionContainerRef = useRef(null);
   const buttonRefs = useRef([]);
+  const initialLoadRef = useRef(false);
 
-  const [configState, setConfigState] = useState({
-    "Restore": true, "Folder Download": true, "File Upload": true, "Folder Upload": true,
-    "Version History": true, "Work Complete": true, "Workflow History": true, "Tag": true,
-    "Open": true, "File Download": true, "Audit Trail History": true, "Attribute": true,
-    "Multi-File Select": true, "Instrument": true, "Workflow Status": true, "Task Status": true,
-    "Parser Status": false
-  });
-
-  const enabledActions = ALL_ACTION_ORDER.filter(action => configState[action]);
-
-  // --- HANDLERS ---
-  const handleActionClick = (actionName) => {
-    // Determine if this action has a popup defined in POPUP_CONTENTS
-    if (POPUP_CONTENTS[actionName]) {
-      setActivePopup(actionName);
-      setSelectedFile(null); // Reset file if opening upload
-    } else {
-      console.log(`Action ${actionName} clicked (No popup defined)`);
-    }
-    setShowMenu(false);
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
-
-  const handlePopupClose = () => {
-    setActivePopup(null);
-    setSelectedFile(null);
-  };
-
-
-  const POPUP_CONTENTS = {
-    "File Upload": (
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-2">
-           <label className="text-sm font-bold text-slate-700">Upload path :</label>
-           <div className="text-xs text-slate-500 font-medium px-2 py-1.5 bg-slate-50 rounded border border-slate-100">
-              /Root/Current/Folder/Path
-           </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-bold text-slate-700">File <span className="text-red-500">*</span></label>
-          <div className="flex items-center gap-3">
-            <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} />
-            <button onClick={() => fileInputRef.current?.click()} className="px-3 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
-              Choose files
-            </button>
-            <span className="text-xs text-slate-600 font-medium truncate max-w-[200px]">
-              {selectedFile ? selectedFile.name : "No file chosen"}
-            </span>
-          </div>
-          <p className="text-[10px] font-semibold text-slate-400 mt-1">NOTE:- Upload File should be less than 200 MB</p>
-        </div>
-        <div className="flex justify-end gap-3 pt-1 mt-4 border-t border-slate-100 ">
-          <button onClick={() => console.log("Upload", selectedFile)} className="flex  items-center gap-2 px-2 py-0 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-bold rounded shadow-sm transition-all active:scale-95">
-            <Upload className="w-4 h-4 stroke-[3]" /> upload
-          </button>
-          <button onClick={handlePopupClose} className="px-5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 text-sm font-bold rounded shadow-sm transition-all">
-            Close
-          </button>
-        </div>
-      </div>
-    ),
-    
-    "Folder Upload": (
-      <div className="p-4 text-center text-slate-600">
-        <FolderUp className="w-10 h-10 mx-auto mb-2 text-blue-500" />
-        <p>Folder Upload Content Here</p>
-        <button onClick={handlePopupClose} className="mt-4 px-4 py-2 bg-slate-100 rounded">Close</button>
-      </div>
-    ),
-
-    "Tag": (
-      <div className="flex flex-col gap-4">
-        <label className="text-sm font-bold text-slate-700">Add Tags</label>
-        <input type="text" className="border border-slate-300 rounded p-2 text-sm" placeholder="Enter tags..." />
-        <div className="flex justify-end gap-2 mt-2">
-           <button className="px-4 py-2 bg-blue-600 text-white rounded text-sm">Save Tag</button>
-           <button onClick={handlePopupClose} className="px-4 py-2 border rounded text-sm">Cancel</button>
-        </div>
-      </div>
-    )
-
-  };
-
-
-  useEffect(() => {
-    const calculateVisibleActions = () => {
-      if (!actionContainerRef.current) return;
-      const containerWidth = actionContainerRef.current.offsetWidth;
-      const reservedSpace = 140;
-      const availableWidth = containerWidth - reservedSpace;
-      let accumulatedWidth = 0;
-      let count = 0;
-      for (let i = 0; i < buttonRefs.current.length; i++) {
-        const button = buttonRefs.current[i];
-        if (!button) continue;
-        const buttonWidth = button.offsetWidth + 8;
-        if (accumulatedWidth + buttonWidth <= availableWidth) {
-          accumulatedWidth += buttonWidth;
-          count++;
-        } else { break; }
-      }
-      setVisibleCount(Math.max(1, count));
-    };
-    calculateVisibleActions();
-    window.addEventListener('resize', calculateVisibleActions);
-    const timer = setTimeout(calculateVisibleActions, 100);
-    return () => { window.removeEventListener('resize', calculateVisibleActions); clearTimeout(timer); };
-  }, [configState, enabledActions.length]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+  const showDialog = useCallback((message, type = "error") => {
+    setDialogData({ open: true, message, type });
   }, []);
 
-  const visibleActions = enabledActions.slice(0, visibleCount);
-  const overflowActions = enabledActions.slice(visibleCount);
-  const isCustomDate = recordsDuration === "Custom Date";
-  const handleDurationChange = (value) => {
-    const actualValue = value?.target?.value || value?.value || value;
-    setRecordsDuration(actualValue);
+  const handleDialogClose = useCallback(() => {
+    setDialogData({ open: false, message: "", type: "" });
+  }, []);
+
+  const handlePopupClose = useCallback(() => {
+    setActivePopup(null);
+  }, []);
+
+  const instrumentOptions = useMemo(() => {
+    return instruments.map((i) => i.sInstrumentName).filter(Boolean);
+  }, [instruments]);
+
+  const clientOptions = useMemo(() => {
+    const names = (clients || []).map((c) => c.sClientName).filter(Boolean);
+    const uniqueNames = [...new Set(names)];
+    return uniqueNames.includes("All") ? uniqueNames : ["All", ...uniqueNames];
+  }, [clients]);
+
+  const workflowOptions = useMemo(() => {
+    const types = (workflowStatuses || [])
+      .map((w) => w.L80WorkFlowType)
+      .filter((t) => t && t !== "All");
+    return ["All", ...new Set(types)];
+  }, [workflowStatuses]);
+
+  // ✅ CRITICAL FIX: Ensure 'val' is a string so .find() logic works
+  const handleInputChange = useCallback(
+    async (field, value) => {
+      let val = value;
+
+      // 1. Extract raw value if it's an event or object
+      // if (value?.target?.value !== undefined) {
+      //   val = value.target.value;
+      // } else if (typeof value === "object" && value !== null) {
+      //   val = value.value || value.label || ""; 
+      // }
+
+      if (value?.target?.value !== undefined) {
+      val = value.target.value;
+    } else if (typeof value === "object" && value !== null) {
+      val = value.value || value.label || "";
+    }
+
+      setFilterForm((prev) => ({ ...prev, [field]: val }));
+    
+
+      if (field === "client") {
+        // Ensure we compare strings
+        const clientObj = clients.find((c) => String(c.sClientName) === String(val));
+        
+        // Always try to find FTP Group, even if using 'All'
+        const currentGroup = filterForm.storageGroup || (ftpGroups[0] ? ftpGroups[0].sFTPAliasName : "");
+        const ftpObj = ftpGroups.find((g) => g.sFTPAliasName === currentGroup);
+
+        if (!clientObj || !ftpObj) return;
+
+        autoInstrumentSetRef.current = false;
+
+        const newInstruments = await changeClientName(
+          clientObj.sClientID,
+          ftpObj.sFTPID,
+          clientObj.sClientName
+        );
+
+        setFilterForm((prev) => {
+          if (clientObj.sClientName === "All") {
+            return {
+              ...prev,
+              client: val,
+              instrument: "",
+            };
+          }
+
+          if (!autoInstrumentSetRef.current && newInstruments?.length > 0) {
+            autoInstrumentSetRef.current = true;
+            return {
+              ...prev,
+              client: val,
+              instrument: newInstruments[0].sInstrumentName,
+            };
+          }
+
+          return {
+            ...prev,
+            client: val,
+          };
+        });
+
+        return;
+      }
+
+      if (field === "instrument") {
+        setFilterForm((prev) => ({
+          ...prev,
+          instrument: val,
+        }));
+
+         if (field === "recordsDuration") {
+      if (val !== "Custom Date") {
+        const range = getFromToDates(val);
+
+        if (range) {
+          setFilterForm((prev) => ({
+            ...prev,
+            recordsDuration: val,
+            fromDate: range.from,
+            toDate: range.to,
+          }));
+
+          // 🔥 UPDATE SUMMARY IMMEDIATELY
+          setAppliedFilters((prev) => ({
+            ...prev,
+            recordsDuration: val,
+            fromDate: range.from,
+            toDate: range.to,
+          }));
+        }
+      } else {
+        setFilterForm((prev) => ({
+          ...prev,
+          recordsDuration: val,
+          fromDate: "",
+          toDate: "",
+        }));
+
+        setAppliedFilters((prev) => ({
+          ...prev,
+          recordsDuration: val,
+          fromDate: "",
+          toDate: "",
+        }));
+      }
+      return;
+    }
+
+  
+
+        const instObj = instruments.find((i) => i.sInstrumentName === val);
+        if (!instObj) return;
+
+        const mappedClientID = await getInstrumentmappedClientID(instObj.sInstrumentMappingID);
+        if (!mappedClientID) return;
+
+        const mappedClient = clients.find((c) => c.sClientID === mappedClientID);
+        if (!mappedClient) return;
+
+        const currentGroup = filterForm.storageGroup || (ftpGroups[0] ? ftpGroups[0].sFTPAliasName : "");
+        const ftpObj = ftpGroups.find((g) => g.sFTPAliasName === currentGroup);
+        if(!ftpObj) return;
+
+        autoInstrumentSetRef.current = true;
+
+        await changeClientName(mappedClient.sClientID, ftpObj.sFTPID, mappedClient.sClientName);
+
+        setFilterForm((prev) => ({
+          ...prev,
+          client: mappedClient.sClientName,
+          instrument: val,
+        }));
+      }
+    },
+    [
+      clients,
+      ftpGroups,
+      instruments,
+      filterForm.storageGroup,
+      changeClientName,
+      getInstrumentmappedClientID,
+    ]
+  );
+
+  const handleReset = useCallback(async () => {
+    try {
+      setFilterForm(INITIAL_FILTER_STATE);
+      setAppliedFilters(INITIAL_FILTER_STATE);
+      setSavedFilters(INITIAL_FILTER_STATE);
+
+      setHasFiltered(false);
+      setSelectedRow(null);
+      setFileTagsData([]);
+      setFileParsedData([]);
+      setLeftPanelData(null);
+
+      setLoadingScope("both");
+      setIsGridLoading(true);
+      setIsLeftLoading(true);
+
+      await loadInitialData();
+      setRefreshKey((prev) => prev + 1);
+    } catch (error) {
+      showDialog("Failed to reset application state: " + error.message, "error");
+    }
+  }, [loadInitialData, setSavedFilters, showDialog]);
+
+
+const handleFilter = useCallback(() => {
+  // ENTRY POINT DEBUG - This MUST print when button is clicked
+  console.log("🔥 handleFilter ENTERED - Function is being called!");
+  console.log("Timestamp:", new Date().toISOString());
+  
+  // Rest of your existing logic with logs
+  console.log("=== handleFilter called ===");
+  console.log("Initial filterForm state:", {
+    recordsDuration: filterForm.recordsDuration,
+    fromDate: filterForm.fromDate,
+    toDate: filterForm.toDate,
+  });
+
+  let effectiveFromDate = filterForm.fromDate;
+  let effectiveToDate = filterForm.toDate;
+
+  if (filterForm.recordsDuration !== "Custom Date") {
+    console.log(`Calculating date range for: "${filterForm.recordsDuration}"`);
+    const range = getFromToDates(filterForm.recordsDuration);
+    
+    if (range) {
+      effectiveFromDate = range.from;
+      effectiveToDate = range.to;
+      console.log("✅ Dates calculated:", { from: range.from, to: range.to });
+      
+      setFilterForm(prev => ({
+        ...prev,
+        fromDate: range.from,
+        toDate: range.to
+      }));
+    }
+  }
+
+  const finalFilters = {
+    ...filterForm,
+    fromDate: effectiveFromDate,
+    toDate: effectiveToDate,
   };
 
+  console.log("Final filters:", finalFilters);
+  
+  applyLocalStorageFilters(finalFilters);
+  setAppliedFilters(finalFilters);
+  setSavedFilters(finalFilters);
+  setHasFiltered(true);
+  setLoadingScope("both");
+  setIsGridLoading(true);
+  setIsLeftLoading(true);
+
+  setLeftPanelData({
+    storageGroup: finalFilters.storageGroup,
+    client: finalFilters.client,
+    instrument: finalFilters.instrument,
+  });
+
+  console.log("=== handleFilter completed ===");
+}, [filterForm, applyLocalStorageFilters, setSavedFilters]);
+
+
+
+
+
+
+
+
+  useEffect(() => {
+    if (!initialLoadRef.current) {
+      initialLoadRef.current = true;
+      loadInitialData().catch((err) => {
+        showDialog("Failed to load server data: " + err.message, "error");
+      });
+    }
+  }, [loadInitialData, showDialog]);
+
+ 
+
+
+  const handleRowSelect = useCallback((row) => {
+    setSelectedRow(row);
+    if (!row) {
+      setFileTagsData([]);
+      setFileParsedData([]);
+      return;
+    }
+    setFileTagsData([{ id: 1, category: "Priority", value: "High", createdBy: "System" }]);
+    setFileParsedData([{ id: 1, fieldName: "FTP ID", fieldValue: row.id }]);
+  }, []);
+
+  const handleRefresh = useCallback(
+    (scope = "middle") => {
+      handleRowSelect(null);
+      setLoadingScope(scope);
+      setRefreshKey((prev) => prev + 1);
+      if (scope === "both") loadInitialData().catch(console.error);
+    },
+    [handleRowSelect, loadInitialData]
+  );
+
+  const handleActionClick = useCallback(
+    (actionName) => {
+      if (actionName === "Parser Status") {
+        setFileParsedData([]);
+        return;
+      }
+      setActivePopup(actionName);
+      if (isMenuOpen) toggleMenu(false);
+    },
+    [isMenuOpen, toggleMenu]
+  );
+
+  useEffect(() => {
+    if (loadingScope === "both") {
+      setIsLeftLoading(true);
+      setIsGridLoading(true);
+    } else {
+      setIsGridLoading(true);
+      setIsLeftLoading(false);
+    }
+
+    const mockData = ftpGroups.map((group, index) => ({
+      id: index + 1,
+      username: group.sFTPAliasName || `${group.sFTPID}.pdf`,
+      fullName: "System",
+      profileName:
+        appliedFilters.client && appliedFilters.client !== "All"
+          ? appliedFilters.client
+          : "System",
+      TasksName: "Upload",
+      parserStatus: "Parsed",
+    }));
+
+    const timer = setTimeout(() => {
+      setGridData(mockData);
+      setIsGridLoading(false);
+      setIsLeftLoading(false);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [refreshKey, ftpGroups, appliedFilters, loadingScope]);
+
+ const calculateVisibleActions = useCallback(() => {
+  if (!actionContainerRef.current) return;
+
+  const availableWidth = actionContainerRef.current.offsetWidth - 140; // your buffer
+  let accumulatedWidth = 0;
+  let count = 0;
+
+  buttonRefs.current.forEach((button) => {
+    if (!button) return;
+    const w = button.offsetWidth + 8; // button + gap
+    if (accumulatedWidth + w < availableWidth) {
+      accumulatedWidth += w;
+      count += 1;
+    }
+  });
+
+  setVisibleCount(Math.max(0, count));
+}, []);
+
+
+ useEffect(() => {
+  calculateVisibleActions(); // initial
+  window.addEventListener("resize", calculateVisibleActions);
+  return () => window.removeEventListener("resize", calculateVisibleActions);
+}, [calculateVisibleActions]);
+
+  const getIsActionDisabled = useCallback(
+    (actionName) => {
+      if (selectedRow)
+        return !["Open", "Restore", "Folder Download", "File Upload", "Folder Upload"].includes(
+          actionName
+        );
+      if (hasFiltered) return !["Open", "Restore"].includes(actionName);
+      return ["Version History", "Work Complete", "Tag"].includes(actionName);
+    },
+    [selectedRow, hasFiltered]
+  );
+
+  const enabledActions = useMemo(
+    () => ALL_ACTION_ORDER.filter((a) => configState[a]),
+    [configState]
+  );
+  const visibleActions = enabledActions.slice(0, visibleCount);
+  const overflowActions = enabledActions.slice(visibleCount);
+
+  const taskStatusOptions = useMemo(() => {
+    const base = ["All", "Active", "Deactive"];
+    return isHiddenRetire === "0" ? [...base, "Retire"] : base;
+  }, [isHiddenRetire]);
+
   return (
-    <div className="flex flex-col w-full font-sans rounded-md relative">
+    <div className="flex flex-col w-full font-sans rounded-md relative h-full">
+      {isLoadingApi && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl flex items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <span className="text-lg font-medium">Loading Server Data...</span>
+          </div>
+        </div>
+      )}
+
+      {/* FILTER BAR */}
       <div className="bg-[#f0f4f8] px-4 pt-4 pb-2 relative rounded-t-md z-20">
-        {isOpen ? (
+        {isFilterOpen ? (
           <div className="flex flex-wrap items-end gap-3.5 mb-2">
             <div className="w-60">
               <AnimatedDropdown
                 label="Storage Group"
-                value="File01"
-                options={["File01", "File02", "File03"]}
-                onChange={(value) => console.log(value)}
-                isSearchable={true}
+                value={filterForm.storageGroup}
+                options={ftpGroups.map((g) => g.sFTPAliasName) || []}
+                onChange={(val) => handleInputChange("storageGroup", val)}
+                isSearchable
               />
             </div>
+
             <div className="w-60">
               <AnimatedDropdown
                 label="Client"
-                value="All"
-                options={["All", "Client A", "Client B"]}
-                onChange={(value) => console.log(value)}
-                isSearchable={true}
+                value={filterForm.client}
+                options={clientOptions}
+                onChange={(val) => handleInputChange("client", val)}
+                isSearchable
               />
             </div>
 
@@ -419,63 +625,73 @@ const ServerData = () => {
               <div className="w-60">
                 <AnimatedDropdown
                   label="Instrument"
-                  value=""
-                  options={["Inst 1", "Inst 2","Apple","Samsung"]}
-                  onChange={(value) => console.log(value)}
-                  // isSearchable={true}
-                   allowFreeInput={true}  
+                  value={filterForm.instrument}
+                  options={instrumentOptions}
+                  onChange={(val) => handleInputChange("instrument", val)}
+                  allowFreeInput
                 />
               </div>
             )}
+
             {configState["Task Status"] && (
               <div className="w-60">
                 <AnimatedDropdown
                   label="Task Status"
-                  value="All"
-                  options={["All", "Pending", "Completed", "Retire"]}
-                  onChange={(value) => console.log(value)}
-                  isSearchable={true}
+                  value={filterForm.taskStatus}
+                  options={taskStatusOptions}
+                  isSearchable
+                  onChange={(val) => handleInputChange("taskStatus", val)}
                 />
               </div>
             )}
+
             {configState["Workflow Status"] && (
               <div className="w-60">
                 <AnimatedDropdown
                   label="Workflow Status"
-                  value="All"
-                  options={["All", "Not Completed", "Completed", "Reviewed", "Not Satisfied", "Verified", "Not Effective", "Approved", "NotApproved"]}
-                  onChange={(value) => console.log(value)}
-                  isSearchable={true}
+                  value={filterForm.workflowStatus}
+                  options={workflowOptions}
+                  onChange={(val) => handleInputChange("workflowStatus", val)}
+                  isSearchable
                 />
               </div>
             )}
 
             <div className="w-60">
-              <AnimatedDropdown
-                label="Records Duration"
-                value={recordsDuration}
-                options={["Current Date", "Last 7 Days", "Last 1 Month", "Last 1 Year", "Custom Date"]}
-                onChange={handleDurationChange}
-                isSearchable={true}
-              />
+            <AnimatedDropdown
+  label="Records Duration"
+  value={filterForm.recordsDuration}
+  options={[
+    "Current Date",
+    "Last 7 Days",
+    "Last 30 Days", 
+    "Last 1 Year",
+    "Custom Date",
+  ]}
+  onChange={(val) => handleInputChange("recordsDuration", val)
+}
+  isSearchable
+/>
+
+
             </div>
 
-            {isCustomDate && (
+            {filterForm.recordsDuration === "Custom Date" && (
               <>
                 <div className="w-52 pb-4">
                   <DatePicker
                     label="From"
-                    value={fromDate}
-                    onChange={setFromDate}
-                    max={today}
+                    value={filterForm.fromDate}
+                    onChange={(val) => handleInputChange("fromDate", val)}
+                    max={getCurrentDate()}
                   />
                 </div>
                 <div className="w-52 pb-4">
                   <DatePicker
                     label="To"
-                    value={toDate}
-                    onChange={setToDate}
-                    max={today}
+                    value={filterForm.toDate}
+                    onChange={(val) => handleInputChange("toDate", val)}
+                    max={getCurrentDate()}
                   />
                 </div>
               </>
@@ -484,75 +700,115 @@ const ServerData = () => {
             <label className="flex items-center gap-2 cursor-pointer select-none pb-4">
               <span className="text-xs font-bold text-slate-600">Hide Empty Folder</span>
               <div
-                onClick={() => setHideEmpty(!hideEmpty)}
-                className={`w-4 h-4 rounded border flex items-center justify-center transition-colors
-                  ${hideEmpty ? 'bg-blue-500 border-blue-500' : 'bg-white border-slate-300'}
-                `}
+                onClick={() => handleInputChange("hideEmpty", !filterForm.hideEmpty)}
+                className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                  filterForm.hideEmpty ? "bg-blue-500 border-blue-500" : "bg-white border-slate-300"
+                }`}
               >
-                {hideEmpty && <CheckSquare className="w-3 h-3 text-white" />}
+                {filterForm.hideEmpty && <CheckSquare className="w-3 h-3 text-white" />}
               </div>
             </label>
 
             <div className="flex items-end gap-2 pb-2">
-              <PrimaryButton icon={Filter} label="Filter" />
-              <PrimaryButton icon={RotateCcw} label="Reset" />
-              <PrimaryButton icon={RefreshCw} label="Refresh" />
-              <PrimaryButton icon={Settings} label="Configuration" onClick={() => setShowConfig(true)} />
+              <PrimaryButton icon={Filter} label="Filter" onClick={handleFilter} />
+              <PrimaryButton icon={RotateCcw} label="Reset" onClick={handleReset} />
+              <PrimaryButton icon={RefreshCw} label="Refresh" onClick={() => handleRefresh("both")} />
+              <PrimaryButton icon={Settings} label="Configuration" onClick={toggleConfig} />
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-4 gap-4 py-2.5">
-             <span className="text-xs text-slate-500 italic">Filters hidden...</span>
+          // ✅ FIXED: Using appliedFilters with robust display logic
+          <div className="grid grid-cols-6 gap-3 py-2 px-1">
+            <SummaryItem label="Storage Group" value={appliedFilters.storageGroup} />
+            <SummaryItem label="Client" value={filterForm.client} />
+<SummaryItem label="Instrument" value={filterForm.instrument} />
+
+        <SummaryItem label="From" value={formatDisplayDate(appliedFilters.fromDate)} />
+<SummaryItem label="To" value={formatDisplayDate(appliedFilters.toDate)} />
+
+
+
           </div>
         )}
-        <button className="absolute right-4 -bottom-3 z-10 bg-[#f0f4f8] hover:bg-slate-200 p-0.5 rounded shadow-sm cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <ChevronUp className="w-4 h-4 text-blue-600" /> : <ChevronDown className="w-4 h-4 text-blue-600" />}
+
+        {/* Arrow Toggle */}
+        <button
+          className="absolute right-4 -bottom-3 z-10 bg-[#f0f4f8] hover:bg-slate-200 p-0.5 rounded shadow-sm cursor-pointer"
+          onClick={toggleFilter}
+        >
+          {isFilterOpen ? (
+            <ChevronUp className="w-4 h-4 text-blue-600" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-blue-600" />
+          )}
         </button>
       </div>
 
       {/* ACTION BAR */}
-      <div className="bg-white px-3 py-2">
-        <div ref={actionContainerRef} className="flex items-center flex-wrap gap-2 justify-start relative">
-          {/* Measurement Div */}
+      <div className="bg-white px-3 py-2 border-b border-slate-100">
+        <div
+          ref={actionContainerRef}
+          className="flex items-center flex-wrap gap-2 justify-start relative"
+        >
           <div className="invisible absolute pointer-events-none flex gap-2">
-            {enabledActions.map((actionName, index) => (
-               <div key={`measure-${actionName}`} ref={(el) => (buttonRefs.current[index] = el)}>
-                 <ActionButton icon={ACTION_ICONS[actionName]} label={actionName} />
-               </div>
+            {enabledActions.map((a, i) => (
+              <div key={`measure-${a}`} ref={(el) => (buttonRefs.current[i] = el)}>
+                <ActionButton icon={ACTION_ICONS[a]} label={a} />
+              </div>
             ))}
           </div>
 
-          {/* Visible Buttons */}
-          {visibleActions.map((actionName) => (
-             <ActionButton
-               key={actionName}
-               icon={ACTION_ICONS[actionName]}
-               label={actionName}
-               disabled={actionName === "Version History" || actionName === "Work Complete"}
-               onClick={() => handleActionClick(actionName)}
-             />
+          {visibleActions.map((a) => (
+            <ActionWrapper
+              key={a}
+              disabled={getIsActionDisabled(a)}
+              isLoading={isLoadingApi}
+              showDialog={showDialog}
+              onClick={() => handleActionClick(a)}
+            >
+              <ActionButton icon={ACTION_ICONS[a]} label={a} disabled={getIsActionDisabled(a)} />
+            </ActionWrapper>
           ))}
 
           <div className="h-4 w-px bg-slate-200 mx-1"></div>
-          <ActionButton icon={RefreshCw} label="Refresh" />
 
-          {/* Overflow Menu */}
+          <ActionWrapper
+            disabled={false}
+            isLoading={isLoadingApi}
+            showDialog={showDialog}
+            onClick={() => handleRefresh("middle")}
+          >
+            <ActionButton icon={RefreshCw} label="Refresh" disabled={isLoadingApi} />
+          </ActionWrapper>
+
           {overflowActions.length > 0 && (
-            <div className="relative" ref={menuRef}>
-              <button onClick={() => setShowMenu(!showMenu)} className="p-1.5 rounded bg-[#f1f5f9] hover:bg-blue-100 text-[#1d8cf8]">
+            <div className="relative">
+              <button
+                onClick={toggleMenu}
+                className="p-1.5 rounded bg-[#f1f5f9] hover:bg-blue-100 text-[#1d8cf8]"
+              >
                 <MoreVertical className="w-4 h-4" />
               </button>
-              {showMenu && (
+
+              {isMenuOpen && (
                 <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-md shadow-xl py-1 z-50 border border-slate-100">
-                  {overflowActions.map((actionName) => (
-                    <button
-                      key={actionName}
-                      onClick={() => handleActionClick(actionName)}
-                      className="w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 hover:bg-slate-50 text-slate-700"
+                  {overflowActions.map((a) => (
+                    <ActionWrapper
+                      key={a}
+                      disabled={getIsActionDisabled(a)}
+                      showDialog={showDialog}
+                      onClick={() => handleActionClick(a)}
                     >
-                      {ACTION_ICONS[actionName] && React.createElement(ACTION_ICONS[actionName], { className: "w-3.5 h-3.5 text-blue-500" })}
-                      {actionName}
-                    </button>
+                      <div
+                        className={`w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 ${
+                          getIsActionDisabled(a)
+                            ? "text-slate-300 cursor-not-allowed"
+                            : "text-slate-700 cursor-pointer"
+                        }`}
+                      >
+                        {React.createElement(ACTION_ICONS[a], { className: "w-3.5 h-3.5" })} {a}
+                      </div>
+                    </ActionWrapper>
                   ))}
                 </div>
               )}
@@ -560,21 +816,66 @@ const ServerData = () => {
           )}
         </div>
       </div>
-        <h1>Hello World</h1>
-        <div><FtpLayout /> </div>
 
-        {/* <UsersPage /> */}
-       
+      {/* FTP LAYOUT */}
+      <div className="pb-10 pt-6">
+        <FtpLayout
+          storageGroup={appliedFilters.storageGroup}
+          rowData={gridData}
+          columns={[
+            { key: "username", label: "Filename", width: 150 },
+            { key: "profileName", label: "Client", width: 150 },
+            { key: "TasksName", label: "Task Type", width: 150 },
+            {
+              key: "parserStatus",
+              label: "Parser Status",
+              width: 120,
+              enableSearch: true,
+              hidden: true,
+            },
+          ]}
+          onRowSelect={handleRowSelect}
+          refreshKey={refreshKey}
+          tagsData={fileTagsData}
+          parsedData={fileParsedData}
+          configState={configState}
+          isMiddleLoading={isGridLoading}
+          isLeftLoading={isLeftLoading}
+          showParserColumn={configState["Parser Status"]}
+          showRightPanel={true}
+          onRefresh={() => handleRefresh("middle")}
+          showDialog={showDialog}
+          leftPanelData={leftPanelData}
+        />
+      </div>
 
-      {showConfig && (
+      <UsersPage />
+
+      {/* MODALS */}
+      {isConfigOpen && (
         <ConfigModal
           currentVisibility={configState}
           onSave={setConfigState}
-          onClose={() => setShowConfig(false)}
+          onClose={toggleConfig}
+          showDialog={showDialog}
+        />
+      )}
+
+      <CustomPopup
+        isOpen={!!activePopup}
+        onClose={handlePopupClose}
+        title={activePopup || ""}
+        content={<PopupContentResolver type={activePopup} onClose={handlePopupClose} />}
+        closeOnOverlayClick={false}
+      />
+
+      {dialogData.open && (
+        <Errordialog
+          message={dialogData.message}
+          type={dialogData.type}
+          onClose={handleDialogClose}
         />
       )}
     </div>
   );
-};
-
-export default ServerData;
+}
