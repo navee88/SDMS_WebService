@@ -146,7 +146,7 @@ export default function OthersInstrumentsPage() {
       enableSearch: true,
       render: (row, isSelected) => (
         <div className="py-1">
-          <div className={`font-medium ${isSelected ? 'text-gray-900' : 'text-gray-800'}`}>
+          <div className={`font-bold ${isSelected ? 'text-gray-900' : 'text-gray-800'}`}>
             {row.ActualFileName}
           </div>
           <div className="text-xs text-gray-500">{row["Created On"]}</div>
@@ -301,12 +301,12 @@ export default function OthersInstrumentsPage() {
   };
 
   return (
-    <div className="p-6 bg-[#fafafa] min-h-screen font-sans">
+    <div className="px-3 py-1 bg-[#ffffff] min-h-screen font-roboto">
       <div className="max-w-[1400px] space-y-6">
         {/* Locked Instrument Details */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-medium text-[#4a6fa5]">
+            <h3 className="text-xs font-bold text-[#405f7d]">
               {t("instrumentlocktag.lockedinstrumentdetails")}
             </h3>
             <PrimaryButton 
@@ -329,7 +329,7 @@ export default function OthersInstrumentsPage() {
         {/* File Information */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-medium text-[#4a6fa5]">
+            <h3 className="text-xs font-bold text-[#405f7d]">
               {t("instrumentlocktag.fileinformation")}
             </h3>
             <PrimaryButton 
@@ -352,7 +352,7 @@ export default function OthersInstrumentsPage() {
         {/* File Tag Information */}
         {!featureStatus && (
           <div>
-            <h3 className="text-sm font-medium text-[#4a6fa5] mb-2">
+            <h3 className="text-xs font-bold text-[#405f7d] mb-2">
               {t("instrumentlocktag.filetagsinformation")}
             </h3>
             <InfoBox data={fileTags} />

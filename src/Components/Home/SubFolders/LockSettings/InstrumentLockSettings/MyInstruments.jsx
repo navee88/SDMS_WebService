@@ -94,10 +94,10 @@ const FileUploadDropzone = ({ onFilesAdded, files, onRemoveFile, onUpload, onRes
           onChange={handleFileSelect}
           className="hidden"
           accept="*/*"
-        />
-        <Plus className="mx-auto mb-4 text-gray-400" size={40} />
-        <div className="text-gray-700">
-          <span className="font-bold uppercase">{t("instrumentlocktag.dragdrop") || "Drag & Drop"}</span>
+        />   
+        <Plus className="mx-auto mb-2 text-gray-400" size={40} />
+        <div className="text-gray-700 ">
+          <span className="font-bold font-Helvetica Neue text-sm uppercase">{t("instrumentlocktag.dragdrop") || "Drag & Drop"}</span>
           <br />
           {t("instrumentlocktag.or") || "or"}{" "}
           <span className="text-blue-600 underline">
@@ -111,13 +111,13 @@ const FileUploadDropzone = ({ onFilesAdded, files, onRemoveFile, onUpload, onRes
 
       {files.length > 0 && (
         <div className="mt-4">
-          <div className="text-sm font-semibold text-gray-700 mb-2">
+          <div className="text-xs font-bold text-gray-700 mb-2">
             Selected Files ({files.length})
           </div>
           <div className="space-y-2">
             {files.map((file, index) => (
               <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                <span className="text-sm text-gray-700 truncate flex-1">{file.name}</span>
+                <span className="text-xs text-gray-700 truncate flex-1">{file.name}</span>
                 <PrimaryButton
                   onClick={() => onRemoveFile(index)}
                   variant="danger"
@@ -158,10 +158,10 @@ const InfoBox = ({ data }) => (
       <div className="space-y-2">
         {data.map((d, i) => (
           <div key={i} className="flex">
-            <label className="w-[45%] text-sm font-bold text-gray-800">
+            <label className="w-[45%] text-xs font-bold text-gray-800">
               {d.label}:
             </label>
-            <span className="w-[45%] text-sm font-bold text-[#162ddc]">
+            <span className="w-[45%] text-xs font-bold text-[#162ddc]">
               {d.value}
             </span>
           </div>
@@ -229,7 +229,7 @@ const makeAjaxCall = async (url, passObjDet) => {
       enableSearch: true,
       render: (row, isSelected) => (
         <div className="py-1">
-          <div className={`font-semibold ${isSelected ? 'text-gray-900' : 'text-gray-800'}`}>
+          <div className={`font-bold ${isSelected ? 'text-gray-900' : 'text-gray-800'}`}>
             {row.sInstrumentAliasName}
           </div>
           <div className="text-xs text-gray-500">{row.sCreatedOn}</div>
@@ -286,7 +286,7 @@ const makeAjaxCall = async (url, passObjDet) => {
       enableSearch: true,
       render: (row, isSelected) => (
         <div className="py-1">
-          <div className={`font-medium ${isSelected ? 'text-gray-900' : 'text-gray-800'}`}>
+          <div className={`font-bold ${isSelected ? 'text-gray-900' : 'text-gray-800'}`}>
             {row.ActualFileName}
           </div>
           <div className="text-xs text-gray-500">{row["Created On"]}</div>
@@ -327,32 +327,32 @@ const makeAjaxCall = async (url, passObjDet) => {
 
   // Detail panel renderers
   const renderInstrumentDetail = useCallback((instrument) => (
-    <div className="p-4 space-y-3 text-sm">
+    <div className="p-4 space-y-3 text-xs">
       <div className="grid grid-cols-2 gap-4">
-        <span className="font-semibold text-gray-700">Task ID:</span>
-        <span className="font-medium text-gray-900">{instrument.sTaskID}</span>
-        <span className="font-semibold text-gray-700">Status:</span>
-        <span className={`font-medium ${instrument.Status === 'Locked' ? 'text-green-600' : 'text-orange-600'}`}>
+        <span className="font-bold text-gray-700">Task ID:</span>
+        <span className="font-bold text-gray-900">{instrument.sTaskID}</span>
+        <span className="font-bold text-gray-700">Status:</span>
+        <span className={`font-bold ${instrument.Status === 'Locked' ? 'text-green-600' : 'text-orange-600'}`}>
           {instrument.Status}
         </span>
-        <span className="font-semibold text-gray-700">Source Path:</span>
+        <span className="font-bold text-gray-700">Source Path:</span>
         <span className="text-gray-900 truncate">{instrument.sTaskSourcePath}</span>
-        <span className="font-semibold text-gray-700">Template:</span>
+        <span className="font-bold text-gray-700">Template:</span>
         <span className="text-gray-900">{instrument.sTemplateName}</span>
       </div>
     </div>
   ), []);
 
   const renderFileDetail = useCallback((file) => (
-    <div className="p-4 space-y-3 text-sm">
+    <div className="p-4 space-y-3 text-xs">
       <div className="grid grid-cols-2 gap-4">
-        <span className="font-semibold text-gray-700">File Name:</span>
-        <span className="font-medium text-gray-900">{file.ActualFileName}</span>
-        <span className="font-semibold text-gray-700">Status:</span>
-        <span className={`font-medium ${file["Upload Status"] === 'Uploaded' ? 'text-green-600' : 'text-orange-600'}`}>
+        <span className="font-bold text-gray-700">File Name:</span>
+        <span className="font-bold text-gray-900">{file.ActualFileName}</span>
+        <span className="font-bold text-gray-700">Status:</span>
+        <span className={`font-bold ${file["Upload Status"] === 'Uploaded' ? 'text-green-600' : 'text-orange-600'}`}>
           {file["Upload Status"]}
         </span>
-        <span className="font-semibold text-gray-700">Client:</span>
+        <span className="font-bold text-gray-700">Client:</span>
         <span className="text-gray-900">{file["Client Name"]}</span>
       </div>
     </div>
@@ -515,12 +515,12 @@ const makeAjaxCall = async (url, passObjDet) => {
   };
 
   return (
-    <div className="p-6 bg-[#fafafa] min-h-screen font-sans">
+    <div className="px-3 py-2 bg-[#ffffff] min-h-screen font-roboto">
       <div className="max-w-[1400px] space-y-6">
         {/* Locked Instruments - GridLayout */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-medium text-[#4a6fa5]">
+            <h3 className="text-xs font-bold text-[#405f7d]">
               {t("instrumentlocktag.lockedinstrumentdetails")}
             </h3>
             <PrimaryButton 
@@ -554,7 +554,7 @@ const makeAjaxCall = async (url, passObjDet) => {
 
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-medium text-[#4a6fa5]">
+            <h3 className="text-xs font-bold text-[#405f7d]">
               {t("instrumentlocktag.fileinformation")}
             </h3>
             <PrimaryButton 
@@ -576,7 +576,7 @@ const makeAjaxCall = async (url, passObjDet) => {
         {/* File Tag Information */}
         {!featureStatus && (
           <div>
-            <h3 className="text-sm font-medium text-[#4a6fa5] mb-2">
+            <h3 className="text-xs font-bold text-[#405f7d] mb-2">
               {t("instrumentlocktag.filetagsinformation")}
             </h3>
             <InfoBox data={fileTags} />

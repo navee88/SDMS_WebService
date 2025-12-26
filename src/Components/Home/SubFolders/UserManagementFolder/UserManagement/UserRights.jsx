@@ -842,8 +842,8 @@ const UserRights = () => {
             display: 'flex', 
             flexDirection: 'column',
             fontFamily: 'Roboto, sans-serif',
-            backgroundColor: '#f9fafb',
-            height: '100%',
+            backgroundColor: '#fff',
+            height: '100vh',
             overflow: 'hidden'
         }}>
             {infoDialog.open && (
@@ -854,11 +854,15 @@ const UserRights = () => {
                 />
             )}
 
+            {/* Header Section */}
             <div style={{ 
-                padding: '15px',
+                padding: '10px 15px',
                 background: 'white',
                 borderBottom: '1px solid #e5e7eb',
-                flexShrink: 0
+                flexShrink: 0,
+                position: 'sticky',
+                top: 0,
+                zIndex: 10
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -870,12 +874,8 @@ const UserRights = () => {
                                 value={selectedGroup}
                                 onChange={(e) => handleGroupChange(e.target.value)}
                                 style={{
-                                    width: '200px',
-                                    padding: '6px 10px',
+                                    width: '250px',
                                     fontSize: '12px',
-                                    border: '1px solid #d1d5db',
-                                    borderRadius: '4px',
-                                    outline: 'none',
                                     backgroundColor: 'white'
                                 }}
                             >
@@ -929,15 +929,21 @@ const UserRights = () => {
                 </div>
             </div>
 
-            <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+            {/* Main Content Area - This will scroll */}
+            <div style={{ 
+                flex: 1,
+                overflow: 'auto',
+                minHeight: 0
+            }}>
                 {filteredData.length === 0 && !loading ? (
                     <div style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
                         justifyContent: 'center', 
                         height: '100%',
+                        minHeight: '200px',
                         color: '#6b7280',
-                        fontSize: '14px',
+                        fontSize: '12px',
                         flexDirection: 'column',
                         gap: '10px'
                     }}>
@@ -954,7 +960,6 @@ const UserRights = () => {
                                     padding: '8px 16px',
                                     backgroundColor: '#f1f5f9',
                                     color: '#2883FE',
-                                    border: '1px solid #d1d5db',
                                     borderRadius: '4px',
                                     cursor: 'pointer',
                                     fontSize: '12px',
@@ -966,14 +971,26 @@ const UserRights = () => {
                         )}
                     </div>
                 ) : (
-                    <GridLayout 
-                        key={`user-rights-grid-${selectedGroup}`}
-                        columns={columns}
-                        data={stableData}
-                        searchable={false}
-                        selectable={false}
-                        hidePagination={false}
-                    />
+                    <div style={{ 
+                        padding: '15px',
+                        height: '100%'
+                    }}>
+                        {/* Wrap GridLayout in a container that takes full height */}
+                        <div style={{ 
+                            height: '100%',                     
+                            overflow: 'auto'
+                        }}>
+                            <GridLayout 
+                                key={`user-rights-grid-${selectedGroup}`}
+                                columns={columns}
+                                data={stableData}
+                                searchable={false}
+                                selectable={false}
+                                hidePagination={false}
+                                enableSelection={false}
+                            />
+                        </div>
+                    </div>
                 )}
             </div>
         </div>

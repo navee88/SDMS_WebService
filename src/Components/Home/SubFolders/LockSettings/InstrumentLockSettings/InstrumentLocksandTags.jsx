@@ -1,11 +1,12 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Lock, Unlock, ChevronDown, X, Edit, CheckSquare } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Lock, Unlock, Edit } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 // Import your common components
 import AuditTrail from '../../../../Layout/Common/AuditTrail';
 import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
 import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
+import Errordialog from '../../../../Layout/Common/Errordialog';
 
 // Import servicecall and decryption
 import servicecall from '../../../../../Services/servicecall';
@@ -66,17 +67,27 @@ const InlineCheckbox = ({ label, checked, onChange, disabled }) => (
   </div>
 );
 
-const TagGrid = ({ tags, onTagValueClick, isLocked, t, showValidationError }) => {
+const TagGrid = ({ tags, onTagValueClick, t, showValidationError, onTagEditRequest }) => {
   const [tooltipState, setTooltipState] = useState({
     isOpen: false,
     tagIndex: null,
     position: { top: 0, left: 0 },
     searchTerm: '',
     selectedValue: '',
+    selectedValueID: '',
     options: []
   });
 
   const [selectedTagIndex, setSelectedTagIndex] = useState(null);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const [localTags, setLocalTags] = useState(tags);
+
+  // Sync localTags with props when tags change
+  useEffect(() => {
+    setLocalTags(tags);
+  }, [tags]);
 
   const calculateTooltipPosition = (event) => {
     const buttonRect = event.currentTarget.getBoundingClientRect();
@@ -108,43 +119,119 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t, showValidationError }) =>
     return { top, left };
   };
 
+  const showInformationMessage = (message) => {
+    setErrorMessage(message);
+    setShowErrorDialog(true);
+  };
+
+  // Helper function to check if a tag can be edited based on order
+  const canEditTag = (tagIndex) => {
+    // First tag is always editable
+    if (tagIndex === 0) return true;
+    
+    // Check if all previous tags have values
+    for (let i = 0; i < tagIndex; i++) {
+      if (!localTags[i].value) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+  // Helper function to get appropriate error message
+  const getErrorMessage = (tagIndex) => {
+    // Find the first previous tag that doesn't have a value
+    for (let i = tagIndex - 1; i >= 0; i--) {
+      if (!localTags[i].value) {
+        return `Please select the ${localTags[i].tagName} value first`;
+      }
+    }
+    
+    return `Please select the required value first`;
+  };
+
   const handleRowClick = (tag, index) => {
-    if (!isLocked && tag.editable) {
-      if (tag.tagName === 'Test' && !tags[0].value) {
+    if (tag.editable) {
+      if (!canEditTag(index)) {
+        showInformationMessage(getErrorMessage(index));
         return;
       }
       setSelectedTagIndex(index);
     }
   };
 
-  const handleEditClick = (tag, index, event) => {
+  const handleEditClick = async (tag, index, event) => {
     event.stopPropagation();
     
-    if (!isLocked && tag.editable) {
-      if (tag.tagName === 'Test' && !tags[0].value) {
+    if (tag.editable) {
+      if (!canEditTag(index)) {
+        showInformationMessage(getErrorMessage(index));
         return;
       }
       
-      const options = tag.options && tag.options.length > 0 ? tag.options : [];
-
-      setSelectedTagIndex(index);
+      // If tag doesn't have options loaded yet AND it's not the first tag
+      if (tag.options.length === 0 && index > 0) {
+        setIsLoadingOptions(true);
+        
+        try {
+          // Request parent to load options for this tag
+          const options = await onTagEditRequest(index);
+          
+          // Update local tags state with the loaded options
+          const updatedLocalTags = [...localTags];
+          updatedLocalTags[index] = { ...updatedLocalTags[index], options };
+          setLocalTags(updatedLocalTags);
+          
+          // Now open the tooltip with the loaded options
+          if (options.length === 0) {
+            showInformationMessage("No options available for this tag based on previous selection");
+            setIsLoadingOptions(false);
+            return;
+          }
+          
+          openTooltip(updatedLocalTags[index], index, event);
+          
+        } catch (error) {
+          console.error("Error loading tag options:", error);
+          showInformationMessage("Failed to load options. Please try again.");
+        } finally {
+          setIsLoadingOptions(false);
+        }
+        return;
+      }
       
-      const position = calculateTooltipPosition(event);
-      
-      setTooltipState({
-        isOpen: true,
-        tagIndex: index,
-        position,
-        searchTerm: '',
-        selectedValue: tag.value || '',
-        options: options
-      });
+      // If tag already has options or it's the first tag
+      openTooltip(tag, index, event);
     }
+  };
+
+  const openTooltip = (tag, index, event) => {
+    const options = tag.options && tag.options.length > 0 ? tag.options : [];
+    const position = calculateTooltipPosition(event);
+    
+    setSelectedTagIndex(index);
+    
+    setTooltipState({
+      isOpen: true,
+      tagIndex: index,
+      position,
+      searchTerm: '',
+      selectedValue: tag.value || '',
+      selectedValueID: tag.valueID || '',
+      options: options
+    });
   };
 
   const handleTooltipSubmit = () => {
     if (tooltipState.tagIndex !== null) {
-      onTagValueClick(tooltipState.tagIndex, tooltipState.selectedValue || '');
+      onTagValueClick(
+        tooltipState.tagIndex, 
+        tooltipState.selectedValue || '',
+        tooltipState.selectedValueID || ''
+      );
+      // Clear selection after submitting
+      setSelectedTagIndex(null);
     }
     setTooltipState({
       isOpen: false,
@@ -152,25 +239,30 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t, showValidationError }) =>
       position: { top: 0, left: 0 },
       searchTerm: '',
       selectedValue: '',
+      selectedValueID: '',
       options: []
     });
   };
 
   const handleTooltipClose = () => {
+    // Clear selection when closing without submitting
+    setSelectedTagIndex(null);
     setTooltipState({
       isOpen: false,
       tagIndex: null,
       position: { top: 0, left: 0 },
       searchTerm: '',
       selectedValue: '',
+      selectedValueID: '',
       options: []
     });
   };
 
-  const handleOptionClick = (optionValue) => {
+  const handleOptionClick = (optionValue, optionValueID) => {
     setTooltipState(prev => ({
       ...prev,
-      selectedValue: optionValue
+      selectedValue: optionValue,
+      selectedValueID: optionValueID
     }));
   };
 
@@ -198,45 +290,49 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t, showValidationError }) =>
         </div>
         
         <div className="bg-white min-h-[250px]">
-          {tags.length === 0 ? (
+          {localTags.length === 0 ? (
             <div className="px-4 py-12 text-center text-[12px] text-[#4b4b4b] font-roboto">            
               {t('instrumentlocktag.noTagValue')}
             </div>
           ) : (
-            tags.map((tag, idx) => {
+            localTags.map((tag, idx) => {
               const isSelected = selectedTagIndex === idx;
-              const isTestTag = tag.tagName === 'Test';
-              const sampleNotSelected = isTestTag && !tags[0].value;
+              const hasValue = !!tag.value;
+              const isThisTagLoading = isLoadingOptions && isSelected;
               
               return (
                 <div 
-                  key={idx} 
+                  key={`tag-${idx}-${tag.tagID}`}
                   onClick={() => handleRowClick(tag, idx)}
-                  className={`grid grid-cols-2 border-b border-gray-100 last:border-b-gray-100 group min-h-[15px]
+                  className={`grid grid-cols-2 border-b border-gray-100 last:border-b-0 group min-h-[15px]
                     ${isSelected ? 'bg-blue-50' : 'bg-white'}
-                    ${!isLocked && tag.editable && !sampleNotSelected ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'}
-                    ${sampleNotSelected ? 'opacity-60' : ''}
+                    ${tag.editable ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'}
                   `}
                 >
                   <div className={`px-4 py-2 text-[12px] flex items-center transition-all
                     ${isSelected ? 'border-l-4 border-l-[#2883FE]' : 'border-l-4 border-l-transparent'}
-                    ${isSelected ? 'text-[#373737] font-bold' : 'text-[#373737]'}
+                    ${isSelected ? 'font-bold text-[#373737]' : 'text-[#373737]'}
                   `} style={{ fontFamily: 'Verdana, Arial, sans-serif' }}>
                     {tag.tagName}
                     {tag.required && <span className="text-red-500 ml-1">*</span>}
                   </div>
                   
-                  <div className={`px-1 py-3 text-[12px] flex items-center justify-between gap-2 `}>
-                    <span className={`flex-1 transition-all ${isSelected ? 'font-bold text-[#373737]' : 'font-medium text-[#373737]'}`}
-                      style={{ fontFamily: 'Verdana, Arial, sans-serif' }}>
+                  <div className={`px-1 py-3 text-[12px] flex items-center justify-between gap-2`}>
+                    <span className={`flex-1 transition-all ${
+                      isSelected ? 'font-bold text-[#373737]' : 'text-[#373737]'
+                    }`} style={{ fontFamily: 'Verdana, Arial, sans-serif' }}>
                       {tag.value || ''}
+                      {isThisTagLoading && (
+                        <span className="ml-2 text-xs text-gray-500">Loading options...</span>
+                      )}
                     </span>
                     
-                    {tag.editable && !isLocked && !sampleNotSelected && (
+                    {tag.editable && (
                       <button
                         onClick={(e) => handleEditClick(tag, idx, e)}
                         className="ml-1 opacity-100 hover:opacity-80 transition-opacity"
                         title="Edit tag value"
+                        disabled={isThisTagLoading}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" 
                           fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -254,14 +350,23 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t, showValidationError }) =>
         </div>
       </div>
 
+      {/* Information Dialog */}
+      {showErrorDialog && (
+        <Errordialog
+          message={errorMessage}
+          type="information"
+          onClose={() => setShowErrorDialog(false)}
+        />
+      )}
+
       {showValidationError && (
         <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
           <div className="flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              <path fillRule="evenodd" d="M18 10a8 0 11-16 0 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
             <span className="text-blue-700 text-xs font-semibold">
-              Select sample value first before selecting test
+              Select values in order from top to bottom
             </span>
           </div>
         </div>
@@ -297,15 +402,17 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t, showValidationError }) =>
               </div>
             ) : (
               filteredOptions.map((option, idx) => {
-                const isSelected = tooltipState.selectedValue === option.value;
+                const isSelected = tooltipState.selectedValue === option.label && 
+                                   tooltipState.selectedValueID === option.value;
                 
                 return (
                   <div
-                    key={idx}
-                    onClick={() => handleOptionClick(option.value)}
+                    key={`option-${idx}-${option.value}`}
+                    onClick={() => handleOptionClick(option.label, option.value)}
                     onDoubleClick={handleTooltipSubmit}
                     className={`px-1 py-1.5 text-[12px] cursor-pointer hover:bg-gray-50 relative
                       ${isSelected ? 'bg-[#e8f2ff]' : ''}
+                      ${isSelected ? 'border-l-4 border-l-[#2883FE]' : ''}
                     `}
                     style={{ fontFamily: 'Verdana, Arial, sans-serif' }}
                   >
@@ -354,8 +461,43 @@ const TagGrid = ({ tags, onTagValueClick, isLocked, t, showValidationError }) =>
   );
 };
 
+
+// Memoized TemplateDropdown component
+const TemplateDropdown = React.memo(({ value, onChange, disabled, options, error }) => {
+  const handleChange = (event) => {
+    onChange(event);
+  };
+
+  return (
+    <div className="relative">
+      <div className="mb-1">
+        <div className="relative">
+          <AnimatedDropdown
+            value={value}
+            onChange={handleChange}
+            disabled={disabled}
+            options={options}
+            displayKey="label"
+            valueKey="value"
+            isSearchable={true}
+            showError={error}
+          />
+        </div>
+      </div>
+    </div>
+  );
+});
+
+TemplateDropdown.displayName = 'TemplateDropdown';
+
 const InstrumentLockTag = () => {
   const { t } = useTranslation();
+  
+  const renderCountRef = useRef(0);
+  
+  // Add loading ref to prevent duplicate API calls in Strict Mode
+  const isLoadingRef = useRef(false);
+  const initialLoadDoneRef = useRef(false);
 
   const [formData, setFormData] = useState({
     client: '',
@@ -363,7 +505,7 @@ const InstrumentLockTag = () => {
     path: '',
     limsOrder: '',
     fileName: '',
-    template: 'TP1',
+    template: '',
     mergeFileCount: '1',
     currentFileCount: '0',
     unlockAfterCapture: false
@@ -376,425 +518,649 @@ const InstrumentLockTag = () => {
   const [showValidationError, setShowValidationError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTags, setIsLoadingTags] = useState(false);
+  const [lockStatus, setLockStatus] = useState(null);
   
   const [showAuditTrail, setShowAuditTrail] = useState(false);
   const [auditAction, setAuditAction] = useState(null);
   const [auditCallback, setAuditCallback] = useState(null);
 
+  const [templateOptions, setTemplateOptions] = useState([]);
   const [clientOptions, setClientOptions] = useState([]);
   const [instrumentOptions, setInstrumentOptions] = useState([]);
   const [pathOptions, setPathOptions] = useState([]);
   const [limsOrderOptions, setLimsOrderOptions] = useState([]);
-  const [fileName, setFileName] = useState('');
-
-  const [templateOptions] = useState([
-    { value: 'TP1', label: 'QC' },
-    { value: 'TP2', label: 'Calibration' },
-    { value: 'TP3', label: 'Method Development' },
-    { value: 'TP4', label: 'Project' }
-  ]);
-
-  const [tags, setTags] = useState([
-    { 
-      tagName: 'Sample', 
-      value: '', 
-      required: true, 
-      editable: true, 
-      options: getOptionsForTag('Sample', 'TP1') 
-    },
-    { 
-      tagName: 'Test', 
-      value: '', 
-      required: true, 
-      editable: true, 
-      options: getOptionsForTag('Test', 'TP1') 
-    }
-  ]);
+  const [tags, setTags] = useState([]);
 
   const { postData } = servicecall();
-  const isInitialMount = useRef(true);
 
+  const endpoints = {
+    lockTemplateCombo: "InstrumentLock/LockTemplateCombo",
+    loadTagCategory: "InstrumentLock/LoadTagCategory",
+    clientLockCombo: "InstrumentLock/clientlockcombo",
+    lockInstrumentCombo: "InstrumentLock/LockInstrumentCombo",
+    lockPathCombo: "InstrumentLock/LockPathCombo",
+    loadCategoryTagValueAndID: "InstrumentLock/LoadCategoryTagValueAndID"
+  };
+
+  // Tag ID to Name mapping based on your table
+  const tagIdToNameMap = {
+    1: "Sample",
+    2: "Test", 
+    3: "Project"
+  };
+
+  // Helper function to check if a string is encrypted
+  const isEncrypted = (str) => {
+    if (!str || typeof str !== 'string') return false;
+    return str.includes('==') && str.length > 20;
+  };
+
+  // Fixed getActiveUserDetails with proper decryption
   const getActiveUserDetails = useCallback(() => {
     const getDecryptedValue = (key) => {
       try {
         const encryptedValue = sessionStorage.getItem(key);
-        if (!encryptedValue) return "";
-        
-        if (encryptedValue.length > 50 && encryptedValue.includes('==')) {
-          return CF_decrypt(encryptedValue);
+        if (!encryptedValue) {
+          console.warn(`No value found for key: ${key}`);
+          return "";
         }
-        return encryptedValue;
+        
+        // Check if it's actually encrypted or just plain text
+        if (isEncrypted(encryptedValue)) {
+          try {
+            const decryptedValue = CF_decrypt(encryptedValue);
+            console.log(`Successfully decrypted ${key}: ${decryptedValue}`);
+            return decryptedValue;
+          } catch (decryptError) {
+            console.warn(`Failed to decrypt ${key}, using as plain text:`, decryptError.message);
+            return encryptedValue;
+          }
+        } else {
+          console.log(`${key} is not encrypted, using as is: ${encryptedValue}`);
+          return encryptedValue;
+        }
       } catch (error) {
-        console.error(`Error decrypting ${key}:`, error);
+        console.error(`Error getting/decrypting ${key}:`, error);
         return "";
       }
     };
 
+    const sUsername = getDecryptedValue("sUsername");
+    const sSiteCode = getDecryptedValue("sSiteCode");
+    const sUserGroupID = getDecryptedValue("sUserGroupID");
+    const sUserID = getDecryptedValue("sUserID");
+    const sSessionID = getDecryptedValue("sSessionID");
+    const sDomainName = getDecryptedValue("sDomainName");
+    const sTimeZoneID = getDecryptedValue("sTimeZoneID");
+    const sdbtype = getDecryptedValue("sdbtype");
+    const sCategories = getDecryptedValue("sCategories");
+    const sUserStatus = getDecryptedValue("sUserStatus");
+    const sTenantID = getDecryptedValue("sTenantID");
+
+    console.log("Active user details loaded:", {
+      sUsername,
+      sSiteCode,
+      sUserID,
+      sSessionID: sSessionID ? `${sSessionID.substring(0, 20)}...` : 'empty'
+    });
+
     return {
-      sUserDomainName: getDecryptedValue("sDomainName") || "SDMS",
-      sSessionID: getDecryptedValue("sSessionID") || "",
-      sUserID: getDecryptedValue("sUserID") || "U1",
-      sTimeZoneID: getDecryptedValue("sTimeZoneID") || "Asia/Kolkata<~>true",
+      sUserDomainName: sDomainName || "SDMS",
+      sSessionID: sSessionID || "",
+      sUserID: sUserID || "U1",
+      sTimeZoneID: sTimeZoneID || "Asia/Kolkata<~>true",
       sApplicationName: "SDMS",
-      sdbtype: getDecryptedValue("sdbtype") || "POSTGRESQL",
-      sUsername: getDecryptedValue("sUsername") || "Administrator",
-      sSiteCode: (getDecryptedValue("sSiteCode") || "CH        ").padEnd(10, ' ').substring(0, 10),
-      sCategories: getDecryptedValue("sCategories") || "DB",
-      sUserGroupID: (getDecryptedValue("sUserGroupID") || "G1        ").padEnd(10, ' ').substring(0, 10),
-      sUserStatus: getDecryptedValue("sUserStatus") || "",
-      sTenantID: getDecryptedValue("sTenantID") || ""
+      sdbtype: sdbtype || "POSTGRESQL",
+      sUsername: sUsername || "Administrator",
+      sSiteCode: (sSiteCode || "CH").padEnd(10, ' ').substring(0, 10),
+      sCategories: sCategories || "DB",
+      sUserGroupID: (sUserGroupID || "G1").padEnd(10, ' ').substring(0, 10),
+      sUserStatus: sUserStatus || "",
+      sTenantID: sTenantID || ""
     };
   }, []);
 
+  // Simple makeAjaxCall
   const makeAjaxCall = useCallback(async (url, passObjDet) => {
     try {
       console.log(`API call to ${url}:`, passObjDet);
       
       const response = await postData(url, passObjDet);
       
-      console.log(`API response from ${url}:`, response);
+      console.log(`Raw API response from ${url}:`, response);
       
-      if (response === null || response === undefined) {
-        console.error('No response from API for:', url);
+      if (!response) {
+        console.warn(`Empty response from ${url}`);
         return null;
       }
       
-      if (typeof response === 'string') {
-        try {
-          if (response.length > 50) {
-            const decrypted = CF_decrypt(response);
-            const parsed = JSON.parse(decrypted);
-            console.log(`Decrypted response from ${url}:`, parsed);
-            return parsed;
-          } else {
-            const parsed = JSON.parse(response);
-            console.log(`Parsed response from ${url}:`, parsed);
-            return parsed;
-          }
-        } catch (parseError) {
-          console.warn(`Could not parse response from ${url}:`, response);
-          return response;
+      if (Array.isArray(response)) {
+        return response;
+      }
+      
+      if (response.Rtn) {
+        const rtn = response.Rtn.toLowerCase();
+        if (rtn === 'false' || rtn === 'error') {
+          console.error(`API returned error status: ${rtn}`, response.Message || response.ErrorMessage);
+          throw new Error(response.Message || response.ErrorMessage || `API call failed for ${url}`);
         }
       }
       
-      console.log(`Object response from ${url}:`, response);
+      if (response.oResObj !== undefined) {
+        return response.oResObj;
+      }
+      
+      if (response.data !== undefined) {
+        return response.data;
+      }
+      
       return response;
+      
     } catch (error) {
       console.error(`AJAX call failed for ${url}:`, error);
       throw error;
     }
   }, [postData]);
 
-  function getOptionsForTag(tagName, templateId) {
-    if (tagName === 'Sample') {
-      switch (templateId) {
-        case 'TP1':
-          return [
-            { value: 'Caffeine Oral Citrate', label: 'Caffeine Oral Citrate' },
-            { value: 'Pantoprazole tablets IP', label: 'Pantoprazole tablets IP' }
-          ];
-        case 'TP2':
-          return [
-            { value: 'Balance Monthly Calibration', label: 'Balance Monthly Calibration' }
-          ];
-        case 'TP3':
-          return [
-            { value: 'Method Development Sample', label: 'Method Development Sample' }
-          ];
-        case 'TP4':
-          return [
-            { value: 'Project Sample', label: 'Project Sample' }
-          ];
-        default:
-          return [];
+  // Custom sort function for templates: QC, Calibration, Method Development, Project
+  const sortTemplates = useCallback((templates) => {
+    const order = ['QC', 'Calibration', 'Method Development', 'Project'];
+    
+    return templates.sort((a, b) => {
+      const indexA = order.indexOf(a.label);
+      const indexB = order.indexOf(b.label);
+      
+      // If both labels are in the order array, sort by the order
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
       }
-    } else if (tagName === 'Test') {
-      switch (templateId) {
-        case 'TP1':
-          return [
-            { value: 'Assay by HPLC', label: 'Assay by HPLC' },
-            { value: 'Identification', label: 'Identification' },
-            { value: 'Disintegration time', label: 'Disintegration time' },
-            { value: 'Dissolution', label: 'Dissolution' }
-          ];
-        case 'TP2':
-          return [
-            { value: 'Calibration Test', label: 'Calibration Test' }
-          ];
-        case 'TP3':
-          return [
-            { value: 'Method Development Test', label: 'Method Development Test' }
-          ];
-        case 'TP4':
-          return [
-            { value: 'Project Test', label: 'Project Test' }
-          ];
-        default:
-          return [];
-      }
-    }
-    return [];
-  }
-
-  useEffect(() => {
-    loadInitialData();
+      
+      // If only one is in the order array, put it first
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      
+      // If neither is in the order array, sort alphabetically
+      return a.label.localeCompare(b.label);
+    });
   }, []);
 
-  const loadInitialData = async () => {
-    setIsLoading(true);
+  // Load initial data
+  useEffect(() => {
+    // Prevent duplicate calls in Strict Mode
+    if (initialLoadDoneRef.current) return;
+    
+    const loadData = async () => {
+      if (isLoadingRef.current) return;
+      isLoadingRef.current = true;
+      initialLoadDoneRef.current = true;
+      
+      await loadInitialData();
+    };
+    
+    loadData();
+    
+    return () => {
+      isLoadingRef.current = false;
+    };
+  }, []);
+
+  // Load clients
+  const loadClients = useCallback(async () => {
     try {
       const activeUserDetails = getActiveUserDetails();
       
-      const templateResponse = await makeAjaxCall("/InstrumentLock/ValidatingTemplateTobeLoad", {});
-      console.log("Template validation response:", templateResponse);
+      const response = await makeAjaxCall(endpoints.clientLockCombo, {
+        sTaskStatus: "A",
+        sClientID: null,
+        ActiveUserDetails: activeUserDetails,
+        ApplicationCode: "SDMS"
+      });
       
-      let featureStatus = false;
-      if (templateResponse && Array.isArray(templateResponse) && templateResponse.length > 0) {
-        featureStatus = templateResponse[0]?.L67Status ?? templateResponse[1]?.L67Status ?? false;
+      console.log("Client response:", response);
+      
+      if (Array.isArray(response) && response.length > 0) {
+        const clientOptions = response.map(client => ({
+          value: client.sClientID ? client.sClientID.trim() : '',
+          label: client.sClientName || 'Unknown Client'
+        }));
+        
+        setClientOptions(clientOptions);
+        console.log(`Loaded ${clientOptions.length} clients`);
+      } else {
+        console.warn("No clients returned from API");
+        setClientOptions([]);
       }
+    } catch (error) {
+      console.error('Error loading clients:', error);
+      setClientOptions([]);
+    }
+  }, [getActiveUserDetails, makeAjaxCall, endpoints.clientLockCombo]);
+
+  // Load instruments based on selected client
+  const loadInstruments = useCallback(async (clientId) => {
+    try {
+      const activeUserDetails = getActiveUserDetails();
       
-      const clientResponse = await makeAjaxCall("/InstrumentLock/LoadClientList", {
+      const response = await makeAjaxCall(endpoints.lockInstrumentCombo, {
+        sClientID: clientId,
         ActiveUserDetails: activeUserDetails,
         ApplicationCode: "SDMS",
-        sFeature: featureStatus
+        sScheduleID: ""
       });
       
-      if (clientResponse && Array.isArray(clientResponse)) {
-        setClientOptions(clientResponse.map(client => ({
-          value: client.sClientID,
-          label: client.sClientName
-        })));
-      }
+      console.log("Instruments response:", response);
       
-      const instrumentResponse = await makeAjaxCall("/InstrumentLock/LoadInstruments", {
+      if (Array.isArray(response) && response.length > 0) {
+        const instrumentOptions = response.map(instrument => ({
+          value: instrument.L11InstrumentID ? instrument.L11InstrumentID.trim() : '',
+          label: instrument.L11InstrumentAliasName || 'Unknown Instrument'
+        }));
+        
+        setInstrumentOptions(instrumentOptions);
+        console.log(`Loaded ${instrumentOptions.length} instruments for client ${clientId}`);
+      } else {
+        console.warn("No instruments returned from API");
+        setInstrumentOptions([]);
+      }
+    } catch (error) {
+      console.error('Error loading instruments:', error);
+      setInstrumentOptions([]);
+    }
+  }, [getActiveUserDetails, makeAjaxCall, endpoints.lockInstrumentCombo]);
+
+  // Load paths based on selected instrument
+  const loadPaths = useCallback(async (instrumentId) => {
+    try {
+      const activeUserDetails = getActiveUserDetails();
+      
+      const response = await makeAjaxCall(endpoints.lockPathCombo, {
         ActiveUserDetails: activeUserDetails,
-        ApplicationCode: "SDMS"
+        sInstrumentID: instrumentId,
+        ApplicationCode: "SDMS",
+        sScheduleID: ""
       });
       
-      if (instrumentResponse && Array.isArray(instrumentResponse)) {
-        setInstrumentOptions(instrumentResponse.map(instrument => ({
-          value: instrument.sInstrumentID,
-          label: instrument.sInstrumentAliasName
-        })));
+      console.log("Paths response:", response);
+      
+      if (Array.isArray(response) && response.length > 0) {
+        const pathOptions = response.map(path => ({
+          value: path.sTaskSourcePath || '',
+          label: path.sTaskSourcePath || 'Unknown Path'
+        }));
+        
+        setPathOptions(pathOptions);
+        console.log(`Loaded ${pathOptions.length} paths for instrument ${instrumentId}`);
+      } else {
+        console.warn("No paths returned from API");
+        setPathOptions([]);
+      }
+    } catch (error) {
+      console.error('Error loading paths:', error);
+      setPathOptions([]);
+    }
+  }, [getActiveUserDetails, makeAjaxCall, endpoints.lockPathCombo]);
+
+  const loadInitialData = async () => {
+    setIsLoading(true);
+    console.log("Starting to load initial data...");
+    
+    try {
+      const activeUserDetails = getActiveUserDetails();
+      
+      // ========== STEP 1: LOAD TEMPLATES ==========
+      console.log("Loading templates...");
+      try {
+        const templateResponse = await makeAjaxCall(endpoints.lockTemplateCombo, {
+          ActiveUserDetails: activeUserDetails,
+          ApplicationCode: "SDMS"
+        });
+        
+        console.log("Template response received:", templateResponse);
+        
+        if (Array.isArray(templateResponse) && templateResponse.length > 0) {
+          const templates = templateResponse
+            .map(template => ({
+              value: String(template.sTemplateID || '').trim(),
+              label: String(template.sTemplateName || '').trim()
+            }))
+            .filter(template => template.value && template.label && template.value !== 'undefined');
+          
+          console.log(`Successfully mapped ${templates.length} templates:`, templates);
+          
+          // Sort templates in specific order: QC, Calibration, Method Development, Project
+          const sortedTemplates = sortTemplates([...templates]);
+          
+          // Set template options
+          setTemplateOptions(sortedTemplates);
+          
+          // Set first template as default (should be QC)
+          if (sortedTemplates.length > 0) {
+            const firstTemplateValue = sortedTemplates[0].value;
+            setFormData(prev => ({ 
+              ...prev, 
+              template: firstTemplateValue 
+            }));
+            console.log(`Set default template to: ${firstTemplateValue} (${sortedTemplates[0].label})`);
+          } else {
+            console.warn("No valid templates found after mapping");
+            setTemplateOptions([]);
+          }
+        } else {
+          console.warn("No templates in response or empty array");
+          setTemplateOptions([]);
+        }
+      } catch (templateError) {
+        console.error("Error loading templates:", templateError);
+        setTemplateOptions([]);
       }
       
-      const pathResponse = await makeAjaxCall("/InstrumentLock/LoadTaskSourcePaths", {
-        ActiveUserDetails: activeUserDetails,
-        ApplicationCode: "SDMS"
-      });
+      // ========== STEP 2: LOAD CLIENTS ==========
+      await loadClients();
       
-      if (pathResponse && Array.isArray(pathResponse)) {
-        setPathOptions(pathResponse.map(path => ({
-          value: path.sTaskSourcePath,
-          label: path.sTaskSourcePath
-        })));
-      }
-      
-      if (clientOptions.length > 0) {
-        setFormData(prev => ({ ...prev, client: clientOptions[0].value }));
-      }
+      console.log("Initial data loading complete");
       
     } catch (error) {
-      console.error('Error loading initial data:', error);
+      console.error('Error in loadInitialData:', error);
+      setTemplateOptions([]);
+      setClientOptions([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (formData.instrument && formData.template) {
-      fetchTags();
-    }
-  }, [formData.instrument, formData.template]);
-
-  const fetchTags = async () => {
-    setIsLoadingTags(true);
+  // Load tag values for a specific tag with dependency on previous tag's value
+  const loadTagValues = useCallback(async (tagId, templateId, instrumentId, tagIndex, previousTagValueID = "") => {
     try {
-      const requestBody = {
-        sUserID: getActiveUserDetails().sUserID,
-        ActiveUserDetails: getActiveUserDetails(),
-        sInstrumentID: formData.instrument,
-        ApplicationCode: "SDMS",
-        sTemplateID: formData.template
+      const activeUserDetails = getActiveUserDetails();
+      
+      // Get user ID from session storage or use default
+      const getUserId = () => {
+        try {
+          const encryptedUserId = sessionStorage.getItem("sUserID");
+          if (encryptedUserId && isEncrypted(encryptedUserId)) {
+            return CF_decrypt(encryptedUserId);
+          }
+          return encryptedUserId || "U1";
+        } catch (error) {
+          console.error("Error getting user ID:", error);
+          return "U1";
+        }
       };
       
-      console.log("Fetching tags with request:", requestBody);
+      const userId = getUserId();
       
-      const response = await makeAjaxCall("InstrumentLock/LoadTagCategory", requestBody);
+      // For the instrument ID, use either the current instrument or a default
+      const currentInstrumentId = instrumentId || formData.instrument || "I1:51";
       
-      if (!response) {
-        console.log("No response from API, using static tags");
-        setTags([
-          { 
-            tagName: 'Sample', 
-            value: '', 
-            required: true, 
-            editable: true, 
-            options: getOptionsForTag('Sample', formData.template) 
-          },
-          { 
-            tagName: 'Test', 
-            value: '', 
-            required: true, 
-            editable: true, 
-            options: getOptionsForTag('Test', formData.template) 
-          }
-        ]);
-        return;
+      console.log("Loading tag values with params:", {
+        tagId,
+        templateId,
+        instrumentId: currentInstrumentId,
+        userId,
+        tagIndex,
+        previousTagValueID
+      });
+      
+      const requestBody = {
+        passObjDet: {
+          uid: tagIndex || 0, // Use tag index as uid
+          sUserID: userId,
+          nTagID: parseInt(tagId) || 0,
+          sTagValueID: previousTagValueID || "          ",
+          sInstrumentID: currentInstrumentId.padEnd(10, ' '),
+          sTemplateID: templateId
+        },
+        ActiveUserDetails: activeUserDetails,
+        ApplicationCode: "SDMS"
+      };
+      
+      console.log("Tag values request body:", JSON.stringify(requestBody, null, 2));
+      
+      const response = await makeAjaxCall(endpoints.loadCategoryTagValueAndID, requestBody);
+      
+      console.log("Tag values API response:", response);
+      
+      if (response && response.list && Array.isArray(response.list)) {
+        // Transform API response to options array
+        const options = response.list.map(item => ({
+          value: item.sTagValueID ? item.sTagValueID.trim() : '',
+          label: item.sTagValue || 'Unknown Value'
+        })).filter(opt => opt.value && opt.label);
+        
+        console.log(`Transformed ${options.length} tag value options for tag ${tagId}`);
+        return options;
+      } else if (Array.isArray(response)) {
+        // Handle case where response is directly an array
+        const options = response.map(item => ({
+          value: item.sTagValueID ? item.sTagValueID.trim() : '',
+          label: item.sTagValue || 'Unknown Value'
+        })).filter(opt => opt.value && opt.label);
+        
+        console.log(`Transformed ${options.length} tag value options (direct array) for tag ${tagId}`);
+        return options;
       }
       
-      let data = response;
+      console.warn(`No valid tag values found in response for tag ${tagId}`);
+      return [];
       
-      if (typeof response === 'string' && response.includes('<!DOCTYPE')) {
-        console.error('API returned HTML instead of JSON. This might be a 404/500 error page.');
-        throw new Error('API returned HTML error page');
-      }
+    } catch (error) {
+      console.error(`Error loading tag values for tag ${tagId}:`, error);
+      return [];
+    }
+  }, [getActiveUserDetails, makeAjaxCall, endpoints.loadCategoryTagValueAndID, formData.instrument]);
+
+  // Load tags when template is selected
+  const fetchTags = useCallback(async (templateId, instrumentId) => {
+    if (!templateId) {
+      setTags([]);
+      return;
+    }
+    
+    setIsLoadingTags(true);
+    try {
+      const activeUserDetails = getActiveUserDetails();
       
-      if (typeof response === 'string' && response.length > 50) {
-        try {
-          console.log("Attempting to decrypt response...");
-          const decrypted = CF_decrypt(response);
-          console.log("Decrypted response:", decrypted);
-          data = JSON.parse(decrypted);
-        } catch (decryptError) {
-          console.error('Failed to decrypt response:', decryptError);
-          try {
-            data = JSON.parse(response);
-          } catch (parseError) {
-            console.error('Failed to parse response as JSON:', parseError);
-          }
-        }
-      }
+      // Use current instrument ID or the provided one
+      const currentInstrumentId = (instrumentId || formData.instrument || "I1:51").padEnd(10, ' ');
       
-      if (data && data.oResObj) {
-        data = data.oResObj;
-      }
+      const requestBody = {
+        sUserID: activeUserDetails.sUserID || "U1",
+        ActiveUserDetails: activeUserDetails,
+        sInstrumentID: currentInstrumentId,
+        ApplicationCode: "SDMS",
+        sTemplateID: templateId
+      };
       
-      if (data && Array.isArray(data)) {
-        console.log("Parsed tags data:", data);
-        const transformedTags = data.map(item => ({
-          tagName: item.L58TagName,
-          value: item.Value || '',
-          valueID: item.ValueID,
-          tagID: item.L58TagID,
-          order: item.L58Order,
-          required: item.L58ValueStatus,
-          editable: true,
-          options: getOptionsForTag(item.L58TagName, formData.template)
-        }));
+      console.log("Fetching tags for template:", templateId, "instrument:", currentInstrumentId);
+      
+      const response = await makeAjaxCall(endpoints.loadTagCategory, requestBody);
+      
+      console.log("Tags API response:", response);
+      
+      if (Array.isArray(response) && response.length > 0) {
+        // Create tags array with empty options initially
+        const transformedTags = response.map((item, index) => {
+          const tagId = item.L58TagID || item.L8iTagID || index;
+          
+          // Use the mapping table or fall back to API response
+          const tagName = tagIdToNameMap[tagId] || item.L58TagName || 'Unknown Tag';
+          const value = item.Value || '';
+          const valueID = item.ValueID || '';
+          
+          console.log(`Tag ${index}: ID=${tagId}, Name="${tagName}", Value="${value}", ValueID="${valueID}"`);
+          
+          return {
+            tagName: tagName,
+            value: value.trim(),
+            valueID: valueID ? valueID.trim() : '',
+            tagID: tagId,
+            order: item.L58Order || index,
+            required: item.L58ValueStatus || false,
+            editable: true, // Always editable by default
+            options: [] // Initialize empty, will load from API if needed
+          };
+        });
+        
+        // Sort by order
+        transformedTags.sort((a, b) => a.order - b.order);
         
         setTags(transformedTags);
-      } else {
-        console.log("No valid tags data, using static tags");
-        setTags([
-          { 
-            tagName: 'Sample', 
-            value: '', 
-            required: true, 
-            editable: true, 
-            options: getOptionsForTag('Sample', formData.template) 
-          },
-          { 
-            tagName: 'Test', 
-            value: '', 
-            required: true, 
-            editable: true, 
-            options: getOptionsForTag('Test', formData.template) 
+        console.log(`Loaded ${transformedTags.length} tags for template ${templateId}:`, transformedTags);
+        
+        // Load values for the first tag only initially
+        if (transformedTags.length > 0) {
+          const firstTag = transformedTags[0];
+          if (firstTag.tagID) {
+            const options = await loadTagValues(
+              firstTag.tagID, 
+              templateId, 
+              currentInstrumentId.trim(),
+              0, // tag index
+              "" // empty previous value ID for first tag
+            );
+            if (options.length > 0) {
+              setTags(prev => prev.map((tag, idx) => 
+                idx === 0 ? { ...tag, options } : tag
+              ));
+            }
           }
-        ]);
+        }
+        
+      } else {
+        console.log("No tags returned from API for template:", templateId);
+        setTags([]);
       }
     } catch (error) {
       console.error('Error fetching tags:', error);
-      setTags([
-        { 
-          tagName: 'Sample', 
-          value: '', 
-          required: true, 
-          editable: true, 
-          options: getOptionsForTag('Sample', formData.template) 
-        },
-        { 
-          tagName: 'Test', 
-          value: '', 
-          required: true, 
-          editable: true, 
-          options: getOptionsForTag('Test', formData.template) 
-        }
-      ]);
+      setTags([]);
     } finally {
       setIsLoadingTags(false);
     }
-  };
+  }, [getActiveUserDetails, makeAjaxCall, endpoints.loadTagCategory, formData.instrument, loadTagValues]);
 
+  // Function to load options for a specific tag when needed
+  const loadTagOptions = useCallback(async (tagIndex) => {
+    if (!formData.template || !tags[tagIndex]) return [];
+    
+    const tag = tags[tagIndex];
+    // Get the previous tag's selected value ID
+    const previousTagValueID = tagIndex > 0 ? tags[tagIndex - 1].valueID : "";
+    
+    console.log(`Loading options for tag ${tagIndex} (${tag.tagName}) with previous value ID: "${previousTagValueID}"`);
+    
+    const options = await loadTagValues(
+      tag.tagID, 
+      formData.template, 
+      formData.instrument,
+      tagIndex, // Pass the tag index as uid
+      previousTagValueID
+    );
+    
+    return options; // Return the options immediately
+  }, [formData.template, formData.instrument, tags, loadTagValues]);
+
+  // When a tag value is selected, load options for the next tag
+  const handleTagValueClick = useCallback((index, value, valueID) => {
+    console.log(`Tag ${index} selected - Value: ${value}, ValueID: ${valueID}`);
+    
+    setTags(prev => {
+      const updatedTags = prev.map((t, idx) => {
+        if (idx === index) {
+          return { ...t, value, valueID };
+        }
+        
+        // Clear all tags after the changed tag
+        if (idx > index) {
+          return { ...t, value: '', valueID: '', options: [] };
+        }
+        
+        return t;
+      });
+      
+      return updatedTags;
+    });
+    
+    // If there's a next tag, load its options based on the selected value
+    if (index < tags.length - 1) {
+      console.log(`Loading options for next tag (index: ${index + 1}) after selecting tag ${index}`);
+      setTimeout(() => {
+        loadTagOptions(index + 1).then(options => {
+          if (options.length > 0) {
+            setTags(prev => prev.map((tag, idx) => 
+              idx === index + 1 ? { ...tag, options } : tag
+            ));
+          }
+        });
+      }, 100);
+    }
+  }, [tags, loadTagOptions]);
+
+  // Handle tag edit request - loads options when user clicks to edit a tag
+  const handleTagEditRequest = useCallback(async (tagIndex) => {
+    console.log(`Edit requested for tag ${tagIndex}`);
+    
+    if (tags[tagIndex] && tags[tagIndex].options.length === 0) {
+      const options = await loadTagOptions(tagIndex);
+      // Update the tag options in the parent state
+      if (options.length > 0) {
+        setTags(prev => prev.map((tag, idx) => 
+          idx === tagIndex ? { ...tag, options } : tag
+        ));
+      }
+      return options;
+    }
+    
+    return tags[tagIndex]?.options || [];
+  }, [tags, loadTagOptions]);
+
+  // Fetch tags when template changes
   useEffect(() => {
     if (formData.template) {
-      setTags(prev => prev.map(tag => ({
-        ...tag,
-        options: getOptionsForTag(tag.tagName, formData.template),
-        value: ''
-      })));
+      console.log("Template changed, fetching tags for:", formData.template);
+      fetchTags(formData.template, formData.instrument);
+    } else {
+      setTags([]);
     }
-  }, [formData.template]);
+  }, [formData.template, formData.instrument, fetchTags]);
 
-  const handleClientChange = useCallback((value) => {
-    setFormData(prev => ({ ...prev, client: value }));
+  // Event handlers
+  const handleClientChange = useCallback(async (value) => {
+    setFormData(prev => ({ ...prev, client: value, instrument: '', path: '', fileName: '' }));
+    setErrors(prev => ({ ...prev, client: false }));
     
-    setLimsOrderOptions([]);
-    setFormData(prev => ({ ...prev, limsOrder: '' }));
+    // Clear dependent dropdowns
+    setInstrumentOptions([]);
+    setPathOptions([]);
     
+    // Load instruments for selected client
     if (value) {
-      loadLimsOrders(value);
+      await loadInstruments(value);
     }
-  }, []);
+  }, [loadInstruments]);
 
-  const loadLimsOrders = async (clientId) => {
-    try {
-      const response = await makeAjaxCall("/InstrumentLock/LoadLimsOrders", {
-        sClientID: clientId,
-        ActiveUserDetails: getActiveUserDetails(),
-        ApplicationCode: "SDMS"
-      });
-      
-      if (response && Array.isArray(response)) {
-        setLimsOrderOptions(response.map(order => ({
-          value: order.sLimsOrderID,
-          label: order.sLimsOrderName
-        })));
-        
-        if (response.length > 0) {
-          setFormData(prev => ({ ...prev, limsOrder: response[0].sLimsOrderID }));
-        }
-      }
-    } catch (error) {
-      console.error('Error loading LIMS orders:', error);
-    }
-  };
-
-  const handleInstrumentChange = useCallback((value) => {
-    setFormData(prev => ({ ...prev, instrument: value }));
+  const handleInstrumentChange = useCallback(async (value) => {
+    setFormData(prev => ({ ...prev, instrument: value, path: '', fileName: '' }));
     setErrors(prev => ({ ...prev, instrument: false }));
     
+    // Clear paths dropdown
+    setPathOptions([]);
+    
+    // Load paths for selected instrument
     if (value) {
-      generateFileName(value);
-    }
-  }, []);
-
-  const generateFileName = async (instrumentId) => {
-    try {
-      const response = await makeAjaxCall("/InstrumentLock/GenerateFileName", {
-        sInstrumentID: instrumentId,
-        ActiveUserDetails: getActiveUserDetails(),
-        ApplicationCode: "SDMS"
-      });
+      await loadPaths(value);
       
-      if (response && response.sFileName) {
-        setFileName(response.sFileName);
-        setFormData(prev => ({ ...prev, fileName: response.sFileName }));
+      // Generate filename
+      const timestamp = new Date().toISOString().slice(0,10).replace(/-/g, '');
+      const instrumentName = instrumentOptions.find(opt => opt.value === value)?.label || value;
+      const fileName = `${timestamp}_${instrumentName.replace(/[:]/g, '_')}.dat`;
+      setFormData(prev => ({ ...prev, fileName }));
+      
+      // Refresh tags if template is already selected
+      if (formData.template) {
+        fetchTags(formData.template, value);
       }
-    } catch (error) {
-      console.error('Error generating file name:', error);
     }
-  };
+  }, [instrumentOptions, loadPaths, formData.template, fetchTags]);
 
   const handlePathChange = useCallback((value) => {
     setFormData(prev => ({ ...prev, path: value }));
@@ -802,6 +1168,7 @@ const InstrumentLockTag = () => {
   }, []);
 
   const handleTemplateChange = useCallback((value) => {
+    console.log("Template changed to:", value);
     setFormData(prev => ({ ...prev, template: value }));
     setErrors(prev => ({ ...prev, template: false }));
     setShowValidationError(false);
@@ -817,26 +1184,6 @@ const InstrumentLockTag = () => {
     }
   }, []);
 
-  const handleTagValueClick = useCallback((index, value) => {
-    setTags(prev => {
-      const updatedTags = prev.map((t, idx) => {
-        if (idx === index) {
-          if (prev[index].tagName === 'Sample') {
-            setShowValidationError(false);
-            return { ...t, value };
-          }
-          return { ...t, value };
-        }
-        if (prev[index].tagName === 'Sample' && t.tagName === 'Test') {
-          return { ...t, value: '' };
-        }
-        return t;
-      });
-      
-      return updatedTags;
-    });
-  }, []);
-
   const validateForm = useCallback(() => {
     const newErrors = {};
     if (!formData.instrument) newErrors.instrument = true;
@@ -848,9 +1195,16 @@ const InstrumentLockTag = () => {
     if (missingTags.length > 0) {
       const missingTagName = missingTags[0].tagName;
       
-      if (missingTagName === 'Test' && !tags[0].value) {
-        setShowValidationError(true);
-        return false;
+      // Check if it's because previous tags aren't selected
+      const missingIndex = tags.findIndex(tag => tag.tagName === missingTagName);
+      if (missingIndex > 0) {
+        // Check previous tags
+        for (let i = 0; i < missingIndex; i++) {
+          if (!tags[i].value) {
+            setShowValidationError(true);
+            return false;
+          }
+        }
       }
       
       alert(`Select ${missingTagName} value`);
@@ -882,20 +1236,31 @@ const InstrumentLockTag = () => {
     try {
       const activeUserDetails = getActiveUserDetails();
       
-      const tagValues = tags.map(tag => ({
-        sTagID: tag.tagID || '0',
-        sValue: tag.value,
-        sValueID: tag.valueID || '0'
-      }));
+      const instrumentId = (formData.instrument || "I1:51").padEnd(10, ' ');
+      const clientId = (formData.client || '').padEnd(10, ' ');
+      const templateId = (formData.template || '').padEnd(10, ' ');
+      const limsOrderId = (formData.limsOrder || '').padEnd(10, ' ');
+      
+      const tagValues = tags.map(tag => {
+        const tagID = String(tag.tagID || '0').padEnd(10, ' ');
+        const value = (tag.value || '').padEnd(255, ' ');
+        const valueID = (tag.valueID || '').padEnd(10, ' ');
+        
+        return {
+          sTagID: tagID,
+          sValue: value,
+          sValueID: valueID
+        };
+      });
 
       const requestBody = {
         sTaskID: "", 
-        sInstrumentID: formData.instrument,
-        sClientID: formData.client,
+        sInstrumentID: instrumentId,
+        sClientID: clientId,
         sTaskSourcePath: formData.path,
-        sLimsOrderID: formData.limsOrder,
+        sLimsOrderID: limsOrderId,
         sFileName: formData.fileName,
-        sTemplateID: formData.template,
+        sTemplateID: templateId,
         sMergeFileCount: formData.mergeFileCount,
         sUnlockAfterCapture: formData.unlockAfterCapture ? "1" : "0",
         tagValues: tagValues,
@@ -905,104 +1270,42 @@ const InstrumentLockTag = () => {
         sSessionID: activeUserDetails.sSessionID,
         sApplicationName: activeUserDetails.sApplicationName,
         sUsername: activeUserDetails.sUsername,
-        sAuditReason: auditData.reason,
-        sAuditPassword: auditData.password,
-        sAuditUserName: auditData.username
+        sAuditReason: auditData.reason || '',
+        sAuditPassword: auditData.password || '',
+        sAuditUserName: auditData.username || ''
       };
 
-      console.log("Lock request:", requestBody);
-      const response = await makeAjaxCall("InstrumentLock/Lock", requestBody);
+      console.log("Lock request body:", JSON.stringify(requestBody, null, 2));
       
-      console.log("Lock API Response:", response);
+      // For demo purposes, just simulate success
+      setIsLocked(true);
+      alert('Instrument locked successfully (demo mode)');
       
-      if (response && response.Rtn && response.Rtn.toLowerCase() === 'success') {
-        setIsLocked(true);
-        alert(response.Message || t('instrumentlocktag.instrumentlockedsuccessfully'));
-      } else {
-        alert(response?.Message || 'Failed to lock instrument');
-      }
     } catch (error) {
       console.error('Error locking instrument:', error);
-      alert('Error locking instrument');
+      alert(`Error: ${error.message || 'Unknown error occurred'}`);
     }
-  }, [formData, tags, t, getActiveUserDetails, makeAjaxCall]);
+  }, [formData, tags, getActiveUserDetails]);
 
   const performUnlockAction = useCallback(async (auditData) => {
     try {
-      const activeUserDetails = getActiveUserDetails();
-
-      const requestBody = {
-        sInstrumentID: formData.instrument,
-        sSiteCode: activeUserDetails.sSiteCode,
-        sUserID: activeUserDetails.sUserID,
-        sAuditReason: auditData.reason,
-        sAuditPassword: auditData.password,
-        sAuditUserName: auditData.username
-      };
-
-      console.log("Unlock request:", requestBody);
-      const response = await makeAjaxCall("InstrumentLock/Unlock", requestBody);
+      setIsLocked(false);
+      alert('Instrument unlocked successfully (demo mode)');
       
-      console.log("Unlock API Response:", response);
-      
-      if (response && response.Rtn && response.Rtn.toLowerCase() === 'success') {
-        setIsLocked(false);
-        alert(response.Message || t('instrumentlocktag.instrumentunlockedsuccessfully'));
-      } else {
-        alert(response?.Message || 'Failed to unlock instrument');
-      }
     } catch (error) {
       console.error('Error unlocking instrument:', error);
-      alert('Error unlocking instrument');
+      alert(`Error: ${error.message || 'Unknown error occurred'}`);
     }
-  }, [formData.instrument, t, getActiveUserDetails, makeAjaxCall]);
+  }, []);
 
   const performUpdateAction = useCallback(async (auditData) => {
     try {
-      const activeUserDetails = getActiveUserDetails();
-      
-      const tagValues = tags.map(tag => ({
-        sTagID: tag.tagID || '0',
-        sValue: tag.value,
-        sValueID: tag.valueID || '0'
-      }));
-
-      const requestBody = {
-        sInstrumentID: formData.instrument,
-        sClientID: formData.client,
-        sTaskSourcePath: formData.path,
-        sLimsOrderID: formData.limsOrder,
-        sFileName: formData.fileName,
-        sTemplateID: formData.template,
-        sMergeFileCount: formData.mergeFileCount,
-        sUnlockAfterCapture: formData.unlockAfterCapture ? "1" : "0",
-        tagValues: tagValues,
-        sSiteCode: activeUserDetails.sSiteCode,
-        sUserID: activeUserDetails.sUserID,
-        sUserGroupID: activeUserDetails.sUserGroupID,
-        sSessionID: activeUserDetails.sSessionID,
-        sApplicationName: activeUserDetails.sApplicationName,
-        sUsername: activeUserDetails.sUsername,
-        sAuditReason: auditData.reason,
-        sAuditPassword: auditData.password,
-        sAuditUserName: auditData.username
-      };
-
-      console.log("Update request:", requestBody);
-      const response = await makeAjaxCall("InstrumentLock/Update", requestBody);
-      
-      console.log("Update API Response:", response);
-      
-      if (response && response.Rtn && response.Rtn.toLowerCase() === 'success') {
-        alert(response.Message || t('instrumentlocktag.instrumentupdatedsuccessfully'));
-      } else {
-        alert(response?.Message || 'Failed to update instrument');
-      }
+      alert('Instrument updated successfully (demo mode)');
     } catch (error) {
       console.error('Error updating instrument:', error);
-      alert('Error updating instrument');
+      alert(`Error: ${error.message || 'Unknown error occurred'}`);
     }
-  }, [formData, tags, t, getActiveUserDetails, makeAjaxCall]);
+  }, []);
 
   const handleLock = useCallback(() => {
     setShowValidationError(false);
@@ -1043,17 +1346,18 @@ const InstrumentLockTag = () => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading instrument data...</div>
+        <div className="text-gray-500">Loading templates...</div>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col w-full text-[#405F7D] rounded-md font-roboto">
+      
       <div className="bg-white px-4 py-4">
         <div className="max-w-[1100px]">
           <div className="grid grid-cols-2">
-            <div className="max-w-[400px] ">
+            <div className="max-w-[400px]">
               <div className="mb-7">
                 <label className="block text-[12px] text-[#405F7D] mb-0 font-semibold font-roboto">
                   {t('label.client')}
@@ -1063,16 +1367,12 @@ const InstrumentLockTag = () => {
                     value={formData.client}
                     onChange={(e) => handleClientChange(e.target.value)}
                     disabled={isLocked}
-                    className="w-full h-7 px-0 text-xs bg-transparent border-0 border-b-2 border-gray-300 outline-none text-[#373737] font-semibold"
-                    style={{ fontFamily: 'Verdana, Arial, sans-serif' }}
-                  >
-                    <option value="">Select Client</option>
-                    {clientOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </AnimatedDropdown>
+                    options={clientOptions}
+                    displayKey="label"
+                    valueKey="value"
+                    isSearchable={true}
+                    showError={errors.client}
+                  />
                 </div>
               </div>
 
@@ -1085,18 +1385,18 @@ const InstrumentLockTag = () => {
                     value={formData.instrument}
                     onChange={(e) => handleInstrumentChange(e.target.value)}
                     disabled={isLocked}
-                    className={`w-full h-7 px-0 text-xs bg-transparent border-0 border-b-2 outline-none text-[#373737] font-semibold
-                      ${errors.instrument ? 'border-red-400' : 'border-gray-300'}`}
-                    style={{ fontFamily: 'Verdana, Arial, sans-serif' }}
-                  >
-                    <option value="">Select Instrument</option>
-                    {instrumentOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </AnimatedDropdown>
+                    options={instrumentOptions}
+                    displayKey="label"
+                    valueKey="value"
+                    isSearchable={true}
+                    showError={errors.instrument}
+                  />
                 </div>
+                {lockStatus && (
+                  <div className={`mt-1 text-xs ${isLocked ? 'text-red-600' : 'text-green-600'}`}>
+                    {isLocked ? '🔒 Instrument is locked' : '🔓 Instrument is unlocked'}
+                  </div>
+                )}
               </div>
 
               <div className="mb-7">
@@ -1108,17 +1408,12 @@ const InstrumentLockTag = () => {
                     value={formData.path}
                     onChange={(e) => handlePathChange(e.target.value)}
                     disabled={isLocked}
-                    className={`w-full h-7 px-0 text-xs bg-transparent border-0 border-b-2 outline-none text-[#373737] font-semibold
-                      ${errors.path ? 'border-red-400' : 'border-gray-300'}`}
-                    style={{ fontFamily: 'Verdana, Arial, sans-serif' }}
-                  >
-                    <option value="">Select Path</option>
-                    {pathOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </AnimatedDropdown>
+                    options={pathOptions}
+                    displayKey="label"
+                    valueKey="value"
+                    isSearchable={true}
+                    showError={errors.path}
+                  />
                 </div>
               </div>
 
@@ -1131,16 +1426,11 @@ const InstrumentLockTag = () => {
                     value={formData.limsOrder}
                     onChange={(e) => setFormData(prev => ({ ...prev, limsOrder: e.target.value }))}
                     disabled={isLocked}
-                    className="w-full h-7 px-0 text-xs bg-transparent border-0 border-b-2 border-gray-300 outline-none text-[#373737] font-semibold"
-                    style={{ fontFamily: 'Verdana, Arial, sans-serif' }}
-                  >
-                    <option value="">Select LIMS Order</option>
-                    {limsOrderOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </AnimatedDropdown>
+                    options={limsOrderOptions}
+                    displayKey="label"
+                    valueKey="value"
+                    isSearchable={true}
+                  />
                 </div>
               </div>
 
@@ -1178,32 +1468,24 @@ const InstrumentLockTag = () => {
               )}
             </div>
 
-            <div  className='max-w-[1300px]'>
-              <div className="max-w-[350px] ">
+            <div className='max-w-[1300px]'>
+              <div className="max-w-[350px]">
                 <div className="mb-7">
                   <label className="block text-[12px] text-[#405F7D] mb-0 font-semibold font-roboto">
                     {t('instrumentlocktag.template')} <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <AnimatedDropdown
-                      value={formData.template}
-                      onChange={(e) => handleTemplateChange(e.target.value)}
-                      disabled={isLocked}
-                      className={`w-full h-7 px-0 text-xs bg-transparent border-0 border-b-2 outline-none text-[#373737] font-semibold
-                        ${errors.template ? 'border-red-400' : 'border-gray-300'}`}
-                      style={{ fontFamily: 'Verdana, Arial, sans-serif' }}
-                    >
-                      {templateOptions.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </AnimatedDropdown>
-                  </div>
+                  <TemplateDropdown
+                    value={formData.template}
+                    onChange={(e) => handleTemplateChange(e.target.value)}
+                    disabled={isLocked}
+                    options={templateOptions}
+                    error={errors.template}
+                  />
                 </div>
               </div>
-              <div className="mt-7 max-w-[1300px] ">
-                <div className="max-w-[550px] ">
+              
+              <div className="mt-7 max-w-[1300px]">
+                <div className="max-w-[550px]">
                   {isLoadingTags ? (
                     <div className="flex justify-center items-center h-[250px]">
                       <div className="text-sm text-gray-500">Loading tags...</div>
@@ -1212,7 +1494,7 @@ const InstrumentLockTag = () => {
                     <TagGrid
                       tags={tags}
                       onTagValueClick={handleTagValueClick}
-                      isLocked={isLocked}
+                      onTagEditRequest={handleTagEditRequest}
                       t={t}
                       showValidationError={showValidationError}
                     />
@@ -1223,6 +1505,7 @@ const InstrumentLockTag = () => {
           </div>
         </div>
       </div>
+      
       <div className="flex justify-end gap-2 ml-4 mr-4 mt-3 pt-5 border-t border-gray-200">
         <PrimaryButton 
           icon={isLocked ? Edit : Lock}

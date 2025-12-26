@@ -11,10 +11,10 @@ const InfoBox = ({ data }) => (
       <div className="space-y-2">
         {data.map((d, i) => (
           <div key={i} className="flex">
-            <label className="w-[45%] text-sm font-bold text-gray-800">
+            <label className="w-[45%] text-xs font-bold text-gray-800">
               {d.Category || d.label}:
             </label>
-            <span className="w-[45%] text-sm font-bold text-[#162ddc]">
+            <span className="w-[45%] text-xs font-bold text-[#162ddc]">
               {d.Value || d.value}
             </span>
           </div>
@@ -516,7 +516,7 @@ export default function InstrumentDataPage() {
         const createdOn = row["Created On"] || "";
         return (
           <div>
-            <div className={`font-medium ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>{fileName}</div>
+            <div className={`font-bold ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>{fileName}</div>
             {createdOn && <div className="text-xs text-gray-500">{createdOn}</div>}
           </div>
         );
@@ -596,25 +596,25 @@ export default function InstrumentDataPage() {
 
     return (
       <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.rawdataid")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{merge.sRawDataID}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{merge.sRawDataID}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.sequenceno")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{merge.nSequenceNo}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{merge.nSequenceNo}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.mergefilecount")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{merge.nMergeFileCount}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{merge.nMergeFileCount}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.lockid")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{merge.sLockID}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{merge.sLockID}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.instrumentid")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{merge.nInstrumentID}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{merge.nInstrumentID}</div>
         </div>
       </div>
     );
@@ -629,25 +629,25 @@ export default function InstrumentDataPage() {
 
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.rawdataid")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{nullRow.sRawDataID}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{nullRow.sRawDataID}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.sequenceno")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{nullRow.nSequenceNo}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{nullRow.nSequenceNo}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.mergefilecount")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{nullRow.nMergeFileCount}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{nullRow.nMergeFileCount}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.lockid")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{nullRow.sLockID}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{nullRow.sLockID}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.instrumentid")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{nullRow.nInstrumentID}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{nullRow.nInstrumentID}</div>
         </div>
       </div>
     );
@@ -664,29 +664,29 @@ export default function InstrumentDataPage() {
 
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.filename")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{file["File Name"]}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{file["File Name"]}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.uploadstatus")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{file["Upload Status"]}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{file["Upload Status"]}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.clientname")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{file["Client Name"]}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{file["Client Name"]}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">{t("instrumentlocktag.createdon")}</div>
-          <div className="col-span-2 text-gray-800 font-medium">{file["Created On"]}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{file["Created On"]}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">Reference</div>
-          <div className="col-span-2 text-gray-800 font-medium">{file.Reference}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{file.Reference}</div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-3 gap-4 text-[12px]">
           <div className="font-semibold text-teal-700">Task ID</div>
-          <div className="col-span-2 text-gray-800 font-medium">{file["Task ID"]}</div>
+          <div className="col-span-2 text-gray-800 font-bold">{file["Task ID"]}</div>
         </div>
       </div>
     );
@@ -704,8 +704,8 @@ export default function InstrumentDataPage() {
       )}
       
       {/* Instrument Dropdown */}
-      <div className="mb-4 mt-4">
-        <label className="block text-sm font-medium text-[#4a6fa5] mb-1">
+      <div className="mb-1 mt-2">
+        <label className="block text-xs font-bold text-[#4a6fa5] mb-1">
           {t("label.instrument")} <span className="text-red-500">*</span>
         </label>
         <div className="w-80">
@@ -722,7 +722,7 @@ export default function InstrumentDataPage() {
 
       {/* Instrument Tag Information */}
       <div className="mb-4">
-        <h3 className="text-sm font-medium text-[#4a6fa5] mb-2">
+        <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">
           {t("instrumentlocktag.instrumenttagsinformation")}
         </h3>
         <InfoBox data={instrumentTags} />
@@ -731,12 +731,12 @@ export default function InstrumentDataPage() {
       {/* Latest Merged File Information */}
       <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
-          <h3 className="text-sm font-medium text-[#4a6fa5]">
+          <h3 className="text-xs font-bold text-[#4a6fa5]">
             {t("instrumentlocktag.latestmergedfileinformation")}
           </h3>
           <div className="flex gap-6">
             <button
-              className={`text-sm font-medium pb-1 ${
+              className={`text-xs font-bold pb-1 ${
                 tab === "merge"
                   ? "text-[#4a9fd8] border-b-2 border-[#4a9fd8]"
                   : "text-gray-600"
@@ -746,7 +746,7 @@ export default function InstrumentDataPage() {
               {t("instrumentlocktag.mergedata")}
             </button>
             <button
-              className={`text-sm font-medium pb-1 ${
+              className={`text-xs font-bold pb-1 ${
                 tab === "null"
                   ? "text-[#4a9fd8] border-b-2 border-[#4a9fd8]"
                   : "text-gray-600"
@@ -806,7 +806,7 @@ export default function InstrumentDataPage() {
       {/* File Information */}
       <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
-          <h3 className="text-sm font-medium text-[#4a6fa5]">
+          <h3 className="text-xs font-bold text-[#4a6fa5]">
             {t("instrumentlocktag.fileinformation")}
           </h3>
           <PrimaryButton 
@@ -827,7 +827,7 @@ export default function InstrumentDataPage() {
 
       {/* File Tag Information */}
       <div className="mb-4">
-        <h3 className="text-sm font-medium text-[#4a6fa5] mb-2">
+        <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">
           {t("instrumentlocktag.filetagsinformation")}
         </h3>
         <InfoBox data={fileTags} />
@@ -835,7 +835,7 @@ export default function InstrumentDataPage() {
 
       {/* File Raw Data */}
       <div className="mb-4">
-        <h3 className="text-sm font-medium text-[#4a6fa5] mb-2">
+        <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">
           {t("instrumentlocktag.filerawdata")}
         </h3>
         <FileViewer 
@@ -847,7 +847,7 @@ export default function InstrumentDataPage() {
 
       {/* Parsed Data */}
       <div className="mb-4">
-        <h3 className="text-sm font-medium text-[#4a6fa5] mb-2">
+        <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">
           {t("instrumentlocktag.parseddata")}
         </h3>
         <InfoBox data={parsedData} />
