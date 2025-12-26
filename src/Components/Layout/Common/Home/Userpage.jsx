@@ -8,12 +8,19 @@ const fetchUsersAPI = async ({ postData }) => {
    return new Promise((resolve) => {
      setTimeout(() => {
        const mockData = [
-         { id: '1', username: 'jdoe', fullName: 'John Doe', profileName: 'Admin Profile', userGroupName: 'Admins', createdOn: '2023-01-15', userStatus: 'Active', checkStatus: 1, email: 'jdoe@test.com', locktype: "Locked", Modulename: "DataExplore", TasksName: "Open", level: "process" },
-         { id: '2', username: 'asmith', fullName: 'Alex Smith', profileName: 'Editor Profile', userGroupName: 'Editors', createdOn: '2023-02-20', userStatus: 'Active', checkStatus: 0, email: 'alex@test.com', locktype: "Unlocked", Modulename: "DataExplore", TasksName: "Download", level: "process" },
-         { id: '3', username: 'bwayne', fullName: 'Bruce Wayne', profileName: 'Viewer Profile', userGroupName: 'Admin', createdOn: '2023-03-10', userStatus: 'Locked', checkStatus: 'NA', email: 'bwayne@test.com', locktype: "Locked", Modulename: "DataExplore", TasksName: "Restore", level: "queue" },
-         { id: '4', username: 'ckent', fullName: 'Clark Kent', profileName: 'Super User', userGroupName: 'Admins', createdOn: '2023-04-05', userStatus: 'Active', checkStatus: 'NA', email: 'clark@test.com', locktype: "Unlocked", Modulename: "DataExplore", TasksName: "File Upload", level: "queue" },
-         { id: '3', username: 'bwayne', fullName: 'Bruce Wayne', profileName: 'Admin', userGroupName: 'Viewers', createdOn: '2023-03-10', userStatus: 'Active', checkStatus: 0, email: 'bwayne@test.com', locktype: "Unlocked", Modulename: "Explore", TasksName: "Restore", level: "process" },
-         { id: '4', username: 'ckent', fullName: 'Clark Kent', profileName: 'User', userGroupName: 'Admins', createdOn: '2023-04-05', userStatus: 'Active', checkStatus: 1, email: 'clark@test.com', locktype: "Locked", Modulename: "Explore", TasksName: "File Upload", level: "queue" },
+         { id: '1', username: 'jdoe1', fullName: 'John Doe', profileName: 'Admin Profile', userGroupName: 'Admins', createdOn: '2023-01-15', userStatus: 'Active', checkStatus: 1, email: 'jdoe@test.com', locktype: "Locked", Modulename: "DataExplore", TasksName: "Open", level: "process" },
+         { id: '2', username: 'asmith2', fullName: 'Alex Smith', profileName: 'Editor Profile', userGroupName: 'Editors', createdOn: '2023-02-20', userStatus: 'Active', checkStatus: 0, email: 'alex@test.com', locktype: "Unlocked", Modulename: "DataExplore", TasksName: "Download", level: "process" },
+         { id: '3', username: 'bwayne3', fullName: 'Bruce Wayne', profileName: 'Viewer Profile', userGroupName: 'Admin', createdOn: '2023-03-10', userStatus: 'Locked', checkStatus: 1, email: 'bwayne@test.com', locktype: "Locked", Modulename: "DataExplore", TasksName: "Restore", level: "queue" },
+         { id: '4', username: 'ckent4', fullName: 'Clark Kent', profileName: 'Super User', userGroupName: 'Admins', createdOn: '2023-04-05', userStatus: 'Active', checkStatus: 'NA', email: 'clark@test.com', locktype: "Unlocked", Modulename: "DataExplore", TasksName: "File Upload", level: "queue" },
+         { id: '3', username: 'bwayne5', fullName: 'Bruce Wayne', profileName: 'Admin', userGroupName: 'Viewers', createdOn: '2023-03-10', userStatus: 'Active', checkStatus: 0, email: 'bwayne@test.com', locktype: "Unlocked", Modulename: "Explore", TasksName: "Restore", level: "process" },
+         { id: '4', username: 'ckent6', fullName: 'Clark Kent', profileName: 'User', userGroupName: 'Admins', createdOn: '2023-04-05', userStatus: 'Active', checkStatus: 1, email: 'clark@test.com', locktype: "Locked", Modulename: "Explore", TasksName: "File Upload", level: "queue" },
+          { id: '5', username: 'jdoe7', fullName: 'John Doe', profileName: 'Admin Profile', userGroupName: 'Admins', createdOn: '2023-01-15', userStatus: 'Active', checkStatus: 1, email: 'jdoe@test.com', locktype: "Locked", Modulename: "DataExplore", TasksName: "Open", level: "process" },
+         { id: '6', username: 'asmith8', fullName: 'Alex Smith', profileName: 'Editor Profile', userGroupName: 'Editors', createdOn: '2023-02-20', userStatus: 'Active', checkStatus: 0, email: 'alex@test.com', locktype: "Unlocked", Modulename: "DataExplore", TasksName: "Download", level: "process" },
+         { id: '7', username: 'bwayne9', fullName: 'Bruce Wayne', profileName: 'Viewer Profile', userGroupName: 'Admin', createdOn: '2023-03-10', userStatus: 'Locked', checkStatus: 'NA', email: 'bwayne@test.com', locktype: "Locked", Modulename: "DataExplore", TasksName: "Restore", level: "queue" },
+         { id: '8', username: 'ckent10', fullName: 'Clark Kent', profileName: 'Super User', userGroupName: 'Admins', createdOn: '2023-04-05', userStatus: 'Active', checkStatus: 'NA', email: 'clark@test.com', locktype: "Unlocked", Modulename: "DataExplore", TasksName: "File Upload", level: "queue" },
+         { id: '9', username: 'bwayne11', fullName: 'Bruce Wayne', profileName: 'Admin', userGroupName: 'Viewers', createdOn: '2023-03-10', userStatus: 'Active', checkStatus: 0, email: 'bwayne@test.com', locktype: "Unlocked", Modulename: "Explore", TasksName: "Restore", level: "process" },
+         { id: '10', username: 'ckent12', fullName: 'Clark Kent', profileName: 'User', userGroupName: 'Admins', createdOn: '2023-04-05', userStatus: 'Active', checkStatus: 1, email: 'clark@test.com', locktype: "Locked", Modulename: "Explore", TasksName: "File Upload", level: "queue" },
+         
        ];
        resolve(mockData);
      }, 500);
@@ -86,7 +93,7 @@ const UsersPage = () => {
       width: 150,
       enableSearch: true,
       render: (row, isSelected) => (
-        <span className={`${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>
+        <span className={`${isSelected ? 'text-red-900 font-bold' : 'text-gray-700'}`}>
           {row.username}
         </span>
       )
@@ -113,7 +120,7 @@ const UsersPage = () => {
       width: 150,
       enableSearch: true,
       render: (row, isSelected) => {
-        const statusColor = row.userStatus === 'Active' ? 'text-green-600' 
+        const statusColor = row.userStatus === 'Active' ? 'text-green-600 font-bold' 
                           : row.userStatus === 'Locked' ? 'text-red-600' 
                           : 'text-gray-700';
         
@@ -220,23 +227,29 @@ const UsersPage = () => {
   return (
     <div className="">
       <GridLayout
-        columns={userColumns}
-        data={userData} 
-        getRowId={generateUniqueKey} 
-        renderDetailPanel={renderUserDetail}
-        enableSelection={true} 
-        onSelectionChange={handleSelectionChange}
-        initialSelectedIds={initialSelection}
-        // hidePagination={shouldHidePagination}
+  columns={userColumns}
+  data={userData} 
+  getRowId={generateUniqueKey} 
+  renderDetailPanel={renderUserDetail}
+  enableSelection={true} 
+  onSelectionChange={handleSelectionChange}
+  initialSelectedIds={initialSelection}
+  
+  // Add the width prop here
+  detailPanelWidth="40%"  // You can use "300px", "50%", "30rem", etc.
 
+  // hidePagination={shouldHidePagination}
+  // height="400px"
+  // hideFilterRow={true}
 
-        manualPagination={!shouldHidePagination} 
-        totalRows={totalRows}
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
-      />
+  manualPagination={!shouldHidePagination} 
+  totalRows={totalRows}
+  page={page}
+  pageSize={pageSize}
+  onPageChange={setPage}
+  onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+/>
+
     </div>
   );
 };

@@ -374,7 +374,7 @@ const handleKeyDown = useCallback(
         };
 
         const response = await postData("Login/Login", reqObj);
-        console.log(response?.oResObj)
+        console.log("Response : ",response?.oResObj)
         const info = response?.oResObj?.sInformation || response?.oResObj?.targetSource?.target?.sInformation;
         const status = response?.oResObj?.bStatus ?? response?.oResObj?.targetSource?.target?.bStatus;
 
