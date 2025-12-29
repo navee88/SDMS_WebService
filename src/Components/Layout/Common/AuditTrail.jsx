@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import AnimatedInput from './AnimatedInput';
 import AnimatedDropdown from './AnimatedDropdown';
 import AnimatedTextarea from './AnimatedTextarea';
@@ -20,9 +20,33 @@ const AuditTrail = ({
     const [comments, setComments] = useState("");
     const [showError, setShowError] = useState(false);
     const [userName, setUserName] = useState("");
+    const [passwordError, setPasswordError] = useState(false);
     const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
     const [activePopup, setActivePopup] = useState(null);
+
+    const passwordRef = useRef(null);
+
+    // useEffect(() => {
+    //     if (isOpen && passwordRef.current) {
+    //         setTimeout(() => {
+    //             passwordRef.current.focus();
+    //         }, 100);
+    //     }
+    // }, [isOpen]);
+
+    // UPDATE useEffect to get username from session:
+    useEffect(() => {
+        if (isOpen) {
+            // Get username from session/localStorage/context
+            const sessionUsername = sessionStorage.getItem('sUsername') || 'Administrator';
+            setUserName(sessionUsername);
+
+            if (passwordRef.current) {
+                setTimeout(() => passwordRef.current.focus(), 100);
+            }
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -46,9 +70,31 @@ const AuditTrail = ({
     // };
 
 
-    const verifyPassword = (password) => {
-        return password === "admin";
+    // const verifyPassword = (password) => {
+    //     return password === "admin";
+    // };
+
+    // REPLACE verifyPassword function with:
+    const verifyPassword = async (password) => {
+        try {
+            const response = await fetch('/User/VerifyPassword', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sUsername: userName,
+                    sPassword: password
+                })
+            });
+
+            const result = await response.json();
+            return result.bValid === true;
+        } catch (error) {
+            console.error('Password verification error:', error);
+            return false;
+        }
     };
+
+
 
 
     const handleReason = (value) => {
@@ -56,35 +102,125 @@ const AuditTrail = ({
         setReason(actualValue);
     };
 
+    // const handleSubmit = async () => {
+    //     //Validate required fields
+    //     if (!password || !comments.trim()) {
+    //         setShowError(true);
+    //         return;
+    //     }
+
+    //     // Verify password
+    //     const isValid = verifyPassword(password);
+
+    //     if (!isValid) {
+    //         setShowError(true);
+    //         // Show error message for wrong password
+    //         alert("Incorrect password!");
+    //         return;
+    //     }
+
+    //     //  Password is correct! Tell parent component
+    //     onAuthorized({
+    //         password,
+    //         reason,
+    //         comments
+    //     });
+
+    //     // cleanup
+    //     setPassword("");
+    //     setReason(defaultReason);
+    //     setComments("");
+    //     setShowError(false);
+    // };
+
+    // const handleSubmit = async () => {
+    //     // Validate required fields
+    //     if (!password || !comments.trim()) {
+    //         setShowError(true);
+    //         return;
+    //     }
+
+    //     // Verify password
+    //     const isValid = verifyPassword(password);
+
+    //     if (!isValid) {
+    //         setShowError(true);
+    //         setPasswordError(true);
+    //         return;
+    //     }
+
+    //     // Get reason number based on reason name
+    //     const reasonMap = {
+    //         "Activated": 1,
+    //         "Deactivated": 2,
+    //         "Modified": 3,
+    //         "Reviewed": 4,
+    //         "Archive Created": 5,
+    //         "Archive Opened": 6
+    //     };
+
+    //     // Pass formatted object to parent with AuditTrailValues as key
+    //     onAuthorized({
+    //         AuditTrailValues: {
+    //             sUserName: "Administrator",
+    //             sUserPassword: password,
+    //             sReasonNo: reasonMap[reason] || 1,
+    //             sReasonName: reason,
+    //             sComments: comments,
+    //             sUserDomainName: "SDMS"
+    //         }
+    //     });
+
+    //     // Cleanup
+    //     setPassword("");
+    //     setReason(defaultReason);
+    //     setComments("");
+    //     setShowError(false);
+    //     setPasswordError(false);
+    // };
+
+
     const handleSubmit = async () => {
-        //Validate required fields
         if (!password || !comments.trim()) {
             setShowError(true);
             return;
         }
 
-        // Verify password
-        const isValid = verifyPassword(password);
+        // Verify password with backend
+        const isValid = await verifyPassword(password);
 
         if (!isValid) {
-            setShowError(true);
-            // Show error message for wrong password
-            alert("Incorrect password!");
+            setPasswordError(true);
             return;
         }
 
-        //  Password is correct! Tell parent component
+        // Format audit trail data
+        const reasonMap = {
+            "Activated": 1,
+            "Deactivated": 2,
+            "Modified": 3,
+            "Reviewed": 4,
+            "Archive Created": 5,
+            "Archive Opened": 6
+        };
+
         onAuthorized({
-            password,
-            reason,
-            comments
+            AuditTrailValues: {
+                sUserName: userName,
+                sUserPassword: password,
+                sReasonNo: reasonMap[reason] || 1,
+                sReasonName: reason,
+                sComments: comments,
+                sUserDomainName: sessionStorage.getItem('sDomainName') || 'SDMS'
+            }
         });
 
-        // cleanup
+        // Cleanup
         setPassword("");
         setReason(defaultReason);
         setComments("");
         setShowError(false);
+        setPasswordError(false);
     };
 
     // Handler to close popup and show info dialog
@@ -115,8 +251,10 @@ const AuditTrail = ({
                         </div>
 
                         {/* Password Field */}
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col">
                             <AnimatedInput
+                                ref={passwordRef}
+                                autoFocus
                                 label="Password"
                                 name="user_password_secure"
                                 type="password"
@@ -127,13 +265,20 @@ const AuditTrail = ({
                                 onChange={(e) => {
                                     setPassword(e.target.value);
                                     if (showError) setShowError(false);
+                                    if (passwordError) setPasswordError(false);
                                 }}
                             />
+
+                            {passwordError && (
+                                <div className="bg-[#D9534F] text-white text-sm font-semibold px-1 -mt-3 -mb-2">
+                                    Invalid password..
+                                </div>
+                            )}
                         </div>
 
 
                         {/* Reason Field */}
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col">
                             <AnimatedDropdown
                                 label={t("label.reason")}
                                 value={reason}
