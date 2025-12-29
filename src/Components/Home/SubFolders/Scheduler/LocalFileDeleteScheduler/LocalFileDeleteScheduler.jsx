@@ -527,7 +527,7 @@ export default function LocalFileDeleteScheduler() {
   );
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className=" h-full overflow-hidden flex flex-col gap-3">
       {/* ---------------- FILTER BAR ---------------- */}
       <div className="relative bg-[#f4f6f8] px-5 py-2 pb-2 rounded">
         {isOpen ? (
@@ -634,6 +634,8 @@ export default function LocalFileDeleteScheduler() {
       <GridLayout
         columns={columns}
         data={filteredData}
+        height="100%"
+        detailPanelWidth="46%"
         getRowId={(row) => row.id}
         onRowClick={(row) => setSelectedRow(row)}
         renderDetailPanel={(row) => <DetailsPanel row={row} />}

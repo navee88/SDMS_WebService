@@ -77,6 +77,13 @@ const resetForm = () => {
   // 🔹 Popup
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  useEffect(() => {
+  // If user did NOT come from View, ensure Close button is hidden
+  if (!openedFromView) {
+    setOpenedFromView(false);
+  }
+}, []);
+
 useEffect(() => {
   if (!autoConfigData) return;
 
@@ -161,23 +168,20 @@ useEffect(() => {
  
       {/* Save Button */}
       <div className="flex justify-end">
-  {openedFromView ? (
-    <button
-      onClick={() => {
-          resetForm();           // 🔥 clear all data
-          setAutoConfigData(null); 
-          setOpenedFromView(false);
-          setActiveTabIndex(1);
-        }}
-
-      className="flex items-center mb-4 gap-2 rounded border border-[#8092a4] px-3 py-1.5 text-[#8092a4] text-[11px] font-semibold"
-    >
-      <span className="text-xs font-medium">
-        {t("button.close")}
-      </span>
-    </button>
-  ) : (
-    <button
+{openedFromView ? (
+  <button
+    onClick={() => {
+      resetForm();
+      setAutoConfigData(null);
+      setOpenedFromView(false);
+      setActiveTabIndex(1); // back to View
+    }}
+    className="flex items-center mb-4 gap-2 rounded border px-3 py-1.5 text-[11px]"
+  >
+    {t("button.close")}
+  </button>
+) : (
+   <button
       onClick={handleSave}
       className="flex items-center mb-4 gap-2 rounded bg-blue-500 px-3 py-1.5 text-[#ffffff] font-roboto font-semibold"
     >
@@ -186,7 +190,8 @@ useEffect(() => {
         {t("button.save")}
       </span>
     </button>
-  )}
+)}
+
 </div>
 
  

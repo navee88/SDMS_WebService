@@ -394,7 +394,7 @@ console.log(selectedRow);
       {
         key: "instrument",
         label: t("label.instrument"),
-        width: 190,
+        width: 160,
         enableSearch: true,
         render: (row) => (
           <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
@@ -405,7 +405,7 @@ console.log(selectedRow);
       {
         key: "taskId",
         label: t("label.taskId"),
-        width: 120,
+        width: 140,
         enableSearch: true,
         render: (row) => (
           <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
@@ -416,7 +416,7 @@ console.log(selectedRow);
       {
         key: "sourcePath",
         label: t("label.sourcePath"),
-        width: 230,
+        width: 200,
         enableSearch: true,
         render: (row) => (
           <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
@@ -427,7 +427,7 @@ console.log(selectedRow);
       {
         key: "uncStatus",
         label: t("scheduler.uncStatus"),
-        width: 160,
+        width: 140,
         render: (row) => <input type="checkbox" checked={row.uncStatus} readOnly />,
       },
     ],
@@ -504,10 +504,13 @@ const handleAuthorized = () => {
 
 
 
-  return (
-    <div className="bg-white p-3 space-y-4">
-      {/* ACTION BUTTONS */}
-      <div className="flex justify-end pr-2 gap-2">
+return (
+  <div className="h-full overflow-hidden bg-[#f5f7fb]">
+    {/* PAGE CONTAINER */}
+    <div className="h-full flex flex-col bg-white">
+
+      {/* ACTION BUTTONS (NO SCROLL) */}
+      <div className="flex justify-end pr-5  gap-2 pt-3">
         <ActionButton icon={FaFileAlt} label={t("scheduler.view")} onClick={() => setShowAudit(true)} />
         <ActionButton icon={FaCheck} label={t("scheduler.active")} onClick={() => handleAction("ACTIVE")} />
         <ActionButton icon={MdOutlineThumbDown} label={t("scheduler.deactive")} onClick={() => handleAction("INACTIVE")} />
@@ -516,26 +519,31 @@ const handleAuthorized = () => {
         <ActionButton icon={MdPrint} label={t("button.print")} onClick={handlePrint} />
       </div>
 
-      {/* GRID */}
-      {loading ? (
-        <div className="text-center py-10 text-gray-500">
-          {t("login.loadingpasswordpolicy")}
-        </div>
-      ) : (
-        <GridLayout
-          columns={columns}
-          data={data}
-          getRowId={(row) => row.id}
-          renderDetailPanel={renderUserDetail}
-          onRowClick={(row) => setSelectedRow(row)}
-          rowClassName={(row) =>
-            row.id === selectedRow?.id
-              ? "bg-blue-50 border-l-4 border-blue-600 font-semibold"
-              : ""
-          }
-        />
-      )}
+      {/* SCROLLABLE CONTENT AREA */}
+      <div className="flex-1 overflow-auto p-3">
+        {loading ? (
+          <div className="text-center py-10 text-gray-500">
+            {t("login.loadingpasswordpolicy")}
+          </div>
+        ) : (
+          <GridLayout
+            columns={columns}
+            height="100%"
+            detailPanelWidth="46%"
+            data={data}
+            getRowId={(row) => row.id}
+            renderDetailPanel={renderUserDetail}
+            onRowClick={(row) => setSelectedRow(row)}
+            rowClassName={(row) =>
+              row.id === selectedRow?.id
+                ? "bg-blue-50 border-l-4 border-blue-600 font-semibold"
+                : ""
+            }
+          />
+        )}
+      </div>
 
+      {/* ERROR DIALOG */}
       {showErrorDialog && (
         <Errordialog
           type="error"
@@ -553,5 +561,6 @@ const handleAuthorized = () => {
         />
       )}
     </div>
-  );
+  </div>
+);
 }
