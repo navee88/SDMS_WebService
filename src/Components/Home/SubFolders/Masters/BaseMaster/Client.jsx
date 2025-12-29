@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef ,useEffect} from "react";
 
 import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
 import { MdPrint } from "react-icons/md";
@@ -9,6 +9,9 @@ import * as XLSX from "xlsx"; // For Excel export
 import { FiCheckSquare } from "react-icons/fi";
 import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import Draggable from "react-draggable";
+import useAxios from "../../../../../Services/servicecall";
+import { CF_decrypt } from "../../../../Common/encryptiondecryption";
+import { get } from "react-hook-form";
 /* ---------------- MOCK INSTRUMENTS ---------------- */
 const INSTRUMENTS = [
   "IN001 (in001)",
@@ -30,6 +33,58 @@ const INSTRUMENTS = [
 
 /* ================== MAIN COMPONENT ================== */
 const Client = () => {
+  const { postData } = useAxios();
+  const getSessionValue = (key) => {
+  const value = sessionStorage.getItem(key);
+  return value ? CF_decrypt(value) : null;
+};
+const buildClientRequest = () => {
+  return {
+    sActionType: "View",
+    ActiveUserDetails: {
+      sUserDomainName: getSessionValue("sDomainName"),
+      sSessionID: getSessionValue("sSessionID"),
+      sUserID: getSessionValue("sUserID"),
+      sTimeZoneID: getSessionValue("UTCStatus"),
+      sApplicationName: "SDMS",
+      sdbtype: getSessionValue("sdbtype") ,
+      sUsername: getSessionValue("sUsername"),
+      sSiteCode: getSessionValue("sSiteCode"),
+      sCategories: getSessionValue("sCategories"),
+      sUserGroupID: getSessionValue("sUserGroupID"),
+      sUserStatus:getSessionValue("sUserStatus"),
+      sTenantID: getSessionValue("sTenantID") ,
+      device: getSessionValue("device"),
+    },
+    ApplicationCode: "SDMS",
+  };
+};
+const loadClientGridData = async () => {
+  try {
+    const requestPayload = buildClientRequest();
+
+    // 🔍 Console check BEFORE encryption
+    console.log("Client API Request (PLAIN):", requestPayload);
+
+    const response = await postData(
+      "basemaster/getClient",
+      requestPayload
+    );
+
+    // 🔍 Console check RESPONSE
+    console.log("Client API Response:", response);
+
+    // 🔹 Example: adjust based on backend response structure
+
+  } catch (error) {
+    console.error("Client API Error:", error);
+  }
+};
+useEffect(() => {
+  loadClientGridData();
+}, []);
+
+
   const [rows, setRows] = useState([
     {
       id: "1",
@@ -311,7 +366,7 @@ const Client = () => {
       render: (row) => (
         <div
           onClick={() => setSelectedRowId(row.id)}
-          className={row.id === selectedRowId ? "font-bold cursor-pointer" : "cursor-pointer"}
+          className={row.id === selectedRowId ? "font-semibold cursor-pointer" : "cursor-pointer"}
         >
           {row.clientName}
         </div>
@@ -325,7 +380,7 @@ const Client = () => {
       render: (row) => (
         <div
           onClick={() => setSelectedRowId(row.id)}
-          className={row.id === selectedRowId ? "font-bold cursor-pointer" : "cursor-pointer"}
+          className={row.id === selectedRowId ? "font-semibold cursor-pointer" : "cursor-pointer"}
         >
           {row.clientAlias}
         </div>
@@ -344,7 +399,7 @@ const Client = () => {
       onClick={() => setSelectedRowId(row.id)}
       className={`
         cursor-pointer
-        ${isSelected ? "font-bold" : ""}
+        ${isSelected ? "font-semibold" : ""}
         ${isActive ? "text-green-600" : "text-red-600"}
       `}
     >
@@ -378,7 +433,7 @@ const Client = () => {
   };
 
   return (
-    <div className=" flex flex-col">
+    <div className=" h-full overflow-hidden flex flex-col">
       {/* ACTION BAR */}
       <div className="flex justify-end gap-2 p-3 ">
         <ActionButton
@@ -413,6 +468,8 @@ const Client = () => {
       <GridLayout
         columns={columns}
         data={rows}
+        height="100%"
+        detailPanelWidth="46%"
         getRowId={(row) => row.id}
         enableSelection={false}
         renderDetailPanel={(row) =>
@@ -489,7 +546,7 @@ const AddClientModal = ({ initialData, onClose, onSubmit }) => {
   };
 
   return (
-<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+<div className=" fixed inset-0 bg-black/40 flex items-center justify-center z-50">
  <Draggable
   nodeRef={nodeRef}
   handle=".modal-header"
@@ -548,7 +605,7 @@ onChange={(e) => setForm({ ...form, clientName: e.target.value })}
 
             <AnimatedDropdown
               label={
-                <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
+                <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">                
                   Client Type <span className="text-red-500">*</span>
                 </label>
               }

@@ -31,6 +31,7 @@ import ServerFileDeleteScheduler from "../../../../Pages/Home/Scheduler/ServerFi
 import ClientServiceMonitor from "../../../../Pages/Home/Scheduler/ClientServiceMonitor";
 import Configuration from "../../../../Pages/Home/Storage/Configuration";
 import Rights from "../../../../Pages/Home/Storage/Rights";
+import DownloadSchedulerWithProvider from "../../../../Context/DownloadSchedulerWithProvider";
 
 export const menuConfig = [
   {
@@ -59,7 +60,7 @@ export const menuConfig = [
       { label: "Monitor Scheduler", content: MonitorScheduler },
       { label: "Local File Delete Scheduler", content: LocalFileDeleteScheduler },
       { label: "Server File Delete Scheduler", content: ServerFileDeleteScheduler },
-      { label: "Download Scheduler", content: DownloadScheduler },
+      { label: "Download Scheduler", content: DownloadSchedulerWithProvider },
       { label: "Client Service Monitor", content: ClientServiceMonitor },
     ],
   },

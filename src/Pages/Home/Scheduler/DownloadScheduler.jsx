@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import TabsHeader from "../../../Components/Layout/Common/Home/TabsHeader";
-import { tabConfig } from ".././../../Components/Layout/Common/Home/TabConfig";
+import { tabConfig } from "../../../Components/Layout/Common/Home/TabConfig";
 import { useDownloadScheduler } from "../../../Context/DownloadSchedulerContext";
 
 export default function DownloadScheduler() {
@@ -10,6 +10,7 @@ export default function DownloadScheduler() {
     activeTabIndex,
     setActiveTabIndex,
     clearAutoConfigData,
+    setOpenedFromView,   // ✅ ADD
   } = useDownloadScheduler();
 
   const pageTabsObj = tabConfig[page] || {};
@@ -21,23 +22,24 @@ export default function DownloadScheduler() {
   const handleTabChange = (index) => {
     setActiveTabIndex(index);
 
-    // 🔴 Clear auto data when leaving Auto tab
-    if (index !== 0) {
-      clearAutoConfigData();
-    }
+    // 🔥 USER manually changed tab → reset View-origin state
+    setOpenedFromView(false);
+    clearAutoConfigData();
   };
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden bg-white">
+      {/* TAB HEADER */}
       <div className="flex-none z-10 bg-white">
         <TabsHeader
           tabs={currentTabs}
           selectedTab={activeTabIndex}
-          setSelectedTab={handleTabChange}
+          setSelectedTab={handleTabChange} // ✅ CORRECT PLACE
           className="shadow-sm"
         />
       </div>
 
+      {/* TAB CONTENT */}
       <div className="flex-1 overflow-y-scroll overflow-x-hidden pb-20">
         {currentTabs[activeTabIndex]?.content || null}
       </div>

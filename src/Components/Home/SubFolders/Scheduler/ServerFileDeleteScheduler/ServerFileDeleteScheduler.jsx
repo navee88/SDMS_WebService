@@ -529,7 +529,7 @@ export default function ServerFileDeleteScheduler() {
   );
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className=" h-full overflow-hidden flex flex-col gap-3">
       {/* ---------------- FILTER BAR ---------------- */}
       <div className="relative bg-[#f4f6f8] p-5 rounded">
         {isOpen ? (
@@ -638,6 +638,8 @@ export default function ServerFileDeleteScheduler() {
       <GridLayout
         columns={columns}
         data={filteredData}
+        height="100%"
+        detailPanelWidth="46%"
         getRowId={(row) => row.id}
         onRowClick={(row) => setSelectedRow(row)}
         renderDetailPanel={(row) => <DetailsPanel row={row} />}

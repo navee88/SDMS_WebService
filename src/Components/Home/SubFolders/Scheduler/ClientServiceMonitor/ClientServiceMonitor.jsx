@@ -184,7 +184,7 @@ const handleRefreshClick = () => {
 
   /* ------------------ DETAIL PANEL ------------------ */
   const DetailsPanel = ({ row }) => (
-    <div className="space-y-4 text-[12px]">
+    <div className="space-y-4  text-[12px]">
       <Detail label="Last Modified Date" value={row?.lastModified} />
       <Detail label="Start DateTime" value={row?.startTime} />
       <Detail label="Running DateTime" value={row?.runningTime} />
@@ -192,9 +192,10 @@ const handleRefreshClick = () => {
   );
 
   return (
-    <div className="bg-white p-4 space-y-4">
+    <div className="flex flex-col h-full p-4">
+
       {/* ---------- FILTER BAR ---------- */}
-      <div className="flex pl-4 items-end gap-4">
+      <div className="flex pl-4 items-end gap-4 pb-5">
         <label className="mb-5 block text-[#405f7d] text-[12px] font-semibold font-roboto">
                   {t("label.clientName")}
                 </label>
@@ -245,13 +246,18 @@ const handleRefreshClick = () => {
       )}
 
       {/* ---------- GRID ---------- */}
-      <GridLayout
-        columns={columns}
-        data={filteredData}
-        getRowId={(row) => row.id}
-        onRowClick={(row) => setSelectedRow(row)}
-        renderDetailPanel={(row) => <DetailsPanel row={row} />}
-      />
+      <div className="flex-1 min-h-0">
+  <GridLayout
+    columns={columns}
+    data={filteredData}
+    height="100%"
+    detailPanelWidth="46%"
+    getRowId={(row) => row.id}
+    onRowClick={(row) => setSelectedRow(row)}
+    renderDetailPanel={(row) => <DetailsPanel row={row} />}
+  />
+</div>
+
     </div>
   );
 };

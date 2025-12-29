@@ -144,7 +144,9 @@
     "edit":"Edit",
     "authorize":"Authorize",
     "retry":"Retry",
-    "open":"Open"
+    "open":"Open",
+    "retire":"Retire",
+    "yes":"Yes"
   },
   "label": {
     "email": "E-mail",
@@ -548,7 +550,18 @@
     "enterLoginDomainName": "Enter server IP/name",
     "enterUsername": "Enter username",
     "enterPassword": "Enter password",
-    "name":"Name"
+    "name":"Name",
+    "instrumentModel": "Instrument Model",
+    "instrumentMake": "Instrument Make",
+    "client": "Client",
+    "instrumentCode": "Instrument Code",
+    "instrumentAlias": "Instrument Alias",
+    "lockType": "Lock Type",
+    "parserType": "Parser Type",
+    "interfacerMapped": "Interfacer Mapped",
+    "interfacerInstrument": "Interfacer Instrument",
+    "availableLicense": "Available License"
+    
   },
   "usermanagement": {
     "ftpusermappingview": "Storage User Mapping",
