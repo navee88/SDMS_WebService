@@ -197,7 +197,7 @@ const DeactivedTask = () => {
         {
             key: 'L13ScheduleID',
             label: t('scheduler.taskID'), // Translated
-            width: 120,
+            width: 90,
             render: (row,isSelected) => (
                 <div style={{ 
                     fontSize: '12px', 
@@ -231,7 +231,7 @@ const DeactivedTask = () => {
         {
             key: 'L09FTPAliasName',
             label: t('scheduler.storageName'), // Translated
-            width: 150,
+            width: 100,
             render: (row,isSelected) => (
                 <div style={{ 
                     fontSize: '12px', 
@@ -675,7 +675,7 @@ const DeactivedTask = () => {
             </div>
 
             {/* Main GridLayout with Details Panel */}
-            <div style={{ flex: 1,fontFamily: 'verdana, sans-serif' }}>
+            <div style={{ flex: 1,fontSize:"12px",fontFamily: 'roboto, sans-serif' }}>
                 <GridLayout
                     columns={columns}
                     data={schedulerData}

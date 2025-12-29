@@ -145,7 +145,8 @@ const AnimatedDropdown = ({
       onKeyDown={handleKeyDown}
     >
       {label && (
-        <label className="mb-1 block text-sm font-medium text-gray-600">
+        // <label className="mb-1 block text-sm font-medium text-gray-600">
+        <label className="mb-1 block text-[12px] font-roboto text-[#405F7D] font-semibold">
           {label}
         </label>
       )}
@@ -180,8 +181,7 @@ const AnimatedDropdown = ({
               target: { name, value: val }
             });
           }}
-          className={`
-            w-full border-b-2 bg-transparent pb-1 text-sm font-semibold outline-none
+          className={`  w-full border-b-2 bg-transparent pb-1 text-[12px] font-semibold outline-none font-['Verdana'] text-[#555]
             ${
               disabled
                 ? "border-gray-200 text-gray-400 cursor-not-allowed"
@@ -247,10 +247,13 @@ const AnimatedDropdown = ({
                   onClick={() => handleSelect(opt)}
                   onMouseEnter={() => setFocusedIndex(i)}
                   className={`
-                    flex cursor-pointer items-center border-l-4 px-3 py-2 text-sm transition-all
+                    flex cursor-pointer items-center border-l-4 px-3 py-2 text-xs transition-all
                     ${
                       isSelected
-                        ? "border-blue-500 bg-blue-50 font-semibold text-blue-600"
+
+                        // ? "border-blue-500 bg-blue-50 font-semibold text-blue-600"
+                          ? "border-[#0e5bca] bg-blue-50 font-semibold text-[#000] rounded"
+
                         : "border-transparent"
                     }
                     ${i === focusedIndex && !isSelected ? "bg-slate-100" : ""}
