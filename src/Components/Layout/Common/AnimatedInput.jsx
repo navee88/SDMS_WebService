@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, forwardRef } from "react";
 import { Ban } from "lucide-react";
 
-const AnimatedInput = ({
+const AnimatedInput = forwardRef(({
   label,
   name,
   value = "",
@@ -12,7 +12,7 @@ const AnimatedInput = ({
   disabled = false,
   showError = false,
   borderColor,
-}) => {
+}, ref) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -30,6 +30,7 @@ const AnimatedInput = ({
 
       <div className="relative">
         <input
+          ref={ref}
           type={type}
           name={name}
           value={value}
@@ -85,6 +86,6 @@ const AnimatedInput = ({
       </div>
     </div>
   );
-};
+});
 
 export default React.memo(AnimatedInput);
