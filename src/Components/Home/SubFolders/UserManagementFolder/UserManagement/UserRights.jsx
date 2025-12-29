@@ -526,22 +526,17 @@ const UserRights = () => {
         {
             key: 'sModuleName',
             label: t('usermanagement.modulename') || 'Module Name',
-            width: 200,
+            width: 180,
             enableSearch: true,
-            enableSort: false,
+            enableSort: undefined,
+            fontFamily: 'Verdana, sans-serif',
             render: (row, isSelected, index, rows) => {
                 if (index === 0 || row.sModuleName !== rows[index - 1]?.sModuleName) {
                     return (
-                        <div style={{ 
-                            fontSize: '12px', 
-                            fontFamily: 'verdana',
-                            fontWeight: 'bold',
-                            color: '#8b4513',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                        }}>
-                            {t(row.sModuleName) || row.sModuleName}
+                        <div className="text-[12px] font-verdana font-medium text-[#A52A2A]">
+                            <span className={isSelected ? 'font-bold' : ''}>
+                                {t(row.sModuleName) || row.sModuleName}
+                            </span>
                         </div>
                     );
                 }
@@ -554,56 +549,49 @@ const UserRights = () => {
             width: 200,
             enableSort: false,
             enableSearch: true,
-            render: (row) => (
-                <div style={{ 
-                    fontSize: '12px', 
-                    fontFamily: 'verdana',
-                    color: '#8b4513',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                }}>
-                    {t(row.sDisplayTopic) || row.sDisplayTopic}
+            render: (row, isSelected) => (
+                <div className="text-[12px] font-verdana font-medium truncate text-[#A52A2A]">
+                    <span className={isSelected ? 'font-bold' : ''}>
+                        {t(row.sDisplayTopic) || row.sDisplayTopic}
+                    </span>
                 </div>
             )
         },
         {
             key: 'sCreate',
             label: (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                <div className="flex items-center gap-3 ml-14 justify-center">
                     <input
                         type="checkbox"
                         checked={createAll}
                         onChange={(e) => memoizedHandleCreateAll(e.target.checked)}
-                        style={{ cursor: 'pointer', marginRight: '5px' }}
+                        className="cursor-pointer  w-[14px] h-[14px] accent-blue-600"
                     />
-                    {t('usermanagement.create') || 'Create'}
+                    <span className="text-[12px] font-roboto font-bold">
+                        {t('usermanagement.create') || 'Create'}
+                    </span>
                 </div>
             ),
             width: 120,
             enableSearch: false,
             enableSort: false,
-            render: (row) => { 
+            render: (row, isSelected) => { 
                 if (row.sCreate === "NA") {
                     return (
-                        <div style={{ 
-                            fontSize: '12px', 
-                            fontFamily: 'verdana',
-                            color: '#6b7280',
-                            fontWeight: 'bold',
-                            textAlign: 'center'
-                        }}>
-                            NA
+                        <div className="flex items-center justify-center">
+                            <span className={`text-[12px] font-verdana text-black ${isSelected ? 'font-bold' : ''}`}>
+                                NA
+                            </span>
                         </div>
                     );
                 }
                 return (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="flex items-center justify-center">
                         <input
                             type="checkbox"
                             checked={row.sCreate === "1"}
                             onChange={(e) => memoizedHandleCheckboxChange(row.id, 'sCreate', e.target.checked)}
-                            style={{ cursor: 'pointer' }}
+                            className="cursor-pointer w-[14px] h-[14px] accent-blue-600"
                         />
                     </div>
                 );
@@ -612,40 +600,38 @@ const UserRights = () => {
         {
             key: 'sEdit',
             label: (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+                <div className="flex items-center gap-1 ml-14 justify-center">
                     <input
                         type="checkbox"
                         checked={editAll}
                         onChange={(e) => memoizedHandleEditAll(e.target.checked)}
-                        style={{ cursor: 'pointer', marginRight: '5px' }}
+                        className="cursor-pointer mr-1 w-[14px] h-[14px] accent-blue-600"
                     />
-                    {t('usermanagement.edit') || 'Edit'}
+                    <span className="text-[12px] font-roboto font-bold">
+                        {t('usermanagement.edit') || 'Edit'}
+                    </span>
                 </div>
             ),
             width: 120,
             enableSearch: false,
             enableSort: false,
-            render: (row) => {
+            render: (row, isSelected) => {
                 if (row.sEdit === "NA") {
                     return (
-                        <div style={{ 
-                            fontSize: '12px', 
-                            fontFamily: 'verdana',
-                            color: '#6b7280',
-                            fontWeight: 'bold',
-                            textAlign: 'center'
-                        }}>
-                            NA
+                        <div className="flex items-center justify-center">
+                            <span className={`text-[12px] font-verdana text-black ${isSelected ? 'font-bold' : ''}`}>
+                                NA
+                            </span>
                         </div>
                     );
                 }
                 return (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="flex items-center justify-center">
                         <input
                             type="checkbox"
                             checked={row.sEdit === "1"}
                             onChange={(e) => memoizedHandleCheckboxChange(row.id, 'sEdit', e.target.checked)}
-                            style={{ cursor: 'pointer' }}
+                            className="cursor-pointer w-[14px] h-[14px] accent-blue-600"
                         />
                     </div>
                 );
@@ -654,40 +640,38 @@ const UserRights = () => {
         {
             key: 'sDelete',
             label: (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+                <div className="flex items-center gap-1 ml-14 justify-center">
                     <input
                         type="checkbox"
                         checked={deleteAll}
                         onChange={(e) => memoizedHandleDeleteAll(e.target.checked)}
-                        style={{ cursor: 'pointer', marginRight: '5px' }}
+                        className="cursor-pointer mr-1 w-[14px] h-[14px] accent-blue-600"
                     />
-                    {t('usermanagement.delete') || 'Delete'}
+                    <span className="text-[12px] font-roboto font-bold">
+                        {t('usermanagement.delete') || 'Delete'}
+                    </span>
                 </div>
             ),
             width: 120,
             enableSearch: false,
-            enableSort: false,
-            render: (row) => {
+            enableSort: true,
+            render: (row, isSelected) => {
                 if (row.sDelete === "NA") {
                     return (
-                        <div style={{ 
-                            fontSize: '12px', 
-                            fontFamily: 'verdana',
-                            color: '#6b7280',
-                            fontWeight: 'bold',
-                            textAlign: 'center'
-                        }}>
-                            NA
+                        <div className="flex items-center justify-center">
+                            <span className={`text-[12px] font-verdana text-black ${isSelected ? 'font-bold' : ''}`}>
+                                NA
+                            </span>
                         </div>
                     );
                 }
                 return (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="flex items-center justify-center">
                         <input
                             type="checkbox"
                             checked={row.sDelete === "1"}
                             onChange={(e) => memoizedHandleCheckboxChange(row.id, 'sDelete', e.target.checked)}
-                            style={{ cursor: 'pointer' }}
+                            className="cursor-pointer w-[14px] h-[14px] accent-blue-600"
                         />
                     </div>
                 );
@@ -696,26 +680,28 @@ const UserRights = () => {
         {
             key: 'sAllow',
             label: (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+                <div className="flex items-center gap-1 ml-14 justify-center">
                     <input
                         type="checkbox"
                         checked={allowAll}
                         onChange={(e) => memoizedHandleAllowAll(e.target.checked)}
-                        style={{ cursor: 'pointer', marginRight: '5px' }}
+                        className="cursor-pointer mr-1 w-[14px] h-[14px] accent-blue-600"
                     />
-                    {t('usermanagement.allow') || 'Allow'}
+                    <span className="text-[12px] font-roboto font-bold">
+                        {t('usermanagement.allow') || 'Allow'}
+                    </span>
                 </div>
             ),
             width: 120,
             enableSearch: false,
             enableSort: false,
-            render: (row) => (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            render: (row, isSelected) => (
+                <div className="flex items-center justify-center">
                     <input
                         type="checkbox"
                         checked={row.sAllow === "1"}
                         onChange={(e) => memoizedHandleCheckboxChange(row.id, 'sAllow', e.target.checked)}
-                        style={{ cursor: 'pointer' }}
+                        className="cursor-pointer w-[14px] h-[14px] accent-blue-600"
                     />
                 </div>
             )
@@ -729,57 +715,29 @@ const UserRights = () => {
         <button
             onClick={onClick}
             disabled={disabled}
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 10px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                borderRadius: '4px',
-                border: 'none',
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap',
-                backgroundColor: disabled 
-                    ? '#f8fafc' 
+            className={`
+                flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-bold rounded border-none 
+                transition-all duration-200 whitespace-nowrap
+                ${disabled 
+                    ? 'bg-gray-50 text-gray-300 cursor-not-allowed' 
                     : variant === 'primary'
-                        ? '#2883FE'
-                        : '#f1f5f9',
-                color: disabled 
-                    ? '#cbd5e1' 
-                    : variant === 'primary'
-                        ? 'white'
-                        : '#2883FE'
-            }}
+                        ? 'bg-[#2883FE] text-white hover:bg-[#1a6fd8]'
+                        : 'bg-[#F0F2F5] text-[#2883FE] hover:bg-gray-100'
+                }
+            `}
         >
-            {Icon && <Icon style={{ width: '14px', height: '14px' }} />}
+            {Icon && <Icon className="w-3.5 h-3.5" />}
             <span>{label}</span>
         </button>
     );
 
     if (loading) {
         return (
-            <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                height: '100vh',
-                fontFamily: 'Roboto, sans-serif',
-                backgroundColor: '#f9fafb'
-            }}>
-                <div style={{ 
-                    color: '#6b7280',
-                    fontSize: '16px',
-                    marginBottom: '10px'
-                }}>
+            <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-roboto">
+                <div className="text-gray-500 text-base mb-2.5">
                     {t('masters.loading') || 'Loading...'}
                 </div>
-                <div style={{ 
-                    fontSize: '12px',
-                    color: '#9ca3af'
-                }}>
+                <div className="text-gray-400 text-xs">
                     Fetching user rights data...
                 </div>
             </div>
@@ -788,31 +746,11 @@ const UserRights = () => {
 
     if (!loading && userGroups.length === 0) {
         return (
-            <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                height: '100vh',
-                fontFamily: 'Roboto, sans-serif',
-                backgroundColor: '#f9fafb',
-                gap: '20px',
-                padding: '20px'
-            }}>
-                <div style={{ 
-                    color: '#ef4444', 
-                    fontSize: '18px', 
-                    fontWeight: 'bold',
-                    textAlign: 'center'
-                }}>
+            <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-roboto gap-5 p-5">
+                <div className="text-red-500 text-lg font-bold text-center">
                     {t('usermanagement.nogroupsavailable') || 'No User Groups Available'}
                 </div>
-                <div style={{ 
-                    fontSize: '14px', 
-                    color: '#6b7280', 
-                    textAlign: 'center',
-                    maxWidth: '400px'
-                }}>
+                <div className="text-gray-500 text-sm text-center max-w-md">
                     No user groups are defined in the system. Please contact administrator to create user groups first.
                 </div>
                 <button 
@@ -820,16 +758,7 @@ const UserRights = () => {
                         setLoading(true);
                         fetchUserGroups();
                     }}
-                    style={{
-                        padding: '10px 20px',
-                        backgroundColor: '#2883FE',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: 'bold'
-                    }}
+                    className="px-5 py-2.5 bg-[#2883FE] text-white border-none rounded cursor-pointer text-sm font-bold hover:bg-[#1a6fd8]"
                 >
                     {t('button.retry') || 'Retry'}
                 </button>
@@ -838,14 +767,7 @@ const UserRights = () => {
     }
 
     return (
-        <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            fontFamily: 'Roboto, sans-serif',
-            backgroundColor: '#fff',
-            height: '100vh',
-            overflow: 'hidden'
-        }}>
+        <div className="flex flex-col font-roboto bg-white w-full h-screen overflow-hidden">
             {infoDialog.open && (
                 <Errordialog
                     message={infoDialog.message}
@@ -854,32 +776,20 @@ const UserRights = () => {
                 />
             )}
 
-            {/* Header Section */}
-            <div style={{ 
-                padding: '10px 15px',
-                background: 'white',
-                borderBottom: '1px solid #e5e7eb',
-                flexShrink: 0,
-                position: 'sticky',
-                top: 0,
-                zIndex: 10
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151' }}>
+            {/* Header Section - Fixed */}
+            <div className="px-3.5 py-1.5 bg-white flex-shrink-0 sticky top-0 z-10">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-5">
+                        <div className="flex items-center gap-2.5">
+                            <label className="text-[12px] font-semibold text-gray-700">
                                 {t('usermanagement.groupname') || 'Group Name'}:
                             </label>
                             <AnimatedDropdown
                                 value={selectedGroup}
                                 onChange={(e) => handleGroupChange(e.target.value)}
-                                style={{
-                                    width: '250px',
-                                    fontSize: '12px',
-                                    backgroundColor: 'white'
-                                }}
+                                className="w-84 text-[12px] bg-white mt-2 mr-11" 
                             >
-                                <option value="">{t('usermanagement.selectgroup') || 'Select Group'}</option>
+                                <option value="" className='pb-0'>{t('usermanagement.selectgroup') || 'Select Group'}</option>
                                 {userGroups.map(group => (
                                     <option key={group.L01UserGroupID} value={group.L01UserGroupID}>
                                         {t(group.L01UserGroupName) || group.L01UserGroupName}
@@ -888,30 +798,24 @@ const UserRights = () => {
                             </AnimatedDropdown>
                         </div>
                         
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '30px' }}>
+                        <div className="flex items-center gap-2 ml-7">
                             <input
                                 type="checkbox"
                                 id="selectAllCheckbox"
                                 checked={selectAll}
                                 onChange={(e) => handleSelectAll(e.target.checked)}
-                                style={{ cursor: 'pointer', width: '14px', height: '14px' }}
+                                className="cursor-pointer w-4 h-4 ml-8"
                             />
                             <label 
                                 htmlFor="selectAllCheckbox"
-                                style={{ 
-                                    fontSize: '12px', 
-                                    color: '#374151',
-                                    cursor: 'pointer',
-                                    marginLeft: '5px',
-                                    userSelect: 'none'
-                                }}
+                                className=" text-[12px] text-[#405F7D] font-bold cursor-pointer ml-1 select-none"
                             >
                                 {t('usermanagement.selectall') || 'Select All'}
                             </label>
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <div className="flex gap-2.5">
                         <ActionButton
                             icon={Printer}
                             label={t('usermanagement.print') || 'Print'}
@@ -929,24 +833,10 @@ const UserRights = () => {
                 </div>
             </div>
 
-            {/* Main Content Area - This will scroll */}
-            <div style={{ 
-                flex: 1,
-                overflow: 'auto',
-                minHeight: 0
-            }}>
+            {/* Main Content Area - Takes remaining height and scrolls */}
+            <div className="flex-1 overflow-auto min-h-0 w-full relative">
                 {filteredData.length === 0 && !loading ? (
-                    <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        height: '100%',
-                        minHeight: '200px',
-                        color: '#6b7280',
-                        fontSize: '12px',
-                        flexDirection: 'column',
-                        gap: '10px'
-                    }}>
+                    <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-gray-500 text-[12px] gap-2.5">
                         <div>
                             {selectedGroup 
                                 ? (t('usermanagement.norightsfound') || 'No rights found for this group')
@@ -956,38 +846,25 @@ const UserRights = () => {
                         {selectedGroup && (
                             <button 
                                 onClick={() => fetchUserRights(selectedGroup)}
-                                style={{
-                                    padding: '8px 16px',
-                                    backgroundColor: '#f1f5f9',
-                                    color: '#2883FE',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '12px',
-                                    fontWeight: 'bold'
-                                }}
+                                className="px-4 py-2 bg-gray-50 text-[#2883FE] rounded cursor-pointer text-[12px] font-bold hover:bg-gray-100"
                             >
                                 {t('button.refresh') || 'Refresh'}
                             </button>
                         )}
                     </div>
                 ) : (
-                    <div style={{ 
-                        padding: '15px',
-                        height: '100%'
-                    }}>
-                        {/* Wrap GridLayout in a container that takes full height */}
-                        <div style={{ 
-                            height: '100%',                     
-                            overflow: 'auto'
-                        }}>
+                    <div className="p-1 h-full flex flex-col">
+                        {/* Grid container with explicit height */}
+                        <div className="flex-1 min-h-[100px] overflow-hidden bg-white">
                             <GridLayout 
                                 key={`user-rights-grid-${selectedGroup}`}
                                 columns={columns}
                                 data={stableData}
                                 searchable={false}
                                 selectable={false}
-                                hidePagination={false}
+                                hidePagination={true}
                                 enableSelection={false}
+                                height="80%"
                             />
                         </div>
                     </div>
