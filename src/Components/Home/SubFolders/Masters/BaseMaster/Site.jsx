@@ -8,7 +8,7 @@ import CustomPopup from '../../../../Layout/Common/Popup';
 import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
 import AnimatedTextarea from '../../../../Layout/Common/AnimatedTextarea';
 
-const UsersPage = ({ onRowClick, userData, setUserData }) => {
+const UsersPage = ({ onRowClick, userData, setUserData, selectedIndex }) => {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -18,43 +18,43 @@ const UsersPage = ({ onRowClick, userData, setUserData }) => {
 
     const mockData = [
         {
-            id: 1,
+            id: 101,
             siteCode: "MU-001",
             siteName: "Kolkata",
             live: true
         },
         {
-            id: 2,
+            id: 10102,
             siteCode: "MU-002",
             siteName: "Chennai",
             live: true
         },
         {
-            id: 3,
+            id: 103,
             siteCode: "MU-003",
             siteName: "Mumbai",
             live: true
         },
         {
-            id: 4,
+            id: 104,
             siteCode: "MU-004",
             siteName: "Bangalore",
             live: true
         },
         {
-            id: 5,
+            id: 105,
             siteCode: "MU-005",
             siteName: "Mumbai",
             live: true
         },
         {
-            id: 6,
+            id: 106,
             siteCode: "MU-006",
             siteName: "Bangalore",
             live: true
         },
         {
-            id: 7,
+            id: 107,
             siteCode: "MU-007",
             siteName: "Chennai",
             live: true
@@ -80,18 +80,25 @@ const UsersPage = ({ onRowClick, userData, setUserData }) => {
     //     fetchUsers();
     //   }, []);
 
+    // useEffect(() => {
+    //     setLoading(true);
+    //     setTimeout(() => {
+    //         setUserData(mockData);
+    //         setLoading(false);
+    //         // Select first record after data is loaded
+    //         if (mockData.length > 0 && onRowClick) {
+    //             onRowClick(mockData[0]);
+    //         }
+    //     }, 300);
+    // }, []);
+
     useEffect(() => {
         setLoading(true);
         setTimeout(() => {
             setUserData(mockData);
             setLoading(false);
-            // Select first record after data is loaded
-            if (mockData.length > 0 && onRowClick) {
-                onRowClick(mockData[0]);
-            }
         }, 300);
     }, []);
-
 
     const userColumns = useMemo(() => [
         {
@@ -183,12 +190,22 @@ function Site() {
         faxNo: '',
         email: ''
     });
-    const [selectedRecord, setSelectedRecord] = useState(null);
-    const [validationErrors, setValidationErrors] = useState({});
 
+    const [validationErrors, setValidationErrors] = useState({});
+    const [selectedIndex, setSelectedIndex] = useState(0);
     const [showAuditTrail, setShowAuditTrail] = useState(false);
     const [pendingFormData, setPendingFormData] = useState(null);
     const [userData, setUserData] = useState([]);
+    const selectedRecord = useMemo(() => {
+        return userData[selectedIndex] || null;
+    }, [userData, selectedIndex]);
+
+
+    useEffect(() => {
+        if (userData.length > 0 && selectedIndex === 0) {
+            setSelectedIndex(0);
+        }
+    }, [userData.length]);
 
 
     const handleAddClick = () => {
@@ -235,6 +252,27 @@ function Site() {
         }
     };
 
+    // const handlePopupSubmit = () => {
+    //     // Validate required fields
+    //     const errors = {};
+    //     if (!formData.siteCode || formData.siteCode.trim() === '') {
+    //         errors.siteCode = true;
+    //     }
+    //     if (!formData.siteName || formData.siteName.trim() === '') {
+    //         errors.siteName = true;
+    //     }
+
+    //     if (Object.keys(errors).length > 0) {
+    //         setValidationErrors(errors);
+    //         return;
+    //     }
+
+    //     // Store form data and show audit trail
+    //     setPendingFormData(formData);
+    //     setShowAuditTrail(true);
+    // };
+
+
     const handlePopupSubmit = () => {
         // Validate required fields
         const errors = {};
@@ -250,10 +288,69 @@ function Site() {
             return;
         }
 
-        // Store form data and show audit trail
-        setPendingFormData(formData);
-        setShowAuditTrail(true);
+        // if (activePopup === "Add Site") {
+        //     setUserData(prev => {
+        //         const updated = [
+        //             ...prev,
+        //             {
+        //                 id: Date.now(),
+        //                 ...formData
+        //             }
+        //         ].sort((a, b) => a.siteCode.localeCompare(b.siteCode));
+
+        //         return updated;
+        //     });
+
+        //     setActivePopup(null);
+        //     setValidationErrors({});
+        //     setFormData({});
+        //     return;
+        // }
+
+
+        // if (activePopup === "Add Site") {
+        //     const newItem = {
+        //         id: Date.now(),
+        //         ...formData
+        //     };
+
+        //     // Get currently selected record before updating
+        //     const currentSelectedRecord = userData[selectedIndex];
+
+        //     // Update userData with sorted list
+        //     const updatedData = [...userData, newItem].sort((a, b) =>
+        //         a.siteCode.localeCompare(b.siteCode)
+        //     );
+
+        //     setUserData(updatedData);
+
+        //     // Find new index of previously selected record
+        //     if (currentSelectedRecord) {
+        //         const newIndex = updatedData.findIndex(item => item.id === currentSelectedRecord.id);
+        //         if (newIndex !== -1) {
+        //             setSelectedIndex(newIndex);
+        //         }
+        //     }
+
+        //     setActivePopup(null);
+        //     setFormData({});
+        //     return;
+        // }
+
+
+        if (activePopup === "Add Site") {
+            // Store form data and show audit trail for ADD too
+            setPendingFormData(formData);
+            setShowAuditTrail(true);
+            return;
+        }
+
+        if (activePopup === "Edit Site") {
+            setPendingFormData(formData);
+            setShowAuditTrail(true);
+        }
     };
+
 
     const handlePopupReset = () => {
         if (activePopup === "Edit Site" && selectedRecord) {
@@ -261,11 +358,11 @@ function Site() {
             setFormData({
                 siteCode: selectedRecord.siteCode,
                 siteName: '',
-                siteAddress:'',
+                siteAddress: '',
                 contactPerson: '',
-                mobileNo:'',
+                mobileNo: '',
                 faxNo: '',
-                email:''
+                email: ''
             });
         } else {
             // For Add Site clear everything
@@ -285,35 +382,84 @@ function Site() {
     };
 
 
+    // const handleRowClick = (record) => {
+    //     setSelectedRecord(record);
+    // };
+
     const handleRowClick = (record) => {
-        setSelectedRecord(record);
+        const index = userData.findIndex(item => item.id === record.id);
+        if (index !== -1) {
+            setSelectedIndex(index);
+        }
     };
 
-    const handleAuditAuthorized = (auditData) => {
+
+
+
+
+    // const handleAuditAuthorized = (auditData) => {
+    //     console.log("Audit Data:", auditData);
+    //     console.log("Form Data to Save:", pendingFormData);
+
+    //     // Update grid data
+    //     setUserData(prevData =>
+    //         prevData.map(item =>
+    //             item.id === selectedRecord.id
+    //                 ? { ...item, ...pendingFormData }
+    //                 : item
+    //         )
+    //     );
+
+    //     // selectedIndex stays the same since we're editing in place
+    //     // No need to update it
+
+    //     // Close both popups
+    //     setShowAuditTrail(false);
+    //     setActivePopup(null);
+    //     setValidationErrors({});
+    //     setPendingFormData(null);
+    // };
+
+    const handleAuditAuthorized = async (auditData) => {
         console.log("Audit Data:", auditData);
         console.log("Form Data to Save:", pendingFormData);
 
-        // Update grid data
-        setUserData(prevData =>
-            prevData.map(item =>
-                item.id === selectedRecord.id
-                    ? { ...item, ...pendingFormData }
-                    : item
-            )
-        );
+        // Combine form data with audit trail data
+        const payload = {
+            ...pendingFormData,
+            ...auditData,
+            sStatus: 1,
+            addeditstatus: activePopup === "Add Site" ? "false" : "true"
+        };
 
-        // Update selected record
-        setSelectedRecord(prev => ({
-            ...prev,
-            ...pendingFormData
-        }));
+        try {
+            // Call your backend API
+            const response = await fetch('/Login/SitecodeSubmit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ passObj: payload })
+            });
 
-        // Close both popups
-        setShowAuditTrail(false);
-        setActivePopup(null);
-        setValidationErrors({});
-        setPendingFormData(null);
+            const result = await response.json();
+
+            if (result.rtnmsg === "Success" || result.rtnmsg === "Site updated successfully") {
+                // Refresh grid data from backend
+                fetchSiteData(); // You need to create this function
+
+                // Close popups
+                setShowAuditTrail(false);
+                setActivePopup(null);
+                setPendingFormData(null);
+            } else {
+                alert(result.rtnmsg); // Show error
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to save site');
+        }
     };
+
+
     const ActionButton = ({ icon: Icon, label, disabled, onClick, className = "" }) => (
         <button
             onClick={onClick}
@@ -341,6 +487,36 @@ function Site() {
             <span>{label}</span>
         </button>
     );
+
+
+
+    const fetchSiteData = async () => {
+        try {
+            const response = await fetch('/basemaster/getSitemasterDetails', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    passObj: {
+                        sActionType: "View",
+                        sUserID: sessionStorage.getItem('sUserID'),
+                        sSiteCode: sessionStorage.getItem('sSiteCode')
+                    }
+                })
+            });
+
+            const result = await response.json();
+            setUserData(result.data || []); // Adjust based on your API response structure
+        } catch (error) {
+            console.error('Error fetching sites:', error);
+        }
+    };
+
+    // Call this in useEffect
+    useEffect(() => {
+        fetchSiteData();
+    }, []);
+
+    
     const POPUP_CONTENTS = {
         "Add Site": (
             <div className="flex flex-col gap-3 p-2">
@@ -560,7 +736,7 @@ function Site() {
             </div>
 
             <div className="flex-1 overflow-hidden">
-                <UsersPage onRowClick={handleRowClick} userData={userData} setUserData={setUserData} />
+                <UsersPage onRowClick={handleRowClick} userData={userData} setUserData={setUserData} selectedIndex={selectedIndex} />
             </div>
 
             {/* CustomPopup */}

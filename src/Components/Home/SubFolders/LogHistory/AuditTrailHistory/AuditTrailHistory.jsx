@@ -29,7 +29,19 @@ const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => 
     const [selectedArchiveId, setSelectedArchiveId] = useState(archiveList.length > 0 ? archiveList[0].id : null);
     const { t } = useTranslation();
 
-    const handleRowClick = (id) => {
+    useEffect(() => {
+        if (isOpen && archiveList.length > 0) {
+            setSelectedArchiveId(archiveList[0].id);
+        }
+    }, [isOpen, archiveList]);
+
+    // const handleRowClick = (id) => {
+    //     setSelectedArchiveId(id);
+    // };
+
+    const handleRowClick = (rowOrId) => {
+        const id = typeof rowOrId === 'object' ? rowOrId.id : rowOrId;
+        console.log('Selected ID:', id);
         setSelectedArchiveId(id);
     };
 
@@ -58,6 +70,43 @@ const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => 
         }
     ], [selectedArchiveId, t]);
 
+    // const archiveColumns = useMemo(() => [
+    //     {
+    //         key: 'name',
+    //         label: t("label.name"),
+    //         width: 200,
+    //         enableSearch: true,
+    //         render: (row) => (
+    //             <span
+    //                 className={`text-gray-700 cursor-pointer ${selectedArchiveId === row.id ? 'font-bold text-blue-600' : ''}`}
+    //                 onClick={(e) => {
+    //                     e.stopPropagation();
+    //                     handleRowClick(row.id);
+    //                 }}
+    //             >
+    //                 {row.name}
+    //             </span>
+    //         )
+    //     },
+    //     {
+    //         key: 'createDate',
+    //         label: t("label.CRDate"),
+    //         width: 150,
+    //         enableSearch: true,
+    //         render: (row) => (
+    //             <span
+    //                 className={`text-gray-700 cursor-pointer ${selectedArchiveId === row.id ? 'font-bold text-blue-600' : ''}`}
+    //                 onClick={(e) => {
+    //                     e.stopPropagation();
+    //                     handleRowClick(row.id);
+    //                 }}
+    //             >
+    //                 {row.createDate}
+    //             </span>
+    //         )
+    //     }
+    // ], [selectedArchiveId, t]);
+
     const handleOpen = () => {
         if (!selectedArchiveId) {
             alert('Please select an archive');
@@ -83,7 +132,7 @@ const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => 
                         <GridLayout
                             columns={archiveColumns}
                             data={archiveList}
-                            onRowClick={handleRowClick}
+                            onRowClick={(row) => handleRowClick(row.id)}
                             selectedRows={selectedArchiveId ? [selectedArchiveId] : []}
                         />
                     </div>
@@ -569,19 +618,45 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
 
 
     return (
-        // <div className="flex flex-col mt-2">
-        //     <GridLayout
-        //         columns={userColumns}
-        //         data={userData}
-        //         renderDetailPanel={renderUserDetail}
-        //     />
+
+        // <div className="flex-1 overflow-hidden">
+        //     {showReviewHistory ? (
+        //         <GridLayout
+        //             columns={reviewHistoryColumns}
+        //             data={userData.filter(row => selectedRows.includes(row.id))}
+        //         />
+        //     ) : (
+        //         <GridLayout
+        //             columns={userColumns}
+        //             data={userData}
+        //             renderDetailPanel={renderUserDetail}
+        //         />
+        //     )}
         // </div>
-        <div className="flex-1 overflow-hidden">
+
+        <div className="flex-1 overflow-hidden flex flex-col">
             {showReviewHistory ? (
-                <GridLayout
-                    columns={reviewHistoryColumns}
-                    data={userData.filter(row => selectedRows.includes(row.id))}
-                />
+                <>
+                    <GridLayout
+                        columns={reviewHistoryColumns}
+                        data={userData.filter(row => selectedRows.includes(row.id))}
+                    />
+                    <div className="flex justify-end p-4 border-t border-gray-200">
+                        <button
+                            onClick={() => {
+                                setSelectedRows([]);
+                                // This prop needs to be passed from parent
+                                if (typeof window !== 'undefined') {
+                                    const event = new CustomEvent('closeReviewHistory');
+                                    window.dispatchEvent(event);
+                                }
+                            }}
+                            className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
+                        >
+                            {t("button.close")}
+                        </button>
+                    </div>
+                </>
             ) : (
                 <GridLayout
                     columns={userColumns}
@@ -908,6 +983,16 @@ const AuditTrailHistory = () => {
         }, 300);
     }, []);
 
+    useEffect(() => {
+        const handleCloseReviewHistory = () => {
+            setShowReviewHistory(false);
+            setSelectedRows([]);
+        };
+
+        window.addEventListener('closeReviewHistory', handleCloseReviewHistory);
+        return () => window.removeEventListener('closeReviewHistory', handleCloseReviewHistory);
+    }, []);
+
     //calculate the current date minus the records duration date
     const formatDateDDMMYYYY = (date) => {
         const d = new Date(date);
@@ -1152,14 +1237,16 @@ const AuditTrailHistory = () => {
         setErrorDialog({
             show: true,
             message: "Do you want to Create an Archive?",
-            type: "information"
+            type: "confirmation"
         });
 
         setShowAuditTrail(true);
     }
 
     const handleAuditTrailAuthorized = (data) => {
-        // Update the selected rows with review status
+        console.log('Review Audit Trail Data:', data);
+
+        // Mock: Update local state
         setUserData(prev => prev.map(row =>
             selectedRows.includes(row.id)
                 ? { ...row, reviewStatus: "Reviewed" }
@@ -1167,6 +1254,33 @@ const AuditTrailHistory = () => {
         ));
         setShowAuditTrail(false);
         setSelectedRows([]);
+
+        // When ready for API, uncomment below:
+        /*
+        try {
+            const response = await fetch('/api/audit-trail', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                setUserData(prev => prev.map(row =>
+                    selectedRows.includes(row.id)
+                        ? { ...row, reviewStatus: "Reviewed" }
+                        : row
+                ));
+                setShowAuditTrail(false);
+                setSelectedRows([]);
+            }
+        } catch (error) {
+            console.error('API Error:', error);
+        }
+        */
     };
 
     const handleCreateArchive = () => {
@@ -1179,6 +1293,9 @@ const AuditTrailHistory = () => {
     };
 
     const handleArchiveAuditLogAuthorized = (data) => {
+        console.log('Create Archive Audit Trail Data:', data);
+
+        // Mock: Create archive locally
         const newArchive = {
             id: archiveList.length + 1,
             name: `CFRArchiving_${archiveList.length + 1}_${new Date().toISOString().split('T')[0].replace(/-/g, '')}`,
@@ -1187,12 +1304,43 @@ const AuditTrailHistory = () => {
         setArchiveList(prev => [newArchive, ...prev]);
         setShowCreateAuditLog(false);
 
-        // Show success message and keep the current data visible
         setErrorDialog({
             show: true,
             message: `Archive "${newArchive.name}" created successfully!`,
             type: "success"
         });
+
+        // When ready for API, uncomment below:
+        /*
+        try {
+            const response = await fetch('/api/create-archive', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                const newArchive = {
+                    id: result.archiveId,
+                    name: result.archiveName,
+                    createDate: result.createDate
+                };
+                setArchiveList(prev => [newArchive, ...prev]);
+                setShowCreateAuditLog(false);
+                setErrorDialog({
+                    show: true,
+                    message: `Archive "${newArchive.name}" created successfully!`,
+                    type: "success"
+                });
+            }
+        } catch (error) {
+            console.error('API Error:', error);
+        }
+        */
     };
 
     const handleOpenArchive = () => {
@@ -1205,8 +1353,34 @@ const AuditTrailHistory = () => {
     };
 
     const handleOpenArchiveAuditLogAuthorized = (data) => {
+        console.log('Open Archive Audit Trail Data:', data);
+
+        // Mock: Just proceed without API call
         setShowOpenAuditLog(false);
         setShowOpenArchivePopup(true);
+
+        // When ready for API, uncomment below:
+        /*
+        try {
+            const response = await fetch('/api/audit-trail', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            console.log('Backend response:', result);
+            
+            if (response.ok) {
+                setShowOpenAuditLog(false);
+                setShowOpenArchivePopup(true);
+            }
+        } catch (error) {
+            console.error('API Error:', error);
+        }
+        */
     };
 
     const handleArchiveSelect = (archive) => {
@@ -1221,6 +1395,32 @@ const AuditTrailHistory = () => {
         setShowReviewHistory(false);
         setSelectedRows([]);
     };
+    //Api code
+    //     const handleArchiveSelect = async (archive) => {
+    //     setSelectedArchiveName(archive.name);
+    //     setShowOpenArchivePopup(false);
+    //     setLoading(true);
+
+    //     try {
+    //         // API call to fetch data from specific archive table
+    //         const response = await fetch(`/api/archives/${archive.id}/data`, {
+    //             method: 'GET',
+    //             headers: { 
+    //                 'Content-Type': 'application/json' 
+    //             }
+    //         });
+
+    //         const archivedData = await response.json();
+
+    //         if (response.ok) {
+    //             setUserData(archivedData);
+    //         }
+    //         setLoading(false);
+    //     } catch (error) {
+    //         console.error('Error fetching archived data:', error);
+    //         setLoading(false);
+    //     }
+    // };
 
     //Reset Function
     const handleReset = () => {
@@ -1241,6 +1441,41 @@ const AuditTrailHistory = () => {
         //     setLoading(false);
         // }, 300);
     };
+
+    //api code for reset
+    //     const handleReset = async () => {
+    //     setSelectedUser("All");
+    //     setSelectedModule("All");
+    //     setSelectedAuditType("All");
+    //     setRecordsDuration("Current Date");
+    //     setFromDate(today);
+    //     setToDate(today);
+    //     setSelectedRows([]);
+    //     setShowReviewHistory(false);
+    //     setSelectedArchiveName(""); // Clear archive name
+
+    //     setLoading(true);
+
+    //     try {
+    //         // Fetch original main table data
+    //         const response = await fetch('/api/audit-trail', {
+    //             method: 'GET',
+    //             headers: { 
+    //                 'Content-Type': 'application/json' 
+    //             }
+    //         });
+
+    //         const data = await response.json();
+
+    //         if (response.ok) {
+    //             setUserData(data);
+    //         }
+    //         setLoading(false);
+    //     } catch (error) {
+    //         console.error('Error resetting data:', error);
+    //         setLoading(false);
+    //     }
+    // };
 
     const handlePrint = () => {
         const columnsToShow = showReviewHistory ? reviewHistoryColumns : userColumns;
@@ -1386,7 +1621,7 @@ const AuditTrailHistory = () => {
     };
     const handleFilter = () => {
         setLoading(true);
-
+        setSelectedArchiveName("");
         setTimeout(() => {
             let filteredData = [...MOCK_DATA];
 
@@ -1437,6 +1672,43 @@ const AuditTrailHistory = () => {
             setShowReviewHistory(false);
         }, 300);
     };
+
+    //api code for filter
+    // const handleFilter = async () => {
+    //     setLoading(true);
+    //     setSelectedArchiveName(""); // Clear archive name when filtering main data
+
+    //     const { startDate, endDate } = getDateRange(recordsDuration, fromDate, toDate);
+
+    //     try {
+    //         // API call with filter parameters
+    //         const response = await fetch('/api/audit-trail/filter', {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json'
+    //             },
+    //             body: JSON.stringify({
+    //                 userName: selectedUser !== "All" ? selectedUser : null,
+    //                 moduleName: selectedModule !== "All" ? selectedModule : null,
+    //                 auditType: selectedAuditType !== "All" ? selectedAuditType : null,
+    //                 startDate: startDate,
+    //                 endDate: endDate
+    //             })
+    //         });
+
+    //         const filteredData = await response.json();
+
+    //         if (response.ok) {
+    //             setUserData(filteredData);
+    //             setSelectedRows([]);
+    //             setShowReviewHistory(false);
+    //         }
+    //         setLoading(false);
+    //     } catch (error) {
+    //         console.error('Error filtering data:', error);
+    //         setLoading(false);
+    //     }
+    // };
     return (
         <div className="flex flex-col w-full font-roboto rounded-md">
 
@@ -1553,21 +1825,27 @@ const AuditTrailHistory = () => {
                 </button>
             </div>
 
-            {/* Buttons */}
-            <div className="flex flex-wrap justify-center gap-2 mt-4">
-                {selectedArchiveName && (
-                    <div className="px-4 py-2 font-roboto">
-                        <span className="font-bold text-xs text-[#000000]">Archival name: </span>
-                        <span className="font-bold text-xs text-[#405F7D]">{selectedArchiveName}</span>
-                    </div>
-                )}
+            {/* Archive Name and Buttons */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mt-4 px-4">
+                {/* Left side - Archive name label */}
+                <div className="flex items-center">
+                    {selectedArchiveName && (
+                        <div className="px-4 py-2 font-roboto">
+                            <span className="font-bold text-xs text-[#000000]">Archival name: </span>
+                            <span className="font-bold text-xs text-[#405F7D]">{selectedArchiveName}</span>
+                        </div>
+                    )}
+                </div>
 
-                <ActionButton icon={History} label={t('button.reviewHistory')} onClick={handleReviewHistory} />
-                <ActionButton icon={FileText} label={t('button.review')} onClick={handleReview} />
-                <ActionButton icon={ArchiveIcon} label={t('button.createArchieve')} onClick={handleCreateArchive} />
-                <ActionButton icon={PackageOpenIcon} label={t('button.openArchieve')} onClick={handleOpenArchive} />
-                <ActionButton icon={Upload} label={t('button.export')} onClick={handleExport} />
-                <ActionButton icon={Printer} label={t('button.print')} onClick={handlePrint} />
+                {/* Right side - Action buttons */}
+                <div className="flex flex-wrap gap-2">
+                    <ActionButton icon={History} label={t('button.reviewHistory')} onClick={handleReviewHistory} />
+                    <ActionButton icon={FileText} label={t('button.review')} onClick={handleReview} />
+                    <ActionButton icon={ArchiveIcon} label={t('button.createArchieve')} onClick={handleCreateArchive} />
+                    <ActionButton icon={PackageOpenIcon} label={t('button.openArchieve')} onClick={handleOpenArchive} />
+                    <ActionButton icon={Upload} label={t('button.export')} onClick={handleExport} />
+                    <ActionButton icon={Printer} label={t('button.print')} onClick={handlePrint} />
+                </div>
             </div>
 
 
@@ -1610,7 +1888,7 @@ const AuditTrailHistory = () => {
             {showCreateArchiveDialog && (
                 <Errordialog
                     message="Do you want to create archive?"
-                    type="information"
+                    type="confirmation"
                     onClose={handleCreateArchiveConfirm}
                 />
             )}
@@ -1618,7 +1896,7 @@ const AuditTrailHistory = () => {
             {showOpenArchiveDialog && (
                 <Errordialog
                     message="Do you want to open archive?"
-                    type="information"
+                    type="confirmation"
                     onClose={handleOpenArchiveConfirm}
                 />
             )}
@@ -1629,8 +1907,7 @@ const AuditTrailHistory = () => {
                     onClose={() => setShowCreateAuditLog(false)}
                     onAuthorized={handleArchiveAuditLogAuthorized}
                     actionLabel="Submit"
-                    defaultReason="Archive Created"
-                    disableReason={true}
+                    
                 />
             )}
 
@@ -1640,8 +1917,7 @@ const AuditTrailHistory = () => {
                     onClose={() => setShowOpenAuditLog(false)}
                     onAuthorized={handleOpenArchiveAuditLogAuthorized}
                     actionLabel="Submit"
-                    defaultReason="Archive Opened"
-                    disableReason={true}
+                  
                 />
             )}
 
