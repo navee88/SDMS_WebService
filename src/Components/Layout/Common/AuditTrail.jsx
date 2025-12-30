@@ -6,6 +6,7 @@ import { CheckSquare } from 'lucide-react';
 import { useTranslation } from "react-i18next";
 import { useLanguage } from '../../../Context/LanguageContext';
 import CustomPopup from './Popup';
+import { CF_decrypt } from '../../Common/encryptiondecryption';
 
 const AuditTrail = ({
     isOpen,
@@ -13,7 +14,8 @@ const AuditTrail = ({
     onAuthorized,
     actionLabel = "Submit",
     defaultReason = "Activated",
-    disableReason = false
+    disableReason = false,
+    showPasswordError = false
 }) => {
     const [password, setPassword] = useState("");
     const [reason, setReason] = useState(defaultReason);
@@ -35,12 +37,15 @@ const AuditTrail = ({
     //     }
     // }, [isOpen]);
 
-    // UPDATE useEffect to get username from session:
+    // Get username from session on open
     useEffect(() => {
         if (isOpen) {
-            // Get username from session/localStorage/context
-            const sessionUsername = sessionStorage.getItem('sUsername') || 'Administrator';
-            setUserName(sessionUsername);
+            // Get username from session and decrypt
+            const encryptedUsername = sessionStorage.getItem('sUsername');
+            const decryptedUsername = encryptedUsername
+                ? CF_decrypt(encryptedUsername)
+                : 'Administrator';
+            setUserName(decryptedUsername);
 
             if (passwordRef.current) {
                 setTimeout(() => passwordRef.current.focus(), 100);
@@ -48,59 +53,29 @@ const AuditTrail = ({
         }
     }, [isOpen]);
 
+    // Show password error from parent
+    useEffect(() => {
+        if (showPasswordError) {
+            setPasswordError(true);
+        }
+    }, [showPasswordError]);
+
     if (!isOpen) return null;
-
-    // const verifyPassword = async (password) => {
-    //     try {
-    //         const response = await fetch("/api/auth/verify-password", {
-    //             method: "POST",
-    //             headers: {
-    //                 "Content-Type": "application/json",
-    //             },
-    //             credentials: "include", // if session-based auth
-    //             body: JSON.stringify({ password }),
-    //         });
-
-    //         if (!response.ok) return false;
-
-    //         return true;
-    //     } catch (error) {
-    //         return false;
-    //     }
-    // };
 
 
     // const verifyPassword = (password) => {
     //     return password === "admin";
     // };
 
-    // REPLACE verifyPassword function with:
-    const verifyPassword = async (password) => {
-        try {
-            const response = await fetch('/User/VerifyPassword', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sUsername: userName,
-                    sPassword: password
-                })
-            });
-
-            const result = await response.json();
-            return result.bValid === true;
-        } catch (error) {
-            console.error('Password verification error:', error);
-            return false;
-        }
-    };
 
 
 
 
-    const handleReason = (value) => {
-        const actualValue = value?.target?.value || value?.value || value;
-        setReason(actualValue);
-    };
+
+    // const handleReason = (value) => {
+    //     const actualValue = value?.target?.value || value?.value || value;
+    //     setReason(actualValue);
+    // };
 
     // const handleSubmit = async () => {
     //     //Validate required fields
@@ -180,17 +155,14 @@ const AuditTrail = ({
     // };
 
 
+    const handleReason = (value) => {
+        const actualValue = value?.target?.value || value?.value || value;
+        setReason(actualValue);
+    };
+
     const handleSubmit = async () => {
         if (!password || !comments.trim()) {
             setShowError(true);
-            return;
-        }
-
-        // Verify password with backend
-        const isValid = await verifyPassword(password);
-
-        if (!isValid) {
-            setPasswordError(true);
             return;
         }
 
@@ -204,14 +176,18 @@ const AuditTrail = ({
             "Archive Opened": 6
         };
 
+        // Get and decrypt domain name
+        const encryptedDomain = sessionStorage.getItem('sDomainName');
+        const decryptedDomain = encryptedDomain ? CF_decrypt(encryptedDomain) : 'SDMS';
+
         onAuthorized({
             AuditTrailValues: {
-                sUserName: userName,
-                sUserPassword: password,
+                sUserName: userName, // Already decrypted in useEffect
+                sUserPassword: password, // Raw password entered by user
                 sReasonNo: reasonMap[reason] || 1,
                 sReasonName: reason,
                 sComments: comments,
-                sUserDomainName: sessionStorage.getItem('sDomainName') || 'SDMS'
+                sUserDomainName: decryptedDomain // Decrypted domain
             }
         });
 
@@ -223,12 +199,12 @@ const AuditTrail = ({
         setPasswordError(false);
     };
 
-    // Handler to close popup and show info dialog
-    const handlePopupClose = () => {
-        setActivePopup(null);
-        // Show info dialog after closing popup
-        // showInfoDialog("Schedule mode popup closed", "success");
-    };
+    // // Handler to close popup and show info dialog
+    // const handlePopupClose = () => {
+    //     setActivePopup(null);
+    //     // Show info dialog after closing popup
+    //     // showInfoDialog("Schedule mode popup closed", "success");
+    // };
     return (
         <>
             <CustomPopup
@@ -242,7 +218,7 @@ const AuditTrail = ({
                             <AnimatedInput
                                 label="Username"
                                 name="username"
-                                value="Administrator"
+                                value={userName}
                                 required
                                 disabled={true}
                                 showError={showError}

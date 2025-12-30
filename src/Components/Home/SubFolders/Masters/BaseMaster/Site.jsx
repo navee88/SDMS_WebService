@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, ChevronDown, FileText, SquarePen, Plus, Edit, SquareCheckBig } from 'lucide-react';
 import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import { useLanguage } from '../../../../../Context/LanguageContext';
@@ -7,6 +7,8 @@ import AuditTrail from '../../../../Layout/Common/AuditTrail';
 import CustomPopup from '../../../../Layout/Common/Popup';
 import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
 import AnimatedTextarea from '../../../../Layout/Common/AnimatedTextarea';
+import { CF_encrypt, CF_decrypt } from '../../../../../Components/Common/encryptiondecryption';
+import useAxios from '../../../../../Services/servicecall';
 
 const UsersPage = ({ onRowClick, userData, setUserData, selectedIndex }) => {
 
@@ -92,13 +94,21 @@ const UsersPage = ({ onRowClick, userData, setUserData, selectedIndex }) => {
     //     }, 300);
     // }, []);
 
+    // useEffect(() => {
+    //     setLoading(true);
+    //     setTimeout(() => {
+    //         setUserData(mockData);
+    //         setLoading(false);
+    //     }, 300);
+    // }, []);
+
     useEffect(() => {
-        setLoading(true);
-        setTimeout(() => {
-            setUserData(mockData);
+        // Data will be loaded by parent component's fetchSiteData()
+        // Just manage loading state based on userData prop
+        if (userData.length > 0) {
             setLoading(false);
-        }, 300);
-    }, []);
+        }
+    }, [userData]);
 
     const userColumns = useMemo(() => [
         {
@@ -123,7 +133,7 @@ const UsersPage = ({ onRowClick, userData, setUserData, selectedIndex }) => {
                 </span>
             )
         }
-    ], []);
+    ], [t]);
 
 
     const renderUserDetail = (user) => (
@@ -180,6 +190,7 @@ const UsersPage = ({ onRowClick, userData, setUserData, selectedIndex }) => {
 function Site() {
     const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
+    const { postData } = useAxios();
     const [activePopup, setActivePopup] = useState(null);
     const [formData, setFormData] = useState({
         siteCode: '',
@@ -196,16 +207,47 @@ function Site() {
     const [showAuditTrail, setShowAuditTrail] = useState(false);
     const [pendingFormData, setPendingFormData] = useState(null);
     const [userData, setUserData] = useState([]);
-    const selectedRecord = useMemo(() => {
-        return userData[selectedIndex] || null;
-    }, [userData, selectedIndex]);
+    const [passwordError, setPasswordError] = useState(false);
+    //state for tracking pending selection
+    const [selectedSiteCode, setSelectedSiteCode] = useState(null);
+    const [gridRefreshKey, setGridRefreshKey] = useState(0);
+    // const selectedRecord = useMemo(() => {
+    //     return userData[selectedIndex] || null;
+    // }, [userData, selectedIndex]);
 
+    const selectedRecord = useMemo(() => {
+        return userData.find(item => item.siteCode.trim() === selectedSiteCode?.trim()) || null;
+    }, [userData, selectedSiteCode]);
+
+    // useEffect(() => {
+    //     if (selectedSiteCode && userData.length > 0) {
+    //         const index = userData.findIndex(
+    //             item => item.siteCode === selectedSiteCode
+    //         );
+    //         if (index !== -1) {
+    //             setSelectedIndex(index);
+    //         }
+    //     } else if (userData.length > 0 && selectedIndex === -1) {
+    //         // Select first row on initial load only
+    //         setSelectedIndex(0);
+    //         setSelectedSiteCode(userData[0].siteCode);
+    //     }
+    // }, [userData, selectedSiteCode]);
 
     useEffect(() => {
-        if (userData.length > 0 && selectedIndex === 0) {
+        if (!userData || userData.length === 0) return;
+
+        const trimmedSiteCode = selectedSiteCode?.trim();
+        const index = userData.findIndex(item => item.siteCode.trim() === trimmedSiteCode);
+
+        if (index !== -1) {
+            setSelectedIndex(index);
+        } else if (userData.length > 0) {
             setSelectedIndex(0);
+            setSelectedSiteCode(userData[0].siteCode);
         }
-    }, [userData.length]);
+    }, [userData, selectedSiteCode]);
+
 
 
     const handleAddClick = () => {
@@ -213,18 +255,68 @@ function Site() {
         setFormData({}); // Reset form
     };
 
-    const handleEditClick = () => {
-        if (selectedRecord) {
-            setActivePopup("Edit Site");
+    // const handleEditClick = () => {
+    //     if (selectedRecord) {
+    //         setActivePopup("Edit Site");
+    //         setFormData({
+    //             siteCode: selectedRecord.siteCode,
+    //             siteName: selectedRecord.siteName,
+    //             siteAddress: selectedRecord.siteAddress || '',
+    //             contactPerson: selectedRecord.contactPerson || '',
+    //             mobileNo: selectedRecord.mobileNo || '',
+    //             faxNo: selectedRecord.faxNo || '',
+    //             email: selectedRecord.email || ''
+    //         });
+    //     }
+    // };
+
+
+
+    const handleEditClick = async () => {
+        if (!selectedRecord) {
+            alert("Please select a record to edit");
+            return;
+        }
+
+        try {
+            // Get user details from session
+            const encryptedUserID = sessionStorage.getItem('sUserID');
+            const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
+
+            const payload = {
+                objdat: {
+                    sSitecode: selectedRecord.siteCode,
+                    sSitename: selectedRecord.siteName
+                }
+            };
+
+            console.log("Edit Load Payload:", payload);
+
+            // Call backend to get full site details
+            const result = await postData('basemaster/SiteEditLoad', payload);
+
+            console.log("Edit Load Result:", result);
+
+            // Backend returns array, get first item
+            const siteDetails = result.oResObj?.[0] || result[0] || {};
+
+            // Pre-fill form with loaded data
             setFormData({
-                siteCode: selectedRecord.siteCode,
-                siteName: selectedRecord.siteName,
-                siteAddress: selectedRecord.siteAddress || '',
-                contactPerson: selectedRecord.contactPerson || '',
-                mobileNo: selectedRecord.mobileNo || '',
-                faxNo: selectedRecord.faxNo || '',
-                email: selectedRecord.email || ''
+                siteCode: siteDetails.L85SiteCode?.trim() || selectedRecord.siteCode,
+                siteName: siteDetails.L85SiteName || selectedRecord.siteName,
+                siteAddress: siteDetails.L85SiteAddress || '',
+                contactPerson: siteDetails.L85ContactPerson || '',
+                mobileNo: siteDetails.L85PhoneNo || '',
+                faxNo: siteDetails.L85FaxNo || '',
+                email: siteDetails.L85Email || ''
             });
+
+            // Show edit popup
+            setActivePopup("Edit Site");
+
+        } catch (error) {
+            console.error('Error loading site details:', error);
+            alert('Failed to load site details');
         }
     };
 
@@ -288,66 +380,111 @@ function Site() {
             return;
         }
 
-        // if (activePopup === "Add Site") {
-        //     setUserData(prev => {
-        //         const updated = [
-        //             ...prev,
-        //             {
-        //                 id: Date.now(),
-        //                 ...formData
-        //             }
-        //         ].sort((a, b) => a.siteCode.localeCompare(b.siteCode));
-
-        //         return updated;
-        //     });
-
-        //     setActivePopup(null);
-        //     setValidationErrors({});
-        //     setFormData({});
-        //     return;
-        // }
-
-
-        // if (activePopup === "Add Site") {
-        //     const newItem = {
-        //         id: Date.now(),
-        //         ...formData
-        //     };
-
-        //     // Get currently selected record before updating
-        //     const currentSelectedRecord = userData[selectedIndex];
-
-        //     // Update userData with sorted list
-        //     const updatedData = [...userData, newItem].sort((a, b) =>
-        //         a.siteCode.localeCompare(b.siteCode)
-        //     );
-
-        //     setUserData(updatedData);
-
-        //     // Find new index of previously selected record
-        //     if (currentSelectedRecord) {
-        //         const newIndex = updatedData.findIndex(item => item.id === currentSelectedRecord.id);
-        //         if (newIndex !== -1) {
-        //             setSelectedIndex(newIndex);
-        //         }
-        //     }
-
-        //     setActivePopup(null);
-        //     setFormData({});
-        //     return;
-        // }
-
-
+        // ADD SITE - Direct backend call without audit trail
         if (activePopup === "Add Site") {
-            // Store form data and show audit trail for ADD too
-            setPendingFormData(formData);
-            setShowAuditTrail(true);
+            handleDirectSave(formData, "false");
             return;
         }
 
+        // EDIT SITE - Show audit trail first
         if (activePopup === "Edit Site") {
             setPendingFormData(formData);
             setShowAuditTrail(true);
+        }
+    };
+
+    // const handleDirectSave = async (siteData, addEditStatus) => {
+    //     const payload = {
+    //         sSitename: siteData.siteName,
+    //         sSitecode: siteData.siteCode,
+    //         sSiteaddress: siteData.siteAddress || '',
+    //         sContactperson: siteData.contactPerson || '',
+    //         sMobileno: siteData.mobileNo || '',
+    //         sFaxno: siteData.faxNo || '',
+    //         sEmail: siteData.email || '',
+    //         sStatus: 1,
+    //         addeditstatus: addEditStatus
+    //     };
+
+    //     try {
+    //         console.log("ADD Site Payload:", payload); // Debug log
+
+    //         // Use postData from useAxios (already handles encryption)
+    //         const result = await postData('Login/SitecodeSubmit', payload);
+
+    //         console.log("ADD Site Result:", result); // Debug log
+
+    //         if (result.rtnmsg === "Success" || result.rtnmsg === "Site created successfully") {
+    //             await fetchSiteData();
+    //             setActivePopup(null);
+    //             setValidationErrors({});
+    //             setFormData({});
+    //         } else {
+    //             alert(result.rtnmsg || 'Failed to save site');
+    //         }
+    //     } catch (error) {
+    //         console.error('Error saving site:', error);
+    //         alert('Failed to save site. Please check console for details.');
+    //     }
+    // };
+
+    const handleDirectSave = async (siteData, addEditStatus) => {
+        // Get user details from session
+        const encryptedUserID = sessionStorage.getItem('sUserID');
+        const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
+        const encryptedTenantID = sessionStorage.getItem('sTenantID');
+        const encryptedUsername = sessionStorage.getItem('sUsername');
+        const encryptedDomain = sessionStorage.getItem('sDomainName');
+        const encryptedCategories = sessionStorage.getItem('sCategories');
+        const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
+        const encryptedSessionID = sessionStorage.getItem('sSessionID');
+        const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
+        const encryptedDBType = sessionStorage.getItem('sdbtype');
+
+        const payload = {
+            sSitename: siteData.siteName,
+            sSitecode: siteData.siteCode,
+            sSiteaddress: siteData.siteAddress || '',
+            sContactperson: siteData.contactPerson || '',
+            sMobileno: siteData.mobileNo || '',
+            sFaxno: siteData.faxNo || '',
+            sEmail: siteData.email || '',
+            sStatus: 1,
+            addeditstatus: addEditStatus,
+            appname: "SDMS",
+            ApplicationCode: "SDMS",
+            ActiveUserDetails: {
+                sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
+                sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
+                sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
+                sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
+                sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
+                sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
+                sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
+                sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
+                sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
+                sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
+                sApplicationName: "SDMS",
+                sUserStatus: ""
+            }
+        };
+
+        try {
+            console.log("ADD Site Payload:", payload);
+            const result = await postData('Login/SitecodeSubmit', payload);
+            console.log("ADD Site Result:", result);
+
+            if (result.rtnmsg === "Success") {
+                await fetchSiteData();
+                setActivePopup(null);
+                setValidationErrors({});
+                setFormData({});
+            } else {
+                alert(result.rtnmsg || 'Failed to save site');
+            }
+        } catch (error) {
+            console.error('Error saving site:', error);
+            alert('Failed to save site. Please check console for details.');
         }
     };
 
@@ -382,83 +519,209 @@ function Site() {
     };
 
 
+
+
     // const handleRowClick = (record) => {
-    //     setSelectedRecord(record);
+    //     const index = userData.findIndex(item => item.id === record.id);
+    //     if (index !== -1) {
+    //         setSelectedIndex(index);
+    //     }
     // };
 
     const handleRowClick = (record) => {
-        const index = userData.findIndex(item => item.id === record.id);
+        const index = userData.findIndex(
+            item => item.siteCode === record.siteCode
+        );
+
         if (index !== -1) {
             setSelectedIndex(index);
+            setSelectedSiteCode(record.siteCode);
         }
     };
 
-
-
-
-
-    // const handleAuditAuthorized = (auditData) => {
+    // const handleAuditAuthorized = async (auditData) => {
     //     console.log("Audit Data:", auditData);
     //     console.log("Form Data to Save:", pendingFormData);
 
-    //     // Update grid data
-    //     setUserData(prevData =>
-    //         prevData.map(item =>
-    //             item.id === selectedRecord.id
-    //                 ? { ...item, ...pendingFormData }
-    //                 : item
-    //         )
-    //     );
+    //     // Get user details from session
+    //     const encryptedUserID = sessionStorage.getItem('sUserID');
+    //     const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
+    //     const encryptedTenantID = sessionStorage.getItem('sTenantID');
+    //     const encryptedUsername = sessionStorage.getItem('sUsername');
+    //     const encryptedDomain = sessionStorage.getItem('sDomainName');
+    //     const encryptedCategories = sessionStorage.getItem('sCategories');
+    //     const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
+    //     const encryptedSessionID = sessionStorage.getItem('sSessionID');
+    //     const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
+    //     const encryptedDBType = sessionStorage.getItem('sdbtype');
 
-    //     // selectedIndex stays the same since we're editing in place
-    //     // No need to update it
+    //     const payload = {
+    //         sSitename: pendingFormData.siteName,
+    //         sSitecode: pendingFormData.siteCode,
+    //         sSiteaddress: pendingFormData.siteAddress || '',
+    //         sContactperson: pendingFormData.contactPerson || '',
+    //         sMobileno: pendingFormData.mobileNo || '',
+    //         sFaxno: pendingFormData.faxNo || '',
+    //         sEmail: pendingFormData.email || '',
+    //         sStatus: 1,
+    //         addeditstatus: "true",
+    //         appname: "SDMS",
+    //         ApplicationCode: "SDMS",
+    //         AuditTrailValues: auditData.AuditTrailValues,
+    //         ActiveUserDetails: {
+    //             sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
+    //             sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
+    //             sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
+    //             sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
+    //             sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
+    //             sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
+    //             sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
+    //             sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
+    //             sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
+    //             sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
+    //             sApplicationName: "SDMS",
+    //             sUserStatus: ""
+    //         }
+    //     };
 
-    //     // Close both popups
-    //     setShowAuditTrail(false);
-    //     setActivePopup(null);
-    //     setValidationErrors({});
-    //     setPendingFormData(null);
+    //     try {
+    //         // 1. Save to backend
+    //         const result = await postData('Login/SitecodeSubmit', payload);
+
+    //         // 2. Handle audit failure
+    //         if (result.AuditTrailLogin === false) {
+    //             setPasswordError(true);
+    //             return;
+    //         }
+
+    //         // 3. If save successful
+    //         if (result.rtnmsg === "Success" || result.rtnmsg === "Site updated successfully") {
+    //             // ✅ CRITICAL: Set the site code BEFORE fetching
+    //             // This tells useEffect which row to select after data loads
+    //             setSelectedSiteCode(selectedRecord.siteCode);
+
+    //             // ✅ Fetch fresh data from backend
+    //             await fetchSiteData();
+
+    //             // ✅ useEffect will automatically reselect the row when userData updates
+
+    //             // Clean up
+    //             setShowAuditTrail(false);
+    //             setActivePopup(null);
+    //             setValidationErrors({});
+    //             setPendingFormData(null);
+    //             setPasswordError(false);
+    //         } else {
+    //             alert(result.rtnmsg || 'Failed to update site');
+    //         }
+    //     } catch (error) {
+    //         console.error('Error updating site:', error);
+    //         alert('Failed to update site. Please try again.');
+    //     }
     // };
 
     const handleAuditAuthorized = async (auditData) => {
         console.log("Audit Data:", auditData);
         console.log("Form Data to Save:", pendingFormData);
 
-        // Combine form data with audit trail data
+        const encryptedUserID = sessionStorage.getItem('sUserID');
+        const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
+        const encryptedTenantID = sessionStorage.getItem('sTenantID');
+        const encryptedUsername = sessionStorage.getItem('sUsername');
+        const encryptedDomain = sessionStorage.getItem('sDomainName');
+        const encryptedCategories = sessionStorage.getItem('sCategories');
+        const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
+        const encryptedSessionID = sessionStorage.getItem('sSessionID');
+        const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
+        const encryptedDBType = sessionStorage.getItem('sdbtype');
+
         const payload = {
-            ...pendingFormData,
-            ...auditData,
+            sSitename: pendingFormData.siteName,
+            sSitecode: pendingFormData.siteCode,
+            sSiteaddress: pendingFormData.siteAddress || '',
+            sContactperson: pendingFormData.contactPerson || '',
+            sMobileno: pendingFormData.mobileNo || '',
+            sFaxno: pendingFormData.faxNo || '',
+            sEmail: pendingFormData.email || '',
             sStatus: 1,
-            addeditstatus: activePopup === "Add Site" ? "false" : "true"
+            addeditstatus: "true",
+            appname: "SDMS",
+            ApplicationCode: "SDMS",
+            AuditTrailValues: auditData.AuditTrailValues,
+            ActiveUserDetails: {
+                sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
+                sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
+                sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
+                sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
+                sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
+                sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
+                sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
+                sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
+                sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
+                sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
+                sApplicationName: "SDMS",
+                sUserStatus: ""
+            }
         };
 
         try {
-            // Call your backend API
-            const response = await fetch('/Login/SitecodeSubmit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ passObj: payload })
-            });
+            console.log("EDIT Site Payload:", payload);
+            const result = await postData('Login/SitecodeSubmit', payload);
+            console.log("EDIT Site Result:", result);
 
-            const result = await response.json();
+            if (result.AuditTrailLogin === false) {
+                setPasswordError(true);
+                return;
+            }
 
             if (result.rtnmsg === "Success" || result.rtnmsg === "Site updated successfully") {
-                // Refresh grid data from backend
-                fetchSiteData(); // You need to create this function
+                // Store which row to reselect
+                //setSelectedSiteCode(selectedRecord.siteCode);
+                // setSelectedSiteCode(pendingFormData.siteCode);
 
-                // Close popups
+
+                // // Fetch fresh data from backend
+                // await fetchSiteData();
+
+                // 1. Remember selection
+                setSelectedSiteCode(pendingFormData.siteCode);
+
+                // 2. UPDATE UI INSTANTLY (optimistic update)
+                setUserData(prev =>
+                    prev.map(item =>
+                        item.siteCode.trim() === pendingFormData.siteCode.trim()
+                            ? { ...item, ...pendingFormData }
+                            : item
+                    )
+                );
+
+                setGridRefreshKey(prev => prev + 1);
+
+                // 3. Fetch fresh data in background (sync with backend)
+                setTimeout(() => {
+                    fetchSiteData().catch(err => {
+                        console.error("Background refresh failed", err);
+                    });
+                }, 300);
+
+
+                // Force grid to remount and show new data
+                // setGridRefreshKey(prev => prev + 1);
+
+                // Clean up
                 setShowAuditTrail(false);
                 setActivePopup(null);
+                setValidationErrors({});
                 setPendingFormData(null);
+                setPasswordError(false);
             } else {
-                alert(result.rtnmsg); // Show error
+                alert(result.rtnmsg || 'Failed to update site');
             }
         } catch (error) {
-            console.error('Error:', error);
-            alert('Failed to save site');
+            console.error('Error updating site:', error);
+            alert('Failed to update site. Please try again.');
         }
     };
-
 
     const ActionButton = ({ icon: Icon, label, disabled, onClick, className = "" }) => (
         <button
@@ -488,24 +751,126 @@ function Site() {
         </button>
     );
 
+    // const fetchSiteData = async () => {
+    //     try {
+    //         // Get and decrypt session values
+    //         const encryptedUserID = sessionStorage.getItem('sUserID');
+    //         const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
+    //         const encryptedTenantID = sessionStorage.getItem('sTenantID');
+    //         const encryptedUsername = sessionStorage.getItem('sUsername');
+    //         const encryptedDomain = sessionStorage.getItem('sDomainName');
+    //         const encryptedCategories = sessionStorage.getItem('sCategories');
+    //         const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
+    //         const encryptedSessionID = sessionStorage.getItem('sSessionID');
+    //         const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
+    //         const encryptedDBType = sessionStorage.getItem('sdbtype');
 
+    //         const payload = {
+    //             sActionType: "View",
+    //             sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
+    //             sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
+    //             ApplicationCode: "SDMS",
+    //             ActiveUserDetails: {
+    //                 sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
+    //                 sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
+    //                 sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
+    //                 sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
+    //                 sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
+    //                 sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
+    //                 sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
+    //                 sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
+    //                 sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
+    //                 sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
+    //                 sApplicationName: "SDMS",
+    //                 sUserStatus: ""
+    //             }
+    //         };
+
+    //         console.log("Fetch Sites Payload:", payload);
+
+    //         // Use postData from useAxios (already handles encryption)
+    //         const result = await postData('basemaster/getSitemasterDetails', payload);
+
+    //         console.log("Fetch Sites Result:", result);
+
+    //         // Backend returns array directly with L85* field names
+    //         // Map to frontend format
+    //         const mappedData = (result || []).map(item => ({
+    //             id: item.L85SiteCode?.trim() || Math.random(),
+    //             siteCode: item.L85SiteCode?.trim() || '',
+    //             siteName: item.L85SiteName || '',
+    //             siteAddress: item.L85SiteAddress || '',
+    //             contactPerson: item.L85ContactPerson || '',
+    //             mobileNo: item.L85PhoneNo || '',
+    //             faxNo: item.L85FaxNo || '',
+    //             email: item.L85Email || ''
+    //         }));
+
+    //         console.log("Mapped Data:", mappedData);
+
+    //         setUserData(mappedData);
+    //     } catch (error) {
+    //         console.error('Error fetching sites:', error);
+    //     }
+    // };
 
     const fetchSiteData = async () => {
         try {
-            const response = await fetch('/basemaster/getSitemasterDetails', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    passObj: {
-                        sActionType: "View",
-                        sUserID: sessionStorage.getItem('sUserID'),
-                        sSiteCode: sessionStorage.getItem('sSiteCode')
-                    }
-                })
-            });
+            const encryptedUserID = sessionStorage.getItem('sUserID');
+            const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
+            const encryptedTenantID = sessionStorage.getItem('sTenantID');
+            const encryptedUsername = sessionStorage.getItem('sUsername');
+            const encryptedDomain = sessionStorage.getItem('sDomainName');
+            const encryptedCategories = sessionStorage.getItem('sCategories');
+            const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
+            const encryptedSessionID = sessionStorage.getItem('sSessionID');
+            const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
+            const encryptedDBType = sessionStorage.getItem('sdbtype');
 
-            const result = await response.json();
-            setUserData(result.data || []); // Adjust based on your API response structure
+            const payload = {
+                sActionType: "View",
+                sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
+                sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
+                ApplicationCode: "SDMS",
+                ActiveUserDetails: {
+                    sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
+                    sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
+                    sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
+                    sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
+                    sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
+                    sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
+                    sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
+                    sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
+                    sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
+                    sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
+                    sApplicationName: "SDMS",
+                    sUserStatus: ""
+                }
+            };
+
+            console.log("Fetch Sites Payload:", payload);
+
+            const result = await postData('basemaster/getSitemasterDetails', payload);
+
+            console.log("Fetch Sites Result:", result);
+
+            // Create fresh mapped data with unique timestamp to ensure new reference
+            const mappedData = (result || []).map((item, index) => ({
+                id: item.L85SiteCode.trim(), // STABLE ID
+                siteCode: item.L85SiteCode?.trim() || '',
+                siteName: item.L85SiteName?.trim() || '',
+                siteAddress: item.L85SiteAddress?.trim() || '',
+                contactPerson: item.L85ContactPerson?.trim() || '',
+                mobileNo: item.L85PhoneNo?.trim() || '',
+                faxNo: item.L85FaxNo?.trim() || '',
+                email: item.L85Email?.trim() || ''
+            }));
+
+            console.log("Mapped Data:", mappedData);
+
+            // Set new array (this triggers React re-render)
+            setUserData(mappedData);
+
         } catch (error) {
             console.error('Error fetching sites:', error);
         }
@@ -516,7 +881,7 @@ function Site() {
         fetchSiteData();
     }, []);
 
-    
+
     const POPUP_CONTENTS = {
         "Add Site": (
             <div className="flex flex-col gap-3 p-2">
@@ -736,7 +1101,7 @@ function Site() {
             </div>
 
             <div className="flex-1 overflow-hidden">
-                <UsersPage onRowClick={handleRowClick} userData={userData} setUserData={setUserData} selectedIndex={selectedIndex} />
+                <UsersPage key={gridRefreshKey} onRowClick={handleRowClick} userData={userData} setUserData={setUserData} selectedIndex={selectedIndex} />
             </div>
 
             {/* CustomPopup */}
@@ -748,13 +1113,23 @@ function Site() {
             />
 
             {/* AuditTrail Popup */}
-            <AuditTrail
+            {/* <AuditTrail
                 isOpen={showAuditTrail}
                 onClose={() => setShowAuditTrail(false)}
                 onAuthorized={handleAuditAuthorized}
                 actionLabel="Submit"
-            />
+            /> */}
 
+            <AuditTrail
+                isOpen={showAuditTrail}
+                onClose={() => {
+                    setShowAuditTrail(false);
+                    setPasswordError(false);
+                }}
+                onAuthorized={handleAuditAuthorized}
+                actionLabel="Submit"
+                showPasswordError={passwordError}
+            />
         </div>
     );
 
