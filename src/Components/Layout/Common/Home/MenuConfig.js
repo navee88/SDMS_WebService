@@ -32,6 +32,7 @@ import ClientServiceMonitor from "../../../../Pages/Home/Scheduler/ClientService
 import Configuration from "../../../../Pages/Home/Storage/Configuration";
 import Rights from "../../../../Pages/Home/Storage/Rights";
 import DownloadSchedulerWithProvider from "../../../../Context/DownloadSchedulerWithProvider";
+import InstrumentLockSettingsWrapper from "../../../../Context/InstrumentLockSettingsWrapper";
 
 export const menuConfig = [
   {
@@ -47,7 +48,7 @@ export const menuConfig = [
     icon: <GiPadlock />,
     label: "Lock Settings",
     subItems: [
-      { label: "Instrument Lock Settings", content: InstrumentLockSettings },
+      { label: "Instrument Lock Settings", content: InstrumentLockSettingsWrapper },
     ],
   },
 
