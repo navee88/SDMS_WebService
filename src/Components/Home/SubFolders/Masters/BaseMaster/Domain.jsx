@@ -1,13 +1,812 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Edit, Eye, Download, Printer } from 'lucide-react';
+// import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+// import { Plus, Edit } from 'lucide-react';
+// import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
+// import { useTranslation } from 'react-i18next';
+// import Errordialog from '../../../../Layout/Common/Errordialog';
+// import CustomPopup from '../../../../Layout/Common/Popup';
+// import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
+// import AuditTrail from '../../../../Layout/Common/AuditTrail';
+// import servicecall from '../../../../../Services/servicecall';
+// import { CF_decrypt } from '../../../../../Components/Common/encryptiondecryption.js';
+
+// const Domain = () => {
+//     // State declarations
+//     const [domainData, setDomainData] = useState([]);
+//     const [selectedDomain, setSelectedDomain] = useState(null);
+//     const [selectedRowId, setSelectedRowId] = useState(null);
+//     const [loading, setLoading] = useState(true);
+//     const [infoDialog, setInfoDialog] = useState({
+//         open: false,
+//         message: "",
+//         type: "information"
+//     });
+//     const [activePopup, setActivePopup] = useState(null);
+//     const [showAudit, setShowAudit] = useState(false);
+//     const [auditTrailData, setAuditTrailData] = useState({
+//         username: "Administrator",
+//         password: "",
+//         reason: "",
+//         comments: ""
+//     });
+//     const [formData, setFormData] = useState({
+//         sDomainID: "",
+//         sDomainName: "",
+//         sCategories: "Server",
+//         sLoginDomainName: "",
+//         sdomainusername: "",
+//         sdomainpassword: "",
+//         iDomainStatus: 1
+//     });
+//     const [formErrors, setFormErrors] = useState({});
+//     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+//     const { t } = useTranslation();
+//     const { postData } = servicecall();
+//     const isInitialMount = useRef(true);
+
+//     // ==================== HELPER FUNCTIONS ====================
+
+//     const getActiveUserDetails = useCallback(() => {
+//         const getDecryptedValue = (key) => {
+//             try {
+//                 const encryptedValue = sessionStorage.getItem(key);
+//                 if (!encryptedValue) return "";
+                
+//                 if (encryptedValue.length > 50 && encryptedValue.includes('==')) {
+//                     return CF_decrypt(encryptedValue);
+//                 }
+//                 return encryptedValue;
+//             } catch (error) {
+//                 console.error(`Error decrypting ${key}:`, error);
+//                 return "";
+//             }
+//         };
+
+//         const sUsername = getDecryptedValue("sUsername");
+//         const sSiteCode = getDecryptedValue("sSiteCode") || "CH        ";
+//         const sUserGroupID = getDecryptedValue("sUserGroupID") || "G1        ";
+//         const sUserID = getDecryptedValue("sUserID") || "U1";
+//         const sSessionID = getDecryptedValue("sSessionID");
+//         const sDomainName = getDecryptedValue("sDomainName") || "SDMS";
+        
+//         // Format timezone with required suffix
+//         let sTimeZoneID = getDecryptedValue("sTimeZoneID");
+//         if (sTimeZoneID && !sTimeZoneID.includes("<~>true")) {
+//             sTimeZoneID = sTimeZoneID + "<~>true";
+//         } else if (!sTimeZoneID) {
+//             sTimeZoneID = "Asia/Kolkata<~>true";
+//         }
+        
+//         const sdbtype = getDecryptedValue("sdbtype") || "POSTGRESQL";
+//         const sCategories = getDecryptedValue("sCategories") || "DB";
+//         const sUserStatus = getDecryptedValue("sUserStatus") || "";
+//         const sTenantID = getDecryptedValue("sTenantID") || "";
+
+//         return {
+//             sUserDomainName: sDomainName,
+//             sSessionID: sSessionID || "",
+//             sUserID: sUserID,
+//             sTimeZoneID: sTimeZoneID,
+//             sApplicationName: "SDMS",
+//             sdbtype: sdbtype,
+//             sUsername: sUsername || "Administrator",
+//             sSiteCode: sSiteCode.padEnd(10, ' ').substring(0, 10),
+//             sCategories: sCategories,
+//             sUserGroupID: sUserGroupID.padEnd(10, ' ').substring(0, 10),
+//             sUserStatus: sUserStatus,
+//             sTenantID: sTenantID
+//         };
+//     }, []);
+
+//     const showInfoDialog = useCallback((message, type = "information") => {
+//         setInfoDialog({
+//             open: true,
+//             message,
+//             type
+//         });
+//     }, []);
+
+//     const closeInfoDialog = useCallback(() => {
+//         setInfoDialog(prev => ({ ...prev, open: false }));
+//     }, []);
+
+//     // ==================== API FUNCTIONS ====================
+
+//     const fetchDomainData = useCallback(async () => {
+//         setLoading(true);
+//         try {
+//             const activeUserDetails = getActiveUserDetails();
+//             const passObjDet = {
+//                 sActionType: "View",
+//                 ActiveUserDetails: activeUserDetails,
+//                 ApplicationCode: "SDMS"
+//             };
+            
+//             console.log("Fetching domain data...");
+//             const response = await postData("basemaster/getDomain", passObjDet);
+            
+//             if (!response) {
+//                 setDomainData([]);
+//                 showInfoDialog(t('masters.failedtofetchdomain') || 'Failed to fetch domain data', "error");
+//                 return;
+//             }
+            
+//             let data = response;
+            
+//             // Handle encrypted response
+//             if (typeof response === 'string' && response.length > 50) {
+//                 try {
+//                     const decrypted = CF_decrypt(response);
+//                     data = JSON.parse(decrypted);
+//                 } catch (error) {
+//                     console.error('Failed to decrypt/parse response:', error);
+//                 }
+//             }
+            
+//             // Handle nested response structure
+//             if (data && data.oResObj) {
+//                 data = data.oResObj;
+//             }
+            
+//             if (data && data.Rtn === "Success" && data.Domain) {
+//                 data = data.Domain;
+//             }
+            
+//             // Ensure it's an array
+//             if (Array.isArray(data)) {
+//                 const dataWithIds = data.map((item, index) => ({
+//                     ...item,
+//                     id: index + 1,
+//                     sDomainStatus: item.sDomainStatus || (item.iDomainStatus === 1 ? "Active" : "Inactive")
+//                 }));
+//                 setDomainData(dataWithIds);
+//                 console.log(`Loaded ${data.length} domain records`);
+//             } else {
+//                 setDomainData([]);
+//                 if (data && data.Message) {
+//                     showInfoDialog(data.Message, "error");
+//                 } else {
+//                     showInfoDialog(t('masters.invalidresponseformat') || 'Invalid response format', "error");
+//                 }
+//             }
+//         } catch (error) {
+//             console.error('Error fetching domain data:', error);
+//             showInfoDialog(t('masters.failedtofetchdomain') || 'Failed to fetch domain data', "error");
+//             setDomainData([]);
+//         } finally {
+//             setLoading(false);
+//         }
+//     }, [postData, t, getActiveUserDetails, showInfoDialog]);
+
+//     const fetchDomainDetails = useCallback(async (domainID) => {
+//         if (!domainID) return null;
+        
+//         try {
+//             const activeUserDetails = getActiveUserDetails();
+//             const passObjDet = {
+//                 sDomainID: domainID,
+//                 ActiveUserDetails: activeUserDetails,
+//                 ApplicationCode: "SDMS"
+//             };
+            
+//             const response = await postData("basemaster/editGetDomain", passObjDet);
+            
+//             if (!response) {
+//                 showInfoDialog(t('masters.failedtofetchdomaindetails') || 'Failed to fetch domain details', "error");
+//                 return null;
+//             }
+            
+//             let data = response;
+//             if (typeof response === 'string' && response.length > 50) {
+//                 try {
+//                     const decrypted = CF_decrypt(response);
+//                     data = JSON.parse(decrypted);
+//                 } catch (error) {
+//                     console.error('Failed to decrypt response:', error);
+//                 }
+//             }
+            
+//             if (data && data.Rtn === "Success" && data.Domain) {
+//                 return {
+//                     ...data.Domain,
+//                     sDomainStatus: data.Domain.iDomainStatus === 1 ? "Active" : "Inactive"
+//                 };
+//             } else {
+//                 showInfoDialog(t('masters.failedtofetchdomaindetails') || 'Failed to fetch domain details', "error");
+//                 return null;
+//             }
+//         } catch (error) {
+//             console.error('Error fetching domain details:', error);
+//             showInfoDialog(t('masters.failedtofetchdomaindetails') || 'Failed to fetch domain details', "error");
+//             return null;
+//         }
+//     }, [postData, showInfoDialog, t, getActiveUserDetails]);
+
+//     // ==================== EVENT HANDLERS ====================
+
+//     const handleRowSelect = useCallback((row) => {
+//         setSelectedDomain(row);
+//         setSelectedRowId(row.id);
+//     }, []);
+
+//     const handleAddClick = useCallback(() => {
+//         setFormData({
+//             sDomainID: "",
+//             sDomainName: "",
+//             sCategories: "Server",
+//             sLoginDomainName: "",
+//             sdomainusername: "",
+//             sdomainpassword: "",
+//             iDomainStatus: 1
+//         });
+//         setFormErrors({});
+//         setActivePopup(t('masters.adddomain'));
+//     }, [t]);
+
+//     const handleEditClick = useCallback(async () => {
+//         if (!selectedDomain) {
+//             showInfoDialog(t('masters.selectRecord'), "warning");
+//             return;
+//         }
+        
+//         if (selectedDomain.sDomainName === "SDMS") {
+//             showInfoDialog(t('masters.sdmsEditDisabled'), "error");
+//             return;
+//         }
+        
+//         setLoading(true);
+//         try {
+//             const domainDetails = await fetchDomainDetails(selectedDomain.sDomainID);
+            
+//             if (domainDetails) {
+//                 setFormData({
+//                     sDomainID: domainDetails.sDomainID?.trim() || selectedDomain.sDomainID,
+//                     sDomainName: domainDetails.sDomainName?.trim() || selectedDomain.sDomainName,
+//                     sCategories: domainDetails.sCategories?.trim() || selectedDomain.sCategories,
+//                     sLoginDomainName: domainDetails.sLoginDomainName?.trim() || "",
+//                     sdomainusername: "",
+//                     sdomainpassword: "",
+//                     iDomainStatus: domainDetails.iDomainStatus || (domainDetails.sDomainStatus === "Active" ? 0 : 1)
+//                 });
+//                 setFormErrors({});
+//                 setActivePopup(t('masters.editdomain'));
+//             }
+//         } finally {
+//             setLoading(false);
+//         }
+//     }, [selectedDomain, showInfoDialog, t, fetchDomainDetails]);
+
+//     const handleFormChange = useCallback((field, value) => {
+//         setFormData(prev => ({
+//             ...prev,
+//             [field]: value
+//         }));
+        
+//         // Clear error when user starts typing
+//         if (formErrors[field]) {
+//             setFormErrors(prev => ({
+//                 ...prev,
+//                 [field]: ""
+//             }));
+//         }
+//     }, [formErrors]);
+
+//     const validateForm = useCallback(() => {
+//         const errors = {};
+        
+//         if (!formData.sDomainName.trim()) {
+//             errors.sDomainName = t('masters.domainNameRequired');
+//         }
+        
+//         if (!formData.sdomainusername.trim() && formData.sCategories !== "DB") {
+//             errors.sdomainusername = t('masters.usernameRequired');
+//         }
+        
+//         if (!formData.sdomainpassword.trim() && formData.sCategories !== "DB") {
+//             errors.sdomainpassword = t('masters.passwordRequired');
+//         }
+        
+//         setFormErrors(errors);
+//         return Object.keys(errors).length === 0;
+//     }, [formData, t]);
+
+//     const prepareAuditTrailValues = useCallback(() => {
+//         return {
+//             sUserPassword: auditTrailData.password,
+//             sUserDomainName: getActiveUserDetails().sUserDomainName,
+//             sComments: auditTrailData.comments || "",
+//             sUserName: auditTrailData.username,
+//             sReasonNo: 1,
+//             sReasonName: auditTrailData.reason || "Activated"
+//         };
+//     }, [auditTrailData, getActiveUserDetails]);
+
+//     const prepareDomainObject = useCallback(() => {
+//         const domainObj = {
+//             sDomainName: formData.sDomainName.trim(),
+//             sCategories: formData.sCategories,
+//             iDomainStatus: formData.iDomainStatus,
+//             sLoginDomainName: formData.sLoginDomainName.trim() || null
+//         };
+        
+//         if (formData.sDomainID && formData.sDomainID.trim()) {
+//             domainObj.sDomainID = formData.sDomainID.trim();
+//         }
+        
+//         return domainObj;
+//     }, [formData]);
+
+//     const handleSubmit = useCallback(async () => {
+//         if (!validateForm()) {
+//             return;
+//         }
+        
+//         if (showAudit) {
+//             if (!auditTrailData.password) {
+//                 showInfoDialog(t('masters.auditPasswordRequired'), "warning");
+//                 return;
+//             }
+//             if (!auditTrailData.reason) {
+//                 showInfoDialog(t('masters.auditReasonRequired'), "warning");
+//                 return;
+//             }
+//         }
+        
+//         setIsSubmitting(true);
+//         try {
+//             const isEdit = formData.sDomainID !== "";
+//             const apiEndpoint = isEdit ? "basemaster/editDomain" : "basemaster/insertDomain";
+            
+//             const requestData = {
+//                 sdomainusername: auditTrailData.username || getActiveUserDetails().sUsername,
+//                 AuditTrailValues: prepareAuditTrailValues(),
+//                 Domain: prepareDomainObject(),
+//                 ActiveUserDetails: getActiveUserDetails(),
+//                 sdomainpassword: formData.sdomainpassword,
+//                 ApplicationCode: "SDMS"
+//             };
+            
+//             console.log(`Submitting domain ${isEdit ? 'edit' : 'add'}...`);
+//             const response = await postData(apiEndpoint, requestData);
+            
+//             if (!response) {
+//                 showInfoDialog(t('masters.operationFailed'), "error");
+//                 return;
+//             }
+            
+//             let data = response;
+//             if (typeof response === 'string' && response.length > 50) {
+//                 try {
+//                     const decrypted = CF_decrypt(response);
+//                     data = JSON.parse(decrypted);
+//                 } catch (error) {
+//                     console.error('Failed to decrypt response:', error);
+//                 }
+//             }
+            
+//             if (data && data.Rtn === "Success") {
+//                 showInfoDialog(
+//                     isEdit ? t('masters.domainUpdated') : t('masters.domainAdded'),
+//                     "success"
+//                 );
+                
+//                 setActivePopup(null);
+//                 setShowAudit(false);
+//                 setAuditTrailData({
+//                     username: "Administrator",
+//                     password: "",
+//                     reason: "",
+//                     comments: ""
+//                 });
+                
+//                 await fetchDomainData();
+                
+//             } else if (data && data.Message) {
+//                 const errorMessage = typeof data.Message === 'string' 
+//                     ? data.Message 
+//                     : Object.values(data.Message).join(', ');
+//                 showInfoDialog(errorMessage, "error");
+//             } else {
+//                 showInfoDialog(t('masters.operationFailed'), "error");
+//             }
+            
+//         } catch (error) {
+//             console.error('Error submitting domain:', error);
+//             showInfoDialog(t('masters.operationFailed'), "error");
+//         } finally {
+//             setIsSubmitting(false);
+//         }
+//     }, [
+//         validateForm, 
+//         formData, 
+//         showAudit, 
+//         auditTrailData, 
+//         t, 
+//         showInfoDialog, 
+//         postData, 
+//         getActiveUserDetails, 
+//         prepareAuditTrailValues, 
+//         prepareDomainObject, 
+//         fetchDomainData
+//     ]);
+
+//     const handlePopupClose = useCallback(() => {
+//         setActivePopup(null);
+//         setFormErrors({});
+//         setAuditTrailData({
+//             username: "Administrator",
+//             password: "",
+//             reason: "",
+//             comments: ""
+//         });
+//         setShowAudit(false);
+//     }, []);
+
+//     const handleAuthorized = useCallback(() => {
+//         setShowAudit(false);
+//         handleSubmit();
+//     }, [handleSubmit]);
+
+//     // ==================== COMPONENT SETUP ====================
+
+//     useEffect(() => {
+//         const sessionID = sessionStorage.getItem('sSessionID');
+//         const userID = sessionStorage.getItem('sUserID');
+        
+//         if (!sessionID || !userID) {
+//             showInfoDialog(t('masters.sessionexpired') || 'Session expired. Please login again.', "error");
+//             return;
+//         }
+        
+//         fetchDomainData();
+//         isInitialMount.current = false;
+//     }, [fetchDomainData, showInfoDialog, t]);
+
+//     // ==================== UI COMPONENTS ====================
+
+//     const columns = useMemo(() => [
+//         {
+//             key: 'sDomainName',
+//             label: t('masters.domainname'),
+//             width: 150,
+//             enableSearch: true,
+//             render: (row, isSelected) => (
+//                 <div className={`text-[12px] font-['Verdana'] truncate text-gray-700 ${isSelected ? 'font-bold' : ''}`}>
+//                     {row.sDomainName}
+//                 </div>
+//             )
+//         },
+//         {
+//             key: 'sCategories',
+//             label: t('masters.category'),
+//             width: 120,
+//             enableSearch: true,
+//             render: (row, isSelected) => (
+//                 <div className={`text-[12px] font-['Verdana'] truncate text-gray-700 ${isSelected ? 'font-bold' : ''}`}>
+//                     {row.sCategories}
+//                 </div>
+//             )
+//         },
+//         {
+//             key: 'sDomainStatus',
+//             label: t('masters.domainstatus'),
+//             width: 150,
+//             enableSearch: true,
+//             render: (row, isSelected) => (
+//                 <div className={`text-[12px] font-['Verdana'] truncate ${row.sDomainStatus === 'Active' ? 'text-[#008000]' : 'text-red-500'} ${isSelected ? 'font-bold' : ''}`}>
+//                     {row.sDomainStatus}
+//                 </div>
+//             )
+//         }
+//     ], [t]);
+
+//     const renderDomainDetail = useCallback((domain) => (
+//         <div className="flex flex-col gap-3.5 font-roboto text-[12px] font-semibold">
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('masters.logindomainname')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {domain.sLoginDomainName || ""}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('masters.createdBy')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {domain.sCreatedBy}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('masters.createdOn')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {domain.dCreatedOn}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('masters.modifiedBy')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {domain.sModifiedBy || ""}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('masters.modifiedOn')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {domain.dModifiedOn || ""}
+//                 </div>
+//             </div>
+//         </div>
+//     ), [t]);
+
+//     const ActionButton = ({ icon: Icon, label, disabled, onClick, variant = "default" }) => (
+//         <button
+//             onClick={onClick}
+//             disabled={disabled}
+//             className={`
+//                 flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold rounded border-none 
+//                 transition-all duration-200 whitespace-nowrap
+//                 hover:scale-[0.98] hover:opacity-90
+//                 ${disabled 
+//                     ? variant === 'primary'
+//                     ? 'bg-[#2885fe7e] text-white cursor-not-allowed'
+//                     : 'bg-[#f0f2f5dc] text-[#2885fecc] cursor-not-allowed'
+//                     : variant === 'primary'
+//                         ? 'bg-[#2883FE] text-white hover:bg-[#1c6fd8]'
+//                         : variant === 'danger'
+//                             ? 'bg-red-500 text-white hover:bg-red-600'
+//                             : 'bg-[#f0f2f5] text-[#2885fe] '
+//                 }
+//             `}
+//         >
+//             {Icon && <Icon className="w-4 h-4" />}
+//             <span>{label}</span>
+//         </button>
+//     );
+
+//     // ==================== RENDER ====================
+
+//     if (loading && isInitialMount.current) {
+//         return (
+//             <div className="flex items-center justify-center h-full">
+//                 <div className="text-gray-500">{t('masters.loading')}</div>
+//             </div>
+//         );
+//     }
+
+//     return (
+//         <div className="h-full overflow-hidden bg-[#f5f7fb]">
+//             <div className="h-full flex flex-col bg-white">
+//                 {infoDialog.open && (
+//                     <Errordialog
+//                         message={infoDialog.message}
+//                         type={infoDialog.type}
+//                         onClose={closeInfoDialog}
+//                     />
+//                 )}
+
+//                 <div className="flex justify-end pr-5 gap-2 pt-3">
+//                     <ActionButton
+//                         icon={Plus}
+//                         label={t('masters.add')}
+//                         onClick={handleAddClick}
+//                         disabled={isSubmitting}
+//                     />
+//                     <ActionButton
+//                         icon={Edit}
+//                         label={t('masters.edit')}
+//                         onClick={handleEditClick}
+//                         disabled={!selectedDomain || isSubmitting}
+//                     />
+//                 </div>
+
+//                 <div className="flex-1 overflow-auto p-3 font-['Roboto] text-[#353f49]  ">
+//                     {loading ? (
+//                         <div className="text-center py-10 text-gray-500">
+//                             {t("login.loadingpasswordpolicy")}
+//                         </div>
+//                     ) : (
+//                         <GridLayout
+//                             columns={columns}
+//                             height="100%"
+//                             detailPanelWidth="46%"
+//                             data={domainData}
+//                             getRowId={(row) => row.id}
+//                             renderDetailPanel={renderDomainDetail}
+//                             onRowClick={handleRowSelect}
+//                             rowClassName={(row) =>
+//                                 row.id === selectedRowId
+//                                     ? "bg-blue-50 border-l-4 border-blue-600 font-semibold"
+//                                     : ""
+//                             }
+//                         />
+//                     )}
+//                 </div>
+
+//                 {activePopup && (
+//                     <CustomPopup
+//                         isOpen={!!activePopup}
+//                         onClose={handlePopupClose}
+//                         title={activePopup}
+//                         content={
+//                             <div className="flex flex-col gap-1 p-1">
+//                                 <input
+//                                     type="hidden"
+//                                     id="bmd_domainprimaryid"
+//                                     value={formData.sDomainID}
+//                                 />
+
+//                                 <div className="flex flex-col">
+//                                     <label className="text-[12px] font-roboto font-semibold text-[#405f7d]">
+//                                         {t('masters.name')} <span className="text-red-500">*</span>
+//                                     </label>
+//                                     <AnimatedInput
+//                                         type="text"
+//                                         id="bmd_domainnameid"
+//                                         value={formData.sDomainName}
+//                                         onChange={(e) => handleFormChange('sDomainName', e.target.value)}
+//                                         disabled={formData.sDomainID !== ""}
+//                                         maxLength={50}
+//                                         className={`w-full text-[12px] outline-none ${formData.sDomainID !== "" ? 'bg-gray-50' : 'bg-white'} ${
+//                                             formErrors.sDomainName ? 'border-red-500' : 'border-gray-300'
+//                                         }`}
+//                                     />
+//                                     {formErrors.sDomainName && (
+//                                         <div className="text-red-500 text-[12px]">
+//                                             {formErrors.sDomainName}
+//                                         </div>
+//                                     )}
+//                                 </div>
+
+                                
+//                                 <div className="flex flex-col">
+//                                     <label className="text-[12px] font-roboto font-semibold text-[#405f7d]">
+//                                         {t('masters.logindomainname')}
+//                                     </label>
+//                                     <AnimatedInput
+//                                         type="text"
+//                                         id="bmd_logindomainnameid"
+//                                         value={formData.sLoginDomainName}
+//                                         onChange={(e) => handleFormChange('sLoginDomainName', e.target.value)}
+//                                         maxLength={100}
+//                                         className="w-full text-[12px] outline-none"
+//                                     />
+//                                 </div>
+
+//                                 {formData.sCategories !== "DB" && (
+//                                     <>
+//                                         <div className="flex flex-col">
+//                                             <label className="text-[12px] font-roboto font-semibold text-[#405f7d]">
+//                                                 {t('masters.domainusername')} <span className="text-red-500">*</span>
+//                                             </label>
+//                                             <AnimatedInput
+//                                                 type="text"
+//                                                 id="bmd_domainusernameid"
+//                                                 value={formData.sdomainusername}
+//                                                 onChange={(e) => handleFormChange('sdomainusername', e.target.value)}
+//                                                 maxLength={50}
+//                                                 className={`w-full text-[12px] outline-none bg-white ${
+//                                                     formErrors.sdomainusername ? 'border-red-500' : 'border-gray-300'
+//                                                 }`}
+//                                             />
+//                                             {formErrors.sdomainusername && (
+//                                                 <div className="text-red-500 text-[12px]">
+//                                                     {formErrors.sdomainusername}
+//                                                 </div>
+//                                             )}
+//                                         </div>
+
+//                                         <div className="flex flex-col">
+//                                             <label className="text-[12px] font-roboto font-semibold text-[#405f7d]">
+//                                                 {t('masters.domainpassword')} <span className="text-red-500">*</span>
+//                                             </label>
+//                                             <AnimatedInput
+//                                                 type="password"
+//                                                 id="bmd_domainpasswordid"
+//                                                 value={formData.sdomainpassword}
+//                                                 onChange={(e) => handleFormChange('sdomainpassword', e.target.value)}
+//                                                 maxLength={50}
+//                                                 className={`w-full text-[12px] outline-none bg-white ${
+//                                                     formErrors.sdomainpassword ? 'border-red-500' : 'border-gray-300'
+//                                                 }`}
+//                                             />
+//                                             {formErrors.sdomainpassword && (
+//                                                 <div className="text-red-500 text-[12px]">
+//                                                     {formErrors.sdomainpassword}
+//                                                 </div>
+//                                             )}
+//                                         </div>
+//                                     </>
+//                                 )}
+
+//                                 <div className="flex items-center gap-2.5">
+//                                     <label htmlFor="bmd_domainstatusid" className="text-[12px] font-roboto font-semibold text-[#405f7d]">
+//                                         {t('masters.active')}
+//                                     </label>
+//                                     <input
+//                                         type="checkbox"
+//                                         id="bmd_domainstatusid"
+//                                         checked={formData.iDomainStatus === 1}
+//                                         onChange={(e) => handleFormChange('iDomainStatus', e.target.checked ? 1 : 0)}
+//                                         className="w-4 h-4 cursor-pointer accent-blue-600"
+//                                     />
+//                                 </div>
+
+//                                 <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200">
+//                                     <button
+//                                         onClick={() => setShowAudit(true)}
+//                                         disabled={isSubmitting}
+//                                         className="flex items-center gap-1 px-2 py-1 text-[12px] font-roboto font-semibold text-white bg-blue-500 border-none rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+//                                     >
+//                                         <Edit className="w-4 h-4" /> 
+//                                         {isSubmitting ? t('masters.submitting') : t('masters.submit')}
+//                                     </button>
+//                                     <button
+//                                         onClick={handlePopupClose}
+//                                         disabled={isSubmitting}
+//                                         className="px-2.5 py-2 text-[12px] font-roboto font-semibold text-[#8092a4] bg-white border border-gray-300 rounded cursor-pointer hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+//                                     >
+//                                         {t('masters.close')}
+//                                     </button>
+//                                 </div>
+//                             </div>
+//                         }
+//                         size="md"
+//                     />
+//                 )}
+
+//                 {showAudit && (
+//                     <AuditTrail
+//                         isOpen={showAudit}
+//                         onClose={() => setShowAudit(false)}
+//                         onAuthorized={handleAuthorized}
+//                         auditData={auditTrailData}
+//                         setAuditData={setAuditTrailData}
+//                     />
+//                 )}
+//             </div>
+//         </div>
+//     );
+// };
+
+// export default Domain;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { Plus, Edit } from 'lucide-react';
 import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import { useTranslation } from 'react-i18next';
 import Errordialog from '../../../../Layout/Common/Errordialog';
 import CustomPopup from '../../../../Layout/Common/Popup';
 import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
 import AuditTrail from '../../../../Layout/Common/AuditTrail';
+import servicecall from '../../../../../Services/servicecall';
+import { CF_decrypt } from '../../../../../Components/Common/encryptiondecryption.js';
 
 const Domain = () => {
+    // State declarations
     const [domainData, setDomainData] = useState([]);
     const [selectedDomain, setSelectedDomain] = useState(null);
     const [selectedRowId, setSelectedRowId] = useState(null);
@@ -28,70 +827,74 @@ const Domain = () => {
     const [formData, setFormData] = useState({
         sDomainID: "",
         sDomainName: "",
-        sCategories: "Server",
         sLoginDomainName: "",
         sdomainusername: "",
         sdomainpassword: "",
         iDomainStatus: 1
     });
     const [formErrors, setFormErrors] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
     const { t } = useTranslation();
+    const { postData } = servicecall();
+    const isInitialMount = useRef(true);
 
-    // Mock data for domain master
-    const mockDomainData = [
-        {
-            id: 1,
-            sDomainID: "DOM-001",
-            sDomainName: "SDMS",
-            sLoginDomainName: "SDMS Domain",
-            sCategories: "DB",
-            sDomainStatus: "Active",
-            sCreatedBy: "Admin",
-            dCreatedOn: "2024-01-10 09:00",
-            dUTCCreatedOn: "2024-01-10 07:00",
-            sModifiedBy: "Admin",
-            dModifiedOn: "2024-01-12 11:00",
-            dUTCModifiedOn: "2024-01-12 09:00"
-        },
-        {
-            id: 2,
-            sDomainID: "DOM-002",
-            sDomainName: "Corporate",
-            sLoginDomainName: "Corporate Network",
-            sCategories: "Server",
-            sDomainStatus: "Active",
-            sCreatedBy: "Admin",
-            dCreatedOn: "2024-01-15 10:00",
-            dUTCCreatedOn: "2024-01-15 08:00",
-            sModifiedBy: "User",
-            dModifiedOn: "2024-02-01 14:00",
-            dUTCModifiedOn: "2024-02-01 12:00"
-        },
-        {
-            id: 3,
-            sDomainID: "DOM-003",
-            sDomainName: "LabNetwork",
-            sLoginDomainName: "Laboratory Domain",
-            sCategories: "Server",
-            sDomainStatus: "Inactive",
-            sCreatedBy: "Admin",
-            dCreatedOn: "2024-02-01 09:00",
-            dUTCCreatedOn: "2024-02-01 07:00",
-            sModifiedBy: "Admin",
-            dModifiedOn: "2024-02-05 16:00",
-            dUTCModifiedOn: "2024-02-05 14:00"
+    // ==================== HELPER FUNCTIONS ====================
+
+    const getActiveUserDetails = useCallback(() => {
+        const getDecryptedValue = (key) => {
+            try {
+                const encryptedValue = sessionStorage.getItem(key);
+                if (!encryptedValue) return "";
+                
+                if (encryptedValue.length > 50 && encryptedValue.includes('==')) {
+                    return CF_decrypt(encryptedValue);
+                }
+                return encryptedValue;
+            } catch (error) {
+                console.error(`Error decrypting ${key}:`, error);
+                return "";
+            }
+        };
+
+        const sUsername = getDecryptedValue("sUsername");
+        const sSiteCode = getDecryptedValue("sSiteCode") || "CH        ";
+        const sUserGroupID = getDecryptedValue("sUserGroupID") || "G1        ";
+        const sUserID = getDecryptedValue("sUserID") || "U1";
+        const sSessionID = getDecryptedValue("sSessionID");
+        const sDomainName = getDecryptedValue("sDomainName") || "SDMS";
+        
+        // Format timezone with required suffix
+        let sTimeZoneID = getDecryptedValue("sTimeZoneID");
+        if (sTimeZoneID && !sTimeZoneID.includes("<~>true")) {
+            sTimeZoneID = sTimeZoneID + "<~>true";
+        } else if (!sTimeZoneID) {
+            sTimeZoneID = "Asia/Kolkata<~>true";
         }
-    ];
+        
+        const sdbtype = getDecryptedValue("sdbtype") || "POSTGRESQL";
+        const sCategories = getDecryptedValue("sCategories") || "DB";
+        const sUserStatus = getDecryptedValue("sUserStatus") || "";
+        const sTenantID = getDecryptedValue("sTenantID") || "";
 
-    useEffect(() => {
-        setLoading(true);
-        setTimeout(() => {
-            setDomainData(mockDomainData);
-            setLoading(false);
-        }, 500);
+        return {
+            sUserDomainName: sDomainName,
+            sSessionID: sSessionID || "",
+            sUserID: sUserID,
+            sTimeZoneID: sTimeZoneID,
+            sApplicationName: "SDMS",
+            sdbtype: sdbtype,
+            sUsername: sUsername || "Administrator",
+            sSiteCode: sSiteCode.padEnd(10, ' ').substring(0, 10),
+            sCategories: sCategories,
+            sUserGroupID: sUserGroupID.padEnd(10, ' ').substring(0, 10),
+            sUserStatus: sUserStatus,
+            sTenantID: sTenantID
+        };
     }, []);
 
     const showInfoDialog = useCallback((message, type = "information") => {
+        console.log(`Info Dialog: ${type} - ${message}`);
         setInfoDialog({
             open: true,
             message,
@@ -100,22 +903,147 @@ const Domain = () => {
     }, []);
 
     const closeInfoDialog = useCallback(() => {
-        setInfoDialog(prev => ({
-            ...prev,
-            open: false
-        }));
+        setInfoDialog(prev => ({ ...prev, open: false }));
     }, []);
 
+    // ==================== API FUNCTIONS ====================
+
+    const fetchDomainData = useCallback(async () => {
+        console.log("Starting fetchDomainData...");
+        setLoading(true);
+        try {
+            const activeUserDetails = getActiveUserDetails();
+            const passObjDet = {
+                sActionType: "View",
+                ActiveUserDetails: activeUserDetails,
+                ApplicationCode: "SDMS"
+            };
+            
+            console.log("Fetching domain data...");
+            const response = await postData("basemaster/getDomain", passObjDet);
+            
+            console.log("API Response:", response);
+            
+            if (!response) {
+                setDomainData([]);
+                showInfoDialog(t('masters.failedtofetchdomain') || 'Failed to fetch domain data', "error");
+                return;
+            }
+            
+            let data = response;
+            
+            // Handle encrypted response
+            if (typeof response === 'string' && response.length > 50) {
+                console.log("Response appears to be encrypted");
+                try {
+                    const decrypted = CF_decrypt(response);
+                    console.log("Decrypted response:", decrypted);
+                    data = JSON.parse(decrypted);
+                } catch (error) {
+                    console.error('Failed to decrypt/parse response:', error);
+                }
+            }
+            
+            console.log("Processed data:", data);
+            
+            // Handle nested response structure
+            if (data && data.oResObj) {
+                data = data.oResObj;
+            }
+            
+            if (data && data.Rtn === "Success" && data.Domain) {
+                data = data.Domain;
+            }
+            
+            // Ensure it's an array
+            if (Array.isArray(data)) {
+                console.log(`Loaded ${data.length} domain records`);
+                const dataWithIds = data.map((item, index) => ({
+                    ...item,
+                    id: index + 1,
+                    sDomainStatus: item.sDomainStatus || (item.iDomainStatus === 1 ? "Active" : "Inactive")
+                }));
+                setDomainData(dataWithIds);
+            } else {
+                console.log("Response is not an array:", data);
+                setDomainData([]);
+                if (data && data.Message) {
+                    showInfoDialog(data.Message, "error");
+                } else {
+                    showInfoDialog(t('masters.invalidresponseformat') || 'Invalid response format', "error");
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching domain data:', error);
+            showInfoDialog(t('masters.failedtofetchdomain') || 'Failed to fetch domain data', "error");
+            setDomainData([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [postData, t, getActiveUserDetails, showInfoDialog]);
+
+    const fetchDomainDetails = useCallback(async (domainID) => {
+        console.log(`Fetching domain details for ID: ${domainID}`);
+        if (!domainID) return null;
+        
+        try {
+            const activeUserDetails = getActiveUserDetails();
+            const passObjDet = {
+                sDomainID: domainID,
+                ActiveUserDetails: activeUserDetails,
+                ApplicationCode: "SDMS"
+            };
+            
+            const response = await postData("basemaster/editGetDomain", passObjDet);
+            
+            console.log("Edit get response:", response);
+            
+            if (!response) {
+                showInfoDialog(t('masters.failedtofetchdomaindetails') || 'Failed to fetch domain details', "error");
+                return null;
+            }
+            
+            let data = response;
+            if (typeof response === 'string' && response.length > 50) {
+                try {
+                    const decrypted = CF_decrypt(response);
+                    data = JSON.parse(decrypted);
+                } catch (error) {
+                    console.error('Failed to decrypt response:', error);
+                }
+            }
+            
+            console.log("Processed domain details:", data);
+            
+            if (data && data.Rtn === "Success" && data.Domain) {
+                return {
+                    ...data.Domain,
+                    sDomainStatus: data.Domain.iDomainStatus === 1 ? "Active" : "Inactive"
+                };
+            } else {
+                showInfoDialog(t('masters.failedtofetchdomaindetails') || 'Failed to fetch domain details', "error");
+                return null;
+            }
+        } catch (error) {
+            console.error('Error fetching domain details:', error);
+            showInfoDialog(t('masters.failedtofetchdomaindetails') || 'Failed to fetch domain details', "error");
+            return null;
+        }
+    }, [postData, showInfoDialog, t, getActiveUserDetails]);
+
+    // ==================== EVENT HANDLERS ====================
+
     const handleRowSelect = useCallback((row) => {
+        console.log("Row selected:", row);
         setSelectedDomain(row);
         setSelectedRowId(row.id);
     }, []);
 
     const handleAddClick = useCallback(() => {
+        console.log("Add button clicked");
         setFormData({
             sDomainID: "",
             sDomainName: "",
-            sCategories: "Server",
             sLoginDomainName: "",
             sdomainusername: "",
             sdomainpassword: "",
@@ -123,34 +1051,51 @@ const Domain = () => {
         });
         setFormErrors({});
         setActivePopup(t('masters.adddomain'));
+        console.log("Form reset for add, activePopup set to:", t('masters.adddomain'));
     }, [t]);
 
-    const handleEditClick = useCallback(() => {
+    const handleEditClick = useCallback(async () => {
+        console.log("Edit button clicked, selectedDomain:", selectedDomain);
+        
         if (!selectedDomain) {
             showInfoDialog(t('masters.selectRecord'), "warning");
             return;
         }
         
-        // Check if trying to edit SDMS domain
         if (selectedDomain.sDomainName === "SDMS") {
             showInfoDialog(t('masters.sdmsEditDisabled'), "error");
             return;
         }
         
-        setFormData({
-            sDomainID: selectedDomain.sDomainID,
-            sDomainName: selectedDomain.sDomainName,
-            sCategories: selectedDomain.sCategories,
-            sLoginDomainName: selectedDomain.sLoginDomainName,
-            sdomainusername: "", // Would come from API in real implementation
-            sdomainpassword: "", // Would come from API in real implementation
-            iDomainStatus: selectedDomain.sDomainStatus === "Active" ? 1 : 0
-        });
-        setFormErrors({});
-        setActivePopup(t('masters.editdomain'));
-    }, [selectedDomain, showInfoDialog, t]);
+        console.log("Fetching domain details for edit...");
+        setLoading(true);
+        try {
+            const domainDetails = await fetchDomainDetails(selectedDomain.sDomainID);
+            console.log("Domain details fetched:", domainDetails);
+            
+            if (domainDetails) {
+                const newFormData = {
+                    sDomainID: domainDetails.sDomainID?.trim() || selectedDomain.sDomainID,
+                    sDomainName: domainDetails.sDomainName?.trim() || selectedDomain.sDomainName,
+                    sLoginDomainName: domainDetails.sLoginDomainName?.trim() || "",
+                    sdomainusername: "",
+                    sdomainpassword: "",
+                    iDomainStatus: domainDetails.iDomainStatus || (domainDetails.sDomainStatus === "Active" ? 1 : 0)
+                };
+                
+                console.log("Setting form data for edit:", newFormData);
+                setFormData(newFormData);
+                setFormErrors({});
+                setActivePopup(t('masters.editdomain'));
+                console.log("Edit popup opened");
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedDomain, showInfoDialog, t, fetchDomainDetails]);
 
     const handleFormChange = useCallback((field, value) => {
+        console.log(`Form field changed: ${field} = ${value}`);
         setFormData(prev => ({
             ...prev,
             [field]: value
@@ -166,52 +1111,171 @@ const Domain = () => {
     }, [formErrors]);
 
     const validateForm = useCallback(() => {
+        console.log("Validating form data:", formData);
         const errors = {};
         
         if (!formData.sDomainName.trim()) {
             errors.sDomainName = t('masters.domainNameRequired');
         }
         
-        if (!formData.sdomainusername.trim() && formData.sCategories !== "DB") {
+        // Always validate username and password (required for all domains)
+        if (!formData.sdomainusername.trim()) {
             errors.sdomainusername = t('masters.usernameRequired');
         }
         
-        if (!formData.sdomainpassword.trim() && formData.sCategories !== "DB") {
+        if (!formData.sdomainpassword.trim()) {
             errors.sdomainpassword = t('masters.passwordRequired');
         }
         
+        console.log("Validation errors:", errors);
         setFormErrors(errors);
         return Object.keys(errors).length === 0;
     }, [formData, t]);
 
-    const handleSubmit = useCallback(() => {
+    const prepareAuditTrailValues = useCallback(() => {
+        console.log("Preparing audit trail values:", auditTrailData);
+        return {
+            sUserPassword: auditTrailData.password,
+            sUserDomainName: getActiveUserDetails().sUserDomainName,
+            sComments: auditTrailData.comments || "",
+            sUserName: auditTrailData.username,
+            sReasonNo: 1,
+            sReasonName: auditTrailData.reason || "Activated"
+        };
+    }, [auditTrailData, getActiveUserDetails]);
+
+    const prepareDomainObject = useCallback(() => {
+        console.log("Preparing domain object:", formData);
+        const domainObj = {
+            sDomainName: formData.sDomainName.trim(),
+            sCategories: "Server", // Always Server since we removed the category field
+            iDomainStatus: formData.iDomainStatus,
+            sLoginDomainName: formData.sLoginDomainName.trim() || null
+        };
+        
+        if (formData.sDomainID && formData.sDomainID.trim()) {
+            domainObj.sDomainID = formData.sDomainID.trim();
+        }
+        
+        return domainObj;
+    }, [formData]);
+
+    const handleSubmit = useCallback(async () => {
+        console.log("Submit button clicked, showAudit:", showAudit);
+        
         if (!validateForm()) {
+            console.log("Form validation failed");
             return;
         }
         
+        console.log("Form validation passed");
+        
+        if (showAudit) {
+            console.log("Audit popup is shown, validating audit data");
+            if (!auditTrailData.password) {
+                showInfoDialog(t('masters.auditPasswordRequired'), "warning");
+                return;
+            }
+            if (!auditTrailData.reason) {
+                showInfoDialog(t('masters.auditReasonRequired'), "warning");
+                return;
+            }
+            console.log("Audit data validated");
+        }
+        
+        setIsSubmitting(true);
+        console.log("Starting form submission...");
+        
         try {
-            // Implement API call for add/edit
             const isEdit = formData.sDomainID !== "";
-            if (isEdit) {
-                showInfoDialog(t('masters.domainUpdated'), "success");
-            } else {
-                showInfoDialog(t('masters.domainAdded'), "success");
+            const apiEndpoint = isEdit ? "basemaster/editDomain" : "basemaster/insertDomain";
+            
+            console.log(`Operation: ${isEdit ? 'Edit' : 'Add'}, Endpoint: ${apiEndpoint}`);
+            
+            const requestData = {
+                sdomainusername: auditTrailData.username || getActiveUserDetails().sUsername,
+                AuditTrailValues: prepareAuditTrailValues(),
+                Domain: prepareDomainObject(),
+                ActiveUserDetails: getActiveUserDetails(),
+                sdomainpassword: formData.sdomainpassword,
+                ApplicationCode: "SDMS"
+            };
+            
+            console.log("Submitting request data:", requestData);
+            
+            const response = await postData(apiEndpoint, requestData);
+            
+            console.log("Submit response:", response);
+            
+            if (!response) {
+                showInfoDialog(t('masters.operationFailed'), "error");
+                return;
             }
             
-            setActivePopup(null);
+            let data = response;
+            if (typeof response === 'string' && response.length > 50) {
+                try {
+                    const decrypted = CF_decrypt(response);
+                    console.log("Decrypted submit response:", decrypted);
+                    data = JSON.parse(decrypted);
+                } catch (error) {
+                    console.error('Failed to decrypt response:', error);
+                }
+            }
             
-            // Refresh grid data
-            setLoading(true);
-            setTimeout(() => {
-                setLoading(false);
-            }, 500);
+            console.log("Processed submit response:", data);
+            
+            if (data && data.Rtn === "Success") {
+                showInfoDialog(
+                    isEdit ? t('masters.domainUpdated') : t('masters.domainAdded'),
+                    "success"
+                );
+                
+                console.log("Success! Closing popup and refreshing data...");
+                setActivePopup(null);
+                setShowAudit(false);
+                setAuditTrailData({
+                    username: "Administrator",
+                    password: "",
+                    reason: "",
+                    comments: ""
+                });
+                
+                await fetchDomainData();
+                
+            } else if (data && data.Message) {
+                const errorMessage = typeof data.Message === 'string' 
+                    ? data.Message 
+                    : Object.values(data.Message).join(', ');
+                console.log("API returned error:", errorMessage);
+                showInfoDialog(errorMessage, "error");
+            } else {
+                showInfoDialog(t('masters.operationFailed'), "error");
+            }
             
         } catch (error) {
+            console.error('Error submitting domain:', error);
             showInfoDialog(t('masters.operationFailed'), "error");
+        } finally {
+            console.log("Submit process completed");
+            setIsSubmitting(false);
         }
-    }, [formData, validateForm, showInfoDialog, t]);
+    }, [
+        validateForm, 
+        formData, 
+        showAudit, 
+        auditTrailData, 
+        t, 
+        showInfoDialog, 
+        postData, 
+        getActiveUserDetails, 
+        prepareAuditTrailValues, 
+        prepareDomainObject, 
+        fetchDomainData
+    ]);
 
     const handlePopupClose = useCallback(() => {
+        console.log("Closing popup");
         setActivePopup(null);
         setFormErrors({});
         setAuditTrailData({
@@ -220,13 +1284,34 @@ const Domain = () => {
             reason: "",
             comments: ""
         });
+        setShowAudit(false);
     }, []);
 
     const handleAuthorized = useCallback(() => {
-        // Handle audit trail authorization
-        console.log('Audit trail authorized');
+        console.log("Audit authorized, proceeding with submit");
         setShowAudit(false);
-    }, []);
+        handleSubmit();
+    }, [handleSubmit]);
+
+    // ==================== COMPONENT SETUP ====================
+
+    useEffect(() => {
+        console.log("Component useEffect triggered");
+        const sessionID = sessionStorage.getItem('sSessionID');
+        const userID = sessionStorage.getItem('sUserID');
+        
+        console.log("Session validation - SessionID:", sessionID, "UserID:", userID);
+        
+        if (!sessionID || !userID) {
+            showInfoDialog(t('masters.sessionexpired') || 'Session expired. Please login again.', "error");
+            return;
+        }
+        
+        fetchDomainData();
+        isInitialMount.current = false;
+    }, [fetchDomainData, showInfoDialog, t]);
+
+    // ==================== UI COMPONENTS ====================
 
     const columns = useMemo(() => [
         {
@@ -235,7 +1320,7 @@ const Domain = () => {
             width: 150,
             enableSearch: true,
             render: (row, isSelected) => (
-                <div className={`text-[12px] font-verdana truncate text-gray-700 ${isSelected ? 'font-bold' : ''}`}>
+                <div className={`text-[12px] font-['Verdana'] truncate text-gray-700 ${isSelected ? 'font-bold' : ''}`}>
                     {row.sDomainName}
                 </div>
             )
@@ -246,7 +1331,7 @@ const Domain = () => {
             width: 120,
             enableSearch: true,
             render: (row, isSelected) => (
-                <div className={`text-[12px] font-verdana truncate text-gray-700 ${isSelected ? 'font-bold' : ''}`}>
+                <div className={`text-[12px] font-['Verdana'] truncate text-gray-700 ${isSelected ? 'font-bold' : ''}`}>
                     {row.sCategories}
                 </div>
             )
@@ -257,7 +1342,7 @@ const Domain = () => {
             width: 150,
             enableSearch: true,
             render: (row, isSelected) => (
-                <div className={`text-[12px] font-verdana truncate ${row.sDomainStatus === 'Active' ? 'text-green-600' : 'text-red-500'} ${isSelected ? 'font-bold' : ''}`}>
+                <div className={`text-[12px] font-['Verdana'] truncate ${row.sDomainStatus === 'Active' ? 'text-[#008000]' : 'text-red-500'} ${isSelected ? 'font-bold' : ''}`}>
                     {row.sDomainStatus}
                 </div>
             )
@@ -271,7 +1356,7 @@ const Domain = () => {
                     {t('masters.logindomainname')}
                 </div>
                 <div className="w-3/5 text-gray-800">
-                    {domain.sLoginDomainName}
+                    {domain.sLoginDomainName || ""}
                 </div>
             </div>
             <div className="flex items-center">
@@ -295,7 +1380,7 @@ const Domain = () => {
                     {t('masters.modifiedBy')}
                 </div>
                 <div className="w-3/5 text-gray-800">
-                    {domain.sModifiedBy}
+                    {domain.sModifiedBy || ""}
                 </div>
             </div>
             <div className="flex items-center">
@@ -303,7 +1388,7 @@ const Domain = () => {
                     {t('masters.modifiedOn')}
                 </div>
                 <div className="w-3/5 text-gray-800">
-                    {domain.dModifiedOn}
+                    {domain.dModifiedOn || ""}
                 </div>
             </div>
         </div>
@@ -314,27 +1399,29 @@ const Domain = () => {
             onClick={onClick}
             disabled={disabled}
             className={`
-                flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-bold rounded border-none 
+                flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold rounded border-none 
                 transition-all duration-200 whitespace-nowrap
                 hover:scale-[0.98] hover:opacity-90
                 ${disabled 
                     ? variant === 'primary'
                     ? 'bg-[#2885fe7e] text-white cursor-not-allowed'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-[#f0f2f5dc] text-[#2885fecc] font-bold cursor-not-allowed'
                     : variant === 'primary'
                         ? 'bg-[#2883FE] text-white hover:bg-[#1c6fd8]'
                         : variant === 'danger'
                             ? 'bg-red-500 text-white hover:bg-red-600'
-                            : 'bg-gray-50 text-[#2883FE] hover:bg-blue-50'
+                            : 'bg-[#f0f2f5] text-[#2883fe] font-bold '
                 }
             `}
         >
-            {Icon && <Icon className="w-3.5 h-3.5" />}
+            {Icon && <Icon className="w-4 h-4 font-bold" />}
             <span>{label}</span>
         </button>
     );
 
-    if (loading) {
+    // ==================== RENDER ====================
+
+    if (loading && isInitialMount.current) {
         return (
             <div className="flex items-center justify-center h-full">
                 <div className="text-gray-500">{t('masters.loading')}</div>
@@ -344,9 +1431,7 @@ const Domain = () => {
 
     return (
         <div className="h-full overflow-hidden bg-[#f5f7fb]">
-            {/* PAGE CONTAINER */}
             <div className="h-full flex flex-col bg-white">
-                {/* Error/Info Dialog */}
                 {infoDialog.open && (
                     <Errordialog
                         message={infoDialog.message}
@@ -355,25 +1440,22 @@ const Domain = () => {
                     />
                 )}
 
-                {/* ACTION BUTTONS (NO SCROLL) */}
                 <div className="flex justify-end pr-5 gap-2 pt-3">
-                    
                     <ActionButton
                         icon={Plus}
                         label={t('masters.add')}
                         onClick={handleAddClick}
+                        disabled={isSubmitting}
                     />
                     <ActionButton
                         icon={Edit}
                         label={t('masters.edit')}
                         onClick={handleEditClick}
-                        disabled={!selectedDomain}
+                        disabled={!selectedDomain || isSubmitting}
                     />
-                    
                 </div>
 
-                {/* SCROLLABLE CONTENT AREA */}
-                <div className="flex-1 overflow-auto p-3">
+                <div className="flex-1 overflow-auto p-3 font-['Roboto'] text-[#353f49]">
                     {loading ? (
                         <div className="text-center py-10 text-gray-500">
                             {t("login.loadingpasswordpolicy")}
@@ -396,24 +1478,21 @@ const Domain = () => {
                     )}
                 </div>
 
-                {/* Add/Edit Domain Popup */}
                 {activePopup && (
                     <CustomPopup
                         isOpen={!!activePopup}
                         onClose={handlePopupClose}
                         title={activePopup}
                         content={
-                            <div className="flex flex-col gap-2 p-1">
-                                {/* Hidden Domain ID field */}
+                            <div className="flex flex-col gap-1 p-1">
                                 <input
                                     type="hidden"
                                     id="bmd_domainprimaryid"
                                     value={formData.sDomainID}
                                 />
 
-                                {/* Domain Name */}
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-[12px] font-semibold text-gray-700">
+                                <div className="flex flex-col">
+                                    <label className="text-[12px] font-roboto font-semibold text-[#405f7d]">
                                         {t('masters.name')} <span className="text-red-500">*</span>
                                     </label>
                                     <AnimatedInput
@@ -434,9 +1513,9 @@ const Domain = () => {
                                     )}
                                 </div>
 
-                                {/* Login Domain Name */}
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-[12px] font-semibold text-gray-700">
+                                
+                                <div className="flex flex-col">
+                                    <label className="text-[12px] font-roboto font-semibold text-[#405f7d]">
                                         {t('masters.logindomainname')}
                                     </label>
                                     <AnimatedInput
@@ -449,9 +1528,9 @@ const Domain = () => {
                                     />
                                 </div>
 
-                                {/* Domain Username */}
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-[12px] font-semibold text-gray-700">
+                                {/* Domain Username - Always Required */}
+                                <div className="flex flex-col">
+                                    <label className="text-[12px] font-roboto font-semibold text-[#405f7d]">
                                         {t('masters.domainusername')} <span className="text-red-500">*</span>
                                     </label>
                                     <AnimatedInput
@@ -459,9 +1538,8 @@ const Domain = () => {
                                         id="bmd_domainusernameid"
                                         value={formData.sdomainusername}
                                         onChange={(e) => handleFormChange('sdomainusername', e.target.value)}
-                                        disabled={formData.sCategories === "DB"}
                                         maxLength={50}
-                                        className={`w-full text-[12px] outline-none ${formData.sCategories === "DB" ? 'bg-gray-50' : 'bg-white'} ${
+                                        className={`w-full text-[12px] outline-none bg-white ${
                                             formErrors.sdomainusername ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                     />
@@ -472,9 +1550,9 @@ const Domain = () => {
                                     )}
                                 </div>
 
-                                {/* Domain Password */}
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-[12px] font-semibold text-gray-700">
+                                {/* Domain Password - Always Required */}
+                                <div className="flex flex-col">
+                                    <label className="text-[12px] font-roboto font-semibold text-[#405f7d]">
                                         {t('masters.domainpassword')} <span className="text-red-500">*</span>
                                     </label>
                                     <AnimatedInput
@@ -482,9 +1560,8 @@ const Domain = () => {
                                         id="bmd_domainpasswordid"
                                         value={formData.sdomainpassword}
                                         onChange={(e) => handleFormChange('sdomainpassword', e.target.value)}
-                                        disabled={formData.sCategories === "DB"}
                                         maxLength={50}
-                                        className={`w-full text-[12px] outline-none ${formData.sCategories === "DB" ? 'bg-gray-50' : 'bg-white'} ${
+                                        className={`w-full text-[12px] outline-none bg-white ${
                                             formErrors.sdomainpassword ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                     />
@@ -495,31 +1572,35 @@ const Domain = () => {
                                     )}
                                 </div>
 
-                                {/* Active Status */}
                                 <div className="flex items-center gap-2.5">
-                                    <label htmlFor="bmd_domainstatusid" className="text-[12px] font-semibold text-gray-700">
+                                    <label htmlFor="bmd_domainstatusid" className="text-[12px] font-roboto font-semibold text-[#405f7d]">
                                         {t('masters.active')}
                                     </label>
                                     <input
                                         type="checkbox"
                                         id="bmd_domainstatusid"
-                                        checked={formData.iDomainStatus === 1}
-                                        onChange={(e) => handleFormChange('iDomainStatus', e.target.checked ? 1 : 0)}
+                                        checked={formData.iDomainStatus === 0}
+                                        onChange={(e) => handleFormChange('iDomainStatus', e.target.checked ? 0 : 1)}
                                         className="w-4 h-4 cursor-pointer accent-blue-600"
                                     />
                                 </div>
 
-                                {/* Form Buttons */}
                                 <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200">
                                     <button
-                                        onClick={handleSubmit}
-                                        className="flex items-center gap-2 px-4 py-2 text-[12px] font-semibold text-white bg-blue-500 border-none rounded cursor-pointer hover:bg-blue-600"
+                                        onClick={() => {
+                                            console.log("Opening audit popup...");
+                                            setShowAudit(true);
+                                        }}
+                                        disabled={isSubmitting}
+                                        className="flex items-center gap-1 px-2 py-1 text-[12px] font-roboto font-semibold text-white bg-blue-500 border-none rounded cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        <Edit className="w-4 h-4" /> {t('masters.submit')}
+                                        <Edit className="w-4 h-4" /> 
+                                        {isSubmitting ? t('masters.submitting') : t('masters.submit')}
                                     </button>
                                     <button
                                         onClick={handlePopupClose}
-                                        className="px-4 py-2 text-[12px] font-semibold text-gray-700 bg-white border border-gray-300 rounded cursor-pointer hover:bg-gray-50"
+                                        disabled={isSubmitting}
+                                        className="px-2.5 py-2 text-[12px] font-roboto font-semibold text-[#8092a4] bg-white border border-gray-300 rounded cursor-pointer hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {t('masters.close')}
                                     </button>
@@ -530,12 +1611,13 @@ const Domain = () => {
                     />
                 )}
 
-                {/* AUDIT POPUP */}
                 {showAudit && (
                     <AuditTrail
                         isOpen={showAudit}
                         onClose={() => setShowAudit(false)}
                         onAuthorized={handleAuthorized}
+                        auditData={auditTrailData}
+                        setAuditData={setAuditTrailData}
                     />
                 )}
             </div>
