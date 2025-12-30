@@ -6,38 +6,57 @@ import { IoMdAdd } from "react-icons/io";
 import { FaEdit } from "react-icons/fa";
 import { TiExport } from "react-icons/ti";
 import * as XLSX from "xlsx"; // For Excel export
-import { FiCheckSquare } from "react-icons/fi";
-import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
-import Draggable from "react-draggable";
+
 import useAxios from "../../../../../Services/servicecall";
-import { CF_decrypt } from "../../../../Common/encryptiondecryption";
-import { get } from "react-hook-form";
+import { CF_decrypt,CF_encrypt } from "../../../../Common/encryptiondecryption";
+
+import AddClientModal from "./AddClientModal";
+import AuditTrail from "../../../../Layout/Common/AuditTrail";
 /* ---------------- MOCK INSTRUMENTS ---------------- */
-const INSTRUMENTS = [
-  "IN001 (in001)",
-  "IN002 (in002)",
-  "IN003 (in003)",
-  "IN004 (in004)",
-  "IN005 (in005)",
-  "IN006 (in006)",
-  "IN007 (in007)",
-  "IN008 (in008)",
-  "IN009 (in009)",
-  "IN010 (in010)",
-  "IN011 (in011)",
-  "IN012 (in012)",
-  "IN013 (in013)",
-  "IN014 (in014)",
-  "IN015 (in015)",
-];
+
 
 /* ================== MAIN COMPONENT ================== */
 const Client = () => {
+    const [rows, setRows] = useState([]);
+    const [showModal, setShowModal] = useState(false);
+  const [editingRow, setEditingRow] = useState(null);
+  const [selectedRowId, setSelectedRowId] = useState(null);
+  const selectedRow = rows.find((r) => r.id === selectedRowId);
+  const [mappedInstruments, setMappedInstruments] = useState([]);
+  const [showClientModal, setShowClientModal] = useState(false);
+const [showAuditTrail, setShowAuditTrail] = useState(false);
+
+const [pendingClientData, setPendingClientData] = useState(null);
+
+  
+
   const { postData } = useAxios();
-  const getSessionValue = (key) => {
+const getSessionValue = (key) => {
   const value = sessionStorage.getItem(key);
-  return value ? CF_decrypt(value) : null;
+
+  // ✅ 1. key missing
+  if (!value) return "";
+
+  // ✅ 2. already plain text (NOT encrypted)
+  if (!value.includes("=") && value.length < 40) {
+    return value;
+  }
+
+  // ✅ 3. encrypted value
+  try {
+    return CF_decrypt(value);
+  } catch (e) {
+    console.warn(`Decrypt skipped for ${key}`);
+    return value;
+  }
 };
+
+const buildEncryptedRequest = (payload) => {
+  return {
+    passObj: CF_encrypt(JSON.stringify(payload)),
+  };
+};
+
 const buildClientRequest = () => {
   return {
     sActionType: "View",
@@ -45,66 +64,164 @@ const buildClientRequest = () => {
       sUserDomainName: getSessionValue("sDomainName"),
       sSessionID: getSessionValue("sSessionID"),
       sUserID: getSessionValue("sUserID"),
-      sTimeZoneID: getSessionValue("UTCStatus"),
+      sTimeZoneID: getSessionValue("sTimeZoneID") + "<~>true",
       sApplicationName: "SDMS",
       sdbtype: getSessionValue("sdbtype") ,
       sUsername: getSessionValue("sUsername"),
       sSiteCode: getSessionValue("sSiteCode"),
       sCategories: getSessionValue("sCategories"),
       sUserGroupID: getSessionValue("sUserGroupID"),
-      sUserStatus:getSessionValue("sUserStatus"),
-      sTenantID: getSessionValue("sTenantID") ,
-      device: getSessionValue("device"),
+      sUserStatus:"" ,
+      sTenantID: "" ,
     },
     ApplicationCode: "SDMS",
   };
 };
-const loadClientGridData = async () => {
+const buildMappedInstrumentRequest = (clientId) => ({
+  sClientID: clientId,   // ✅ FIXED
+  ActiveUserDetails: buildClientRequest().ActiveUserDetails,
+  ApplicationCode: "SDMS",
+});
+
+const loadMappedInstruments = async (clientId) => {
   try {
-    const requestPayload = buildClientRequest();
-
-    // 🔍 Console check BEFORE encryption
-    console.log("Client API Request (PLAIN):", requestPayload);
-
+    const requestPayload = buildMappedInstrumentRequest(clientId);
     const response = await postData(
-      "basemaster/getClient",
+      "basemaster/getMappedInstrumentClient",
       requestPayload
     );
 
-    // 🔍 Console check RESPONSE
-    console.log("Client API Response:", response);
+    console.log("Mapped Instrument Response:", response);
 
-    // 🔹 Example: adjust based on backend response structure
+    // Return the mapped instrument string, or "-" if empty
+    return response?.MappedInstrumentClient || "-";
+  } catch (error) {
+    console.error("Mapped Instrument API Error:", error);
+    return "-";
+  }
+};
 
+const loadClientGridData = async () => {
+  try {
+    const requestPayload = buildClientRequest();
+    const response = await postData("basemaster/getClient", requestPayload);
+
+    if (Array.isArray(response) && response.length > 0) {
+      const mappedRows = await Promise.all(
+        response.map(async (item, index) => {
+          const mappedInstrumentText = await loadMappedInstruments(item.sClientID);
+
+          return {
+            id: item.sClientID || index.toString(),
+            clientName: item.sClientName,
+            clientAlias: item.sClientAliasName,
+            status: item.sClientStatus,
+            clientType: item.sClientTypeName,
+            ipAddress: item.sIPAddress,
+            createdBy: item.sCreatedBy,
+            createdOn: item.dCreatedOn,
+            modifiedBy: item.sModifiedBy,
+            modifiedOn: item.dModifiedOn,
+            mappedInstrument: mappedInstrumentText, // ✅ mapped correctly now
+          };
+        })
+      );
+
+      setRows(mappedRows);
+      setSelectedRowId(mappedRows[0].id); // select first row
+    } else {
+      setRows([]);
+      setSelectedRowId(null);
+    }
   } catch (error) {
     console.error("Client API Error:", error);
   }
 };
+
+console.log("Client Rows:", rows); // Debugging log
+
+const buildInstrumentUnMappingByClient = (selectedInstruments = []) => {
+  return selectedInstruments.map(inst => {
+    // Example inst: "IN001 (in001)"
+
+    const match = inst.match(/^(.+?)\s*\((.+?)\)$/);
+
+    const instrumentName = match?.[1]?.trim() || inst.trim();
+    const instrumentId = match?.[2]?.trim().toUpperCase() || "";
+
+    return {
+      sInstrumentName: instrumentName,               // ✅ IN001
+      sInstrumentID: instrumentId.padEnd(10, " ")    // ✅ IN001_____
+    };
+  });
+};
+
+const buildInsertClientRequest = (clientData, auditData) => {
+  const instruments =
+    clientData.selectedInstruments?.length > 0
+      ? buildInstrumentUnMappingByClient(clientData.selectedInstruments)
+      : [];
+
+  return {
+    InstrumentUnMappingByClient: instruments,
+    AuditTrailValues: auditData, // ✅ CONDITIONAL
+    Client: {
+      sClientName: clientData.clientName,
+      sClientAliasName: clientData.clientAlias,
+      sClientTypeID: clientData.clientTypeID, // IMPORTANT (ID, not name)
+      iStatus: clientData.status === "Active" ? 1 : 0,
+      nClientGateway: clientData.gatewayClient ? 1 : 0
+    },
+    ActiveUserDetails: buildClientRequest().ActiveUserDetails,
+    ApplicationCode: "SDMS"
+  };
+};
+
+const handleAuditSubmit = async (auditData) => {
+  console.log("HANDLE AUDIT SUBMIT CALLED", auditData);
+  try {
+    const requestPayload = buildInsertClientRequest(
+      pendingClientData,
+      auditData
+    );
+
+    console.log("INSERT CLIENT REQUEST:", requestPayload);
+
+    const response = await postData(
+      "basemaster/insertClient",
+      requestPayload
+    );
+
+    console.log("INSERT CLIENT RESPONSE:", response);
+
+    if (response?.Rtn === "Success") {
+      await loadClientGridData(); // 🔥 reload grid
+    }
+
+    setShowAuditTrail(false);
+    setPendingClientData(null);
+    setEditingRow(null);
+  } catch (err) {
+    console.error("Insert Client Error:", err);
+  }
+};
+
+
 useEffect(() => {
   loadClientGridData();
+
 }, []);
+useEffect(() => {
+  if (rows.length > 0 && !selectedRowId) {
+    setSelectedRowId(rows[0].id); // select the first row by default
+  }
+}, [rows]);
 
 
-  const [rows, setRows] = useState([
-    {
-      id: "1",
-      clientName: "AGD54",
-      clientAlias: "AGD54",
-      status: "Active",
-      clientType: "Administrative",
-      ipAddress: "192.168.0.92",
-      createdBy: "Administrator",
-      createdOn: "2025-12-24 17:09:41",
-      modifiedBy: "Administrator",
-      modifiedOn: "2025-12-24 17:14:30",
-      mappedInstrument: "IN001 (in001), IN002 (in002)",
-    },
-  ]);
 
-  const [showModal, setShowModal] = useState(false);
-  const [editingRow, setEditingRow] = useState(null);
-  const [selectedRowId, setSelectedRowId] = useState(rows[0]?.id || null);
-  const selectedRow = rows.find((r) => r.id === selectedRowId);
+
+
+
   
   /* ---------------- PRINT FUNCTIONALITY ---------------- */
   const handlePrint = () => {
@@ -354,6 +471,9 @@ useEffect(() => {
     // Download the file
     XLSX.writeFile(wb, filename);
   };
+  
+
+
 
   /* ---------------- GRID COLUMNS ---------------- */
   const columns = useMemo(
@@ -422,6 +542,7 @@ useEffect(() => {
       <DetailRow label="Modified By" value={row.modifiedBy} />
       <DetailRow label="Modified On" value={row.modifiedOn} />
       <DetailRow label="Mapped Instrument" value={row.mappedInstrument} />
+
     </div>
   );
 
@@ -472,259 +593,48 @@ useEffect(() => {
         detailPanelWidth="46%"
         getRowId={(row) => row.id}
         enableSelection={false}
-        renderDetailPanel={(row) =>
-          row.id === selectedRowId ? renderDetailPanel(selectedRow) : renderDetailPanel(row)
-        }
+        renderDetailPanel={renderDetailPanel}
+         getRowClassName={(row) =>
+    row.id === selectedRowId ? "bg-gray-100 font-semibold" : ""
+  }
+  onRowClick={(row) => setSelectedRowId(row.id)}
+
       />
     
       {/* MODAL */}
       {showModal && (
-        <AddClientModal
-          initialData={editingRow}
-          onClose={() => setShowModal(false)}
-          onSubmit={(newRow) => {
-            if (editingRow) {
-              setRows((prev) =>
-                prev.map((r) => (r.id === editingRow.id ? { ...r, ...newRow } : r))
-              );
-            } else {
-              setRows((prev) => [...prev, newRow]);
-            }
-            setShowModal(false);
-          }}
-        />
-      )}
+  <AddClientModal
+    initialData={editingRow}
+    onClose={() => setShowModal(false)}
+    onSubmit={(clientData) => {
+      setPendingClientData({
+        ...clientData,
+        mode: editingRow ? "EDIT" : "ADD",
+        clientId: editingRow?.id || null,
+      });
+
+      setShowModal(false);
+      setShowAuditTrail(true); // 🔥 open audit
+    }}
+  />
+)}
+
+{showAuditTrail && (
+  <AuditTrail
+    isOpen={showAuditTrail}
+    actionLabel="Submit"
+    defaultReason={pendingClientData?.mode === "EDIT" ? "Modified" : "Activated"}
+    onClose={() => setShowAuditTrail(false)}
+    onAuthorized={handleAuditSubmit}
+  />
+)}
+
     </div>
   );
 };
 
 /* ================== ADD / EDIT CLIENT MODAL ================== */
-const AddClientModal = ({ initialData, onClose, onSubmit }) => {
-  const nodeRef = useRef(null);
-  const [form, setForm] = useState({
-    clientName: initialData?.clientName || "",
-    clientAlias: initialData?.clientAlias || "",
-    clientType: initialData?.clientType || "Administrative",
-    active: initialData?.status === "Active" || false,
-    gatewayClient: false,
-  });
 
-  const [instrumentSearch, setInstrumentSearch] = useState("");
-  const [selectedInstruments, setSelectedInstruments] = useState(() => {
-    if (initialData?.mappedInstrument) {
-      return initialData.mappedInstrument.split(", ").filter(Boolean);
-    }
-    return [];
-  });
-
-  // Check if we're in Add mode (no initialData)
-  const isAddMode = !initialData;
-  
-  // In Add mode, return empty array for filtered instruments
-  const filteredInstruments = useMemo(() => {
-    if (isAddMode) {
-      return []; // Return empty array for Add mode
-    }
-    return INSTRUMENTS.filter((i) =>
-      i.toLowerCase().includes(instrumentSearch.toLowerCase())
-    );
-  }, [instrumentSearch, isAddMode]);
-
-  const handleSubmit = () => {
-    onSubmit({
-      id: initialData?.id || Date.now().toString(),
-      clientName: form.clientName,
-      clientAlias: form.clientAlias,
-      status: form.active ? "Active" : "Inactive",
-      clientType: form.clientType,
-      mappedInstrument: selectedInstruments.join(", "),
-      createdBy: "Administrator",
-      createdOn: initialData?.createdOn || new Date().toISOString(),
-      modifiedBy: "Administrator",
-      modifiedOn: new Date().toISOString(),
-    });
-  };
-
-  return (
-<div className=" fixed inset-0 bg-black/40 flex items-center justify-center z-50">
- <Draggable
-  nodeRef={nodeRef}
-  handle=".modal-header"
-  bounds="parent"
->
-  <div
-    ref={nodeRef}
-    className="bg-white w-[600px] rounded overflow-hidden shadow-lg"
-  >
-
-
-        {/* HEADER */}
-        <div className="modal-header cursor-move flex justify-between items-center px-4 py-2 pb-[5px] bg-slate-100 border-b">
-
-          <label
-  className="text-[#0e5bca] text-[18px]"
-  style={{ fontFamily: 'Helvetica Neue, Arial, sans-serif' }}
->
-  {initialData ? "Edit Client" : "Add Client"}
-</label>
-
-          <button onClick={onClose} className="text-gray-300 text-[20px] font-bold ">
-            ×
-          </button>
-        </div>
-
-        {/* BODY */}
-        <div className="px-4 py-4 space-y-6">
-          {/* CLIENT NAME / ALIAS / TYPE */}
-          <div className="w-[300px] space-y-4">
-            <div >
-  <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-    Client Name <span className="text-red-500">*</span>
-  </label>
-<AnimatedDropdown 
-name="clientName" value={form.clientName} 
-allowFreeInput 
-borderColor="border-gray-300" 
-onChange={(e) => setForm({ ...form, clientName: e.target.value })} 
-/>
-</div>
-
-
-            <div>
-  <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-    Client Alias Name <span className="text-red-500">*</span>
-  </label>
- <AnimatedDropdown  name="clientAlias" 
- value={form.clientAlias} 
- allowFreeInput 
- borderColor="border-gray-300" 
- onChange={(e) => setForm({ ...form, clientAlias: e.target.value })}
-  />
-</div>
-
-
-            <AnimatedDropdown
-              label={
-                <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">                
-                  Client Type <span className="text-red-500">*</span>
-                </label>
-              }
-              name="clientType"
-              value={form.clientType}
-              options={["Administrative", "Trading"]}
-              borderColor="border-gray-300"
-              onChange={(e) => setForm({ ...form, clientType: e.target.value })}
-              className="py-0"
-            />
-          </div>
-
-          {/* CHECKBOXES */}
-          <div className="flex gap-12 ">
-            <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
-              Active
-              <input
-                type="checkbox"
-                checked={form.active}
-                onChange={(e) => setForm({ ...form, active: e.target.checked })}
-              />
-              
-            </label>
-
-            <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
-              Gateway Client
-              <input
-                type="checkbox"
-                checked={form.gatewayClient}
-                onChange={(e) =>
-                  setForm({ ...form, gatewayClient: e.target.checked })
-                }
-                
-              />
-              
-            </label>
-          </div>
-
-          {/* INSTRUMENTS */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
-                Instrument
-              </label>
-              <button
-                type="button"
-                className="bg-blue-500 text-white px-[12px]  py-[6px] rounded text-[11px] font-bold font-roboto"
-              >
-                Add
-              </button>
-            </div>
-
-            <div className="border rounded h-[180px] overflow-hidden">
-              <div className="sticky top-0 bg-white px-2 py-1 border-b z-10">
-                <input
-                  placeholder="Looking for"
-                  value={instrumentSearch}
-                  onChange={(e) => setInstrumentSearch(e.target.value)}
-                  className="w-full border px-2 rounded outline-none text-sm"
-                />
-              </div>
-              <div className="overflow-auto" style={{ maxHeight: '140px' }}>
-                <div className="px-2 font-verdana text-[12px] shadow-sm shadow-blue-500/40">
-                  {/* SHOW DIFFERENT MESSAGE BASED ON MODE */}
-                  {isAddMode ? (
-                    <div className="text-gray-400 text-xs  text-center py-8">
-                      Instruments can be mapped after creating the client
-                    </div>
-                  ) : (
-                    <>
-                      {filteredInstruments.map((inst) => (
-                        <label key={inst} className="flex gap-2 text-sm hover:bg-gray-50 p-1 rounded">
-                          <input
-                            type="checkbox"
-                            checked={selectedInstruments.includes(inst)}
-                            onChange={() =>
-                              setSelectedInstruments((prev) =>
-                                prev.includes(inst)
-                                  ? prev.filter((i) => i !== inst)
-                                  : [...prev, inst]
-                              )
-                            }
-                          />
-                          {inst}
-                        </label>
-                      ))}
-                      {filteredInstruments.length === 0 && instrumentSearch && (
-                        <div className="text-gray-400 text-xs text-center py-4">
-                          No instruments found
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* FOOTER */}
-        <div className="flex justify-end gap-2 px-4 py-3 border-t">
-          <button
-            onClick={handleSubmit}
-            className="bg-[#2883fe] flex text-[#ffffff] px-[12px] py-[6px] rounded text-[11px] font-bold font-roboto shadow-sm items-center gap-1"
-          >
-            <FiCheckSquare className="w-4 h-4" /> <span className="leading-none">Submit</span> 
-          </button>
-          <button
-            onClick={onClose}
-            className="border px-[12px] py-[6px] rounded text-[11px] text-[#8092a4] font-roboto font-bold"
-          >
-            <span className="leading-none">Close</span>
-          </button>
-        </div>
-      </div>
-      </Draggable>
-    </div>
-  );
-};
 
 /* ================== HELPERS ================== */
   const DetailRow = ({ label, value }) => (
