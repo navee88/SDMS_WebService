@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import AnimatedInput from './AnimatedInput';
 import AnimatedDropdown from './AnimatedDropdown';
 import AnimatedTextarea from './AnimatedTextarea';
@@ -7,6 +7,8 @@ import { useTranslation } from "react-i18next";
 import { useLanguage } from '../../../Context/LanguageContext';
 import CustomPopup from './Popup';
 import { CF_decrypt } from '../../Common/encryptiondecryption';
+import useAxios from '../../../Services/servicecall';
+
 
 const AuditTrail = ({
     isOpen,
@@ -26,16 +28,19 @@ const AuditTrail = ({
     const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
     const [activePopup, setActivePopup] = useState(null);
+    const [reasons, setReasons] = useState([]);
+    const [loadingReasons, setLoadingReasons] = useState(false);
+    const { postData } = useAxios();
 
     const passwordRef = useRef(null);
 
-    // useEffect(() => {
-    //     if (isOpen && passwordRef.current) {
-    //         setTimeout(() => {
-    //             passwordRef.current.focus();
-    //         }, 100);
-    //     }
-    // }, [isOpen]);
+    const reasonOptions = useMemo(() => {
+        return reasons.map(r => ({
+            label: r.sComments,
+            value: r.sComments,
+            reasonNo: r.sSerialNo
+        }));
+    }, [reasons]);
 
     // Get username from session on open
     useEffect(() => {
@@ -53,6 +58,36 @@ const AuditTrail = ({
         }
     }, [isOpen]);
 
+    const fetchReasons = async () => {
+        setLoadingReasons(true);
+        try {
+            const payload = {
+                ActiveUserDetails: JSON.parse(sessionStorage.getItem("ActiveUserDetails") || "{}"),
+                ApplicationCode: "SDMS"
+            };
+
+            const response = await postData("AuditTrail/getCFRReasons", payload);
+
+            console.log("CFR Reasons from backend:", response);
+
+            if (response?.Reasons) {
+                setReasons(response.Reasons); // keep full objects from backend
+            }
+
+        } catch (err) {
+            console.error("Failed to fetch CFR reasons", err);
+        } finally {
+            setLoadingReasons(false);
+        }
+    };
+    useEffect(() => {
+        if (isOpen) {
+            fetchReasons();
+        }
+    }, [isOpen]);
+
+
+
     // Show password error from parent
     useEffect(() => {
         if (showPasswordError) {
@@ -61,99 +96,6 @@ const AuditTrail = ({
     }, [showPasswordError]);
 
     if (!isOpen) return null;
-
-
-    // const verifyPassword = (password) => {
-    //     return password === "admin";
-    // };
-
-
-
-
-
-
-    // const handleReason = (value) => {
-    //     const actualValue = value?.target?.value || value?.value || value;
-    //     setReason(actualValue);
-    // };
-
-    // const handleSubmit = async () => {
-    //     //Validate required fields
-    //     if (!password || !comments.trim()) {
-    //         setShowError(true);
-    //         return;
-    //     }
-
-    //     // Verify password
-    //     const isValid = verifyPassword(password);
-
-    //     if (!isValid) {
-    //         setShowError(true);
-    //         // Show error message for wrong password
-    //         alert("Incorrect password!");
-    //         return;
-    //     }
-
-    //     //  Password is correct! Tell parent component
-    //     onAuthorized({
-    //         password,
-    //         reason,
-    //         comments
-    //     });
-
-    //     // cleanup
-    //     setPassword("");
-    //     setReason(defaultReason);
-    //     setComments("");
-    //     setShowError(false);
-    // };
-
-    // const handleSubmit = async () => {
-    //     // Validate required fields
-    //     if (!password || !comments.trim()) {
-    //         setShowError(true);
-    //         return;
-    //     }
-
-    //     // Verify password
-    //     const isValid = verifyPassword(password);
-
-    //     if (!isValid) {
-    //         setShowError(true);
-    //         setPasswordError(true);
-    //         return;
-    //     }
-
-    //     // Get reason number based on reason name
-    //     const reasonMap = {
-    //         "Activated": 1,
-    //         "Deactivated": 2,
-    //         "Modified": 3,
-    //         "Reviewed": 4,
-    //         "Archive Created": 5,
-    //         "Archive Opened": 6
-    //     };
-
-    //     // Pass formatted object to parent with AuditTrailValues as key
-    //     onAuthorized({
-    //         AuditTrailValues: {
-    //             sUserName: "Administrator",
-    //             sUserPassword: password,
-    //             sReasonNo: reasonMap[reason] || 1,
-    //             sReasonName: reason,
-    //             sComments: comments,
-    //             sUserDomainName: "SDMS"
-    //         }
-    //     });
-
-    //     // Cleanup
-    //     setPassword("");
-    //     setReason(defaultReason);
-    //     setComments("");
-    //     setShowError(false);
-    //     setPasswordError(false);
-    // };
-
 
     const handleReason = (value) => {
         const actualValue = value?.target?.value || value?.value || value;
@@ -167,29 +109,28 @@ const AuditTrail = ({
         }
 
         // Format audit trail data
-        const reasonMap = {
-            "Activated": 1,
-            "Deactivated": 2,
-            "Modified": 3,
-            "Reviewed": 4,
-            "Archive Created": 5,
-            "Archive Opened": 6
-        };
+        const selectedReason = reasons.find(r => r.sComments === reason);
+
 
         // Get and decrypt domain name
         const encryptedDomain = sessionStorage.getItem('sDomainName');
         const decryptedDomain = encryptedDomain ? CF_decrypt(encryptedDomain) : 'SDMS';
 
-        onAuthorized({
+        const auditPayload = {
             AuditTrailValues: {
-                sUserName: userName, // Already decrypted in useEffect
-                sUserPassword: password, // Raw password entered by user
-                sReasonNo: reasonMap[reason] || 1,
-                sReasonName: reason,
+                sUserName: userName,
+                sUserPassword: password,
+                sReasonNo: selectedReason?.sSerialNo,
+                sReasonName: selectedReason?.sComments,
                 sComments: comments,
-                sUserDomainName: decryptedDomain // Decrypted domain
+                sUserDomainName: decryptedDomain
             }
-        });
+        };
+
+
+        console.log("AuditTrail → Sending to parent:", auditPayload);
+
+        onAuthorized(auditPayload);
 
         // Cleanup
         setPassword("");
@@ -199,12 +140,8 @@ const AuditTrail = ({
         setPasswordError(false);
     };
 
-    // // Handler to close popup and show info dialog
-    // const handlePopupClose = () => {
-    //     setActivePopup(null);
-    //     // Show info dialog after closing popup
-    //     // showInfoDialog("Schedule mode popup closed", "success");
-    // };
+
+
     return (
         <>
             <CustomPopup
@@ -255,15 +192,19 @@ const AuditTrail = ({
 
                         {/* Reason Field */}
                         <div className="flex flex-col">
-                            <AnimatedDropdown
-                                label={t("label.reason")}
-                                value={reason}
-                                options={["Activated", "Deactivated", "Modified", "Reviewed"]}
-                                onChange={handleReason}
-                                allowFreeInput={true}
-                                required={true}
-                                disabled={disableReason}
-                            />
+                            {loadingReasons ? (
+                                <div>Loading reasons...</div>
+                            ) : (
+                                <AnimatedDropdown
+                                    label={t("label.reason")}
+                                    value={reason}
+                                    options={reasonOptions.map(r => r.label)}
+                                    onChange={handleReason}
+                                    allowFreeInput={true}
+                                    required={true}
+                                    disabled={disableReason}
+                                />
+                            )}
                         </div>
 
                         {/* Comments Field */}
