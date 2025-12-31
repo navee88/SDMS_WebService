@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, ChevronDown, FileText, SquarePen, Plus, Edit, SquareCheckBig } from 'lucide-react';
-import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
+import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayoutTest';
 import { useLanguage } from '../../../../../Context/LanguageContext';
 import { useTranslation } from "react-i18next";
 import AuditTrail from '../../../../Layout/Common/AuditTrail';
@@ -10,7 +10,7 @@ import AnimatedTextarea from '../../../../Layout/Common/AnimatedTextarea';
 import { CF_encrypt, CF_decrypt } from '../../../../../Components/Common/encryptiondecryption';
 import useAxios from '../../../../../Services/servicecall';
 
-const UsersPage = ({ onRowClick, userData, setUserData, selectedIndex }) => {
+const UsersPage = ({ onRowClick, userData, setUserData, selectedIndex, selectedRecord, gridRefreshKey }) => {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -177,10 +177,13 @@ const UsersPage = ({ onRowClick, userData, setUserData, selectedIndex }) => {
     return (
         <div className="flex flex-col">
             <GridLayout
+                // key={gridRefreshKey}
                 columns={userColumns}
                 data={userData}
                 renderDetailPanel={renderUserDetail}
                 onRowClick={onRowClick}
+                getRowId={(row) => row.siteCode}
+                externalSelectedItem={selectedRecord}
             />
         </div>
     );
@@ -234,15 +237,35 @@ function Site() {
     //     }
     // }, [userData, selectedSiteCode]);
 
+    // useEffect(() => {
+    //     if (!userData || userData.length === 0) return;
+
+    //     const trimmedSiteCode = selectedSiteCode?.trim();
+    //     const index = userData.findIndex(item => item.siteCode.trim() === trimmedSiteCode);
+
+    //     if (index !== -1) {
+    //         setSelectedIndex(index);
+    //     } else if (userData.length > 0) {
+    //         setSelectedIndex(0);
+    //         setSelectedSiteCode(userData[0].siteCode);
+    //     }
+    // }, [userData, selectedSiteCode]);
     useEffect(() => {
         if (!userData || userData.length === 0) return;
 
-        const trimmedSiteCode = selectedSiteCode?.trim();
-        const index = userData.findIndex(item => item.siteCode.trim() === trimmedSiteCode);
+        // If we have a selected site code, find and select it
+        if (selectedSiteCode) {
+            const trimmedSiteCode = selectedSiteCode.trim();
+            const index = userData.findIndex(item => item.siteCode.trim() === trimmedSiteCode);
 
-        if (index !== -1) {
-            setSelectedIndex(index);
-        } else if (userData.length > 0) {
+            if (index !== -1) {
+                setSelectedIndex(index);
+                return; // CRITICAL: Exit early
+            }
+        }
+
+        // ONLY select first row on initial load (no selection exists)
+        if (!selectedSiteCode && userData.length > 0) {
             setSelectedIndex(0);
             setSelectedSiteCode(userData[0].siteCode);
         }
@@ -521,10 +544,16 @@ function Site() {
 
 
 
+
+
     // const handleRowClick = (record) => {
-    //     const index = userData.findIndex(item => item.id === record.id);
+    //     const index = userData.findIndex(
+    //         item => item.siteCode === record.siteCode
+    //     );
+
     //     if (index !== -1) {
     //         setSelectedIndex(index);
+    //         setSelectedSiteCode(record.siteCode);
     //     }
     // };
 
@@ -535,7 +564,7 @@ function Site() {
 
         if (index !== -1) {
             setSelectedIndex(index);
-            setSelectedSiteCode(record.siteCode);
+            setSelectedSiteCode(record.siteCode); // This triggers selectedRecord update
         }
     };
 
@@ -543,7 +572,6 @@ function Site() {
     //     console.log("Audit Data:", auditData);
     //     console.log("Form Data to Save:", pendingFormData);
 
-    //     // Get user details from session
     //     const encryptedUserID = sessionStorage.getItem('sUserID');
     //     const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
     //     const encryptedTenantID = sessionStorage.getItem('sTenantID');
@@ -585,25 +613,48 @@ function Site() {
     //     };
 
     //     try {
-    //         // 1. Save to backend
+    //         console.log("EDIT Site Payload:", payload);
     //         const result = await postData('Login/SitecodeSubmit', payload);
+    //         console.log("EDIT Site Result:", result);
 
-    //         // 2. Handle audit failure
     //         if (result.AuditTrailLogin === false) {
     //             setPasswordError(true);
     //             return;
     //         }
 
-    //         // 3. If save successful
     //         if (result.rtnmsg === "Success" || result.rtnmsg === "Site updated successfully") {
-    //             // ✅ CRITICAL: Set the site code BEFORE fetching
-    //             // This tells useEffect which row to select after data loads
-    //             setSelectedSiteCode(selectedRecord.siteCode);
+    //             // Store which row to reselect
+    //             //setSelectedSiteCode(selectedRecord.siteCode);
+    //             // setSelectedSiteCode(pendingFormData.siteCode);
 
-    //             // ✅ Fetch fresh data from backend
-    //             await fetchSiteData();
 
-    //             // ✅ useEffect will automatically reselect the row when userData updates
+    //             // // Fetch fresh data from backend
+    //             // await fetchSiteData();
+
+    //             // 1. Remember selection
+    //             setSelectedSiteCode(pendingFormData.siteCode);
+
+    //             // 2. UPDATE UI INSTANTLY (optimistic update)
+    //             setUserData(prev =>
+    //                 prev.map(item =>
+    //                     item.siteCode.trim() === pendingFormData.siteCode.trim()
+    //                         ? { ...item, ...pendingFormData }
+    //                         : item
+    //                 )
+    //             );
+
+    //             setGridRefreshKey(prev => prev + 1);
+
+    //             // 3. Fetch fresh data in background (sync with backend)
+    //             setTimeout(() => {
+    //                 fetchSiteData().catch(err => {
+    //                     console.error("Background refresh failed", err);
+    //                 });
+    //             }, 300);
+
+
+    //             // Force grid to remount and show new data
+    //             // setGridRefreshKey(prev => prev + 1);
 
     //             // Clean up
     //             setShowAuditTrail(false);
@@ -619,6 +670,7 @@ function Site() {
     //         alert('Failed to update site. Please try again.');
     //     }
     // };
+
 
     const handleAuditAuthorized = async (auditData) => {
         console.log("Audit Data:", auditData);
@@ -675,45 +727,41 @@ function Site() {
             }
 
             if (result.rtnmsg === "Success" || result.rtnmsg === "Site updated successfully") {
-                // Store which row to reselect
-                //setSelectedSiteCode(selectedRecord.siteCode);
-                // setSelectedSiteCode(pendingFormData.siteCode);
+                // 1. Remember which site code to keep selected
+                const editedSiteCode = pendingFormData.siteCode.trim();
 
-
-                // // Fetch fresh data from backend
-                // await fetchSiteData();
-
-                // 1. Remember selection
-                setSelectedSiteCode(pendingFormData.siteCode);
-
-                // 2. UPDATE UI INSTANTLY (optimistic update)
+                // 2. Update UI immediately with new data
                 setUserData(prev =>
                     prev.map(item =>
-                        item.siteCode.trim() === pendingFormData.siteCode.trim()
-                            ? { ...item, ...pendingFormData }
+                        item.siteCode.trim() === editedSiteCode
+                            ? {
+                                id: item.siteCode.trim(),
+                                siteCode: item.siteCode.trim(),
+                                siteName: pendingFormData.siteName?.trim() || item.siteName,
+                                siteAddress: pendingFormData.siteAddress?.trim() || '',
+                                contactPerson: pendingFormData.contactPerson?.trim() || '',
+                                mobileNo: pendingFormData.mobileNo?.trim() || '',
+                                faxNo: pendingFormData.faxNo?.trim() || '',
+                                email: pendingFormData.email?.trim() || '',
+                                live: item.live
+                            }
                             : item
                     )
                 );
 
+                // 3. Force grid to remount (triggers UI update)
                 setGridRefreshKey(prev => prev + 1);
 
-                // 3. Fetch fresh data in background (sync with backend)
-                setTimeout(() => {
-                    fetchSiteData().catch(err => {
-                        console.error("Background refresh failed", err);
-                    });
-                }, 300);
+                // 4. Keep selection - the useRef in GridLayout will restore it after remount
+                setSelectedSiteCode(editedSiteCode);
 
-
-                // Force grid to remount and show new data
-                // setGridRefreshKey(prev => prev + 1);
-
-                // Clean up
+                // 5. Close popups
                 setShowAuditTrail(false);
                 setActivePopup(null);
                 setValidationErrors({});
                 setPendingFormData(null);
                 setPasswordError(false);
+
             } else {
                 alert(result.rtnmsg || 'Failed to update site');
             }
@@ -1101,7 +1149,7 @@ function Site() {
             </div>
 
             <div className="flex-1 overflow-hidden">
-                <UsersPage key={gridRefreshKey} onRowClick={handleRowClick} userData={userData} setUserData={setUserData} selectedIndex={selectedIndex} />
+                <UsersPage gridRefreshKey={gridRefreshKey} onRowClick={handleRowClick} userData={userData} setUserData={setUserData} selectedIndex={selectedIndex} getRowId={(row) => row.siteCode} />
             </div>
 
             {/* CustomPopup */}
