@@ -315,7 +315,7 @@
   "toaddfile": " to add file",
   "tagName":"TagName",
   "tagValue":"TagValue",
-  "noTagValue":"No Tag Value"
+  "noTagValue":"No data to display"
 },
 
   "scheduler": {
