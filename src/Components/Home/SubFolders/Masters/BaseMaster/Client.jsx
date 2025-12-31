@@ -21,12 +21,14 @@ const Client = () => {
     const [showModal, setShowModal] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
   const [selectedRowId, setSelectedRowId] = useState(null);
-  const selectedRow = rows.find((r) => r.id === selectedRowId);
-  const [mappedInstruments, setMappedInstruments] = useState([]);
-  const [showClientModal, setShowClientModal] = useState(false);
+
+  const [unmappedInstruments, setUnmappedInstruments] = useState([]);
+  const [unmappedInstrumentsId, setUnmappedInstrumentsId] = useState([]);
+
 const [showAuditTrail, setShowAuditTrail] = useState(false);
 
 const [pendingClientData, setPendingClientData] = useState(null);
+const [gridKey, setGridKey] = useState(0);
 
   
 
@@ -51,11 +53,6 @@ const getSessionValue = (key) => {
   }
 };
 
-const buildEncryptedRequest = (payload) => {
-  return {
-    passObj: CF_encrypt(JSON.stringify(payload)),
-  };
-};
 
 const buildClientRequest = () => {
   return {
@@ -91,7 +88,6 @@ const loadMappedInstruments = async (clientId) => {
       requestPayload
     );
 
-    console.log("Mapped Instrument Response:", response);
 
     // Return the mapped instrument string, or "-" if empty
     return response?.MappedInstrumentClient || "-";
@@ -115,7 +111,7 @@ const loadClientGridData = async () => {
             id: item.sClientID || index.toString(),
             clientName: item.sClientName,
             clientAlias: item.sClientAliasName,
-            status: item.sClientStatus,
+            status: item.sClientStatus ==="DeActive" ? "Deactive" : "Active",
             clientType: item.sClientTypeName,
             ipAddress: item.sIPAddress,
             createdBy: item.sCreatedBy,
@@ -139,22 +135,40 @@ const loadClientGridData = async () => {
 };
 
 console.log("Client Rows:", rows); // Debugging log
+useEffect(() => {
+  const fetchUnmappedInstruments = async () => {
+    try {
+      const response = await postData(
+        "basemaster/getClientUnmappingInstrumentMaster",
+        buildClientRequest()
+      );
+
+      if (Array.isArray(response)) {
+        setUnmappedInstruments(
+  response.map(inst => ({
+    sInstrumentID: inst.sInstrumentID.trim(),   // I3
+    sInstrumentName: inst.sInstrumentName.trim() // IN002
+  }))
+);
+
+        console.log("Unmapped Instruments:", unmappedInstruments); // Debug log       
+      }
+    } catch (err) {
+      console.error("Error fetching unmapped instruments:", err);
+    }
+  };
+
+  fetchUnmappedInstruments();
+}, []);
+
 
 const buildInstrumentUnMappingByClient = (selectedInstruments = []) => {
-  return selectedInstruments.map(inst => {
-    // Example inst: "IN001 (in001)"
-
-    const match = inst.match(/^(.+?)\s*\((.+?)\)$/);
-
-    const instrumentName = match?.[1]?.trim() || inst.trim();
-    const instrumentId = match?.[2]?.trim().toUpperCase() || "";
-
-    return {
-      sInstrumentName: instrumentName,               // ✅ IN001
-      sInstrumentID: instrumentId.padEnd(10, " ")    // ✅ IN001_____
-    };
-  });
+  return selectedInstruments.map(inst => ({
+    sInstrumentID: inst.sInstrumentID,     // I3
+    sInstrumentName: inst.sInstrumentName  // IN002
+  }));
 };
+
 
 const buildInsertClientRequest = (clientData, auditData) => {
   const instruments =
@@ -163,12 +177,11 @@ const buildInsertClientRequest = (clientData, auditData) => {
       : [];
 
   return {
-    InstrumentUnMappingByClient: instruments,
-    AuditTrailValues: auditData, // ✅ CONDITIONAL
+    InstrumentUnMappingByClient: instruments, // ✅ CONDITIONAL
     Client: {
       sClientName: clientData.clientName,
       sClientAliasName: clientData.clientAlias,
-      sClientTypeID: clientData.clientTypeID, // IMPORTANT (ID, not name)
+      sClientTypeID: "CT1",
       iStatus: clientData.status === "Active" ? 1 : 0,
       nClientGateway: clientData.gatewayClient ? 1 : 0
     },
@@ -176,35 +189,127 @@ const buildInsertClientRequest = (clientData, auditData) => {
     ApplicationCode: "SDMS"
   };
 };
+const buildEditClientRequest = (clientData, auditData) => {
+  console.log("Building Edit Client Request with data:", clientData, auditData); // Debug log
+  return {
+    InstrumentUnMappingByClient: buildInstrumentUnMappingByClient(
+      clientData.selectedInstruments
+    ),
+
+    AuditTrailValues: {
+      sUserPassword: auditData.password,
+      sUserDomainName: auditData.domain,
+      sComments: auditData.comments,
+      sUserName: auditData.username,
+      sReasonNo: auditData.reasonNo,
+      sReasonName: auditData.reasonName
+    },
+
+    Client: {
+      sClientID: clientData.clientId, // 🔥 REQUIRED
+      sClientName: clientData.clientName,
+      sClientAliasName: clientData.clientAlias,
+      sClientTypeID: "CT1",
+      iStatus: clientData.status === "Active" ? 1 : 0,
+      nClientGateway: clientData.gatewayClient ? 1 : 0
+    },
+
+    ActiveUserDetails: buildClientRequest().ActiveUserDetails,
+    ApplicationCode: "SDMS"
+  };
+};
+
 
 const handleAuditSubmit = async (auditData) => {
-  console.log("HANDLE AUDIT SUBMIT CALLED", auditData);
   try {
-    const requestPayload = buildInsertClientRequest(
-      pendingClientData,
-      auditData
-    );
+    const isEdit = pendingClientData.mode === "EDIT";
 
-    console.log("INSERT CLIENT REQUEST:", requestPayload);
+    const requestPayload = isEdit
+      ? buildEditClientRequest(pendingClientData, auditData)
+      : buildInsertClientRequest(pendingClientData, auditData);
 
-    const response = await postData(
-      "basemaster/insertClient",
-      requestPayload
-    );
+    const apiUrl = isEdit
+      ? "basemaster/editClient"
+      : "basemaster/insertClient";
 
-    console.log("INSERT CLIENT RESPONSE:", response);
+    const response = await postData(apiUrl, requestPayload);
 
     if (response?.Rtn === "Success") {
-      await loadClientGridData(); // 🔥 reload grid
+      if (isEdit) {
+        // 🔥 Update grid state immediately for edited row
+        setRows(prevRows =>
+          prevRows.map(row =>
+            row.id === pendingClientData.clientId
+              ? {
+                  ...row,
+                  clientName: pendingClientData.clientName,
+                  clientAlias: pendingClientData.clientAlias,
+                  status: pendingClientData.status,
+                  clientType: pendingClientData.clientType,
+                  mappedInstrument: pendingClientData.selectedInstruments
+                    ? pendingClientData.selectedInstruments.map(i => i.sInstrumentName).join(", ")
+                    : row.mappedInstrument
+                }
+              : row
+          )
+        );
+      } else {
+        // For new insert, reload grid
+        await loadClientGridData();
+      }
     }
 
     setShowAuditTrail(false);
     setPendingClientData(null);
     setEditingRow(null);
   } catch (err) {
-    console.error("Insert Client Error:", err);
+    console.error("Client submit error:", err);
   }
 };
+
+
+const handleEdit = async (row) => {
+  try {
+    const response = await postData(
+      "basemaster/editGetClient",
+      {
+        sClientID: row.id,
+        ActiveUserDetails: buildClientRequest().ActiveUserDetails,
+        ApplicationCode: "SDMS"
+      }
+    );
+
+    if (response?.Rtn === "Success") {
+
+      // 1️⃣ Normalize instruments
+      const normalizedInstruments = response.InstrumentUnMappingByClient.map(inst => ({
+        sInstrumentID: inst.sInstrumentID.trim(),
+        sInstrumentName: inst.sInstrumentName.trim(),
+        iStatus: inst.iStatus
+      }));
+
+      // 2️⃣ Preselect mapped instruments
+      const initiallySelected = normalizedInstruments.filter(
+        inst => inst.iStatus === 1
+      );
+
+      // 3️⃣ Set edit form data
+      setEditingRow({
+        id: row.id,
+        clientName: response.Client.sClientName.trim(),
+        clientAlias: response.Client.sClientAliasName.trim(),
+        status: response.Client.iStatus === 1 ? "Active" : "Inactive",
+        selectedInstruments: initiallySelected,
+        allInstruments: normalizedInstruments
+      });
+
+      setShowModal(true);
+    }
+  } catch (err) {
+    console.error("Edit load error:", err);
+  }
+};
+
 
 
 useEffect(() => {
@@ -547,12 +652,6 @@ useEffect(() => {
   );
 
   /* ---------------- SELECT ROW FOR EDIT ---------------- */
-  const handleEdit = (row) => {
-    setEditingRow(row);
-    setShowModal(true);
-    setSelectedRowId(row.id);
-  };
-
   return (
     <div className=" h-full overflow-hidden flex flex-col">
       {/* ACTION BAR */}
@@ -602,9 +701,10 @@ useEffect(() => {
       />
     
       {/* MODAL */}
-      {showModal && (
+   {showModal && (
   <AddClientModal
     initialData={editingRow}
+    allInstruments={editingRow?.allInstruments || unmappedInstruments}// 🔥 PASS HERE
     onClose={() => setShowModal(false)}
     onSubmit={(clientData) => {
       setPendingClientData({
@@ -614,10 +714,11 @@ useEffect(() => {
       });
 
       setShowModal(false);
-      setShowAuditTrail(true); // 🔥 open audit
+      setShowAuditTrail(true);
     }}
   />
 )}
+
 
 {showAuditTrail && (
   <AuditTrail

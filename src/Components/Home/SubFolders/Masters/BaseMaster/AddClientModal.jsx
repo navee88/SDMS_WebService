@@ -24,9 +24,10 @@ const INSTRUMENTS = [
   "IN015 (in015)",
 ];
 
-const AddClientModal = ({ initialData, onClose, onSubmit }) => {
+const AddClientModal = ({ initialData,allInstruments = [], onClose, onSubmit }) => {
   const nodeRef = useRef(null);
-  const [allInstruments, setAllInstruments] = useState([]);
+  const [submitted, setSubmitted] = useState(false);
+
 
   const { postData } = useAxios();
 
@@ -80,8 +81,9 @@ const AddClientModal = ({ initialData, onClose, onSubmit }) => {
   const [clientTypes, setClientTypes] = useState([]);
   const [instrumentSearch, setInstrumentSearch] = useState("");
   const [selectedInstruments, setSelectedInstruments] = useState(
-    initialData?.mappedInstrument?.split(", ").filter(Boolean) || []
-  );
+  initialData?.selectedInstruments || []
+);
+
 
   const isAddMode = !initialData;
 
@@ -110,54 +112,48 @@ const AddClientModal = ({ initialData, onClose, onSubmit }) => {
 
     fetchClientTypes();
   }, []);
-  useEffect(() => {
-  const fetchInstruments = async () => {
-    try {
-      const response = await postData(
-        "basemaster/getClientUnmappingInstrumentMaster",
-        buildClientRequest()
-      );
 
-      if (Array.isArray(response)) {
-        const instruments = response.map(inst => inst.sInstrumentName.trim());
-        setAllInstruments(instruments);
-      }
-    } catch (err) {
-      console.error("Error fetching instruments:", err);
-    }
-  };
-
-  fetchInstruments();
-}, []);
 useEffect(() => {
-  if (initialData) {
-    setSelectedInstruments(
-      initialData.mappedInstrument !== "-"
-        ? initialData.mappedInstrument.split(",")
-        : []
-    );
+  if (initialData?.selectedInstruments) {
+    setSelectedInstruments(initialData.selectedInstruments);
   }
 }, [initialData]);
 
 
+
 const filteredInstruments = useMemo(() => {
   return allInstruments.filter(inst =>
-    inst.toLowerCase().includes(instrumentSearch.toLowerCase())
+    inst.sInstrumentName
+      .toLowerCase()
+      .includes(instrumentSearch.toLowerCase())
   );
 }, [instrumentSearch, allInstruments]);
 
 
 
-  const handleSubmit = () => {
+
+  const handleSubmit = () => {  
+    setSubmitted(true);
+
+  if (
+    !form.clientName ||
+    !form.clientAlias ||
+    !form.clientType
+  ) {
+    return;
+  }
   onSubmit({
     clientName: form.clientName,
     clientAlias: form.clientAlias,
-    status: form.active ? "Active" : "Inactive",
+    status: form.active ? "Active" : "Dactive",
     clientType: form.clientType,
     clientTypeID: clientTypes.find(ct => ct === form.clientType), // or map ID properly
     gatewayClient: form.gatewayClient,
     selectedInstruments, // 🔥 IMPORTANT
+    
   });
+   setSubmitted(false);
+  onClose();
 };
 
 
@@ -200,6 +196,8 @@ const filteredInstruments = useMemo(() => {
 <AnimatedDropdown 
 name="clientName" value={form.clientName} 
 allowFreeInput 
+required
+  showError={submitted }
 borderColor="border-gray-300" 
 onChange={(e) => setForm({ ...form, clientName: e.target.value })} 
 />
@@ -213,6 +211,8 @@ onChange={(e) => setForm({ ...form, clientName: e.target.value })}
  <AnimatedDropdown  name="clientAlias" 
  value={form.clientAlias} 
  allowFreeInput 
+ required
+  showError={submitted }
  borderColor="border-gray-300" 
  onChange={(e) => setForm({ ...form, clientAlias: e.target.value })}
   />
@@ -229,6 +229,8 @@ onChange={(e) => setForm({ ...form, clientName: e.target.value })}
               value={form.clientType}
               options={clientTypes} 
               borderColor="border-gray-300"
+              required
+  showError={submitted }
               onChange={(e) => setForm({ ...form, clientType: e.target.value })}
               className="py-0"
             />
@@ -288,23 +290,29 @@ onChange={(e) => setForm({ ...form, clientName: e.target.value })}
                   {/* SHOW DIFFERENT MESSAGE BASED ON MODE */}
                   {filteredInstruments.map((inst) => (
   <label
-    key={inst}
+    key={inst.sInstrumentID}
     className="flex gap-2 text-sm hover:bg-gray-50 p-1 rounded"
   >
     <input
-      type="checkbox"
-      checked={selectedInstruments.includes(inst)}
-      onChange={() =>
-        setSelectedInstruments(prev =>
-          prev.includes(inst)
-            ? prev.filter(i => i !== inst)
-            : [...prev, inst]
-        )
-      }
-    />
-    {inst}
+  type="checkbox"
+  checked={selectedInstruments.some(
+    i => i.sInstrumentID === inst.sInstrumentID
+  )}
+  onChange={() =>
+    setSelectedInstruments(prev =>
+      prev.some(i => i.sInstrumentID === inst.sInstrumentID)
+        ? prev.filter(i => i.sInstrumentID !== inst.sInstrumentID)
+        : [...prev, inst]
+    )
+  }
+/>
+
+
+
+    {inst.sInstrumentName}
   </label>
 ))}
+
 
 {filteredInstruments.length === 0 && (
   <div className="text-gray-400 text-xs pt-[53px] text-center py-4">
