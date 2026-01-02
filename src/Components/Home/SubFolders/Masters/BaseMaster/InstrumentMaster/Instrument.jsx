@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
+import React, { useMemo, useState , useEffect} from "react";
+import GridLayout from "../../../../../Layout/Common/Home/Grid/GridLayout";
 import { MdPrint } from "react-icons/md";
 import { IoMdAdd } from "react-icons/io";
 import { FaEdit } from "react-icons/fa";
@@ -7,6 +7,8 @@ import { TiExport } from "react-icons/ti";
 import { MdBlock } from "react-icons/md";
 import AddInstrumentModal from "./AddInstrumentModal";
 import { useTranslation } from "react-i18next";
+import useAxios from "../../../../../../Services/servicecall";
+  import {CF_decrypt} from "../../../../../Common/encryptiondecryption";
 
 
 /* ---------------- MOCK DATA ---------------- */
@@ -57,8 +59,12 @@ const mockRows = [
 
 const DetailRow = ({ label, value }) => (
   <div className="grid grid-cols-2 gap-4 ">
-    <div className="font-bold text-[12px] text-[#405F7D] font-roboto">{label}</div>
-    <div className="font-bold text-[12px] text-[#353f49] font-roboto">{value || "-"}</div>
+    <div className="font-bold text-[12px] text-[#405F7D] font-roboto">
+      {label}
+    </div>
+    <div className="font-bold text-[12px] text-[#353f49] font-roboto">
+      {value || "-"}
+    </div>
   </div>
 );
 
@@ -69,9 +75,10 @@ const ActionButton = ({ icon: Icon, label, onClick, disabled }) => (
     className={`
       flex items-center gap-1 px-[12px] py-[6px]
       font-roboto text-[11px] font-bold rounded shadow-sm
-      ${disabled
-        ? "bg-gray-400/10 text-blue-300 cursor-not-allowed"
-        : "bg-[#f0f2f5] text-[#2883fe]"
+      ${
+        disabled
+          ? "bg-gray-400/10 text-blue-300 cursor-not-allowed"
+          : "bg-[#f0f2f5] text-[#2883fe]"
       }
     `}
   >
@@ -84,8 +91,11 @@ const ActionButton = ({ icon: Icon, label, onClick, disabled }) => (
 
 export default function Instrument() {
   const { t } = useTranslation();
+  const { postData } = useAxios();
+const [loading, setLoading] = useState(false);
 
-  const [rows, setRows] = useState(mockRows);
+
+  const [rows, setRows] = useState([]);
   const [selectedRowId, setSelectedRowId] = useState(rows[0]?.id ?? null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [modalMode, setModalMode] = useState("add");
@@ -97,6 +107,106 @@ export default function Instrument() {
     [rows, selectedRowId]
   );
   const isRetired = selectedRow?.status === "Retired";
+      const getSessionValue = (key) => {
+        const value = sessionStorage.getItem(key);
+  
+        // ✅ 1. key missing
+        if (!value) return "";
+  
+        // ✅ 2. already plain text (NOT encrypted)
+        if (!value.includes("=") && value.length < 40) {
+          return value;
+        }
+  
+        // ✅ 3. encrypted value
+        try {
+          return CF_decrypt(value);
+        } catch (e) {
+          console.warn(`Decrypt skipped for ${key}`);
+          return value;
+        }
+      };
+      const buildInstrumentRequest= () => {
+      return {
+        sActionType: "View",
+        ActiveUserDetails: {
+          sUserDomainName: getSessionValue("sDomainName"),
+          sSessionID: getSessionValue("sSessionID"),
+          sUserID: getSessionValue("sUserID"),
+          sTimeZoneID: getSessionValue("sTimeZoneID") + "<~>true",
+          sApplicationName: "SDMS",
+          sdbtype: getSessionValue("sdbtype"),
+          sUsername: getSessionValue("sUsername"),
+          sSiteCode: getSessionValue("sSiteCode"),
+          sCategories: getSessionValue("sCategories"),
+          sUserGroupID: getSessionValue("sUserGroupID"),
+          sUserStatus: "",
+          sTenantID: "",
+        },
+        ApplicationCode: "SDMS",
+      };
+    };
+    const loadInstrumentGrid = async () => {
+  try {
+    setLoading(true);
+
+    const response = await postData(
+      "basemaster/getInstrument",
+      buildInstrumentRequest()
+    );
+
+    console.log("Instrument API Response:", response);
+
+    if (Array.isArray(response)) {
+      const mappedRows = response.map((item, index) => ({
+        // ✅ REQUIRED FOR GRID
+        id: item.sInstrumentID || index.toString(),
+
+        // ✅ GRID COLUMNS
+        instrumentcode: item.sInstrumentName,
+        instrumentAlias: item.sInstrumentAliasName,
+        instrumentModel: item.sInstrumentModel || "-",
+        instrumentMake: item.sInstrumentMake || "-",
+        clientName: item.sAssociatedToClient || "-",
+
+        // ✅ STATUS
+        status: item.sInstrumentStatus || "Inactive",
+
+        // ✅ AUDIT FIELDS
+        createdBy: item.sCreatedBy || "-",
+        createdOn: item.dCreatedOn
+          ? new Date(item.dCreatedOn).toLocaleDateString("en-GB")
+          : "-",
+        modifiedBy: item.sModifiedBy || "-",
+        modifiedOn: item.dModifiedOn
+          ? new Date(item.dModifiedOn).toLocaleDateString("en-GB")
+          : "-"
+      }));
+
+      setRows(mappedRows);
+
+      // ✅ keep / auto select
+      setSelectedRowId((prev) =>
+        mappedRows.some((r) => r.id === prev)
+          ? prev
+          : mappedRows[0]?.id ?? null
+      );
+    } else {
+      setRows([]);
+      setSelectedRowId(null);
+    }
+  } catch (err) {
+    console.error("Instrument API Error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+useEffect(() => {
+  loadInstrumentGrid();
+}, []);
+
+
 
   /* ---------------- HANDLE SAVE ---------------- */
 
@@ -174,23 +284,25 @@ export default function Instrument() {
       t("masters.createdBy"),
       t("masters.createdOn"),
       t("masters.modifiedBy"),
-      t("masters.modifiedOn")
+      t("masters.modifiedOn"),
     ];
 
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => [
-        `"${row.instrumentcode}"`,
-        `"${row.instrumentAlias}"`,
-        `"${row.instrumentModel}"`,
-        `"${row.instrumentMake}"`,
-        `"${row.clientName}"`,
-        `"${row.status}"`,
-        `"${row.createdBy}"`,
-        `"${row.createdOn}"`,
-        `"${row.modifiedBy}"`,
-        `"${row.modifiedOn}"`
-      ].join(","))
+      ...rows.map((row) =>
+        [
+          `"${row.instrumentcode}"`,
+          `"${row.instrumentAlias}"`,
+          `"${row.instrumentModel}"`,
+          `"${row.instrumentMake}"`,
+          `"${row.clientName}"`,
+          `"${row.status}"`,
+          `"${row.createdBy}"`,
+          `"${row.createdOn}"`,
+          `"${row.modifiedBy}"`,
+          `"${row.modifiedOn}"`,
+        ].join(",")
+      ),
     ].join("\n");
 
     // Create and download CSV file
@@ -198,7 +310,10 @@ export default function Instrument() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `instruments_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute(
+      "download",
+      `instruments_${new Date().toISOString().slice(0, 10)}.csv`
+    );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -210,7 +325,10 @@ export default function Instrument() {
   const handlePrint = () => {
     const now = new Date();
     const printDate = now.toLocaleDateString("en-GB");
-    const printTime = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    const printTime = now.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
     const printContent = `
       <!DOCTYPE html>
@@ -374,13 +492,19 @@ export default function Instrument() {
         <div class="print-meta">
           <div>
             <strong>Total Instruments:</strong> ${rows.length}<br>
-            <strong>Active:</strong> ${rows.filter(r => r.status === "Active").length}<br>
-            <strong>Inactive:</strong> ${rows.filter(r => r.status === "Inactive").length}
+            <strong>Active:</strong> ${
+              rows.filter((r) => r.status === "Active").length
+            }<br>
+            <strong>Inactive:</strong> ${
+              rows.filter((r) => r.status === "Inactive").length
+            }
           </div>
           <div>
             <strong>Print Date:</strong> ${printDate}<br>
             <strong>Print Time:</strong> ${printTime}<br>
-            <strong>Retired:</strong> ${rows.filter(r => r.status === "Retired").length}
+            <strong>Retired:</strong> ${
+              rows.filter((r) => r.status === "Retired").length
+            }
           </div>
         </div>
 
@@ -394,13 +518,19 @@ export default function Instrument() {
             </tr>
           </thead>
           <tbody>
-            ${rows.map(row => `
+            ${rows
+              .map(
+                (row) => `
               <tr>
                 <td>${row.instrumentcode}</td>
                 <td>${row.instrumentAlias}</td>
-                <td class="status-${row.status.toLowerCase()}">${row.status}</td>
+                <td class="status-${row.status.toLowerCase()}">${
+                  row.status
+                }</td>
               </tr>
-            `).join('')}
+            `
+              )
+              .join("")}
           </tbody>
         </table>
 
@@ -416,9 +546,9 @@ export default function Instrument() {
     const printWindow = window.open("", "_blank", "width=900,height=600");
     printWindow.document.write(printContent);
     printWindow.document.close();
-    
+
     // Wait for content to load then print
-    printWindow.onload = function() {
+    printWindow.onload = function () {
       printWindow.focus();
       printWindow.print();
       // Optional: Close after printing
@@ -492,8 +622,14 @@ export default function Instrument() {
 
   const renderDetailPanel = (row) => (
     <div className="space-y-2 ">
-      <DetailRow label={t("masters.instrumentModel")} value={row.instrumentModel} />
-      <DetailRow label={t("masters.instrumentMake")} value={row.instrumentMake} />
+      <DetailRow
+        label={t("masters.instrumentModel")}
+        value={row.instrumentModel}
+      />
+      <DetailRow
+        label={t("masters.instrumentMake")}
+        value={row.instrumentMake}
+      />
       <DetailRow label={t("masters.client")} value={row.clientName} />
       <DetailRow label={t("masters.createdBy")} value={row.createdBy} />
       <DetailRow label={t("masters.createdOn")} value={row.createdOn} />
@@ -532,18 +668,18 @@ export default function Instrument() {
           disabled={isRetired}
           onClick={() => handleRetire(selectedRow)}
         />
-        
+
         {/* Export Button */}
-        <ActionButton 
-          icon={TiExport} 
-          label={t("button.export")} 
+        <ActionButton
+          icon={TiExport}
+          label={t("button.export")}
           onClick={handleExport}
         />
-        
+
         {/* Print Button */}
-        <ActionButton 
-          icon={MdPrint} 
-          label={t("button.print")} 
+        <ActionButton
+          icon={MdPrint}
+          label={t("button.print")}
           onClick={handlePrint}
         />
       </div>
@@ -607,9 +743,11 @@ export default function Instrument() {
               </button>
               <button
                 onClick={() => {
-                  setRows(prev =>
-                    prev.map(row =>
-                      row.id === rowToRetire.id ? { ...row, status: "Retired" } : row
+                  setRows((prev) =>
+                    prev.map((row) =>
+                      row.id === rowToRetire.id
+                        ? { ...row, status: "Retired" }
+                        : row
                     )
                   );
                   setIsConfirmOpen(false);
@@ -619,7 +757,6 @@ export default function Instrument() {
               >
                 {t("button.ok")}
               </button>
-              
             </div>
           </div>
         </div>
