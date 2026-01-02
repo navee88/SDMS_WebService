@@ -24,6 +24,8 @@ import Errordialog from '../../../../Layout/Common/Errordialog';
 import CustomPopup from '../../../../Layout/Common/Popup';
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import useAxios from '../../../../../Services/servicecall';
+import { CF_encrypt, CF_decrypt } from '../../../../../Components/Common/encryptiondecryption';
 
 const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => {
     const [selectedArchiveId, setSelectedArchiveId] = useState(archiveList.length > 0 ? archiveList[0].id : null);
@@ -912,6 +914,11 @@ const AuditTrailHistory = () => {
         "Task Status": true,
         "Parser Status": false
     });
+    const [selectedClient, setSelectedClient] = useState("All");
+    const [clientList, setClientList] = useState([]);
+    const [isFilterCollapsed, setIsFilterCollapsed] = useState(false);
+    const [passwordError, setPasswordError] = useState(false);
+    const { postData } = useAxios();
 
     const enabledActions = ALL_ACTION_ORDER.filter(action => configState[action]);
 
@@ -975,14 +982,26 @@ const AuditTrailHistory = () => {
         setRecordsDuration(actualValue);
     };
 
-    useEffect(() => {
-        setLoading(true);
-        setTimeout(() => {
-            setUserData(MOCK_DATA);
-            setLoading(false); // Set to false after loading
-        }, 300);
-    }, []);
+    // useEffect(() => {
+    //     setLoading(true);
+    //     setTimeout(() => {
+    //         setUserData(MOCK_DATA);
+    //         setLoading(false); // Set to false after loading
+    //     }, 300);
+    // }, []);
 
+    useEffect(() => {
+        const initializeComponent = async () => {
+            // Run in parallel instead of sequential
+            await Promise.all([
+                logViewAuditTrail(),
+                fetchClientList(),
+                fetchAuditTrailData()
+            ]);
+        };
+
+        initializeComponent();
+    }, []);
     useEffect(() => {
         const handleCloseReviewHistory = () => {
             setShowReviewHistory(false);
@@ -1208,7 +1227,19 @@ const AuditTrailHistory = () => {
     );
 
 
-    const handleReviewHistory = () => {
+    // const handleReviewHistory = () => {
+    //     if (selectedRows.length === 0) {
+    //         setErrorDialog({
+    //             show: true,
+    //             message: "Select an existing record.",
+    //             type: "information"
+    //         });
+    //         return;
+    //     }
+    //     setShowReviewHistory(true);
+    // };
+
+    const handleReviewHistory = async () => {
         if (selectedRows.length === 0) {
             setErrorDialog({
                 show: true,
@@ -1217,7 +1248,39 @@ const AuditTrailHistory = () => {
             });
             return;
         }
-        setShowReviewHistory(true);
+
+        try {
+            setLoading(true);
+            const payload = {
+                selectedRowIds: selectedRows,
+                ActiveUserDetails: getSessionUserDetails()
+            };
+
+            console.log("Review History Payload:", payload);
+            const result = await postData('AuditTrail/GetReviewHistory', payload);
+            console.log("Review History Result:", result);
+
+            if (result && Array.isArray(result)) {
+                const mappedData = result.map((item, index) => ({
+                    id: item.id,
+                    moduleName: item.ModuleName || '',
+                    actions: item.Actions || '',
+                    comments: item.Comments || '',
+                    reviewStatus: item.ReviewStatus || '',
+                    reviewComments: item.ReviewComments || '',
+                    reviewedBy: item.ReviewedBy || '',
+                    reviewedDate: item.ReviewedDate || ''
+                }));
+
+                setUserData(mappedData);
+            }
+
+            setShowReviewHistory(true);
+            setLoading(false);
+        } catch (error) {
+            console.error('Error fetching review history:', error);
+            setLoading(false);
+        }
     };
 
     const handleReview = () => {
@@ -1243,32 +1306,39 @@ const AuditTrailHistory = () => {
         setShowAuditTrail(true);
     }
 
-    const handleAuditTrailAuthorized = (data) => {
-        console.log('Review Audit Trail Data:', data);
+    // const handleAuditTrailAuthorized = (data) => {
+    //     console.log('Review Audit Trail Data:', data);
 
-        // Mock: Update local state
-        setUserData(prev => prev.map(row =>
-            selectedRows.includes(row.id)
-                ? { ...row, reviewStatus: "Reviewed" }
-                : row
-        ));
-        setShowAuditTrail(false);
-        setSelectedRows([]);
+    //     // Mock: Update local state
+    //     setUserData(prev => prev.map(row =>
+    //         selectedRows.includes(row.id)
+    //             ? { ...row, reviewStatus: "Reviewed" }
+    //             : row
+    //     ));
+    //     setShowAuditTrail(false);
+    //     setSelectedRows([]);
+    // };
 
-        // When ready for API, uncomment below:
-        /*
+    const handleAuditTrailAuthorized = async (auditData) => {
+        console.log("Audit Data:", auditData);
+
         try {
-            const response = await fetch('/api/audit-trail', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            
-            if (response.ok) {
+            const payload = {
+                selectedRowIds: selectedRows,
+                AuditTrailValues: auditData.AuditTrailValues,
+                ActiveUserDetails: getSessionUserDetails()
+            };
+
+            console.log("Submit Review Payload:", payload);
+            const result = await postData('AuditTrail/SubmitReview', payload);
+            console.log("Submit Review Result:", result);
+
+            if (result.AuditTrailLogin === false) {
+                setPasswordError(true);
+                return;
+            }
+
+            if (result.rtnmsg === "Success") {
                 setUserData(prev => prev.map(row =>
                     selectedRows.includes(row.id)
                         ? { ...row, reviewStatus: "Reviewed" }
@@ -1276,11 +1346,14 @@ const AuditTrailHistory = () => {
                 ));
                 setShowAuditTrail(false);
                 setSelectedRows([]);
+                setPasswordError(false);
+            } else {
+                alert(result.rtnmsg || 'Failed to submit review');
             }
         } catch (error) {
-            console.error('API Error:', error);
+            console.error('Error submitting review:', error);
+            alert('Failed to submit review. Please try again.');
         }
-        */
     };
 
     const handleCreateArchive = () => {
@@ -1292,55 +1365,66 @@ const AuditTrailHistory = () => {
         setShowCreateAuditLog(true);
     };
 
-    const handleArchiveAuditLogAuthorized = (data) => {
-        console.log('Create Archive Audit Trail Data:', data);
+    // const handleArchiveAuditLogAuthorized = (data) => {
+    //     console.log('Create Archive Audit Trail Data:', data);
 
-        // Mock: Create archive locally
-        const newArchive = {
-            id: archiveList.length + 1,
-            name: `CFRArchiving_${archiveList.length + 1}_${new Date().toISOString().split('T')[0].replace(/-/g, '')}`,
-            createDate: new Date().toISOString().replace('T', ' ').substring(0, 19)
-        };
-        setArchiveList(prev => [newArchive, ...prev]);
-        setShowCreateAuditLog(false);
+    //     // Mock: Create archive locally
+    //     const newArchive = {
+    //         id: archiveList.length + 1,
+    //         name: `CFRArchiving_${archiveList.length + 1}_${new Date().toISOString().split('T')[0].replace(/-/g, '')}`,
+    //         createDate: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    //     };
+    //     setArchiveList(prev => [newArchive, ...prev]);
+    //     setShowCreateAuditLog(false);
 
-        setErrorDialog({
-            show: true,
-            message: `Archive "${newArchive.name}" created successfully!`,
-            type: "success"
-        });
+    //     setErrorDialog({
+    //         show: true,
+    //         message: `Archive "${newArchive.name}" created successfully!`,
+    //         type: "success"
+    //     });
+    // };
 
-        // When ready for API, uncomment below:
-        /*
+    const handleArchiveAuditLogAuthorized = async (auditData) => {
+        console.log('Create Archive Audit Trail Data:', auditData);
+
         try {
-            const response = await fetch('/api/create-archive', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            
-            if (response.ok) {
+            const payload = {
+                AuditTrailValues: auditData.AuditTrailValues,
+                ActiveUserDetails: getSessionUserDetails()
+            };
+
+            console.log("Create Archive Payload:", payload);
+            const result = await postData('AuditTrail/CreateArchive', payload);
+            console.log("Create Archive Result:", result);
+
+            if (result.AuditTrailLogin === false) {
+                setPasswordError(true);
+                return;
+            }
+
+            if (result.rtnmsg === "Success") {
                 const newArchive = {
-                    id: result.archiveId,
-                    name: result.archiveName,
-                    createDate: result.createDate
+                    id: result.archiveId || archiveList.length + 1,
+                    name: result.archiveName || `CFRArchiving_${archiveList.length + 1}_${new Date().toISOString().split('T')[0].replace(/-/g, '')}`,
+                    createDate: result.createDate || new Date().toISOString().replace('T', ' ').substring(0, 19)
                 };
+
                 setArchiveList(prev => [newArchive, ...prev]);
                 setShowCreateAuditLog(false);
+                setPasswordError(false);
+
                 setErrorDialog({
                     show: true,
                     message: `Archive "${newArchive.name}" created successfully!`,
                     type: "success"
                 });
+            } else {
+                alert(result.rtnmsg || 'Failed to create archive');
             }
         } catch (error) {
-            console.error('API Error:', error);
+            console.error('Error creating archive:', error);
+            alert('Failed to create archive. Please try again.');
         }
-        */
     };
 
     const handleOpenArchive = () => {
@@ -1352,98 +1436,105 @@ const AuditTrailHistory = () => {
         setShowOpenAuditLog(true);
     };
 
-    const handleOpenArchiveAuditLogAuthorized = (data) => {
-        console.log('Open Archive Audit Trail Data:', data);
+    // const handleOpenArchiveAuditLogAuthorized = (data) => {
+    //     console.log('Open Archive Audit Trail Data:', data);
 
-        // Mock: Just proceed without API call
-        setShowOpenAuditLog(false);
-        setShowOpenArchivePopup(true);
-
-        // When ready for API, uncomment below:
-        /*
-        try {
-            const response = await fetch('/api/audit-trail', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            console.log('Backend response:', result);
-            
-            if (response.ok) {
-                setShowOpenAuditLog(false);
-                setShowOpenArchivePopup(true);
-            }
-        } catch (error) {
-            console.error('API Error:', error);
-        }
-        */
-    };
-
-    const handleArchiveSelect = (archive) => {
-        setSelectedArchiveName(archive.name);
-        setShowOpenArchivePopup(false);
-
-        // Load archived data - filter or load specific archived records
-        // For now, showing the original data. You can filter by archive.id or load from backend
-        const archivedData = MOCK_DATA.filter(row => row.id <= 5); // Example: load specific archived records
-
-        setUserData(archivedData);
-        setShowReviewHistory(false);
-        setSelectedRows([]);
-    };
-    //Api code
-    //     const handleArchiveSelect = async (archive) => {
-    //     setSelectedArchiveName(archive.name);
-    //     setShowOpenArchivePopup(false);
-    //     setLoading(true);
-
-    //     try {
-    //         // API call to fetch data from specific archive table
-    //         const response = await fetch(`/api/archives/${archive.id}/data`, {
-    //             method: 'GET',
-    //             headers: { 
-    //                 'Content-Type': 'application/json' 
-    //             }
-    //         });
-
-    //         const archivedData = await response.json();
-
-    //         if (response.ok) {
-    //             setUserData(archivedData);
-    //         }
-    //         setLoading(false);
-    //     } catch (error) {
-    //         console.error('Error fetching archived data:', error);
-    //         setLoading(false);
-    //     }
+    //     // Mock: Just proceed without API call
+    //     setShowOpenAuditLog(false);
+    //     setShowOpenArchivePopup(true);
     // };
 
-    //Reset Function
-    const handleReset = () => {
-        setSelectedUser("All");
-        setSelectedModule("All");
-        setSelectedAuditType("All");
-        setRecordsDuration("Current Date");
-        setFromDate(today);
-        setToDate(today);
-        setSelectedRows([]);
-        setShowReviewHistory(false);
-        setSelectedArchiveName("");
+    const handleOpenArchiveAuditLogAuthorized = async (auditData) => {
+        console.log('Open Archive Audit Trail Data:', auditData);
 
-        // Reset to original mock data
-        // setLoading(true);
-        // setTimeout(() => {
-        //     setUserData(MOCK_DATA);
-        //     setLoading(false);
-        // }, 300);
+        try {
+            const payload = {
+                AuditTrailValues: auditData.AuditTrailValues,
+                ActiveUserDetails: getSessionUserDetails()
+            };
+
+            console.log("Open Archive Log Payload:", payload);
+            const result = await postData('AuditTrail/OpenArchiveLog', payload);
+            console.log("Open Archive Log Result:", result);
+
+            if (result.AuditTrailLogin === false) {
+                setPasswordError(true);
+                return;
+            }
+
+            if (result.rtnmsg === "Success") {
+                setShowOpenAuditLog(false);
+                setShowOpenArchivePopup(true);
+                setPasswordError(false);
+            }
+        } catch (error) {
+            console.error('Error logging open archive:', error);
+            alert('Failed to log open archive action.');
+        }
     };
 
-    //api code for reset
-    //     const handleReset = async () => {
+    // const handleArchiveSelect = (archive) => {
+    //     setSelectedArchiveName(archive.name);
+    //     setShowOpenArchivePopup(false);
+
+    //     // Load archived data - filter or load specific archived records
+    //     // For now, showing the original data. You can filter by archive.id or load from backend
+    //     const archivedData = MOCK_DATA.filter(row => row.id <= 5); // Example: load specific archived records
+
+    //     setUserData(archivedData);
+    //     setShowReviewHistory(false);
+    //     setSelectedRows([]);
+    // };
+
+
+    const handleArchiveSelect = async (archive) => {
+        setSelectedArchiveName(archive.name);
+        setShowOpenArchivePopup(false);
+        setLoading(true);
+
+        try {
+            const payload = {
+                sArchiveId: archive.id,
+                sArchiveName: archive.name,
+                ActiveUserDetails: getSessionUserDetails()
+            };
+
+            console.log("Load Archive Data Payload:", payload);
+            const result = await postData('AuditTrail/LoadArchiveData', payload);
+            console.log("Load Archive Data Result:", result);
+
+            if (result && Array.isArray(result)) {
+                const mappedData = result.map((item, index) => ({
+                    id: index + 1,
+                    select: false,
+                    moduleName: item.ModuleName || '',
+                    actions: item.Actions || '',
+                    transactionOn: item.TransactionOn || '',
+                    reviewStatus: item.ReviewStatus || '',
+                    requestedClient: item.RequestedClient || '',
+                    affectedClient: item.AffectedClient || '',
+                    instrumentName: item.InstrumentName || '',
+                    reason: item.Reason || '',
+                    comments: item.Comments || '',
+                    reviewComments: item.ReviewComments || '',
+                    reviewedBy: item.ReviewedBy || '',
+                    reviewedDate: item.ReviewedDate || ''
+                }));
+
+                setUserData(mappedData);
+            }
+
+            setShowReviewHistory(false);
+            setSelectedRows([]);
+            setLoading(false);
+        } catch (error) {
+            console.error('Error loading archive data:', error);
+            setLoading(false);
+        }
+    };
+
+    //Reset Function
+    // const handleReset = () => {
     //     setSelectedUser("All");
     //     setSelectedModule("All");
     //     setSelectedAuditType("All");
@@ -1452,32 +1543,157 @@ const AuditTrailHistory = () => {
     //     setToDate(today);
     //     setSelectedRows([]);
     //     setShowReviewHistory(false);
-    //     setSelectedArchiveName(""); // Clear archive name
+    //     setSelectedArchiveName("");
+    // };
 
-    //     setLoading(true);
+    const handleReset = async () => {
+        setSelectedUser("All");
+        setSelectedModule("All");
+        setSelectedAuditType("All");
+        setSelectedClient("All");
+        setRecordsDuration("Current Date");
+        setFromDate(today);
+        setToDate(today);
+        setSelectedRows([]);
+        setShowReviewHistory(false);
+        setSelectedArchiveName("");
 
-    //     try {
-    //         // Fetch original main table data
-    //         const response = await fetch('/api/audit-trail', {
-    //             method: 'GET',
-    //             headers: { 
-    //                 'Content-Type': 'application/json' 
+        await fetchAuditTrailData();
+    };
+
+
+    // const handlePrint = () => {
+    //     const columnsToShow = showReviewHistory ? reviewHistoryColumns : userColumns;
+    //     const dataToShow = showReviewHistory
+    //         ? userData.filter(row => selectedRows.includes(row.id))
+    //         : userData;
+
+    //     const tableHTML = `
+    //     <!DOCTYPE html>
+    //     <html>
+    //     <head>
+    //         <title>Audit Trail History</title>
+    //         <style>
+    //             * { margin: 0; padding: 0; box-sizing: border-box; }
+    //             body { 
+    //                 font-family: 'Roboto', Arial, sans-serif; 
+    //                 padding: 30px;
+    //                 background-color: #ffffff;
     //             }
-    //         });
+    //             h1 { 
+    //                 text-align: center; 
+    //                 color: #2883FE; 
+    //                 margin-bottom: 30px;
+    //                 font-size: 28px;
+    //                 font-weight: 600;
+    //             }
+    //             .print-info {
+    //                 text-align: right;
+    //                 color: #666;
+    //                 font-size: 12px;
+    //                 margin-bottom: 15px;
+    //             }
+    //             table { 
+    //                 width: 100%; 
+    //                 border-collapse: collapse; 
+    //                 margin-top: 20px;
+    //                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    //             }
+    //             th, td { 
+    //                 border: 1px solid #ddd; 
+    //                 padding: 12px 8px; 
+    //                 text-align: left;
+    //                 font-size: 13px;
+    //             }
+    //             th { 
+    //                 background-color: #f9f9f9; 
+    //                 color: #000000; 
+    //                 font-weight: bold;
+    //                 text-transform: uppercase;
+    //                 font-size: 12px;
+    //                 letter-spacing: 0.5px;
+    //             }
+    //             tr:nth-child(even) { 
+    //                 background-color: #fafafa; 
+    //             }
+    //             tr:hover {
+    //                 background-color: #f5f5f5;
+    //             }
+    //             td {
+    //                 color: #333;
+    //             }
+    //             @media print {
+    //                 body { 
+    //                     padding: 15px;
+    //                 }
+    //                 table {
+    //                     box-shadow: none;
+    //                 }
+    //             }
+    //         </style>
+    //     </head>
+    //     <body>
+    //         <div class="print-info">
+    //             Printed on: ${new Date().toLocaleString()}
+    //         </div>
+    //         <h1>Audit Trail History</h1>
+    //         <table>
+    //             <thead>
+    //                 <tr>
+    //                     ${columnsToShow
+    //             .filter(col => col.key !== 'select')
+    //             .map(col => `<th>${col.label}</th>`)
+    //             .join('')}
+    //                 </tr>
+    //             </thead>
+    //             <tbody>
+    //                 ${dataToShow.map((row, index) => `
+    //                     <tr>
+    //                         ${columnsToShow
+    //                     .filter(col => col.key !== 'select')
+    //                     .map(col => {
+    //                         if (col.key === 'serialNo') return `<td>${index + 1}</td>`;
+    //                         return `<td>${row[col.key] || ''}</td>`;
+    //                     })
+    //                     .join('')}
+    //                     </tr>
+    //                 `).join('')}
+    //             </tbody>
+    //         </table>
+    //         <script>
+    //             window.onload = function() { 
+    //                 setTimeout(function() {
+    //                     window.print();
+    //                 }, 250);
+    //             }
 
-    //         const data = await response.json();
+    //             window.onafterprint = function() {
+    //                 setTimeout(function() {
+    //                     window.close();
+    //                 }, 500);
+    //             };
 
-    //         if (response.ok) {
-    //             setUserData(data);
-    //         }
-    //         setLoading(false);
-    //     } catch (error) {
-    //         console.error('Error resetting data:', error);
-    //         setLoading(false);
+    //             document.addEventListener('keydown', function(e) {
+    //                 if (e.key === 'Escape') {
+    //                     window.close();
+    //                 }
+    //             });
+    //         </script>
+    //     </body>
+    //     </html>
+    // `;
+    //
+    //     const printWindow = window.open('', 'PrintWindow', 'width=1200,height=800,left=100,top=50');
+    //     if (printWindow) {
+    //         printWindow.document.write(tableHTML);
+    //         printWindow.document.close();
+    //         printWindow.focus();
+    //     } else {
+    //         alert('Please allow popups for this site to print.');
     //     }
     // };
 
-    const handlePrint = () => {
+    const handlePrint = async () => {
         const columnsToShow = showReviewHistory ? reviewHistoryColumns : userColumns;
         const dataToShow = showReviewHistory
             ? userData.filter(row => selectedRows.includes(row.id))
@@ -1581,13 +1797,13 @@ const AuditTrailHistory = () => {
                         window.print();
                     }, 250);
                 }
-                
+
                 window.onafterprint = function() {
                     setTimeout(function() {
                         window.close();
                     }, 500);
                 };
-                
+
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape') {
                         window.close();
@@ -1597,7 +1813,6 @@ const AuditTrailHistory = () => {
         </body>
         </html>
     `;
-
         const printWindow = window.open('', 'PrintWindow', 'width=1200,height=800,left=100,top=50');
         if (printWindow) {
             printWindow.document.write(tableHTML);
@@ -1606,9 +1821,33 @@ const AuditTrailHistory = () => {
         } else {
             alert('Please allow popups for this site to print.');
         }
+        // API call after print
+        try {
+            const payload = {
+                sModuleName: "Audit Trail History",
+                ActiveUserDetails: getSessionUserDetails()
+            };
+
+            await postData('basemaster/print', payload);
+        } catch (error) {
+            console.error('Error logging print action:', error);
+        }
     };
 
-    const handleExport = () => {
+    // const handleExport = () => {
+    //     if (userData.length === 0) {
+    //         setErrorDialog({
+    //             show: true,
+    //             message: "No data available to export.",
+    //             type: "information"
+    //         });
+    //         return;
+    //     }
+    //     setExportTrigger(prev => prev + 1);
+    // };
+
+
+    const handleExport = async () => {
         if (userData.length === 0) {
             setErrorDialog({
                 show: true,
@@ -1617,98 +1856,301 @@ const AuditTrailHistory = () => {
             });
             return;
         }
-        setExportTrigger(prev => prev + 1);
+
+        try {
+            const columnsToExport = showReviewHistory ? reviewHistoryColumns : userColumns;
+
+            const headers = columnsToExport
+                .filter(col => col.key !== 'select')
+                .map(col => col.label);
+
+            const rows = userData.map((row, index) =>
+                columnsToExport
+                    .filter(col => col.key !== 'select')
+                    .map(col => {
+                        if (col.key === 'serialNo') return index + 1;
+                        return row[col.key] ?? "";
+                    })
+            );
+
+            const payload = {
+                sFileName: showReviewHistory ? "Review_History" : "Audit_Trail_History",
+                AllRows: userData,
+                HeaderDetails: headers,
+                AllowKeys: columnsToExport.filter(col => col.key !== 'select').map(col => col.key),
+                sBrowserURL: window.location.origin,
+                ActiveUserDetails: getSessionUserDetails()
+            };
+
+            console.log("Export Payload:", payload);
+            const result = await postData('basemaster/exportDataFile', payload);
+            console.log("Export Result:", result);
+
+            if (result && result.ExportDataViewURL) {
+                const urlPath = CF_decrypt(result.ExportDataViewURL);
+                const win = window.open(urlPath, '_blank');
+                if (!win) {
+                    alert('Please allow popups for this website');
+                }
+            }
+        } catch (error) {
+            console.error('Error exporting data:', error);
+        }
     };
-    const handleFilter = () => {
+
+
+    // const handleFilter = () => {
+    //     setLoading(true);
+    //     setSelectedArchiveName("");
+    //     setTimeout(() => {
+    //         let filteredData = [...MOCK_DATA];
+
+    //         // Filter by User Name
+    //         if (selectedUser !== "All") {
+    //             filteredData = filteredData.filter(row =>
+    //                 row.userName && row.userName.toLowerCase().includes(selectedUser.toLowerCase())
+    //             );
+    //         }
+
+    //         // Filter by Module Name
+    //         if (selectedModule !== "All") {
+    //             filteredData = filteredData.filter(row =>
+    //                 row.moduleName && row.moduleName.toLowerCase().includes(selectedModule.toLowerCase())
+    //             );
+    //         }
+
+    //         // Filter by Audit Type
+    //         if (selectedAuditType !== "All") {
+    //             // You can add logic based on your audit type field
+    //             // For now, keeping all data for "All"
+    //         }
+
+    //         // Filter by Date Range
+    //         const { startDate, endDate } = getDateRange(recordsDuration, fromDate, toDate);
+
+    //         filteredData = filteredData.filter(row => {
+    //             if (!row.transactionOn) return false;
+
+    //             const rowDate = row.transactionOn; // Format: "08/12/2025"
+
+    //             // Convert to comparable format
+    //             const [rowDay, rowMonth, rowYear] = rowDate.split('/');
+    //             const rowDateObj = new Date(`${rowYear}-${rowMonth}-${rowDay}`);
+
+    //             const [startDay, startMonth, startYear] = startDate.split('/');
+    //             const startDateObj = new Date(`${startYear}-${startMonth}-${startDay}`);
+
+    //             const [endDay, endMonth, endYear] = endDate.split('/');
+    //             const endDateObj = new Date(`${endYear}-${endMonth}-${endDay}`);
+
+    //             return rowDateObj >= startDateObj && rowDateObj <= endDateObj;
+    //         });
+
+    //         setUserData(filteredData);
+    //         setLoading(false);
+    //         setSelectedRows([]);
+    //         setShowReviewHistory(false);
+    //     }, 300);
+    // };
+
+    const getSessionUserDetails = () => {
+        try {
+            const encryptedUserID = sessionStorage.getItem('sUserID');
+            const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
+            const encryptedTenantID = sessionStorage.getItem('sTenantID');
+            const encryptedUsername = sessionStorage.getItem('sUsername');
+            const encryptedDomain = sessionStorage.getItem('sDomainName');
+            const encryptedCategories = sessionStorage.getItem('sCategories');
+            const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
+            const encryptedSessionID = sessionStorage.getItem('sSessionID');
+            const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
+            const encryptedDBType = sessionStorage.getItem('sdbtype');
+
+            return {
+                sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
+                sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
+                sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
+                sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
+                sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
+                sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
+                sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
+                sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
+                sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
+                sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
+                sApplicationName: "SDMS",
+                sUserStatus: ""
+            };
+        } catch (error) {
+            console.error('Error decrypting session data:', error);
+            // Return default values if decryption fails
+            return {
+                sUserID: '',
+                sSiteCode: '',
+                sTenantID: '',
+                sUsername: '',
+                sUserDomainName: '',
+                sCategories: '',
+                sUserGroupID: '',
+                sSessionID: '',
+                sTimeZoneID: '',
+                sdbtype: '',
+                sApplicationName: "SDMS",
+                sUserStatus: ""
+            };
+        }
+    };
+
+    const fetchClientList = async () => {
+        try {
+            const payload = {
+                ActiveUserDetails: getSessionUserDetails()
+            };
+
+            const result = await postData('AuditTrail/AuditTrailClientname', payload);
+            console.log("Client List Result:", result);
+
+            if (result && Array.isArray(result)) {
+                setClientList(result);
+            }
+        } catch (error) {
+            console.error('Error fetching client list:', error);
+        }
+    };
+    const fetchAuditTrailData = async () => {
+        setLoading(true);
+        try {
+            const payload = {
+                sFilter: "",
+                sFromDate: fromDate,
+                sClientID: selectedClient !== "All" ? selectedClient : "",
+                ActiveUserDetails: getSessionUserDetails()
+            };
+
+            console.log("Fetch Audit Trail Payload:", payload);
+            const result = await postData('AuditTrail/AuditTrailHistoryViewAudit', payload);
+            console.log("Fetch Audit Trail Result:", result);
+
+            if (result && Array.isArray(result)) {
+                const mappedData = result.map((item, index) => ({
+                    id: index + 1,
+                    select: false,
+                    moduleName: item.ModuleName || '',
+                    actions: item.Actions || '',
+                    transactionOn: item.TransactionOn || '',
+                    reviewStatus: item.ReviewStatus || '',
+                    requestedClient: item.RequestedClient || '',
+                    affectedClient: item.AffectedClient || '',
+                    instrumentName: item.InstrumentName || '',
+                    reason: item.Reason || '',
+                    comments: item.Comments || '',
+                    reviewComments: item.ReviewComments || '',
+                    reviewedBy: item.ReviewedBy || '',
+                    reviewedDate: item.ReviewedDate || '',
+                    userName: item.UserName || '',
+                    profileName: item.ProfileName || '',
+                    systemComments: item.SystemComments || '',
+                    modifiedData: item.ModifiedData || ''
+                }));
+
+                setUserData(mappedData);
+            } else {
+                // If no data, set empty array
+                setUserData([]);
+            }
+            setLoading(false);
+        } catch (error) {
+            console.error('Error fetching audit trail data:', error);
+            setLoading(false);
+            setErrorDialog({
+                show: true,
+                message: "Failed to load audit trail data. Please check your connection and try again.",
+                type: "error"
+            });
+            setUserData([]); // Set empty data on error
+        }
+    };
+
+    const handleFilter = async () => {
         setLoading(true);
         setSelectedArchiveName("");
-        setTimeout(() => {
-            let filteredData = [...MOCK_DATA];
 
-            // Filter by User Name
-            if (selectedUser !== "All") {
-                filteredData = filteredData.filter(row =>
-                    row.userName && row.userName.toLowerCase().includes(selectedUser.toLowerCase())
-                );
+        try {
+            const payload = {
+                sFromDate: fromDate,
+                sToDate: toDate,
+                sClientID: selectedClient !== "All" ? selectedClient : "",
+                sUserName: selectedUser !== "All" ? selectedUser : "",
+                sModuleName: selectedModule !== "All" ? selectedModule : "",
+                sAuditType: selectedAuditType !== "All" ? selectedAuditType : "",
+                ActiveUserDetails: getSessionUserDetails()
+            };
+
+            console.log("Filter Payload:", payload);
+            const result = await postData('AuditTrail/AuditTrailHistoryFilter', payload);
+            console.log("Filter Result:", result);
+
+            if (result && Array.isArray(result)) {
+                const mappedData = result.map((item, index) => ({
+                    id: index + 1,
+                    select: false,
+                    moduleName: item.ModuleName || '',
+                    actions: item.Actions || '',
+                    transactionOn: item.TransactionOn || '',
+                    reviewStatus: item.ReviewStatus || '',
+                    requestedClient: item.RequestedClient || '',
+                    affectedClient: item.AffectedClient || '',
+                    instrumentName: item.InstrumentName || '',
+                    reason: item.Reason || '',
+                    comments: item.Comments || '',
+                    reviewComments: item.ReviewComments || '',
+                    reviewedBy: item.ReviewedBy || '',
+                    reviewedDate: item.ReviewedDate || '',
+                    userName: item.UserName || '',
+                    profileName: item.ProfileName || '',
+                    systemComments: item.SystemComments || '',
+                    modifiedData: item.ModifiedData || ''
+                }));
+
+                setUserData(mappedData);
+            } else {
+                setUserData([]);
             }
 
-            // Filter by Module Name
-            if (selectedModule !== "All") {
-                filteredData = filteredData.filter(row =>
-                    row.moduleName && row.moduleName.toLowerCase().includes(selectedModule.toLowerCase())
-                );
-            }
-
-            // Filter by Audit Type
-            if (selectedAuditType !== "All") {
-                // You can add logic based on your audit type field
-                // For now, keeping all data for "All"
-            }
-
-            // Filter by Date Range
-            const { startDate, endDate } = getDateRange(recordsDuration, fromDate, toDate);
-
-            filteredData = filteredData.filter(row => {
-                if (!row.transactionOn) return false;
-
-                const rowDate = row.transactionOn; // Format: "08/12/2025"
-
-                // Convert to comparable format
-                const [rowDay, rowMonth, rowYear] = rowDate.split('/');
-                const rowDateObj = new Date(`${rowYear}-${rowMonth}-${rowDay}`);
-
-                const [startDay, startMonth, startYear] = startDate.split('/');
-                const startDateObj = new Date(`${startYear}-${startMonth}-${startDay}`);
-
-                const [endDay, endMonth, endYear] = endDate.split('/');
-                const endDateObj = new Date(`${endYear}-${endMonth}-${endDay}`);
-
-                return rowDateObj >= startDateObj && rowDateObj <= endDateObj;
-            });
-
-            setUserData(filteredData);
             setLoading(false);
             setSelectedRows([]);
             setShowReviewHistory(false);
-        }, 300);
+        } catch (error) {
+            console.error('Error filtering data:', error);
+            setLoading(false);
+            setErrorDialog({
+                show: true,
+                message: "Failed to filter data. Please try again.",
+                type: "error"
+            });
+        }
     };
 
-    //api code for filter
-    // const handleFilter = async () => {
-    //     setLoading(true);
-    //     setSelectedArchiveName(""); // Clear archive name when filtering main data
+    const logViewAuditTrail = async () => {
+        try {
+            const payload = {
+                ActiveUserDetails: getSessionUserDetails()
+            };
 
-    //     const { startDate, endDate } = getDateRange(recordsDuration, fromDate, toDate);
+            await postData('AuditTrail/AuditTrailHistoryViewAudit', payload);
+        } catch (error) {
+            console.error('Error logging view audit trail:', error);
+        }
+    };
 
-    //     try {
-    //         // API call with filter parameters
-    //         const response = await fetch('/api/audit-trail/filter', {
-    //             method: 'POST',
-    //             headers: {
-    //                 'Content-Type': 'application/json'
-    //             },
-    //             body: JSON.stringify({
-    //                 userName: selectedUser !== "All" ? selectedUser : null,
-    //                 moduleName: selectedModule !== "All" ? selectedModule : null,
-    //                 auditType: selectedAuditType !== "All" ? selectedAuditType : null,
-    //                 startDate: startDate,
-    //                 endDate: endDate
-    //             })
-    //         });
 
-    //         const filteredData = await response.json();
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <div className="text-lg">Loading audit trail data...</div>
+            </div>
+        );
+    }
 
-    //         if (response.ok) {
-    //             setUserData(filteredData);
-    //             setSelectedRows([]);
-    //             setShowReviewHistory(false);
-    //         }
-    //         setLoading(false);
-    //     } catch (error) {
-    //         console.error('Error filtering data:', error);
-    //         setLoading(false);
-    //     }
-    // };
     return (
         <div className="flex flex-col w-full font-roboto rounded-md">
 
@@ -1907,7 +2349,7 @@ const AuditTrailHistory = () => {
                     onClose={() => setShowCreateAuditLog(false)}
                     onAuthorized={handleArchiveAuditLogAuthorized}
                     actionLabel="Submit"
-                    
+
                 />
             )}
 
@@ -1917,7 +2359,7 @@ const AuditTrailHistory = () => {
                     onClose={() => setShowOpenAuditLog(false)}
                     onAuthorized={handleOpenArchiveAuditLogAuthorized}
                     actionLabel="Submit"
-                  
+
                 />
             )}
 
