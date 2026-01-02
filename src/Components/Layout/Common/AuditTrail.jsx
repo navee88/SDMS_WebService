@@ -95,6 +95,16 @@ const AuditTrail = ({
         }
     }, [showPasswordError]);
 
+    useEffect(() => {
+        if (!isOpen) {
+            setPassword("");
+            setComments("");
+            setReason(defaultReason);
+            setShowError(false);
+            setPasswordError(false);
+        }
+    }, [isOpen, defaultReason]);
+
     if (!isOpen) return null;
 
     const handleReason = (value) => {
@@ -133,12 +143,13 @@ const AuditTrail = ({
         onAuthorized(auditPayload);
 
         // Cleanup
-        setPassword("");
-        setReason(defaultReason);
-        setComments("");
-        setShowError(false);
-        setPasswordError(false);
+        // setPassword("");
+        // setReason(defaultReason);
+        // setComments("");
+        // setShowError(false);
+        // setPasswordError(false);
     };
+
 
 
 

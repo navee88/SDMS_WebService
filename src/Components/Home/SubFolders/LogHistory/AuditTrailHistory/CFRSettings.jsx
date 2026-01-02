@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from "react-i18next";
 import { Plus, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../../../../Context/LanguageContext';
 import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
 import AuditTrail from '../../../../Layout/Common/AuditTrail';
+import useAxios from '../../../../../Services/servicecall';
+import { CF_decrypt } from '../../../../../Components/Common/encryptiondecryption';
+
 
 function CFRSettings() {
   const { currentLanguage, changeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
+  const [passwordError, setPasswordError] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Activated');
   const [newReason, setNewReason] = useState('');
@@ -30,6 +34,50 @@ function CFRSettings() {
     t('statuses.stopped'),
   ]);
 
+  // Add inside component
+  const { postData } = useAxios();
+
+  // Add this useEffect after your state declarations
+  useEffect(() => {
+    fetchReasons();
+  }, []);
+
+  const fetchReasons = async () => {
+    try {
+      const encryptedTenantID = sessionStorage.getItem('sTenantID');
+      const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
+      const encryptedDBType = sessionStorage.getItem('sdbtype');
+
+      const payload = {
+        silentaudit: true,
+        ApplicationCode: "SDMS",
+        ActiveUserDetails: {
+          sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
+          sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
+          sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
+        }
+      };
+
+
+      const response = await postData('AuditTrail/GetReasons', payload);
+
+      console.log("Fetched CFR Reasons:", response);
+
+      // GetReasons returns array directly: [{L47SerialNo, L47Comments}]
+      if (response && Array.isArray(response)) {
+        const mappedReasons = response.map(item => item.L47Comments); // Use L47Comments
+        setAllStatuses(mappedReasons);
+
+        // Select first reason by default
+        if (mappedReasons.length > 0) {
+          setSelectedStatus(mappedReasons[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching CFR reasons:', error);
+    }
+  };
+
   const filteredStatuses = allStatuses.filter(status =>
     status.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -50,6 +98,121 @@ function CFRSettings() {
       <span>{label}</span>
     </button>
   );
+
+  const handleAddReason = async (auditData) => {
+    try {
+      // Get session data (same as Site.jsx)
+      const encryptedUserID = sessionStorage.getItem('sUserID');
+      const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
+      const encryptedTenantID = sessionStorage.getItem('sTenantID');
+      const encryptedUsername = sessionStorage.getItem('sUsername');
+      const encryptedDomain = sessionStorage.getItem('sDomainName');
+      const encryptedCategories = sessionStorage.getItem('sCategories');
+      const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
+      const encryptedSessionID = sessionStorage.getItem('sSessionID');
+      const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
+      const encryptedDBType = sessionStorage.getItem('sdbtype');
+
+      const payload = {
+        CFRReason: newReason.trim(),
+        ApplicationCode: "SDMS",
+        AuditTrailValues: auditData.AuditTrailValues,
+        ActiveUserDetails: {
+          sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
+          sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
+          sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
+          sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
+          sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
+          sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
+          sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
+          sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
+          sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
+          sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
+          sApplicationName: "SDMS",
+          sUserStatus: ""
+        }
+      };
+
+      const response = await postData('AuditTrail/AddReasons', payload);
+      console.log("Add Response:", response);
+
+      if (response.AuditTrailLogin === false) {
+        setPasswordError(true);
+        return;
+      }
+
+      if (response.Rtn === "Success") {
+        await fetchReasons();
+        setNewReason('');
+        setShowInputError(false);
+        setShowAuditTrail(false);
+        setPendingAction(null);
+      } else {
+        alert(response.Rtn || 'Failed to add reason');
+      }
+    } catch (error) {
+      console.error('Error adding reason:', error);
+      alert('Failed to add reason');
+    }
+  };
+
+
+  const handleRemoveReason = async (auditData) => {
+    try {
+      const remainingReasons = allStatuses.filter(s => s !== selectedStatus);
+
+      // Get session data
+      const encryptedUserID = sessionStorage.getItem('sUserID');
+      const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
+      const encryptedTenantID = sessionStorage.getItem('sTenantID');
+      const encryptedUsername = sessionStorage.getItem('sUsername');
+      const encryptedDomain = sessionStorage.getItem('sDomainName');
+      const encryptedCategories = sessionStorage.getItem('sCategories');
+      const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
+      const encryptedSessionID = sessionStorage.getItem('sSessionID');
+      const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
+      const encryptedDBType = sessionStorage.getItem('sdbtype');
+
+      const payload = {
+        ReasonList: remainingReasons,
+        ApplicationCode: "SDMS",
+        AuditTrailValues: auditData.AuditTrailValues,
+        ActiveUserDetails: {
+          sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
+          sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
+          sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
+          sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
+          sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
+          sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
+          sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
+          sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
+          sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
+          sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
+          sApplicationName: "SDMS",
+          sUserStatus: ""
+        }
+      };
+
+      const response = await postData('AuditTrail/CFRSave', payload);
+      console.log("Remove Response:", response);
+
+      if (response.AuditTrailLogin === false) {
+        setPasswordError(true);
+        return;
+      }
+
+      if (response.Rtn === "Success") {
+        await fetchReasons();
+        setShowAuditTrail(false);
+        setPendingAction(null);
+      } else {
+        alert(response.Rtn || 'Failed to remove reason');
+      }
+    } catch (error) {
+      console.error('Error removing reason:', error);
+      alert('Failed to remove reason');
+    }
+  };
 
   return (
     <div className='px-6 py-4'>
@@ -170,27 +333,22 @@ function CFRSettings() {
           </div>
         </div>
       </div>
-
       <AuditTrail
         isOpen={showAuditTrail}
         onClose={() => {
           setShowAuditTrail(false);
           setPendingAction(null);
+          setPasswordError(false); // Reset on close
         }}
         onAuthorized={(auditData) => {
           if (pendingAction === 'add') {
-            setAllStatuses([...allStatuses, newReason.trim()]);
-            setNewReason('');
-            setShowInputError(false);
+            handleAddReason(auditData);
           } else if (pendingAction === 'remove') {
-            setAllStatuses(allStatuses.filter(s => s !== selectedStatus));
-            // Select first remaining status or empty
-            setSelectedStatus(allStatuses.filter(s => s !== selectedStatus)[0] || '');
+            handleRemoveReason(auditData);
           }
-          setShowAuditTrail(false);
-          setPendingAction(null);
         }}
         actionLabel={pendingAction === 'add' ? 'Add Reason' : 'Remove Reason'}
+        showPasswordError={passwordError} // Pass the error state
       />
     </div>
   );
