@@ -186,6 +186,7 @@ const DeactivedTask = () => {
                     fontSize: '12px', 
                     color: '#374151',
                     overflow: 'hidden',
+                   
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                     fontWeight: selectedRowId === row.id ? 'bold' : 'normal'
