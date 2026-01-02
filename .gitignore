@@ -25,3 +25,5 @@ yarn-error.log*
 # local config
 src/Api/config.js
 
+SQLQuery2.sql
+
