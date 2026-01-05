@@ -7,7 +7,6 @@ import useAxios from "../../../../../../Services/servicecall";
 import { CF_decrypt } from "../../../../../Common/encryptiondecryption";
 import AddInstrumentModal from "../InstrumentMaster/AddInstrumentModal";
 
-
 const AddClientModal = ({
   initialData,
   allInstruments = [],
@@ -85,12 +84,15 @@ const AddClientModal = ({
         );
 
         if (Array.isArray(response)) {
-          const types = response.map((ct) => ct.sClientTypeName.trim());
+          const types = response.map((ct) => ({
+            id: ct.sClientTypeID.trim(),
+            name: ct.sClientTypeName.trim(),
+          }));
+
           setClientTypes(types);
 
-          // If form has no clientType yet, set first type
           if (!form.clientType && types.length > 0) {
-            setForm((f) => ({ ...f, clientType: types[0] }));
+            setForm((f) => ({ ...f, clientType: types[0].name }));
           }
         }
       } catch (err) {
@@ -121,25 +123,31 @@ const AddClientModal = ({
     if (!form.clientName || !form.clientAlias || !form.clientType) {
       return;
     }
+    const selectedClientType = clientTypes.find(
+      (ct) => ct.name === form.clientType
+    );
+
     onSubmit({
       clientName: form.clientName,
       clientAlias: form.clientAlias,
       status: form.active ? "Active" : "Deactive",
-      clientType: form.clientType,
-      clientTypeID: clientTypes.find((ct) => ct === form.clientType), // or map ID properly
+      clientType: selectedClientType?.name, // UI / Grid
+      clientTypeID: selectedClientType?.id, // 🔥 API
       gatewayClient: form.gatewayClient,
-      selectedInstruments, // 🔥 IMPORTANT
+      selectedInstruments,
     });
+
     setSubmitted(false);
     onClose();
   };
 
   return (
-    <div className=" fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadeIn">
       <Draggable nodeRef={nodeRef} handle=".modal-header" bounds="parent">
         <div
           ref={nodeRef}
-          className="bg-white w-[600px] rounded overflow-hidden shadow-lg"
+          className="bg-white w-[600px] rounded overflow-hidden shadow-lg
+                       animate-slideFromTop"
         >
           {/* HEADER */}
           <div className="modal-header cursor-move flex justify-between items-center px-4 py-2 pb-[5px] bg-slate-100 border-b">
@@ -174,8 +182,8 @@ const AddClientModal = ({
                     setForm({ ...form, clientName: e.target.value })
                   }
                   className={`
-      w-full px-1 py-1 text-sm outline-none
-      border-b-2
+      w-full bg-transparent pb-1 text-[12px] font-semibold outline-none font-['Verdana'] text-[#555]
+      border-b-2 
       ${submitted && !form.clientName ? "border-red-500" : "border-gray-300"}
       focus:border-blue-500
     `}
@@ -194,7 +202,7 @@ const AddClientModal = ({
                     setForm({ ...form, clientAlias: e.target.value })
                   }
                   className={`
-      w-full px-1 py-1 text-sm outline-none
+      w-full bg-transparent pb-1 text-[12px] font-semibold outline-none font-['Verdana'] text-[#555]
       border-b-2
       ${submitted && !form.clientAlias ? "border-red-500" : "border-gray-300"}
       focus:border-blue-500
@@ -210,14 +218,11 @@ const AddClientModal = ({
                 }
                 name="clientType"
                 value={form.clientType}
-                options={clientTypes}
-                borderColor="border-gray-300"
-                required
-                showError={submitted}
+                allowFreeInput
+                options={clientTypes.map((ct) => ct.name)}
                 onChange={(e) =>
                   setForm({ ...form, clientType: e.target.value })
                 }
-                className="py-0"
               />
             </div>
 
