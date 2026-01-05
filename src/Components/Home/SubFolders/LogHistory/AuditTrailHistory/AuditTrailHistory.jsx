@@ -1,18 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
-    Filter, RotateCcw, RefreshCw, Settings, ChevronUp, ChevronDown, X, CheckSquare,
-    FolderDown, Upload, FolderUp, FileClock, History, Tag, FileText, FolderOpen, Download,
-    CheckCircle, List, MoreVertical, MousePointer2, Calendar,
-    UploadIcon,
-    Search,
-    RotateCw,
+    Filter, ChevronUp, ChevronDown, X, CheckSquare,
+    Upload, History, FileText, FolderOpen, Download,
     RotateCwIcon,
     Printer,
-    Archive,
-    PackageOpen,
     PackageOpenIcon,
     ArchiveIcon,
-    SquareCheckBig,
+
 } from 'lucide-react';
 import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
 import exportIcon from "../../../../../Assests/Icons/export-icon.png"
@@ -36,10 +30,6 @@ const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => 
             setSelectedArchiveId(archiveList[0].id);
         }
     }, [isOpen, archiveList]);
-
-    // const handleRowClick = (id) => {
-    //     setSelectedArchiveId(id);
-    // };
 
     const handleRowClick = (rowOrId) => {
         const id = typeof rowOrId === 'object' ? rowOrId.id : rowOrId;
@@ -71,43 +61,6 @@ const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => 
             )
         }
     ], [selectedArchiveId, t]);
-
-    // const archiveColumns = useMemo(() => [
-    //     {
-    //         key: 'name',
-    //         label: t("label.name"),
-    //         width: 200,
-    //         enableSearch: true,
-    //         render: (row) => (
-    //             <span
-    //                 className={`text-gray-700 cursor-pointer ${selectedArchiveId === row.id ? 'font-bold text-blue-600' : ''}`}
-    //                 onClick={(e) => {
-    //                     e.stopPropagation();
-    //                     handleRowClick(row.id);
-    //                 }}
-    //             >
-    //                 {row.name}
-    //             </span>
-    //         )
-    //     },
-    //     {
-    //         key: 'createDate',
-    //         label: t("label.CRDate"),
-    //         width: 150,
-    //         enableSearch: true,
-    //         render: (row) => (
-    //             <span
-    //                 className={`text-gray-700 cursor-pointer ${selectedArchiveId === row.id ? 'font-bold text-blue-600' : ''}`}
-    //                 onClick={(e) => {
-    //                     e.stopPropagation();
-    //                     handleRowClick(row.id);
-    //                 }}
-    //             >
-    //                 {row.createDate}
-    //             </span>
-    //         )
-    //     }
-    // ], [selectedArchiveId, t]);
 
     const handleOpen = () => {
         if (!selectedArchiveId) {
@@ -156,92 +109,6 @@ const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => 
             }
         />
     );
-};
-
-
-// const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => {
-//     const [selectedArchiveId, setSelectedArchiveId] = useState(null);
-//     const { t } = useTranslation();
-
-//     const handleRowSelection = (id) => {
-//         setSelectedArchiveId(id);
-//     };
-
-//     const archiveColumns = useMemo(() => [
-//         {
-//             key: 'name',
-//             label: t("label.name"),
-//             width: 120,
-//             enableSearch: true,
-//             render: (row) => <span className="text-gray-700">{row.name}</span>
-//         },
-//         {
-//             key: 'createDate',
-//             label: t("label.CRDate"),
-//             width: 120,
-//             enableSearch: true,
-//             render: (row) => <span className="text-gray-700">{row.createDate}</span>
-//         }
-//     ], [selectedArchiveId, t]);
-
-//     const handleOpen = () => {
-//         if (!selectedArchiveId) {
-//             alert('Please select an archive');
-//             return;
-//         }
-//         const selectedArchive = archiveList.find(a => a.id === selectedArchiveId);
-//         onArchiveSelect(selectedArchive.name);
-//     };
-
-//     return (
-//         <CustomPopup
-//             isOpen={isOpen}
-//             onClose={onClose}
-//             title="Open Archive"
-//             content={
-//                 <div className="p-4">
-//                     <div className="mb-4" style={{ height: '650px' }}>
-//                         <GridLayout
-//                             columns={archiveColumns}
-//                             data={archiveList}
-//                             onRowClick={handleRowSelection}
-//                             selectedRows={selectedArchiveId ? [selectedArchiveId] : []}
-//                         />
-//                     </div>
-//                     <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200">
-//                         <button
-//                             onClick={handleOpen}
-//                             className="flex items-center gap-2 px-4 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-sm font-semibold rounded transition-colors"
-//                         >
-//                             <CheckSquare className="w-4 h-4" /> {t("button.open")}
-//                         </button>
-//                         <button
-//                             onClick={onClose}
-//                             className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
-//                         >
-//                             {t("button.close")}
-//                         </button>
-//                     </div>
-//                 </div>
-//             }
-//         />
-//     );
-// };
-
-const ACTION_ICONS = {
-    "Open": FolderOpen,
-    "File Download": Download,
-    "Restore": RotateCcw,
-    "Folder Download": FolderDown,
-    "File Upload": Upload,
-    "Folder Upload": FolderUp,
-    "Version History": FileClock,
-    "Workflow History": History,
-    "Tag": Tag,
-    "Audit Trail History": List,
-    "Attribute": FileText,
-    "Multi-File Select": MousePointer2,
-    "Work Complete": CheckCircle
 };
 
 const ALL_ACTION_ORDER = [
@@ -477,33 +344,6 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
     const [error, setError] = useState(null);
     const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
-
-    //   useEffect(() => {
-    //     const fetchUsers = async () => {
-    //       try {
-    //         setLoading(true);
-    //         const response = await axios.get('http://localhost:5173/users');
-    //         setUserData(response.data);
-    //         setLoading(false);
-    //       } catch (err) {
-    //         console.error("Error fetching data:", err);
-    //         setError(err.message || "Something went wrong");
-    //         setLoading(false);
-    //       }
-    //     };
-
-    //     fetchUsers();
-    //   }, []);
-
-    // useEffect(() => {
-    //     setLoading(true);
-    //     setTimeout(() => {
-    //         setUserData(mockData);
-    //         setLoading(false);
-    //     }, 300);
-
-    // }, []);
-
     useEffect(() => {
         if (exportTrigger === 0) return;
         if (!userData.length) return;
@@ -620,22 +460,6 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
 
 
     return (
-
-        // <div className="flex-1 overflow-hidden">
-        //     {showReviewHistory ? (
-        //         <GridLayout
-        //             columns={reviewHistoryColumns}
-        //             data={userData.filter(row => selectedRows.includes(row.id))}
-        //         />
-        //     ) : (
-        //         <GridLayout
-        //             columns={userColumns}
-        //             data={userData}
-        //             renderDetailPanel={renderUserDetail}
-        //         />
-        //     )}
-        // </div>
-
         <div className="flex-1 overflow-hidden flex flex-col">
             {showReviewHistory ? (
                 <>
@@ -670,189 +494,23 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
     );
 };
 
-const MOCK_DATA = [
-    {
-        id: 1,
-        select: false,
-        moduleName: "Audit Trail",
-        actions: "Create",
-        transactionOn: "08/12/2025",
-        reviewStatus: "Pending",
-        requestedClient: "Client A",
-        affectedClient: "Client B",
-        instrumentName: "Instrument X",
-        reason: "N/A",
-        comments: "Sample comment",
-        reviewComments: "Review comment text",
-        reviewedBy: "Admin User",
-        reviewedDate: "08/12/2025"
-    },
-    {
-        id: 2,
-        select: true,
-        moduleName: "Role Management",
-        actions: "Update",
-        transactionOn: "08/12/2025",
-        reviewStatus: "Approved",
-        requestedClient: "Client C",
-        affectedClient: "Client D",
-        instrumentName: "Instrument Y",
-        reason: "N/A",
-        comments: "Sample comment",
-        reviewComments: "Review comment text",
-        reviewedBy: "Admin User",
-        reviewedDate: "08/12/2025"
-    },
-    {
-        id: 3,
-        select: false,
-        moduleName: "Audit Trail",
-        actions: "Delete",
-        transactionOn: "07/12/2025",
-        reviewStatus: "Rejected",
-        requestedClient: "Client E",
-        affectedClient: "Client F",
-        instrumentName: "Instrument Z",
-        reason: "N/A",
-        comments: "Sample comment",
-        reviewComments: "Review comment text",
-        reviewedBy: "Admin User",
-        reviewedDate: "08/12/2025"
-    },
-    {
-        id: 4,
-        select: false,
-        moduleName: "Client Configuration",
-        actions: "Update",
-        transactionOn: "07/12/2025",
-        reviewStatus: "Pending",
-        requestedClient: "Client G",
-        affectedClient: "Client H",
-        instrumentName: "Instrument A",
-        reason: "N/A",
-        comments: "Sample comment",
-        reviewComments: "Review comment text",
-        reviewedBy: "Admin User",
-        reviewedDate: "08/12/2025"
-    },
-    {
-        id: 5,
-        select: true,
-        moduleName: "Audit Logs",
-        actions: "View",
-        transactionOn: "06/12/2025",
-        reviewStatus: "Approved",
-        requestedClient: "Client I",
-        affectedClient: "Client J",
-        instrumentName: "Instrument B",
-        reason: "N/A",
-        comments: "Sample comment",
-        reviewComments: "Review comment text",
-        reviewedBy: "Admin User",
-        reviewedDate: "08/12/2025"
-    },
-    {
-        id: 6,
-        select: false,
-        moduleName: "Permission Setup",
-        actions: "Create",
-        transactionOn: "06/12/2025",
-        reviewStatus: "Pending",
-        requestedClient: "Client K",
-        affectedClient: "Client L",
-        instrumentName: "Instrument C",
-        reason: "N/A",
-        comments: "Sample comment",
-        reviewComments: "Review comment text",
-        reviewedBy: "Admin User",
-        reviewedDate: "08/12/2025"
-    },
-    {
-        id: 7,
-        select: false,
-        moduleName: "Workflow Engine",
-        actions: "Update",
-        transactionOn: "05/12/2025",
-        reviewStatus: "Rejected",
-        requestedClient: "Client M",
-        affectedClient: "Client N",
-        instrumentName: "Instrument D",
-        reason: "N/A",
-        comments: "Sample comment",
-        reviewComments: "Review comment text",
-        reviewedBy: "Admin User",
-        reviewedDate: "08/12/2025"
-    },
-    {
-        id: 8,
-        select: true,
-        moduleName: "Report Generator",
-        actions: "Generate",
-        transactionOn: "05/12/2025",
-        reviewStatus: "Approved",
-        requestedClient: "Client O",
-        affectedClient: "Client P",
-        instrumentName: "Instrument E",
-        reason: "N/A",
-        comments: "Sample comment",
-        reviewComments: "Review comment text",
-        reviewedBy: "Admin User",
-        reviewedDate: "08/12/2025"
-    },
-    {
-        id: 9,
-        select: false,
-        moduleName: "Notification Service",
-        actions: "Update",
-        transactionOn: "04/12/2025",
-        reviewStatus: "Pending",
-        requestedClient: "Client Q",
-        affectedClient: "Client R",
-        instrumentName: "Instrument F",
-        reason: "N/A",
-        comments: "Sample comment",
-        reviewComments: "Review comment text",
-        reviewedBy: "Admin User",
-        reviewedDate: "08/12/2025"
-    },
-    {
-        id: 10,
-        select: false,
-        moduleName: "Security Settings",
-        actions: "Update",
-        transactionOn: "04/12/2025",
-        reviewStatus: "Approved",
-        requestedClient: "Client S",
-        affectedClient: "Client T",
-        instrumentName: "Instrument G",
-        reason: "N/A",
-        comments: "Sample comment",
-        reviewComments: "Review comment text",
-        reviewedBy: "Admin User",
-        reviewedDate: "08/12/2025"
-    }
-];
-
-const AUDIT_TYPE_OPTIONS = [
-    { label: "User", value: "User Generated" },
-    { label: "System", value: "System Generated" },
-    { label: "All", value: "All" }
-];
-
 const AuditTrailHistory = () => {
+    const { currentLanguage, changeLanguage, languages } = useLanguage();
+    const { t } = useTranslation();
     const today = getCurrentDate();
     // const [hideEmpty, setHideEmpty] = useState(true);
     const [isOpen, setIsOpen] = useState(true);
     const [showConfig, setShowConfig] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [visibleCount, setVisibleCount] = useState(9);
-    const [recordsDuration, setRecordsDuration] = useState("Current Date");
+    const [recordsDuration, setRecordsDuration] = useState("Current_Date");
     const [fromDate, setFromDate] = useState(today);
     const [toDate, setToDate] = useState(today);
     const [filename, setFilename] = useState("");
     const [userData, setUserData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [exportTrigger, setExportTrigger] = useState(0);
+
 
     const [selectedUser, setSelectedUser] = useState("All");
     const [selectedModule, setSelectedModule] = useState("All");
@@ -983,25 +641,17 @@ const AuditTrailHistory = () => {
     const visibleActions = enabledActions.slice(0, visibleCount);
     const overflowActions = enabledActions.slice(visibleCount);
 
-    const isCustomDate = recordsDuration === "Custom Date";
+    const isCustomDate = recordsDuration === "Custom_Date";
 
     const handleDurationChange = (value) => {
         const actualValue = value?.target?.value || value?.value || value;
         setRecordsDuration(actualValue);
     };
 
-    // useEffect(() => {
-    //     setLoading(true);
-    //     setTimeout(() => {
-    //         setUserData(MOCK_DATA);
-    //         setLoading(false); // Set to false after loading
-    //     }, 300);
-    // }, []);
-
     useEffect(() => {
         const initializeComponent = async () => {
             await Promise.all([
-                logViewAuditTrail(),
+                // logViewAuditTrail(),
                 fetchUserList(),
                 fetchModuleList(),
                 fetchAuditTrailData()
@@ -1035,35 +685,32 @@ const AuditTrailHistory = () => {
         let startDate, endDate;
 
         switch (duration) {
-            case "Current Date":
+            case "Current_Date":  // Change from "Current Date"
                 startDate = endDate = formatDateDDMMYYYY(today);
                 break;
 
-            case "Last 7 Days": {
-                const start = new Date();
-                start.setDate(today.getDate() - 7);
-                startDate = formatDateDDMMYYYY(start);
+            case "Last_7_Days":  // Change from "Last 7 Days"
+                const start7 = new Date();
+                start7.setDate(today.getDate() - 7);
+                startDate = formatDateDDMMYYYY(start7);
                 endDate = formatDateDDMMYYYY(today);
                 break;
-            }
 
-            case "Last 30 Days": {
-                const start = new Date();
-                start.setDate(today.getDate() - 30);
-                startDate = formatDateDDMMYYYY(start);
+            case "Last_30_Days":  // Change from "Last 30 Days"
+                const start30 = new Date();
+                start30.setDate(today.getDate() - 30);
+                startDate = formatDateDDMMYYYY(start30);
                 endDate = formatDateDDMMYYYY(today);
                 break;
-            }
 
-            case "Last 1 Year": {
-                const start = new Date();
-                start.setFullYear(today.getFullYear() - 1);
-                startDate = formatDateDDMMYYYY(start);
+            case "Last_1_Year":  // Change from "Last 1 Year"
+                const start1y = new Date();
+                start1y.setFullYear(today.getFullYear() - 1);
+                startDate = formatDateDDMMYYYY(start1y);
                 endDate = formatDateDDMMYYYY(today);
                 break;
-            }
 
-            case "Custom Date":
+            case "Custom_Date":  // Change from "Custom Date"
                 startDate = formatDateDDMMYYYY(fromDate);
                 endDate = formatDateDDMMYYYY(toDate);
                 break;
@@ -1075,8 +722,21 @@ const AuditTrailHistory = () => {
         return { startDate, endDate };
     };
 
-    const { currentLanguage, changeLanguage, languages } = useLanguage();
-    const { t } = useTranslation();
+
+
+    const AUDIT_TYPE_OPTIONS = useMemo(() => [
+        { label: t("label.user"), value: "User Generated" },
+        { label: t("label.system"), value: "System Generated" },
+        { label: t("label.all"), value: "All" }
+    ], [t]);
+
+    const RECORD_DURATION_OPTIONS = useMemo(() => [
+        { label: t("label.currentDate"), value: "Current_Date" },
+        { label: t("label.last7Days"), value: "Last_7_Days" },
+        { label: t("label.last30Days"), value: "Last_30_Days" },
+        { label: t("label.last1Year"), value: "Last_1_Year" },
+        { label: t("label.customDate"), value: "Custom_Date" }
+    ], [t]);
 
     // Add column definitions HERE (before any functions)
     const userColumns = useMemo(() => [
@@ -1235,19 +895,6 @@ const AuditTrailHistory = () => {
         </button>
     );
 
-
-    // const handleReviewHistory = () => {
-    //     if (selectedRows.length === 0) {
-    //         setErrorDialog({
-    //             show: true,
-    //             message: "Select an existing record.",
-    //             type: "information"
-    //         });
-    //         return;
-    //     }
-    //     setShowReviewHistory(true);
-    // };
-
     const handleReviewHistory = async () => {
         if (selectedRows.length === 0) {
             setErrorDialog({
@@ -1315,19 +962,6 @@ const AuditTrailHistory = () => {
         setShowAuditTrail(true);
     }
 
-    // const handleAuditTrailAuthorized = (data) => {
-    //     console.log('Review Audit Trail Data:', data);
-
-    //     // Mock: Update local state
-    //     setUserData(prev => prev.map(row =>
-    //         selectedRows.includes(row.id)
-    //             ? { ...row, reviewStatus: "Reviewed" }
-    //             : row
-    //     ));
-    //     setShowAuditTrail(false);
-    //     setSelectedRows([]);
-    // };
-
     const handleAuditTrailAuthorized = async (auditData) => {
         console.log("Audit Data:", auditData);
 
@@ -1373,25 +1007,6 @@ const AuditTrailHistory = () => {
         setShowCreateArchiveDialog(false);
         setShowCreateAuditLog(true);
     };
-
-    // const handleArchiveAuditLogAuthorized = (data) => {
-    //     console.log('Create Archive Audit Trail Data:', data);
-
-    //     // Mock: Create archive locally
-    //     const newArchive = {
-    //         id: archiveList.length + 1,
-    //         name: `CFRArchiving_${archiveList.length + 1}_${new Date().toISOString().split('T')[0].replace(/-/g, '')}`,
-    //         createDate: new Date().toISOString().replace('T', ' ').substring(0, 19)
-    //     };
-    //     setArchiveList(prev => [newArchive, ...prev]);
-    //     setShowCreateAuditLog(false);
-
-    //     setErrorDialog({
-    //         show: true,
-    //         message: `Archive "${newArchive.name}" created successfully!`,
-    //         type: "success"
-    //     });
-    // };
 
     const handleArchiveAuditLogAuthorized = async (auditData) => {
         console.log('Create Archive Audit Trail Data:', auditData);
@@ -1445,14 +1060,6 @@ const AuditTrailHistory = () => {
         setShowOpenAuditLog(true);
     };
 
-    // const handleOpenArchiveAuditLogAuthorized = (data) => {
-    //     console.log('Open Archive Audit Trail Data:', data);
-
-    //     // Mock: Just proceed without API call
-    //     setShowOpenAuditLog(false);
-    //     setShowOpenArchivePopup(true);
-    // };
-
     const handleOpenArchiveAuditLogAuthorized = async (auditData) => {
         console.log('Open Archive Audit Trail Data:', auditData);
 
@@ -1481,20 +1088,6 @@ const AuditTrailHistory = () => {
             alert('Failed to log open archive action.');
         }
     };
-
-    // const handleArchiveSelect = (archive) => {
-    //     setSelectedArchiveName(archive.name);
-    //     setShowOpenArchivePopup(false);
-
-    //     // Load archived data - filter or load specific archived records
-    //     // For now, showing the original data. You can filter by archive.id or load from backend
-    //     const archivedData = MOCK_DATA.filter(row => row.id <= 5); // Example: load specific archived records
-
-    //     setUserData(archivedData);
-    //     setShowReviewHistory(false);
-    //     setSelectedRows([]);
-    // };
-
 
     const handleArchiveSelect = async (archive) => {
         setSelectedArchiveName(archive.name);
@@ -1542,172 +1135,23 @@ const AuditTrailHistory = () => {
         }
     };
 
-    //Reset Function
-    // const handleReset = () => {
-    //     setSelectedUser("All");
-    //     setSelectedModule("All");
-    //     setSelectedAuditType("All");
-    //     setRecordsDuration("Current Date");
-    //     setFromDate(today);
-    //     setToDate(today);
-    //     setSelectedRows([]);
-    //     setShowReviewHistory(false);
-    //     setSelectedArchiveName("");
-    // };
-
     const handleReset = async () => {
-        // First, set the current user (not "All")
         const currentUserID = getSessionUserDetails().sUserID;
-        const currentUser = userList.find(u => u.L02UserID === currentUserID);
+        const currentUser = userList.find(u => u.L02UserID.trim() === currentUserID.trim());
         const defaultUser = currentUser ? currentUser.L02UserName : "All";
 
-        // Reset all filters
-        setSelectedUser(defaultUser);  // Use current user, not "All"
+        setSelectedUser(defaultUser);
         setSelectedModule("All");
         setSelectedAuditType("All");
-        setSelectedClient("All");
-        setRecordsDuration("Current Date");
+        setRecordsDuration("Current_Date"); // Not "Current Date"
         setFromDate(today);
         setToDate(today);
         setSelectedRows([]);
         setShowReviewHistory(false);
         setSelectedArchiveName("");
 
-        // Now fetch data with the reset filters
         await fetchAuditTrailData();
     };
-
-
-    // const handlePrint = () => {
-    //     const columnsToShow = showReviewHistory ? reviewHistoryColumns : userColumns;
-    //     const dataToShow = showReviewHistory
-    //         ? userData.filter(row => selectedRows.includes(row.id))
-    //         : userData;
-
-    //     const tableHTML = `
-    //     <!DOCTYPE html>
-    //     <html>
-    //     <head>
-    //         <title>Audit Trail History</title>
-    //         <style>
-    //             * { margin: 0; padding: 0; box-sizing: border-box; }
-    //             body { 
-    //                 font-family: 'Roboto', Arial, sans-serif; 
-    //                 padding: 30px;
-    //                 background-color: #ffffff;
-    //             }
-    //             h1 { 
-    //                 text-align: center; 
-    //                 color: #2883FE; 
-    //                 margin-bottom: 30px;
-    //                 font-size: 28px;
-    //                 font-weight: 600;
-    //             }
-    //             .print-info {
-    //                 text-align: right;
-    //                 color: #666;
-    //                 font-size: 12px;
-    //                 margin-bottom: 15px;
-    //             }
-    //             table { 
-    //                 width: 100%; 
-    //                 border-collapse: collapse; 
-    //                 margin-top: 20px;
-    //                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    //             }
-    //             th, td { 
-    //                 border: 1px solid #ddd; 
-    //                 padding: 12px 8px; 
-    //                 text-align: left;
-    //                 font-size: 13px;
-    //             }
-    //             th { 
-    //                 background-color: #f9f9f9; 
-    //                 color: #000000; 
-    //                 font-weight: bold;
-    //                 text-transform: uppercase;
-    //                 font-size: 12px;
-    //                 letter-spacing: 0.5px;
-    //             }
-    //             tr:nth-child(even) { 
-    //                 background-color: #fafafa; 
-    //             }
-    //             tr:hover {
-    //                 background-color: #f5f5f5;
-    //             }
-    //             td {
-    //                 color: #333;
-    //             }
-    //             @media print {
-    //                 body { 
-    //                     padding: 15px;
-    //                 }
-    //                 table {
-    //                     box-shadow: none;
-    //                 }
-    //             }
-    //         </style>
-    //     </head>
-    //     <body>
-    //         <div class="print-info">
-    //             Printed on: ${new Date().toLocaleString()}
-    //         </div>
-    //         <h1>Audit Trail History</h1>
-    //         <table>
-    //             <thead>
-    //                 <tr>
-    //                     ${columnsToShow
-    //             .filter(col => col.key !== 'select')
-    //             .map(col => `<th>${col.label}</th>`)
-    //             .join('')}
-    //                 </tr>
-    //             </thead>
-    //             <tbody>
-    //                 ${dataToShow.map((row, index) => `
-    //                     <tr>
-    //                         ${columnsToShow
-    //                     .filter(col => col.key !== 'select')
-    //                     .map(col => {
-    //                         if (col.key === 'serialNo') return `<td>${index + 1}</td>`;
-    //                         return `<td>${row[col.key] || ''}</td>`;
-    //                     })
-    //                     .join('')}
-    //                     </tr>
-    //                 `).join('')}
-    //             </tbody>
-    //         </table>
-    //         <script>
-    //             window.onload = function() { 
-    //                 setTimeout(function() {
-    //                     window.print();
-    //                 }, 250);
-    //             }
-
-    //             window.onafterprint = function() {
-    //                 setTimeout(function() {
-    //                     window.close();
-    //                 }, 500);
-    //             };
-
-    //             document.addEventListener('keydown', function(e) {
-    //                 if (e.key === 'Escape') {
-    //                     window.close();
-    //                 }
-    //             });
-    //         </script>
-    //     </body>
-    //     </html>
-    // `;
-    //
-    //     const printWindow = window.open('', 'PrintWindow', 'width=1200,height=800,left=100,top=50');
-    //     if (printWindow) {
-    //         printWindow.document.write(tableHTML);
-    //         printWindow.document.close();
-    //         printWindow.focus();
-    //     } else {
-    //         alert('Please allow popups for this site to print.');
-    //     }
-    // };
 
     const handlePrint = async () => {
         const columnsToShow = showReviewHistory ? reviewHistoryColumns : userColumns;
@@ -1914,53 +1358,6 @@ const AuditTrailHistory = () => {
         }
     };
 
-    // const getSessionUserDetails = () => {
-    //     try {
-    //         const encryptedUserID = sessionStorage.getItem('sUserID');
-    //         const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
-    //         const encryptedTenantID = sessionStorage.getItem('sTenantID');
-    //         const encryptedUsername = sessionStorage.getItem('sUsername');
-    //         const encryptedDomain = sessionStorage.getItem('sDomainName');
-    //         const encryptedCategories = sessionStorage.getItem('sCategories');
-    //         const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
-    //         const encryptedSessionID = sessionStorage.getItem('sSessionID');
-    //         const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
-    //         const encryptedDBType = sessionStorage.getItem('sdbtype');
-
-    //         return {
-    //             sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
-    //             sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
-    //             sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
-    //             sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
-    //             sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
-    //             sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
-    //             sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
-    //             sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
-    //             sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
-    //             sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
-    //             sApplicationName: "SDMS",
-    //             sUserStatus: ""
-    //         };
-    //     } catch (error) {
-    //         console.error('Error decrypting session data:', error);
-    //         // Return default values if decryption fails
-    //         return {
-    //             sUserID: '',
-    //             sSiteCode: '',
-    //             sTenantID: '',
-    //             sUsername: '',
-    //             sUserDomainName: '',
-    //             sCategories: '',
-    //             sUserGroupID: '',
-    //             sSessionID: '',
-    //             sTimeZoneID: '',
-    //             sdbtype: '',
-    //             sApplicationName: "SDMS",
-    //             sUserStatus: ""
-    //         };
-    //     }
-    // };
-
     const getSessionUserDetails = () => {
         try {
             const encryptedUserID = sessionStorage.getItem('sUserID');
@@ -1974,18 +1371,25 @@ const AuditTrailHistory = () => {
             const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
             const encryptedDBType = sessionStorage.getItem('sdbtype');
 
-            // Helper function to safely decrypt
-            const safeDecrypt = (encryptedValue) => {
-                if (!encryptedValue || encryptedValue === 'null' || encryptedValue === 'undefined') {
-                    return '';
-                }
-                try {
-                    return CF_decrypt(encryptedValue);
-                } catch (error) {
-                    console.warn('Decryption failed for value:', encryptedValue);
-                    return '';
-                }
+            const isEncrypted = (value) => {
+                if (typeof value !== 'string') return false;
+                if (value.length < 70) return false;                 // too short → not encrypted
+                return /^[0-9a-fA-F]{64}/.test(value);               // salt + iv must be hex
             };
+
+            const safeDecrypt = (value) => {
+                if (!value || value === 'null' || value === 'undefined') {
+                    return '';
+                }
+                if (!isEncrypted(value)) {
+                    // value is already plain text (U1, Administrator, MSSQL, etc.)
+                    return value;
+                }
+
+                return CF_decrypt(value);
+            };
+
+
 
             return {
                 sUserID: safeDecrypt(encryptedUserID),
@@ -2003,7 +1407,6 @@ const AuditTrailHistory = () => {
             };
         } catch (error) {
             console.error('Error getting session user details:', error);
-            // Return default empty values if everything fails
             return {
                 sUserID: '',
                 sSiteCode: '',
@@ -2075,72 +1478,92 @@ const AuditTrailHistory = () => {
         }
     };
 
+    const mapCFTViewLoad = (item, index) => ({
+        id: item.SerialNo ?? index + 1,
+        select: false,
+        moduleName: item.ModuleName ?? '',
+        actions: item.Actions ?? '',
+        transactionOn: item.TransactionDate ?? '',
+        userName: item['User Name'] ?? '',
+        profileName: item['User Full Name'] ?? '',
+        systemComments: item.SystemComments ?? '',
+        reason: item.Reason ?? '',
+        comments: item.Comments ?? '',
+        modifiedData: item.ModifiedData ?? ''
+    });
+
+    const mapCFRFilter = (item, index) => ({
+        id: item.SerialNo ?? index + 1,
+        select: false,
+        moduleName: item.ModuleName ?? '',
+        actions: item.Actions ?? '',
+        transactionOn: item.TransactionDate ?? '',
+        reviewStatus: item['Review Status'] ?? '',
+        requestedClient: item.RequestedClient ?? '',
+        affectedClient: item.AffectedClient ?? '',
+        instrumentName: item.InstrumentID ?? '',
+        reason: item.Reason ?? '',
+        comments: item.Comments ?? '',
+        reviewComments: item['Review Comments'] ?? '',
+        reviewedBy: item['Reviewed By'] ?? '',
+        reviewedDate: item['Reviewed Date'] ?? '',
+        userName: item['User Name'] ?? '',
+        profileName: item['User Full Name'] ?? '',
+        systemComments: item.SystemComments ?? '',
+        modifiedData: item.ModifiedData ?? ''
+    });
+
 
     const fetchAuditTrailData = async () => {
         setLoading(true);
         try {
-            // Get audit type
-            const auditTrailType = selectedAuditType; // "All", "User Generated", or "System Generated"
+            const auditTrailType =
+                selectedAuditType === "System Generated"
+                    ? "System Generated"
+                    : selectedAuditType === "User Generated"
+                        ? "User Generated"
+                        : "All";
 
-            // Get user ID
-            let sUserIDFromUI;
-            if (selectedUser === "All") {
-                sUserIDFromUI = "All";
-            } else {
-                const user = userList.find(u => u.L02UserName === selectedUser);
-                sUserIDFromUI = user ? user.L02UserID.toString() : "All";
-            }
+            const currentUserDetails = getSessionUserDetails();
+            const sUserIDFromUI = "All"; // jQuery starts with "All"
 
-            // Get module name
-            const sModuleName = selectedModule; // "All" or specific module
+            // Convert dates to DD/MM/YYYY
+            const formatDate = (dateStr) => {
+                const [year, month, day] = dateStr.split('-');
+                return `${day}/${month}/${year}`;
+            };
 
-            // Get dates
-            let sFromDate = "";
-            let sToDate = "";
-
-            // Only send dates if NOT disabled (i.e., not "All" duration)
-            if (recordsDuration !== "All") {
-                sFromDate = fromDate;
-                sToDate = toDate;
-            }
+            const isFilter = selectedUser !== "All" || selectedModule !== "All";
 
             const payload = {
                 auditTrailType: auditTrailType,
                 sUserIDFromUI: sUserIDFromUI,
-                sModuleName: sModuleName,
-                sFromDate: sFromDate,
-                sToDate: sToDate,
-                ActiveUserDetails: getSessionUserDetails()
+                sFromDate: formatDate(fromDate),
+                sToDate: formatDate(toDate),
+                sModuleName: selectedModule || "All",
+                ActiveUserDetails: currentUserDetails,
+                ApplicationCode: currentUserDetails.sApplicationName || "SDMS"
             };
 
             console.log("Fetch Audit Trail Payload:", payload);
-            const result = await postData('AuditTrail/CFTTransViewLoad', payload);
+
+            const apiUrl = isFilter
+                ? 'AuditTrail/CFRTransactionFilter'
+                : 'AuditTrail/CFTTransViewLoad';
+
+            const result = await postData(apiUrl, payload);
+
             console.log("Fetch Audit Trail Result:", result);
 
             if (result && Array.isArray(result) && result.length > 0) {
-                const mappedData = result.map((item, index) => ({
-                    id: item.SerialNo || index + 1,
-                    select: false,
-                    moduleName: item.ModuleName || '',
-                    actions: item.Actions || '',
-                    transactionOn: item.TransactionDate || '',
-                    reviewStatus: item['Review Status'] || '',
-                    requestedClient: item.RequestedClient || '',
-                    affectedClient: item.AffectedClient || '',
-                    instrumentName: item.InstrumentName || '',
-                    reason: item.Reason || '',
-                    comments: item.Comments || '',
-                    reviewComments: item['Review Comments'] || '',
-                    reviewedBy: item['Reviewed By'] || '',
-                    reviewedDate: item['Reviewed Date'] || '',
-                    userName: item['User Name'] || '',
-                    profileName: item['User Full Name'] || '',
-                    systemComments: item.SystemComments || '',
-                    modifiedData: item.ModifiedData || ''
-                }));
+                const mappedData = isFilter
+                    ? result.map(mapCFRFilter)
+                    : result.map(mapCFTViewLoad);
 
                 setUserData(mappedData);
+                console.log("Mapped Data:", mappedData);
             } else {
+                console.log("No data returned");
                 setUserData([]);
             }
             setLoading(false);
@@ -2151,66 +1574,84 @@ const AuditTrailHistory = () => {
         }
     };
 
+
     const handleFilter = async () => {
         setLoading(true);
         setSelectedArchiveName("");
 
         try {
-            // Get user ID (not username)
             let sUserIDFromUI;
             if (selectedUser === "All") {
-                sUserIDFromUI = "All";
+                sUserIDFromUI = "-1";   // BACKEND EXPECTS THIS
             } else {
-                // Find user ID from userList
-                const user = userList.find(u => u.L02UserName === selectedUser || u.UserName === selectedUser);
-                sUserIDFromUI = user ? user.L02UserID.toString() : "All";
+                const user = userList.find(u => u.L02UserName === selectedUser);
+                sUserIDFromUI = user ? user.L02UserID.toString().trim() : "-1";
             }
 
+            // Date format (DO NOT CHANGE)
+            const formatDate = (date) => {
+                const d = new Date(date);
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                return `${day}/${month}/${year}`;
+            };
+
+
+
+            const auditTrailType =
+                selectedAuditType === "System Generated"
+                    ? "System Generated"
+                    : selectedAuditType === "User Generated"
+                        ? "User Generated"
+                        : "All";
+
+
             const payload = {
-                sFromDate: fromDate,
-                sToDate: toDate,
+                sFromDate: formatDate(fromDate),
+                sToDate: formatDate(toDate),
                 sUserIDFromUI: sUserIDFromUI,
-                sModulename: selectedModule,
-                auditTrailType: selectedAuditType,
+                sModulename: selectedModule?.trim() || "All",
+                auditTrailType: auditTrailType,
                 ActiveUserDetails: getSessionUserDetails()
             };
 
-            console.log("Filter Payload:", payload);
+            console.log("Filter Payload (FINAL):", payload);
+
             const result = await postData('AuditTrail/CFRTransactionFilter', payload);
             console.log("Filter Result:", result);
 
-            if (result && Array.isArray(result)) {
-                const mappedData = result.map((item, index) => ({
+            if (Array.isArray(result)) {
+                setUserData(result.map((item, index) => ({
                     id: index + 1,
                     select: false,
                     moduleName: item.ModuleName || '',
                     actions: item.Actions || '',
-                    transactionOn: item.TransactionDate || item.TransactionOn || '',
-                    reviewStatus: item['Review Status'] || item.ReviewStatus || '',
+                    transactionOn: item.TransactionDate || '',
+                    reviewStatus: item['Review Status'] || '',
                     requestedClient: item.RequestedClient || '',
                     affectedClient: item.AffectedClient || '',
-                    instrumentName: item.InstrumentName || '',
+                    instrumentName: item.InstrumentID || '',
                     reason: item.Reason || '',
                     comments: item.Comments || '',
-                    reviewComments: item['Review Comments'] || item.ReviewComments || '',
-                    reviewedBy: item['Reviewed By'] || item.ReviewedBy || '',
-                    reviewedDate: item['Reviewed Date'] || item.ReviewedDate || '',
-                    userName: item['User Name'] || item.UserName || '',
-                    profileName: item['User Full Name'] || item.ProfileName || '',
+                    reviewComments: item['Review Comments'] || '',
+                    reviewedBy: item['Reviewed By'] || '',
+                    reviewedDate: item['Reviewed Date'] || '',
+                    userName: item['User Name'] || '',
+                    profileName: item['User Full Name'] || '',
                     systemComments: item.SystemComments || '',
                     modifiedData: item.ModifiedData || ''
-                }));
-
-                setUserData(mappedData);
+                })));
             } else {
                 setUserData([]);
             }
 
-            setLoading(false);
             setSelectedRows([]);
             setShowReviewHistory(false);
         } catch (error) {
-            console.error('Error filtering data:', error);
+            console.error("Filter error:", error);
+            setUserData([]);
+        } finally {
             setLoading(false);
         }
     };
@@ -2221,7 +1662,9 @@ const AuditTrailHistory = () => {
                 ActiveUserDetails: getSessionUserDetails()
             };
 
-            await postData('AuditTrail/AuditTrailHistoryViewAudit', payload);
+            const result = await postData('AuditTrail/AuditTrailHistoryViewAudit', payload);
+            console.log("Raw audit data count:", result?.length);
+
         } catch (error) {
             console.error('Error logging view audit trail:', error);
         }
@@ -2280,10 +1723,10 @@ const AuditTrailHistory = () => {
                             <AnimatedDropdown
                                 label={t("label.recordsDuration")}
                                 value={recordsDuration}
-                                options={["Current Date", "Last 7 Days", "Last 30 Days", "Last 1 Year", "Custom Date"]}
+                                options={RECORD_DURATION_OPTIONS}
+                                displayKey="label"
+                                valueKey="value"
                                 onChange={handleDurationChange}
-                                // isSearchable={true}
-                                allowFreeInput={true}
                             />
                         </div>
 
