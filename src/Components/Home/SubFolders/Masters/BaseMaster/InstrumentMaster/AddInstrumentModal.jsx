@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import Draggable from "react-draggable";
 import { FiCheckSquare } from "react-icons/fi";
-import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
+import AnimatedDropdown from "../../../../../Layout/Common/AnimatedDropdown";
 import { IoIosSettings } from "react-icons/io";
 import { useTranslation } from "react-i18next";
+import CommunicationSettingsModal from "./CommunicationSettingsModal";
 
 const AddInstrumentModal = ({
   isOpen,
@@ -13,6 +14,8 @@ const AddInstrumentModal = ({
   initialData = null,
 }) => {
   const { t } = useTranslation();
+  const [showCommSettings, setShowCommSettings] = useState(false);
+
   const nodeRef = useRef(null);
   const [submitted, setSubmitted] = useState(false);
 
@@ -25,8 +28,8 @@ const AddInstrumentModal = ({
     parserType: "NONE",
     automatic: false,
     interfacerMapped: false,
-    interfacerInstrument: "",
-    active: true,
+    interfacerInstrument: "CREATE_NEW",
+    active: false,
   };
 
   const [form, setForm] = useState(initialForm);
@@ -55,14 +58,7 @@ const AddInstrumentModal = ({
   const handleSubmit = () => {
     setSubmitted(true);
 
-    if (
-      !form.instrumentCode ||
-      !form.instrumentAlias ||
-      !form.lockType ||
-      !form.parserType
-    ) {
-      return;
-    }
+    if (!isSubmitValid()) return;
 
     onSave(form);
     setForm(initialForm);
@@ -70,9 +66,25 @@ const AddInstrumentModal = ({
     onClose();
   };
 
+  // Submit validation (ONLY 2 fields)
+  const isSubmitValid = () => {
+    return form.instrumentCode.trim() && form.instrumentAlias.trim();
+  };
+
+  // Communication Settings validation (4 fields)
+  const isCommSettingsValid = () => {
+    return (
+      form.instrumentCode.trim() &&
+      form.instrumentAlias.trim() &&
+      form.instrumentModel.trim() &&
+      form.instrumentMake.trim()
+    );
+  };
+
   if (!isOpen) return null;
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <Draggable nodeRef={nodeRef} handle=".modal-header" bounds="parent">
         <div
@@ -81,11 +93,14 @@ const AddInstrumentModal = ({
         >
           {/* HEADER */}
           <div className="modal-header cursor-move flex justify-between px-4 py-2 bg-slate-100 border-b">
-            <span className="text-[#0e5bca] text-[18px] font-semibold">
+            <label
+              className="text-[#0e5bca] text-[18px]"
+              style={{ fontFamily: "Helvetica Neue, Arial, sans-serif" }}
+            >
               {mode === "edit"
                 ? t("masters.editInstrument")
                 : t("masters.addInstrument")}
-            </span>
+            </label>
             <button
               onClick={() => {
                 setSubmitted(false);
@@ -99,27 +114,31 @@ const AddInstrumentModal = ({
           </div>
 
           {/* BODY */}
-          <div className="px-4 py-4 space-y-6 overflow-y-auto flex-1">
+          <div className="px-4 py-4 rounded space-y-4 overflow-y-auto flex-1">
             <label className="block text-center text-green-700 text-[12px] font-bold font-roboto">
               {t("masters.availableLicense")}: 19
             </label>
 
-            <div className="space-y-7 w-[300px]">
+            <div className="space-y-7 w-[340px]">
               <div>
                 <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
                   {t("masters.instrumentCode")}
                   <span className="text-red-500">*</span>
                 </label>
-                <AnimatedDropdown
+                <input
+                  type="text"
                   name="instrumentCode"
                   value={form.instrumentCode}
-                  options={[]}
-                  allowFreeInput
                   onChange={(e) =>
                     setForm({ ...form, instrumentCode: e.target.value })
                   }
-                  required
-                  showError={submitted}
+                  className={`
+    w-full px-1 py-1 text-sm outline-none
+    border-b-2
+    ${submitted && !form.instrumentCode ? "border-red-500" : "border-gray-300"}
+
+    focus:border-blue-500
+  `}
                 />
               </div>
 
@@ -128,46 +147,76 @@ const AddInstrumentModal = ({
                   {t("masters.instrumentAlias")}
                   <span className="text-red-500">*</span>
                 </label>
-                <AnimatedDropdown
+                <input
+                  type="text"
                   name="instrumentAlias"
                   value={form.instrumentAlias}
-                  options={[]}
-                  allowFreeInput
                   onChange={(e) =>
                     setForm({ ...form, instrumentAlias: e.target.value })
                   }
-                  required
-                  showError={submitted}
+                  className={`
+    w-full px-1 py-1 text-sm outline-none
+    border-b-2
+  ${submitted && !form.instrumentAlias ? "border-red-500" : "border-gray-300"}
+
+    focus:border-blue-500
+  `}
                 />
               </div>
 
               <div>
                 <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
                   {t("masters.instrumentModel")}
+                  {form.interfacerMapped && (
+                    <span className="text-red-500">*</span>
+                  )}
                 </label>
-                <AnimatedDropdown
+
+                <input
+                  type="text"
                   name="instrumentModel"
                   value={form.instrumentModel}
-                  options={[]}
-                  allowFreeInput
                   onChange={(e) =>
                     setForm({ ...form, instrumentModel: e.target.value })
                   }
+                  className={`
+  w-full px-1 py-1 text-sm outline-none border-b-2
+ ${
+   submitted && form.interfacerMapped && !form.instrumentModel
+     ? "border-red-500"
+     : "border-gray-300"
+ }
+
+  focus:border-blue-500
+`}
                 />
               </div>
 
               <div>
                 <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
                   {t("masters.instrumentMake")}
+                  {form.interfacerMapped && (
+                    <span className="text-red-500">*</span>
+                  )}
                 </label>
-                <AnimatedDropdown
+
+                <input
+                  type="text"
                   name="instrumentMake"
                   value={form.instrumentMake}
-                  options={[]}
-                  allowFreeInput
                   onChange={(e) =>
                     setForm({ ...form, instrumentMake: e.target.value })
                   }
+                  className={`
+  w-full px-1 py-1 text-sm outline-none border-b-2
+${
+  submitted && form.interfacerMapped && !form.instrumentMake
+    ? "border-red-500"
+    : "border-gray-300"
+}
+
+  focus:border-blue-500
+`}
                 />
               </div>
 
@@ -226,7 +275,8 @@ const AddInstrumentModal = ({
                       setForm({
                         ...form,
                         interfacerMapped: e.target.checked,
-                        interfacerInstrument: "",
+                        interfacerInstrument: e.target.checked ? "CREATE_NEW" : "",
+
                       })
                     }
                   />
@@ -254,9 +304,10 @@ const AddInstrumentModal = ({
                     name="interfacerInstrument"
                     value={form.interfacerInstrument}
                     options={[
-                      { label: "Instrument A", value: "INST_A" },
-                      { label: "Instrument B", value: "INST_B" },
-                      { label: "Instrument C", value: "INST_C" },
+                      { label: "Create New", value: "CREATE_NEW" },
+                      { label: "Roche Cobas 6800/8800", value: "INST_A" },
+                      { label: "DiaSorin LIASION", value: "INST_B" },
+                      { label: "Agaram Chromeleon", value: "INST_C" },
                     ]}
                     displayKey="label"
                     valueKey="value"
@@ -277,7 +328,16 @@ const AddInstrumentModal = ({
           {/* FOOTER */}
           <div className="flex justify-end gap-2 px-4 py-3 border-t">
             {form.interfacerMapped && (
-              <button className="flex items-center gap-1 px-[12px] py-[6px] rounded text-[11px] font-bold shadow-sm bg-[#2883fe] text-white">
+              <button
+                onClick={() => {
+                  setSubmitted(true);
+
+                  if (!isCommSettingsValid()) return;
+
+                  setShowCommSettings(true);
+                }}
+                className="flex items-center gap-1 px-[12px] py-[6px] rounded text-[11px] font-bold shadow-sm bg-[#2883fe] text-white"
+              >
                 <IoIosSettings className="w-4 h-4" />
                 {t("masters.communicationSettings")}
               </button>
@@ -310,6 +370,12 @@ const AddInstrumentModal = ({
         </div>
       </Draggable>
     </div>
+     <CommunicationSettingsModal
+        isOpen={showCommSettings}
+        interfacerInstrument={form.interfacerInstrument}
+        onClose={() => setShowCommSettings(false)}
+      />
+      </>
   );
 };
 

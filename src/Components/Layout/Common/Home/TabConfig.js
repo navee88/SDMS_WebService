@@ -28,8 +28,8 @@ import AutoDownloadConfiguration from "../../../Home/SubFolders/Scheduler/Downlo
 import ViewDownloadConfiguration from "../../../Home/SubFolders/Scheduler/DownloadScheduler/ViewDownloadConfiguration";
 import ClientServiceMonitor from "../../../Home/SubFolders/Scheduler/ClientServiceMonitor/ClientServiceMonitor";
 import Domain from "../../../Home/SubFolders/Masters/BaseMaster/Domain";
-import Client from "../../../Home/SubFolders/Masters/BaseMaster/Client";
-import Instrument from "../../../Home/SubFolders/Masters/BaseMaster/Instrument";
+import Client from "../../../Home/SubFolders/Masters/BaseMaster/ClientMaster/Client";
+import Instrument from "../../../Home/SubFolders/Masters/BaseMaster/InstrumentMaster/Instrument";
 import Site from "../../../Home/SubFolders/Masters/BaseMaster/Site";
 import TagMaster from "../../../Home/SubFolders/Masters/TagsAndTemplate/TagMaster";
 import TemplateMapping from "../../../Home/SubFolders/Masters/TagsAndTemplate/TemplateMapping";

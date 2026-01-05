@@ -560,7 +560,11 @@
     "parserType": "Parser Type",
     "interfacerMapped": "Interfacer Mapped",
     "interfacerInstrument": "Interfacer Instrument",
-    "availableLicense": "Available License"
+    "availableLicense": "Available License",
+    "addInstrument": "Add Instrument",
+    "editInstrument": "Edit Instrument",
+    "communicationSettings": "Communication Settings"
+ 
     
   },
   "usermanagement": {
