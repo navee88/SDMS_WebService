@@ -833,6 +833,12 @@ const MOCK_DATA = [
     }
 ];
 
+const AUDIT_TYPE_OPTIONS = [
+    { label: "User", value: "User Generated" },
+    { label: "System", value: "System Generated" },
+    { label: "All", value: "All" }
+];
+
 const AuditTrailHistory = () => {
     const today = getCurrentDate();
     // const [hideEmpty, setHideEmpty] = useState(true);
@@ -916,6 +922,8 @@ const AuditTrailHistory = () => {
     });
     const [selectedClient, setSelectedClient] = useState("All");
     const [clientList, setClientList] = useState([]);
+    const [userList, setUserList] = useState([]);
+    const [moduleList, setModuleList] = useState([]);
     const [isFilterCollapsed, setIsFilterCollapsed] = useState(false);
     const [passwordError, setPasswordError] = useState(false);
     const { postData } = useAxios();
@@ -992,16 +1000,17 @@ const AuditTrailHistory = () => {
 
     useEffect(() => {
         const initializeComponent = async () => {
-            // Run in parallel instead of sequential
             await Promise.all([
                 logViewAuditTrail(),
-                fetchClientList(),
+                fetchUserList(),
+                fetchModuleList(),
                 fetchAuditTrailData()
             ]);
         };
 
         initializeComponent();
     }, []);
+
     useEffect(() => {
         const handleCloseReviewHistory = () => {
             setShowReviewHistory(false);
@@ -1547,7 +1556,13 @@ const AuditTrailHistory = () => {
     // };
 
     const handleReset = async () => {
-        setSelectedUser("All");
+        // First, set the current user (not "All")
+        const currentUserID = getSessionUserDetails().sUserID;
+        const currentUser = userList.find(u => u.L02UserID === currentUserID);
+        const defaultUser = currentUser ? currentUser.L02UserName : "All";
+
+        // Reset all filters
+        setSelectedUser(defaultUser);  // Use current user, not "All"
         setSelectedModule("All");
         setSelectedAuditType("All");
         setSelectedClient("All");
@@ -1558,6 +1573,7 @@ const AuditTrailHistory = () => {
         setShowReviewHistory(false);
         setSelectedArchiveName("");
 
+        // Now fetch data with the reset filters
         await fetchAuditTrailData();
     };
 
@@ -1898,59 +1914,51 @@ const AuditTrailHistory = () => {
         }
     };
 
+    // const getSessionUserDetails = () => {
+    //     try {
+    //         const encryptedUserID = sessionStorage.getItem('sUserID');
+    //         const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
+    //         const encryptedTenantID = sessionStorage.getItem('sTenantID');
+    //         const encryptedUsername = sessionStorage.getItem('sUsername');
+    //         const encryptedDomain = sessionStorage.getItem('sDomainName');
+    //         const encryptedCategories = sessionStorage.getItem('sCategories');
+    //         const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
+    //         const encryptedSessionID = sessionStorage.getItem('sSessionID');
+    //         const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
+    //         const encryptedDBType = sessionStorage.getItem('sdbtype');
 
-    // const handleFilter = () => {
-    //     setLoading(true);
-    //     setSelectedArchiveName("");
-    //     setTimeout(() => {
-    //         let filteredData = [...MOCK_DATA];
-
-    //         // Filter by User Name
-    //         if (selectedUser !== "All") {
-    //             filteredData = filteredData.filter(row =>
-    //                 row.userName && row.userName.toLowerCase().includes(selectedUser.toLowerCase())
-    //             );
-    //         }
-
-    //         // Filter by Module Name
-    //         if (selectedModule !== "All") {
-    //             filteredData = filteredData.filter(row =>
-    //                 row.moduleName && row.moduleName.toLowerCase().includes(selectedModule.toLowerCase())
-    //             );
-    //         }
-
-    //         // Filter by Audit Type
-    //         if (selectedAuditType !== "All") {
-    //             // You can add logic based on your audit type field
-    //             // For now, keeping all data for "All"
-    //         }
-
-    //         // Filter by Date Range
-    //         const { startDate, endDate } = getDateRange(recordsDuration, fromDate, toDate);
-
-    //         filteredData = filteredData.filter(row => {
-    //             if (!row.transactionOn) return false;
-
-    //             const rowDate = row.transactionOn; // Format: "08/12/2025"
-
-    //             // Convert to comparable format
-    //             const [rowDay, rowMonth, rowYear] = rowDate.split('/');
-    //             const rowDateObj = new Date(`${rowYear}-${rowMonth}-${rowDay}`);
-
-    //             const [startDay, startMonth, startYear] = startDate.split('/');
-    //             const startDateObj = new Date(`${startYear}-${startMonth}-${startDay}`);
-
-    //             const [endDay, endMonth, endYear] = endDate.split('/');
-    //             const endDateObj = new Date(`${endYear}-${endMonth}-${endDay}`);
-
-    //             return rowDateObj >= startDateObj && rowDateObj <= endDateObj;
-    //         });
-
-    //         setUserData(filteredData);
-    //         setLoading(false);
-    //         setSelectedRows([]);
-    //         setShowReviewHistory(false);
-    //     }, 300);
+    //         return {
+    //             sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
+    //             sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
+    //             sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
+    //             sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
+    //             sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
+    //             sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
+    //             sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
+    //             sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
+    //             sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
+    //             sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
+    //             sApplicationName: "SDMS",
+    //             sUserStatus: ""
+    //         };
+    //     } catch (error) {
+    //         console.error('Error decrypting session data:', error);
+    //         // Return default values if decryption fails
+    //         return {
+    //             sUserID: '',
+    //             sSiteCode: '',
+    //             sTenantID: '',
+    //             sUsername: '',
+    //             sUserDomainName: '',
+    //             sCategories: '',
+    //             sUserGroupID: '',
+    //             sSessionID: '',
+    //             sTimeZoneID: '',
+    //             sdbtype: '',
+    //             sApplicationName: "SDMS",
+    //             sUserStatus: ""
+    //         };
+    //     }
     // };
 
     const getSessionUserDetails = () => {
@@ -1966,23 +1974,36 @@ const AuditTrailHistory = () => {
             const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
             const encryptedDBType = sessionStorage.getItem('sdbtype');
 
+            // Helper function to safely decrypt
+            const safeDecrypt = (encryptedValue) => {
+                if (!encryptedValue || encryptedValue === 'null' || encryptedValue === 'undefined') {
+                    return '';
+                }
+                try {
+                    return CF_decrypt(encryptedValue);
+                } catch (error) {
+                    console.warn('Decryption failed for value:', encryptedValue);
+                    return '';
+                }
+            };
+
             return {
-                sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
-                sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
-                sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
-                sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
-                sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
-                sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
-                sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
-                sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
-                sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
-                sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
+                sUserID: safeDecrypt(encryptedUserID),
+                sSiteCode: safeDecrypt(encryptedSiteCode),
+                sTenantID: safeDecrypt(encryptedTenantID),
+                sUsername: safeDecrypt(encryptedUsername),
+                sUserDomainName: safeDecrypt(encryptedDomain),
+                sCategories: safeDecrypt(encryptedCategories),
+                sUserGroupID: safeDecrypt(encryptedUserGroup),
+                sSessionID: safeDecrypt(encryptedSessionID),
+                sTimeZoneID: safeDecrypt(encryptedTimeZone),
+                sdbtype: safeDecrypt(encryptedDBType),
                 sApplicationName: "SDMS",
                 sUserStatus: ""
             };
         } catch (error) {
-            console.error('Error decrypting session data:', error);
-            // Return default values if decryption fails
+            console.error('Error getting session user details:', error);
+            // Return default empty values if everything fails
             return {
                 sUserID: '',
                 sSiteCode: '',
@@ -2016,57 +2037,117 @@ const AuditTrailHistory = () => {
             console.error('Error fetching client list:', error);
         }
     };
+
+    const fetchUserList = async () => {
+        try {
+            const payload = {
+                ActiveUserDetails: getSessionUserDetails()
+            };
+
+            console.log("Fetch User List Payload:", payload);
+            const result = await postData('AuditTrail/CFRTranUsername', payload);
+            console.log("User List Result:", result);
+
+            if (result && Array.isArray(result)) {
+                setUserList(result);
+            }
+        } catch (error) {
+            console.error('Error fetching user list:', error);
+        }
+    };
+
+
+    const fetchModuleList = async () => {
+        try {
+            const payload = {
+                ActiveUserDetails: getSessionUserDetails()
+            };
+
+            console.log("Fetch Module List Payload:", payload);
+            const result = await postData('AuditTrail/CFRTranModuleName', payload);
+            console.log("Module List Result:", result);
+
+            if (result && Array.isArray(result)) {
+                setModuleList(result);
+            }
+        } catch (error) {
+            console.error('Error fetching module list:', error);
+        }
+    };
+
+
     const fetchAuditTrailData = async () => {
         setLoading(true);
         try {
+            // Get audit type
+            const auditTrailType = selectedAuditType; // "All", "User Generated", or "System Generated"
+
+            // Get user ID
+            let sUserIDFromUI;
+            if (selectedUser === "All") {
+                sUserIDFromUI = "All";
+            } else {
+                const user = userList.find(u => u.L02UserName === selectedUser);
+                sUserIDFromUI = user ? user.L02UserID.toString() : "All";
+            }
+
+            // Get module name
+            const sModuleName = selectedModule; // "All" or specific module
+
+            // Get dates
+            let sFromDate = "";
+            let sToDate = "";
+
+            // Only send dates if NOT disabled (i.e., not "All" duration)
+            if (recordsDuration !== "All") {
+                sFromDate = fromDate;
+                sToDate = toDate;
+            }
+
             const payload = {
-                sFilter: "",
-                sFromDate: fromDate,
-                sClientID: selectedClient !== "All" ? selectedClient : "",
+                auditTrailType: auditTrailType,
+                sUserIDFromUI: sUserIDFromUI,
+                sModuleName: sModuleName,
+                sFromDate: sFromDate,
+                sToDate: sToDate,
                 ActiveUserDetails: getSessionUserDetails()
             };
 
             console.log("Fetch Audit Trail Payload:", payload);
-            const result = await postData('AuditTrail/AuditTrailHistoryViewAudit', payload);
+            const result = await postData('AuditTrail/CFTTransViewLoad', payload);
             console.log("Fetch Audit Trail Result:", result);
 
-            if (result && Array.isArray(result)) {
+            if (result && Array.isArray(result) && result.length > 0) {
                 const mappedData = result.map((item, index) => ({
-                    id: index + 1,
+                    id: item.SerialNo || index + 1,
                     select: false,
                     moduleName: item.ModuleName || '',
                     actions: item.Actions || '',
-                    transactionOn: item.TransactionOn || '',
-                    reviewStatus: item.ReviewStatus || '',
+                    transactionOn: item.TransactionDate || '',
+                    reviewStatus: item['Review Status'] || '',
                     requestedClient: item.RequestedClient || '',
                     affectedClient: item.AffectedClient || '',
                     instrumentName: item.InstrumentName || '',
                     reason: item.Reason || '',
                     comments: item.Comments || '',
-                    reviewComments: item.ReviewComments || '',
-                    reviewedBy: item.ReviewedBy || '',
-                    reviewedDate: item.ReviewedDate || '',
-                    userName: item.UserName || '',
-                    profileName: item.ProfileName || '',
+                    reviewComments: item['Review Comments'] || '',
+                    reviewedBy: item['Reviewed By'] || '',
+                    reviewedDate: item['Reviewed Date'] || '',
+                    userName: item['User Name'] || '',
+                    profileName: item['User Full Name'] || '',
                     systemComments: item.SystemComments || '',
                     modifiedData: item.ModifiedData || ''
                 }));
 
                 setUserData(mappedData);
             } else {
-                // If no data, set empty array
                 setUserData([]);
             }
             setLoading(false);
         } catch (error) {
             console.error('Error fetching audit trail data:', error);
             setLoading(false);
-            setErrorDialog({
-                show: true,
-                message: "Failed to load audit trail data. Please check your connection and try again.",
-                type: "error"
-            });
-            setUserData([]); // Set empty data on error
+            setUserData([]);
         }
     };
 
@@ -2075,18 +2156,27 @@ const AuditTrailHistory = () => {
         setSelectedArchiveName("");
 
         try {
+            // Get user ID (not username)
+            let sUserIDFromUI;
+            if (selectedUser === "All") {
+                sUserIDFromUI = "All";
+            } else {
+                // Find user ID from userList
+                const user = userList.find(u => u.L02UserName === selectedUser || u.UserName === selectedUser);
+                sUserIDFromUI = user ? user.L02UserID.toString() : "All";
+            }
+
             const payload = {
                 sFromDate: fromDate,
                 sToDate: toDate,
-                sClientID: selectedClient !== "All" ? selectedClient : "",
-                sUserName: selectedUser !== "All" ? selectedUser : "",
-                sModuleName: selectedModule !== "All" ? selectedModule : "",
-                sAuditType: selectedAuditType !== "All" ? selectedAuditType : "",
+                sUserIDFromUI: sUserIDFromUI,
+                sModulename: selectedModule,
+                auditTrailType: selectedAuditType,
                 ActiveUserDetails: getSessionUserDetails()
             };
 
             console.log("Filter Payload:", payload);
-            const result = await postData('AuditTrail/AuditTrailHistoryFilter', payload);
+            const result = await postData('AuditTrail/CFRTransactionFilter', payload);
             console.log("Filter Result:", result);
 
             if (result && Array.isArray(result)) {
@@ -2095,18 +2185,18 @@ const AuditTrailHistory = () => {
                     select: false,
                     moduleName: item.ModuleName || '',
                     actions: item.Actions || '',
-                    transactionOn: item.TransactionOn || '',
-                    reviewStatus: item.ReviewStatus || '',
+                    transactionOn: item.TransactionDate || item.TransactionOn || '',
+                    reviewStatus: item['Review Status'] || item.ReviewStatus || '',
                     requestedClient: item.RequestedClient || '',
                     affectedClient: item.AffectedClient || '',
                     instrumentName: item.InstrumentName || '',
                     reason: item.Reason || '',
                     comments: item.Comments || '',
-                    reviewComments: item.ReviewComments || '',
-                    reviewedBy: item.ReviewedBy || '',
-                    reviewedDate: item.ReviewedDate || '',
-                    userName: item.UserName || '',
-                    profileName: item.ProfileName || '',
+                    reviewComments: item['Review Comments'] || item.ReviewComments || '',
+                    reviewedBy: item['Reviewed By'] || item.ReviewedBy || '',
+                    reviewedDate: item['Reviewed Date'] || item.ReviewedDate || '',
+                    userName: item['User Name'] || item.UserName || '',
+                    profileName: item['User Full Name'] || item.ProfileName || '',
                     systemComments: item.SystemComments || '',
                     modifiedData: item.ModifiedData || ''
                 }));
@@ -2122,11 +2212,6 @@ const AuditTrailHistory = () => {
         } catch (error) {
             console.error('Error filtering data:', error);
             setLoading(false);
-            setErrorDialog({
-                show: true,
-                message: "Failed to filter data. Please try again.",
-                type: "error"
-            });
         }
     };
 
@@ -2158,40 +2243,37 @@ const AuditTrailHistory = () => {
                 {isOpen ? (
                     <div className="flex flex-wrap items-end gap-3.5 mb-2">
 
+
                         <div className="w-60 mr-4">
                             <AnimatedDropdown
                                 label={t("label.userName")}
                                 value={selectedUser}
-                                options={["All", "User A", "User B"]}
+                                options={userList.map(u => u.L02UserName || u.UserName)}
                                 onChange={(e) => setSelectedUser(e.target.value)}
-                                // isSearchable={true}
                                 allowFreeInput={true}
                             />
-
-
                         </div>
+
+
                         <div className="w-60 mr-4">
                             <AnimatedDropdown
                                 label={t("label.moduleName")}
                                 value={selectedModule}
-                                options={["All", "Audit Trail", "CFR Gateway", "CFR Settings"]}
+                                options={moduleList.map(m => m.ModuleName)}
                                 onChange={(e) => setSelectedModule(e.target.value)}
-                                // isSearchable={true}
                                 allowFreeInput={true}
                             />
-
-
                         </div>
 
                         <div className="w-60 mr-4">
                             <AnimatedDropdown
                                 label={t("label.auditType")}
                                 value={selectedAuditType}
-                                options={["User", "System", "All"]}
+                                options={AUDIT_TYPE_OPTIONS}
+                                displayKey="label"
+                                valueKey="value"
                                 onChange={(e) => setSelectedAuditType(e.target.value)}
                             />
-
-
                         </div>
 
                         <div className="w-60 mr-4">
