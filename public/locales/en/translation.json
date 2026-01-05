@@ -235,7 +235,20 @@
     "last7Days": "Last 7 Days",
     "last30Days": "Last 30 Days",
     "last1Year": "Last 1 Year" ,
-    "customDate": "Custom Date"
+    "customDate": "Custom Date",
+    "tabtitle": "Password Policy",
+    "databaselogin": "Database Based Login",
+    "complexpasswordpolicy": "Complex Password Policy",
+    "minlength": "Minimum Password Length(Between 4 and 20 Characters)",
+    "maxlength": "Maximum Password Length(Between 4 and 20 Characters)",
+    "history": "Password History(Between 1 and 5 Times)",
+    "expiry": "Password Expiry(Between 1 and 180 Days)",
+    "autolock": "Autolock Policy(Between 1 and 5 Times)",
+    "minuppercase": "Minimum number of Uppercase characters",
+    "minlowercase": "Minimum number of Lowercase characters",
+    "minnumeric": "Minimum number of Numeric characters",
+    "minspecial": "Minimum number of Special characters"
+    
   },
   "statuses": {
     "activated": "Activated",
@@ -572,7 +585,11 @@
     "addInstrument": "Add Instrument",
     "editInstrument": "Edit Instrument",
     "communicationSettings": "Communication Settings",
-    "submitting": "Submitting..."
+    "submitting": "Submitting...",
+    "notetext": "NOTE: The total length of complex password must be greater than or equal to minimum password length and less than or equal to maximum password length.",
+    "failedtofetchpolicy": "Failed to fetch password policy",
+    "failedtosavepolicy": "Failed to save password policy",
+    "policysavedsuccess": "Password policy saved successfully"
  
     
   },
@@ -728,7 +745,8 @@
     "modulename": "Module Name",
     "taskname": "Task Name",
     "delete":"Delete",
-    "nogroupsavailable": "No Groups Available"
+    "nogroupsavailable": "No Groups Available",
+    "site":"Site Name"
         
   }
 }

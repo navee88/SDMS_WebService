@@ -1807,7 +1807,7 @@ const UserRights = () => {
             ),
             width: 120,
             enableSearch: false,
-            enableSort: true,
+            enableSort: false,
             render: (row, isSelected) => {
                 if (row.sDelete === "NA") {
                     return (
@@ -1847,7 +1847,6 @@ const UserRights = () => {
             ),
             width: 120,
             enableSearch: false,
-            enableSort: false,
             render: (row, isSelected) => (
                 <div className="flex items-center justify-center">
                     <input
