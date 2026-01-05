@@ -738,7 +738,7 @@ export default function InstrumentDataPage() {
             <button
               className={`text-xs font-bold pb-1 ${
                 tab === "merge"
-                  ? "text-[#4a9fd8] border-b-2 border-[#4a9fd8]"
+                  ? "text-[#0049b0] text-sm border-b-2 border-[#2883fe]"
                   : "text-gray-600"
               }`}
               onClick={() => handleTabChange("merge")}
@@ -748,7 +748,7 @@ export default function InstrumentDataPage() {
             <button
               className={`text-xs font-bold pb-1 ${
                 tab === "null"
-                  ? "text-[#4a9fd8] border-b-2 border-[#4a9fd8]"
+                  ? "text-[#0049b0] text-sm border-b-2 border-[#2883fe]"
                   : "text-gray-600"
               }`}
               onClick={() => handleTabChange("null")}
@@ -781,7 +781,6 @@ export default function InstrumentDataPage() {
           <>
             <div className="flex justify-end mb-2 gap-2">
               <PrimaryButton 
-                icon={FileText}
                 label={t("instrumentlocktag.proceedacknowledgement")}
                 onClick={handleNullDataAcknowledgement}
               />

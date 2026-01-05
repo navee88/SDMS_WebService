@@ -227,7 +227,15 @@
     "serialNo":"Serial No",
     "name":"Name",
     "CRDate":"CRDate",
-    "serviceName":"Service Name"
+    "serviceName":"Service Name",
+    "user":"User",
+    "system":"System",
+    "all":"All",
+    "currentDate": "Current Date",
+    "last7Days": "Last 7 Days",
+    "last30Days": "Last 30 Days",
+    "last1Year": "Last 1 Year" ,
+    "customDate": "Custom Date"
   },
   "statuses": {
     "activated": "Activated",
@@ -563,7 +571,8 @@
     "availableLicense": "Available License",
     "addInstrument": "Add Instrument",
     "editInstrument": "Edit Instrument",
-    "communicationSettings": "Communication Settings"
+    "communicationSettings": "Communication Settings",
+    "submitting": "Submitting..."
  
     
   },
