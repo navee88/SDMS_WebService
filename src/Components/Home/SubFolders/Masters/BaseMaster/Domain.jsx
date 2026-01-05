@@ -1,3 +1,7 @@
+//-------------------ErrorDialogue box----------------------------------------
+
+
+
 // import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 // import { Plus, Edit } from 'lucide-react';
 // import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
@@ -165,8 +169,8 @@
 //                 const dataWithIds = data.map((item, index) => ({
 //                     ...item,
 //                     id: index + 1,
-//                     sDomainStatus: item.sDomainStatus || 
-//         // item.sDomainStatus.replace('DeActive', 'Deactive') : 
+//                     sDomainStatus: item.sDomainStatus ? 
+//         item.sDomainStatus.replace('DeActive', 'Deactive') : 
 //         (item.iDomainStatus === 1 ? "Active" : "Deactive")
 //                 }));
 //                 setDomainData(dataWithIds);
@@ -224,7 +228,7 @@
 //             if (data && data.Rtn === "Success" && data.Domain) {
 //                 return {
 //                     ...data.Domain,
-//                     sDomainStatus: data.Domain.iDomainStatus === 1 ? "Active" : "Inactive"
+//                     sDomainStatus: data.Domain.iDomainStatus === 1 ? "Active" : "Deactive"
 //                 };
 //             } else {
 //                 showInfoDialog(t('masters.failedtofetchdomaindetails') || 'Failed to fetch domain details', "error");
@@ -268,10 +272,10 @@
 //             return;
 //         }
         
-//         if (selectedDomain.sDomainName === "SDMS") {
-//             showInfoDialog(t('masters.sdmsEditDisabled'), "error");
-//             return;
-//         }
+//         // if (selectedDomain.sDomainName === "SDMS") {
+//         //     showInfoDialog(t('masters.sdmsEditDisabled'), "error");
+//         //     return;
+//         // }
         
 //         console.log("Fetching domain details for edit...");
 //         setLoading(true);
@@ -355,135 +359,192 @@
 //     }, [formData]);
 
 //     // NEW: Handle audit authorization
-// const handleAuditAuthorized = useCallback((auditData) => {
-//     console.log("Audit authorized with data:", auditData);
-    
-//     // Extract data from AuditTrailValues
-//     const auditValues = auditData.AuditTrailValues;
-    
-//     if (auditValues) {
-//         console.log("Proceeding with form submission...");
+//     const handleAuditAuthorized = useCallback((auditData) => {
+//         console.log("Audit authorized with data:", auditData);
         
-//         // Save the current form data BEFORE closing audit
-//         const currentFormData = { ...formData };
+//         // Extract data from AuditTrailValues
+//         const auditValues = auditData.AuditTrailValues;
         
-//         // Close audit dialog
-//         setShowAudit(false);
-        
-//         // Proceed with form submission with current form data
-//         handleFormSubmit(auditValues, currentFormData);
-//     } else {
-//         console.error("Audit data missing in AuditTrailValues");
-//         showInfoDialog(t('masters.auditDataMissing'), "error");
-//         setShowAudit(false);
-//     }
-// }, [formData, t, showInfoDialog]);
-
-// // Update handleFormSubmit to accept formData parameter
-// const handleFormSubmit = useCallback(async (auditValues, submittedFormData = null) => {
-//     console.log("Starting form submission with audit values:", auditValues);
-    
-//     // Use submittedFormData if provided, otherwise use current formData state
-//     const dataToValidate = submittedFormData || formData;
-    
-//     // Create a validation function that works with the provided data
-//     const validateFormData = (formDataToValidate) => {
-//         console.log("Validating form data:", formDataToValidate);
-//         const errors = {};
-        
-//         if (!formDataToValidate.sDomainName.trim()) {
-//             errors.sDomainName = t('masters.domainNameRequired');
-//         }
-        
-//         if (!formDataToValidate.sdomainusername.trim()) {
-//             errors.sdomainusername = t('masters.usernameRequired');
-//         }
-        
-//         if (!formDataToValidate.sdomainpassword.trim()) {
-//             errors.sdomainpassword = t('masters.passwordRequired');
-//         }
-        
-//         console.log("Validation errors:", errors);
-//         setFormErrors(errors);
-//         return Object.keys(errors).length === 0;
-//     };
-    
-//     if (!validateFormData(dataToValidate)) {
-//         console.log("Form validation failed");
-//         showInfoDialog(t('masters.formValidationFailed'), "error");
-//         return;
-//     }
-    
-//     setIsSubmitting(true);
-//     console.log("Starting API submission...");
-    
-//     try {
-//         const isEdit = dataToValidate.sDomainID !== "";
-//         const apiEndpoint = isEdit ? "basemaster/editDomain" : "basemaster/insertDomain";
-        
-//         console.log(`Operation: ${isEdit ? 'Edit' : 'Add'}, Endpoint: ${apiEndpoint}`);
-        
-//         // Use the prepareDomainObject with the correct data
-//         const prepareDomainObjectFromData = (data) => {
-//             console.log("Preparing domain object:", data);
-//             const domainObj = {
-//                 sDomainName: data.sDomainName.trim(),
-//                 sCategories: "Server",
-//                 iDomainStatus: data.iDomainStatus,
-//                 sLoginDomainName: data.sLoginDomainName.trim() || null
-//             };
+//         if (auditValues) {
+//             console.log("Proceeding with form submission...");
             
-//             if (data.sDomainID && data.sDomainID.trim()) {
-//                 domainObj.sDomainID = data.sDomainID.trim();
+//             // Save the current form data BEFORE closing audit
+//             const currentFormData = { ...formData };
+            
+//             // Close audit dialog
+//             setShowAudit(false);
+            
+//             // Proceed with form submission with current form data
+//             handleFormSubmit(auditValues, currentFormData);
+//         } else {
+//             console.error("Audit data missing in AuditTrailValues");
+//             showInfoDialog(t('masters.auditDataMissing'), "error");
+//             setShowAudit(false);
+//         }
+//     }, [formData, t, showInfoDialog]);
+
+//     // Update handleFormSubmit to accept formData parameter
+//     const handleFormSubmit = useCallback(async (auditValues, submittedFormData = null) => {
+//         console.log("Starting form submission with audit values:", auditValues);
+        
+//         // Use submittedFormData if provided, otherwise use current formData state
+//         const dataToValidate = submittedFormData || formData;
+        
+//         // Create a validation function that works with the provided data
+//         const validateFormData = (formDataToValidate) => {
+//             console.log("Validating form data:", formDataToValidate);
+//             const errors = {};
+            
+//             if (!formDataToValidate.sDomainName.trim()) {
+//                 errors.sDomainName = t('masters.domainNameRequired');
 //             }
             
-//             return domainObj;
+//             if (!formDataToValidate.sdomainusername.trim()) {
+//                 errors.sdomainusername = t('masters.usernameRequired');
+//             }
+            
+//             if (!formDataToValidate.sdomainpassword.trim()) {
+//                 errors.sdomainpassword = t('masters.passwordRequired');
+//             }
+            
+//             console.log("Validation errors:", errors);
+//             setFormErrors(errors);
+//             return Object.keys(errors).length === 0;
 //         };
         
-//         const requestData = {
-//             sdomainusername: dataToValidate.sdomainusername,
-//             AuditTrailValues: auditValues,
-//             Domain: prepareDomainObjectFromData(dataToValidate),
-//             ActiveUserDetails: getActiveUserDetails(),
-//             sdomainpassword: dataToValidate.sdomainpassword,
-//             ApplicationCode: "SDMS"
-//         };
-        
-//         console.log("Submitting request data:", requestData);
-        
-//         const response = await postData(apiEndpoint, requestData);
-        
-//         // ... rest of the submission logic remains the same
-//         console.log("Submit response:", response);
-        
-//         if (!response) {
-//             showInfoDialog(t('masters.operationFailed'), "error");
+//         if (!validateFormData(dataToValidate)) {
+//             console.log("Form validation failed");
+//             showInfoDialog(t('masters.formValidationFailed'), "error");
 //             return;
 //         }
         
-//         let data = response;
-//         if (typeof response === 'string' && response.length > 50) {
-//             try {
-//                 const decrypted = CF_decrypt(response);
-//                 console.log("Decrypted submit response:", decrypted);
-//                 data = JSON.parse(decrypted);
-//             } catch (error) {
-//                 console.error('Failed to decrypt response:', error);
+//         setIsSubmitting(true);
+//         console.log("Starting API submission...");
+        
+//         try {
+//             const isEdit = dataToValidate.sDomainID !== "";
+//             const apiEndpoint = isEdit ? "basemaster/editDomain" : "basemaster/insertDomain";
+            
+//             console.log(`Operation: ${isEdit ? 'Edit' : 'Add'}, Endpoint: ${apiEndpoint}`);
+            
+//             // Use the prepareDomainObject with the correct data
+//             const prepareDomainObjectFromData = (data) => {
+//                 console.log("Preparing domain object:", data);
+//                 const domainObj = {
+//                     sDomainName: data.sDomainName.trim(),
+//                     sCategories: "Server",
+//                     iDomainStatus: data.iDomainStatus,
+//                     sLoginDomainName: data.sLoginDomainName.trim() || null
+//                 };
+                
+//                 if (data.sDomainID && data.sDomainID.trim()) {
+//                     domainObj.sDomainID = data.sDomainID.trim();
+//                 }
+                
+//                 return domainObj;
+//             };
+            
+//             const requestData = {
+//                 sdomainusername: dataToValidate.sdomainusername,
+//                 AuditTrailValues: auditValues,
+//                 Domain: prepareDomainObjectFromData(dataToValidate),
+//                 ActiveUserDetails: getActiveUserDetails(),
+//                 sdomainpassword: dataToValidate.sdomainpassword,
+//                 ApplicationCode: "SDMS"
+//             };
+            
+//             console.log("Submitting request data:", requestData);
+            
+//             const response = await postData(apiEndpoint, requestData);
+            
+//             // ... rest of the submission logic remains the same
+//             console.log("Submit response:", response);
+            
+//             if (!response) {
+//                 showInfoDialog(t('masters.operationFailed'), "error");
+//                 return;
 //             }
+            
+//             let data = response;
+//             if (typeof response === 'string' && response.length > 50) {
+//                 try {
+//                     const decrypted = CF_decrypt(response);
+//                     console.log("Decrypted submit response:", decrypted);
+//                     data = JSON.parse(decrypted);
+//                 } catch (error) {
+//                     console.error('Failed to decrypt response:', error);
+//                 }
+//             }
+            
+//             console.log("Processed submit response:", data);
+            
+//             if (data && data.Rtn === "Success") {
+//                 showInfoDialog(
+//                     isEdit ? t('masters.domainUpdated') : t('masters.domainAdded'),
+//                     "success"
+//                 );
+                
+//                 console.log("Success! Closing popup and refreshing data...");
+//                 // Close the main form popup
+//                 setActivePopup(null);
+//                 // Clear form data
+//                 setFormData({
+//                     sDomainID: "",
+//                     sDomainName: "",
+//                     sLoginDomainName: "",
+//                     sdomainusername: "",
+//                     sdomainpassword: "",
+//                     iDomainStatus: 1
+//                 });
+//                 setFormErrors({});
+//                 setAuditTrailData({
+//                     username: "",
+//                     password: "",
+//                     reason: "",
+//                     comments: ""
+//                 });
+                
+//                 // Refresh the domain list
+//                 await fetchDomainData();
+                
+//             } else if (data && data.Message) {
+//                 const errorMessage = typeof data.Message === 'string' 
+//                     ? data.Message 
+//                     : Object.values(data.Message).join(', ');
+//                 console.log("API returned error:", errorMessage);
+//                 showInfoDialog(errorMessage, "error");
+//             } else {
+//                 showInfoDialog(t('masters.operationFailed'), "error");
+//             }
+            
+//         } catch (error) {
+//             console.error('Error submitting domain:', error);
+//             showInfoDialog(t('masters.operationFailed'), "error");
+//         } finally {
+//             console.log("Submit process completed");
+//             setIsSubmitting(false);
+//         }
+//     }, [formData, t, postData, getActiveUserDetails, fetchDomainData, showInfoDialog]);
+
+//     // FIXED: Handle submit button click (opens audit trail)
+//     const handleSubmitClick = useCallback(() => {
+//         console.log("Submit button clicked, current form data:", formData);
+        
+//         if (!validateForm()) {
+//             console.log("Form validation failed");
+//             return;
 //         }
         
-//         console.log("Processed submit response:", data);
-        
-//         if (data && data.Rtn === "Success") {
-//             showInfoDialog(
-//                 isEdit ? t('masters.domainUpdated') : t('masters.domainAdded'),
-//                 "success"
-//             );
-            
-//             console.log("Success! Closing popup and refreshing data...");
-//             // Close the main form popup
-//             setActivePopup(null);
-//             // Clear form data
+//         console.log("Form validation passed, opening audit trail...");
+//         setShowAudit(true);
+//     }, [formData, validateForm]);
+
+//     // FIXED: Handle popup close - don't clear form until successful submission
+//     const handlePopupClose = useCallback(() => {
+//         console.log("Closing popup");
+//         setActivePopup(null);
+//         // Only clear form when manually closing, not after submission
+//         if (!isSubmitting) {
 //             setFormData({
 //                 sDomainID: "",
 //                 sDomainName: "",
@@ -493,71 +554,15 @@
 //                 iDomainStatus: 1
 //             });
 //             setFormErrors({});
-//             setAuditTrailData({
-//                 username: "",
-//                 password: "",
-//                 reason: "",
-//                 comments: ""
-//             });
-            
-//             // Refresh the domain list
-//             await fetchDomainData();
-            
-//         } else if (data && data.Message) {
-//             const errorMessage = typeof data.Message === 'string' 
-//                 ? data.Message 
-//                 : Object.values(data.Message).join(', ');
-//             console.log("API returned error:", errorMessage);
-//             showInfoDialog(errorMessage, "error");
-//         } else {
-//             showInfoDialog(t('masters.operationFailed'), "error");
 //         }
-        
-//     } catch (error) {
-//         console.error('Error submitting domain:', error);
-//         showInfoDialog(t('masters.operationFailed'), "error");
-//     } finally {
-//         console.log("Submit process completed");
-//         setIsSubmitting(false);
-//     }
-// }, [formData, t, postData, getActiveUserDetails, fetchDomainData, showInfoDialog]);
-// // FIXED: Handle submit button click (opens audit trail)
-// const handleSubmitClick = useCallback(() => {
-//     console.log("Submit button clicked, current form data:", formData);
-    
-//     if (!validateForm()) {
-//         console.log("Form validation failed");
-//         return;
-//     }
-    
-//     console.log("Form validation passed, opening audit trail...");
-//     setShowAudit(true);
-// }, [formData, validateForm]);
-
-// // FIXED: Handle popup close - don't clear form until successful submission
-// const handlePopupClose = useCallback(() => {
-//     console.log("Closing popup");
-//     setActivePopup(null);
-//     // Only clear form when manually closing, not after submission
-//     if (!isSubmitting) {
-//         setFormData({
-//             sDomainID: "",
-//             sDomainName: "",
-//             sLoginDomainName: "",
-//             sdomainusername: "",
-//             sdomainpassword: "",
-//             iDomainStatus: 1
+//         setAuditTrailData({
+//             username: "",
+//             password: "",
+//             reason: "",
+//             comments: ""
 //         });
-//         setFormErrors({});
-//     }
-//     setAuditTrailData({
-//         username: "",
-//         password: "",
-//         reason: "",
-//         comments: ""
-//     });
-//     setShowAudit(false);
-// }, [isSubmitting]);
+//         setShowAudit(false);
+//     }, [isSubmitting]);
 
 //     // ==================== COMPONENT SETUP ====================
 
@@ -577,6 +582,15 @@
 //         isInitialMount.current = false;
 //     }, [fetchDomainData, showInfoDialog, t]);
 
+//     // NEW: Effect to auto-select first row when data is loaded
+//     useEffect(() => {
+//         if (domainData.length > 0 && !selectedRowId) {
+//             console.log("Auto-selecting first row:", domainData[0]);
+//             setSelectedDomain(domainData[0]);
+//             setSelectedRowId(domainData[0].id);
+//         }
+//     }, [domainData, selectedRowId]);
+
 //     // ==================== UI COMPONENTS ====================
 
 //     const columns = useMemo(() => [
@@ -586,7 +600,10 @@
 //             width: 150,
 //             enableSearch: true,
 //             render: (row, isSelected) => (
-//                 <div className={`text-[12px] font-['Verdana'] truncate text-gray-700 ${isSelected ? 'font-bold' : ''}`}>
+//                 <div 
+//                     className={`text-[12px] font-['Verdana'] truncate text-gray-700 cursor-pointer ${isSelected ? 'font-bold' : ''}`}
+//                     onClick={() => handleRowSelect(row)}
+//                 >
 //                     {row.sDomainName}
 //                 </div>
 //             )
@@ -597,7 +614,10 @@
 //             width: 120,
 //             enableSearch: true,
 //             render: (row, isSelected) => (
-//                 <div className={`text-[12px] font-['Verdana'] truncate text-gray-700 ${isSelected ? 'font-bold' : ''}`}>
+//                 <div 
+//                     className={`text-[12px] font-['Verdana'] truncate text-gray-700 cursor-pointer ${isSelected ? 'font-bold' : ''}`}
+//                     onClick={() => handleRowSelect(row)}
+//                 >
 //                     {row.sCategories}
 //                 </div>
 //             )
@@ -608,12 +628,15 @@
 //             width: 150,
 //             enableSearch: true,
 //             render: (row, isSelected) => (
-//                 <div className={`text-[12px] font-['Verdana'] truncate ${row.sDomainStatus === 'Active' ? 'text-[#008000]' : 'text-red-500'} ${isSelected ? 'font-bold' : ''}`}>
+//                 <div 
+//                     className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${row.sDomainStatus === 'Active' ? 'text-[#008000]' : 'text-red-500'} ${isSelected ? 'font-bold' : ''}`}
+//                     onClick={() => handleRowSelect(row)}
+//                 >
 //                     {row.sDomainStatus}
 //                 </div>
 //             )
 //         }
-//     ], [t]);
+//     ], [t, handleRowSelect]);
 
 //     const renderDomainDetail = useCallback((domain) => (
 //         <div className="flex flex-col gap-3.5 font-roboto text-[12px] font-semibold">
@@ -717,7 +740,7 @@
 //                         icon={Edit}
 //                         label={t('masters.edit')}
 //                         onClick={handleEditClick}
-//                         disabled={!selectedDomain || isSubmitting}
+//                         disabled={!selectedDomain || isSubmitting || selectedDomain?.sDomainName === "SDMS"}
 //                     />
 //                 </div>
 
@@ -839,17 +862,17 @@
 //                                 </div>
 
 //                                 <div className="flex items-center gap-2.5">
-//     <label htmlFor="bmd_domainstatusid" className="text-[12px] font-roboto font-semibold text-[#405f7d]">
-//         {t('masters.active')}
-//     </label>
-//     <input
-//         type="checkbox"
-//         id="bmd_domainstatusid"
-//         checked={formData.iDomainStatus === 1}  // Changed from === 0 to === 1
-//         onChange={(e) => handleFormChange('iDomainStatus', e.target.checked ? 1 : 0)}  // Changed: checked ? 1 : 0
-//         className="w-4 h-4 cursor-pointer accent-blue-600"
-//     />
-// </div>
+//                                     <label htmlFor="bmd_domainstatusid" className="text-[12px] font-roboto font-semibold text-[#405f7d]">
+//                                         {t('masters.active')}
+//                                     </label>
+//                                     <input
+//                                         type="checkbox"
+//                                         id="bmd_domainstatusid"
+//                                         checked={formData.iDomainStatus === 1}  // Changed from === 0 to === 1
+//                                         onChange={(e) => handleFormChange('iDomainStatus', e.target.checked ? 1 : 0)}  // Changed: checked ? 1 : 0
+//                                         className="w-4 h-4 cursor-pointer accent-blue-600"
+//                                     />
+//                                 </div>
 
 //                                 <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200">
 //                                     <button
@@ -890,6 +913,46 @@
 // };
 
 // export default Domain;
+
+
+
+
+//-----------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -939,6 +1002,8 @@ const Domain = () => {
     });
     const [formErrors, setFormErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // ADD THIS STATE FOR CONNECTION ERRORS
+    const [connectionError, setConnectionError] = useState("");
     
     const { t } = useTranslation();
     const { postData } = servicecall();
@@ -1066,8 +1131,9 @@ const Domain = () => {
                 const dataWithIds = data.map((item, index) => ({
                     ...item,
                     id: index + 1,
-                    sDomainStatus: item.sDomainStatus || 
-                    (item.iDomainStatus === 1 ? "Active" : "Deactive")
+                    sDomainStatus: item.sDomainStatus ? 
+        item.sDomainStatus.replace('DeActive', 'Deactive') : 
+        (item.iDomainStatus === 1 ? "Active" : "Deactive")
                 }));
                 setDomainData(dataWithIds);
             } else {
@@ -1124,7 +1190,7 @@ const Domain = () => {
             if (data && data.Rtn === "Success" && data.Domain) {
                 return {
                     ...data.Domain,
-                    sDomainStatus: data.Domain.iDomainStatus === 1 ? "Active" : "Inactive"
+                    sDomainStatus: data.Domain.iDomainStatus === 1 ? "Active" : "Deactive"
                 };
             } else {
                 showInfoDialog(t('masters.failedtofetchdomaindetails') || 'Failed to fetch domain details', "error");
@@ -1156,6 +1222,7 @@ const Domain = () => {
             iDomainStatus: 1
         });
         setFormErrors({});
+        setConnectionError(""); // Clear connection error
         setActivePopup(t('masters.adddomain'));
         console.log("Form reset for add, activePopup set to:", t('masters.adddomain'));
     }, [t]);
@@ -1167,11 +1234,6 @@ const Domain = () => {
             showInfoDialog(t('masters.selectRecord'), "warning");
             return;
         }
-        
-        // if (selectedDomain.sDomainName === "SDMS") {
-        //     showInfoDialog(t('masters.sdmsEditDisabled'), "error");
-        //     return;
-        // }
         
         console.log("Fetching domain details for edit...");
         setLoading(true);
@@ -1192,6 +1254,7 @@ const Domain = () => {
                 console.log("Setting form data for edit:", newFormData);
                 setFormData(newFormData);
                 setFormErrors({});
+                setConnectionError(""); // Clear connection error
                 setActivePopup(t('masters.editdomain'));
                 console.log("Edit popup opened");
             }
@@ -1214,7 +1277,12 @@ const Domain = () => {
                 [field]: ""
             }));
         }
-    }, [formErrors]);
+        
+        // Clear connection error when password changes (since error is shown under password field)
+        if (field === 'sdomainpassword' && connectionError) {
+            setConnectionError("");
+        }
+    }, [formErrors, connectionError]);
 
     const validateForm = useCallback(() => {
         console.log("Validating form data:", formData);
@@ -1254,7 +1322,177 @@ const Domain = () => {
         return domainObj;
     }, [formData]);
 
-    // NEW: Handle audit authorization
+    // ==================== HANDLE FORM SUBMIT (DEFINE THIS FIRST) ====================
+    const handleFormSubmit = useCallback(async (auditValues, submittedFormData = null) => {
+    console.log("Starting form submission with audit values:", auditValues);
+    
+    // Use submittedFormData if provided, otherwise use current formData state
+    const dataToValidate = submittedFormData || formData;
+    
+    // Create a validation function that works with the provided data
+    const validateFormData = (formDataToValidate) => {
+        console.log("Validating form data:", formDataToValidate);
+        const errors = {};
+        
+        if (!formDataToValidate.sDomainName.trim()) {
+            errors.sDomainName = t('masters.domainNameRequired');
+        }
+        
+        if (!formDataToValidate.sdomainusername.trim()) {
+            errors.sdomainusername = t('masters.usernameRequired');
+        }
+        
+        if (!formDataToValidate.sdomainpassword.trim()) {
+            errors.sdomainpassword = t('masters.passwordRequired');
+        }
+        
+        console.log("Validation errors:", errors);
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+    
+    if (!validateFormData(dataToValidate)) {
+        console.log("Form validation failed");
+        showInfoDialog(t('masters.formValidationFailed'), "error");
+        return;
+    }
+    
+    setIsSubmitting(true);
+    console.log("Starting API submission...");
+    
+    try {
+        const isEdit = dataToValidate.sDomainID !== "";
+        const apiEndpoint = isEdit ? "basemaster/editDomain" : "basemaster/insertDomain";
+        
+        console.log(`Operation: ${isEdit ? 'Edit' : 'Add'}, Endpoint: ${apiEndpoint}`);
+        
+        // Use the prepareDomainObject with the correct data
+        const prepareDomainObjectFromData = (data) => {
+            console.log("Preparing domain object:", data);
+            const domainObj = {
+                sDomainName: data.sDomainName.trim(),
+                sCategories: "Server",
+                iDomainStatus: data.iDomainStatus,
+                sLoginDomainName: data.sLoginDomainName.trim() || null
+            };
+            
+            if (data.sDomainID && data.sDomainID.trim()) {
+                domainObj.sDomainID = data.sDomainID.trim();
+            }
+            
+            return domainObj;
+        };
+        
+        const requestData = {
+            sdomainusername: dataToValidate.sdomainusername,
+            AuditTrailValues: auditValues,
+            Domain: prepareDomainObjectFromData(dataToValidate),
+            ActiveUserDetails: getActiveUserDetails(),
+            sdomainpassword: dataToValidate.sdomainpassword,
+            ApplicationCode: "SDMS"
+        };
+        
+        console.log("Submitting request data:", requestData);
+        
+        const response = await postData(apiEndpoint, requestData);
+        
+        console.log("Submit response:", response);
+        
+        if (!response) {
+            showInfoDialog(t('masters.operationFailed'), "error");
+            return;
+        }
+        
+        let data = response;
+        if (typeof response === 'string' && response.length > 50) {
+            try {
+                const decrypted = CF_decrypt(response);
+                console.log("Decrypted submit response:", decrypted);
+                data = JSON.parse(decrypted);
+            } catch (error) {
+                console.error('Failed to decrypt response:', error);
+            }
+        }
+        
+        console.log("Processed submit response:", data);
+        
+        if (data && data.Rtn === "Success") {
+            showInfoDialog(
+                isEdit ? t('masters.domainUpdated') : t('masters.domainAdded'),
+                "success"
+            );
+            
+            console.log("Success! Closing popup and refreshing data...");
+            // Close the main form popup
+            setActivePopup(null);
+            // Clear form data
+            setFormData({
+                sDomainID: "",
+                sDomainName: "",
+                sLoginDomainName: "",
+                sdomainusername: "",
+                sdomainpassword: "",
+                iDomainStatus: 1
+            });
+            setFormErrors({});
+            setConnectionError(""); // Clear connection error
+            setAuditTrailData({
+                username: "",
+                password: "",
+                reason: "",
+                comments: ""
+            });
+            
+            // Refresh the domain list
+            await fetchDomainData();
+            
+        } else if (data && data.Message) {
+            const errorMessage = typeof data.Message === 'string' 
+                ? data.Message 
+                : Object.values(data.Message).join(', ');
+            console.log("API returned error:", errorMessage);
+            
+            // CHECK FOR SPECIFIC DOMAIN CONNECTION ERRORS
+            // Look for errors like "Unknown Host... Check Domainname", "Incorrect username or password", etc.
+            const lowerErrorMessage = errorMessage.toLowerCase();
+            const isDomainConnectionError = 
+                lowerErrorMessage.includes("unknown host") || 
+                lowerErrorMessage.includes("check domain") ||
+                lowerErrorMessage.includes("incorrect username") ||
+                lowerErrorMessage.includes("incorrect password") ||
+                lowerErrorMessage.includes("invalid credentials") ||
+                lowerErrorMessage.includes("connection failed") ||
+                lowerErrorMessage.includes("cannot connect");
+            
+            if (isDomainConnectionError) {
+                // Set the error to display under password field (just like jQuery version)
+                setConnectionError(errorMessage);
+                // Scroll to show the error
+                setTimeout(() => {
+                    const errorElement = document.getElementById('bmd_domainpasswordid');
+                    if (errorElement) {
+                        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 100);
+                // DON'T show error dialog for domain connection errors
+            } else {
+                // For other errors, show in dialog
+                showInfoDialog(errorMessage, "error");
+            }
+        } else {
+            showInfoDialog(t('masters.operationFailed'), "error");
+        }
+        
+    } catch (error) {
+        console.error('Error submitting domain:', error);
+        showInfoDialog(t('masters.operationFailed'), "error");
+    } finally {
+        console.log("Submit process completed");
+        setIsSubmitting(false);
+    }
+}, [formData, t, postData, getActiveUserDetails, fetchDomainData, showInfoDialog]);
+
+    // Handle audit authorization
     const handleAuditAuthorized = useCallback((auditData) => {
         console.log("Audit authorized with data:", auditData);
         
@@ -1277,152 +1515,9 @@ const Domain = () => {
             showInfoDialog(t('masters.auditDataMissing'), "error");
             setShowAudit(false);
         }
-    }, [formData, t, showInfoDialog]);
+    }, [formData, t, showInfoDialog, handleFormSubmit]); // Added handleFormSubmit dependency
 
-    // Update handleFormSubmit to accept formData parameter
-    const handleFormSubmit = useCallback(async (auditValues, submittedFormData = null) => {
-        console.log("Starting form submission with audit values:", auditValues);
-        
-        // Use submittedFormData if provided, otherwise use current formData state
-        const dataToValidate = submittedFormData || formData;
-        
-        // Create a validation function that works with the provided data
-        const validateFormData = (formDataToValidate) => {
-            console.log("Validating form data:", formDataToValidate);
-            const errors = {};
-            
-            if (!formDataToValidate.sDomainName.trim()) {
-                errors.sDomainName = t('masters.domainNameRequired');
-            }
-            
-            if (!formDataToValidate.sdomainusername.trim()) {
-                errors.sdomainusername = t('masters.usernameRequired');
-            }
-            
-            if (!formDataToValidate.sdomainpassword.trim()) {
-                errors.sdomainpassword = t('masters.passwordRequired');
-            }
-            
-            console.log("Validation errors:", errors);
-            setFormErrors(errors);
-            return Object.keys(errors).length === 0;
-        };
-        
-        if (!validateFormData(dataToValidate)) {
-            console.log("Form validation failed");
-            showInfoDialog(t('masters.formValidationFailed'), "error");
-            return;
-        }
-        
-        setIsSubmitting(true);
-        console.log("Starting API submission...");
-        
-        try {
-            const isEdit = dataToValidate.sDomainID !== "";
-            const apiEndpoint = isEdit ? "basemaster/editDomain" : "basemaster/insertDomain";
-            
-            console.log(`Operation: ${isEdit ? 'Edit' : 'Add'}, Endpoint: ${apiEndpoint}`);
-            
-            // Use the prepareDomainObject with the correct data
-            const prepareDomainObjectFromData = (data) => {
-                console.log("Preparing domain object:", data);
-                const domainObj = {
-                    sDomainName: data.sDomainName.trim(),
-                    sCategories: "Server",
-                    iDomainStatus: data.iDomainStatus,
-                    sLoginDomainName: data.sLoginDomainName.trim() || null
-                };
-                
-                if (data.sDomainID && data.sDomainID.trim()) {
-                    domainObj.sDomainID = data.sDomainID.trim();
-                }
-                
-                return domainObj;
-            };
-            
-            const requestData = {
-                sdomainusername: dataToValidate.sdomainusername,
-                AuditTrailValues: auditValues,
-                Domain: prepareDomainObjectFromData(dataToValidate),
-                ActiveUserDetails: getActiveUserDetails(),
-                sdomainpassword: dataToValidate.sdomainpassword,
-                ApplicationCode: "SDMS"
-            };
-            
-            console.log("Submitting request data:", requestData);
-            
-            const response = await postData(apiEndpoint, requestData);
-            
-            // ... rest of the submission logic remains the same
-            console.log("Submit response:", response);
-            
-            if (!response) {
-                showInfoDialog(t('masters.operationFailed'), "error");
-                return;
-            }
-            
-            let data = response;
-            if (typeof response === 'string' && response.length > 50) {
-                try {
-                    const decrypted = CF_decrypt(response);
-                    console.log("Decrypted submit response:", decrypted);
-                    data = JSON.parse(decrypted);
-                } catch (error) {
-                    console.error('Failed to decrypt response:', error);
-                }
-            }
-            
-            console.log("Processed submit response:", data);
-            
-            if (data && data.Rtn === "Success") {
-                showInfoDialog(
-                    isEdit ? t('masters.domainUpdated') : t('masters.domainAdded'),
-                    "success"
-                );
-                
-                console.log("Success! Closing popup and refreshing data...");
-                // Close the main form popup
-                setActivePopup(null);
-                // Clear form data
-                setFormData({
-                    sDomainID: "",
-                    sDomainName: "",
-                    sLoginDomainName: "",
-                    sdomainusername: "",
-                    sdomainpassword: "",
-                    iDomainStatus: 1
-                });
-                setFormErrors({});
-                setAuditTrailData({
-                    username: "",
-                    password: "",
-                    reason: "",
-                    comments: ""
-                });
-                
-                // Refresh the domain list
-                await fetchDomainData();
-                
-            } else if (data && data.Message) {
-                const errorMessage = typeof data.Message === 'string' 
-                    ? data.Message 
-                    : Object.values(data.Message).join(', ');
-                console.log("API returned error:", errorMessage);
-                showInfoDialog(errorMessage, "error");
-            } else {
-                showInfoDialog(t('masters.operationFailed'), "error");
-            }
-            
-        } catch (error) {
-            console.error('Error submitting domain:', error);
-            showInfoDialog(t('masters.operationFailed'), "error");
-        } finally {
-            console.log("Submit process completed");
-            setIsSubmitting(false);
-        }
-    }, [formData, t, postData, getActiveUserDetails, fetchDomainData, showInfoDialog]);
-
-    // FIXED: Handle submit button click (opens audit trail)
+    // Handle submit button click (opens audit trail)
     const handleSubmitClick = useCallback(() => {
         console.log("Submit button clicked, current form data:", formData);
         
@@ -1435,7 +1530,7 @@ const Domain = () => {
         setShowAudit(true);
     }, [formData, validateForm]);
 
-    // FIXED: Handle popup close - don't clear form until successful submission
+    // Handle popup close
     const handlePopupClose = useCallback(() => {
         console.log("Closing popup");
         setActivePopup(null);
@@ -1451,6 +1546,7 @@ const Domain = () => {
             });
             setFormErrors({});
         }
+        setConnectionError(""); // Clear connection error
         setAuditTrailData({
             username: "",
             password: "",
@@ -1478,7 +1574,7 @@ const Domain = () => {
         isInitialMount.current = false;
     }, [fetchDomainData, showInfoDialog, t]);
 
-    // NEW: Effect to auto-select first row when data is loaded
+    // Effect to auto-select first row when data is loaded
     useEffect(() => {
         if (domainData.length > 0 && !selectedRowId) {
             console.log("Auto-selecting first row:", domainData[0]);
@@ -1735,27 +1831,38 @@ const Domain = () => {
                                     )}
                                 </div>
 
-                                {/* Domain Password - Always Required */}
+                                {/* Domain Password - Always Required with connection error display */}
                                 <div className="flex flex-col">
-                                    <label className="text-[12px] font-roboto font-semibold text-[#405f7d]">
-                                        {t('masters.domainpassword')} <span className="text-red-500">*</span>
-                                    </label>
-                                    <AnimatedInput
-                                        type="password"
-                                        id="bmd_domainpasswordid"
-                                        value={formData.sdomainpassword}
-                                        onChange={(e) => handleFormChange('sdomainpassword', e.target.value)}
-                                        maxLength={50}
-                                        className={`w-full text-[12px] outline-none bg-white ${
-                                            formErrors.sdomainpassword ? 'border-red-500' : 'border-gray-300'
-                                        }`}
-                                    />
-                                    {formErrors.sdomainpassword && (
-                                        <div className="text-red-500 text-[12px]">
-                                            {formErrors.sdomainpassword}
-                                        </div>
-                                    )}
-                                </div>
+    <label className="text-[12px] font-roboto font-semibold text-[#405f7d]">
+        {t('masters.domainpassword')} <span className="text-red-500">*</span>
+    </label>
+    <AnimatedInput
+        type="password"
+        id="bmd_domainpasswordid"
+        value={formData.sdomainpassword}
+        onChange={(e) => handleFormChange('sdomainpassword', e.target.value)}
+        maxLength={50}
+        className={`w-full text-[12px] outline-none bg-white ${
+            formErrors.sdomainpassword || connectionError ? 'border-red-500' : 'border-gray-300'
+        }`}
+    />
+    {/* Show password validation error */}
+    {formErrors.sdomainpassword && (
+        <div className="text-red-500 text-[12px] mt-1">
+            {formErrors.sdomainpassword}
+        </div>
+    )}
+    {/* Show connection error UNDER the password field (EXACTLY like in the jQuery image) */}
+    {connectionError && (
+        <div className="p-0.5 bg-[#d83e3e] ">
+            <div className="flex items-center">
+                <div className="text-white text-[14px] font-roboto font-normal">
+                    {connectionError}
+                </div>
+            </div>
+        </div>
+    )}
+</div>
 
                                 <div className="flex items-center gap-2.5">
                                     <label htmlFor="bmd_domainstatusid" className="text-[12px] font-roboto font-semibold text-[#405f7d]">
@@ -1764,8 +1871,8 @@ const Domain = () => {
                                     <input
                                         type="checkbox"
                                         id="bmd_domainstatusid"
-                                        checked={formData.iDomainStatus === 1}  // Changed from === 0 to === 1
-                                        onChange={(e) => handleFormChange('iDomainStatus', e.target.checked ? 1 : 0)}  // Changed: checked ? 1 : 0
+                                        checked={formData.iDomainStatus === 1}
+                                        onChange={(e) => handleFormChange('iDomainStatus', e.target.checked ? 1 : 0)}
                                         className="w-4 h-4 cursor-pointer accent-blue-600"
                                     />
                                 </div>
