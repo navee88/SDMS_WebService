@@ -89,7 +89,7 @@ const AddInstrumentModal = ({
       <Draggable nodeRef={nodeRef} handle=".modal-header" bounds="parent">
         <div
           ref={nodeRef}
-          className="bg-white w-[600px] max-h-[99vh] rounded shadow-lg flex flex-col"
+          className="bg-white w-[600px] max-h-[99vh] rounded shadow-lg flex flex-col  animate-slideFromTop"
         >
           {/* HEADER */}
           <div className="modal-header cursor-move flex justify-between px-4 py-2 bg-slate-100 border-b">
@@ -231,7 +231,6 @@ ${
                   options={["Automatic", "Manual"]}
                   displayKey="label"
                   valueKey="value"
-                  allowFreeInput
                   onChange={(e) =>
                     setForm({ ...form, lockType: e.target.value })
                   }
@@ -250,9 +249,9 @@ ${
                   value={form.parserType}
                   options={[
                     { label: "NONE", value: "NONE" },
-                    { label: "CSV", value: "CSV" },
-                    { label: "XML", value: "XML" },
-                    { label: "JSON", value: "JSON" },
+                    { label: "WIN_METHOD", value: "WIN_METHOD" },
+                    { label: "WEB_METHOD", value: "WEB_METHOD" },
+
                   ]}
                   displayKey="label"
                   valueKey="value"

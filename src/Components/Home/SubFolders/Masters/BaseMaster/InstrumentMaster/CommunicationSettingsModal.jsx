@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import Draggable from "react-draggable";
 import { FiCheckSquare } from "react-icons/fi";
 import AnimatedDropdown from "../../../../../Layout/Common/AnimatedDropdown";
+import { tr } from "zod/v4/locales";
 
 const CommunicationSettingsModal = ({
   isOpen,
@@ -16,6 +17,9 @@ const disableRules = {
     baud: false,
     dataBits: false,
     handShake: false,
+    stopBits: false,
+    Parity: true,
+
   },
   INST_A: {
     ip: false,
@@ -23,7 +27,9 @@ const disableRules = {
     com: true,
     baud: true,
     dataBits: true,
-    handShake: true, // ✅ DISABLE
+    handShake: true, // ✅ DISABLE'
+    stopBits: true, // ✅ DISABLE
+    Parity: true, // ✅ DISABLE
    
   },
   INST_B: {
@@ -33,6 +39,8 @@ const disableRules = {
     baud: true,
     dataBits: true,
     handShake: true, // ✅ DISABLE
+    stopBits: true, // ✅ DISABLE
+    Parity: true,
   },
   INST_C: {
     ip: true,
@@ -41,6 +49,8 @@ const disableRules = {
     baud: false,
     dataBits: false,
     handShake: false,
+    stopBits: false, 
+    Parity: false,
   },
 };
 
@@ -66,7 +76,7 @@ const disabled = disableRules[ruleKey] || {};
   return (
     <div className="fixed rounded inset-0 bg-black/40 flex items-center justify-center z-[60]">
       <Draggable nodeRef={nodeRef} handle=".modal-header">
-        <div ref={nodeRef} className="bg-white  w-[600px] rounded shadow-lg">
+        <div ref={nodeRef} className="bg-white  w-[600px] rounded shadow-lg  animate-slideFromTop">
           {/* HEADER */}
           <div className="modal-header cursor-move flex justify-between px-4 py-2 bg-slate-100 border-b">
             <label
@@ -115,6 +125,7 @@ const disabled = disableRules[ruleKey] || {};
                 displayKey="label"
                 valueKey="value"
                 onChange={handleChange}
+                disabled={disabled.Parity}
               />
             </div>
 
@@ -146,6 +157,7 @@ const disabled = disableRules[ruleKey] || {};
                 displayKey="label"
                 valueKey="value"
                 onChange={handleChange}
+                disabled={disabled.stopBits}
               />
             </div>
 

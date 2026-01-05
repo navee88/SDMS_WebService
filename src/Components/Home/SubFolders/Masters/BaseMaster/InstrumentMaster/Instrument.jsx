@@ -8,7 +8,8 @@ import { MdBlock } from "react-icons/md";
 import AddInstrumentModal from "./AddInstrumentModal";
 import { useTranslation } from "react-i18next";
 import useAxios from "../../../../../../Services/servicecall";
-  import {CF_decrypt} from "../../../../../Common/encryptiondecryption";
+import {CF_decrypt} from "../../../../../Common/encryptiondecryption";
+import { Loader2 } from "lucide-react";
 
 
 /* ---------------- MOCK DATA ---------------- */
@@ -93,6 +94,7 @@ export default function Instrument() {
   const { t } = useTranslation();
   const { postData } = useAxios();
 const [loading, setLoading] = useState(false);
+const [loadingText, setLoadingText] = useState("");
 
 
   const [rows, setRows] = useState([]);
@@ -149,6 +151,7 @@ const [loading, setLoading] = useState(false);
     const loadInstrumentGrid = async () => {
   try {
     setLoading(true);
+    setLoadingText("Loading Instrument Data...");
 
     const response = await postData(
       "basemaster/getInstrument",
@@ -199,6 +202,7 @@ const [loading, setLoading] = useState(false);
     console.error("Instrument API Error:", err);
   } finally {
     setLoading(false);
+    setLoadingText("");
   }
 };
 
@@ -683,6 +687,14 @@ useEffect(() => {
           onClick={handlePrint}
         />
       </div>
+      {loading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+            <div className="bg-white p-8 rounded-2xl shadow-2xl flex items-center gap-4">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              <span className="text-lg font-medium">{loadingText}</span>
+            </div>
+          </div>
+        )}
 
       {/* GRID CONTAINER */}
       <div className="flex-1 overflow-hidden">
