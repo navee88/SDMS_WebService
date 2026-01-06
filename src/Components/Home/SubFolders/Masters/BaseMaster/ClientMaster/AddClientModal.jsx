@@ -142,11 +142,11 @@ const AddClientModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadeIn">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 ">
       <Draggable nodeRef={nodeRef} handle=".modal-header" bounds="parent">
         <div
           ref={nodeRef}
-          className="bg-white w-[600px] rounded overflow-hidden shadow-lg
+          className="bg-white w-[600px] rounded-lg overflow-hidden shadow-lg
                        animate-slideFromTop"
         >
           {/* HEADER */}

@@ -5,6 +5,9 @@ import AnimatedDropdown from "../../../../../Layout/Common/AnimatedDropdown";
 import { IoIosSettings } from "react-icons/io";
 import { useTranslation } from "react-i18next";
 import CommunicationSettingsModal from "./CommunicationSettingsModal";
+import useAxios from "../../../../../../Services/servicecall";
+import { CF_decrypt } from "../../../../../Common/encryptiondecryption";
+import AuditTrail from "../../../../../Layout/Common/AuditTrail"; 
 
 const AddInstrumentModal = ({
   isOpen,
@@ -15,6 +18,26 @@ const AddInstrumentModal = ({
 }) => {
   const { t } = useTranslation();
   const [showCommSettings, setShowCommSettings] = useState(false);
+  const { postData } = useAxios();
+
+  const [availableLicense, setAvailableLicense] = useState(0);
+  const [parserOptions, setParserOptions] = useState([]);
+  const [interfacerOptions, setInterfacerOptions] = useState([]);
+  const [showAuditTrail, setShowAuditTrail] = useState(false);
+const [pendingForm, setPendingForm] = useState(null);
+
+  const isAddMode = mode === "add";
+  const hasInsufficientLicense = isAddMode && availableLicense < 1;
+
+  const PARSER_ORDER_MAP = {
+    0: { label: "NONE", value: "NONE" },
+    1: { label: "WIN_METHOD", value: "WIN_METHOD" },
+    2: { label: "WEB_METHOD", value: "WEB_METHOD" },
+  };
+  const LOCK_TYPE_OPTIONS = [
+    { label: "Automatic", value: "A" },
+    { label: "Manual", value: "M" },
+  ];
 
   const nodeRef = useRef(null);
   const [submitted, setSubmitted] = useState(false);
@@ -24,25 +47,124 @@ const AddInstrumentModal = ({
     instrumentAlias: "",
     instrumentModel: "",
     instrumentMake: "",
-    lockType: "Automatic",
+    lockType: "A",
     parserType: "NONE",
     automatic: false,
     interfacerMapped: false,
-    interfacerInstrument: "CREATE_NEW",
+    interfacerInstrument: -2,
     active: false,
   };
 
   const [form, setForm] = useState(initialForm);
+  useEffect(() => {
+    if (!isOpen) return;
+    const getSessionValue = (key) => {
+      const value = sessionStorage.getItem(key);
+
+      // ✅ 1. key missing
+      if (!value) return "";
+
+      // ✅ 2. already plain text (NOT encrypted)
+      if (!value.includes("=") && value.length < 40) {
+        return value;
+      }
+
+      // ✅ 3. encrypted value
+      try {
+        return CF_decrypt(value);
+      } catch (e) {
+        console.warn(`Decrypt skipped for ${key}`);
+        return value;
+      }
+    };
+    const buildDropdownRequest = () => ({
+      ActiveUserDetails: {
+        sUserDomainName: getSessionValue("sDomainName"),
+        sSessionID: getSessionValue("sSessionID"),
+        sUserID: getSessionValue("sUserID"),
+        sTimeZoneID: getSessionValue("sTimeZoneID") + "<~>true",
+        sApplicationName: "SDMS",
+        sdbtype: getSessionValue("sdbtype"),
+        sUsername: getSessionValue("sUsername"),
+        sSiteCode: getSessionValue("sSiteCode"),
+        sCategories: getSessionValue("sCategories"),
+        sUserGroupID: getSessionValue("sUserGroupID"),
+        sUserStatus: "",
+        sTenantID: "",
+      },
+      sInstrumentID: "",
+      ApplicationCode: "SDMS",
+    });
+
+    const loadDropdowns = async () => {
+      try {
+        const res = await postData(
+          "basemaster/getMapInstrumentBasedDataFillValues",
+          buildDropdownRequest()
+        );
+        console.log("Dropdown request", buildDropdownRequest());
+        console.log("Dropdown data", res);
+
+        // ✅ Available license
+        setAvailableLicense(res.AvailableLicense || 0);
+        // ✅ Parser Type dropdown (from Feature)
+        if (Array.isArray(res.Feature)) {
+          const options = [
+            PARSER_ORDER_MAP[0], // 👈 NONE always
+          ];
+
+          const interfacerFeature = res.Feature.find(
+            (f) => f.L67Enum === "INTERFACER_SETTINGS"
+          );
+
+          const webMethodFeature = res.Feature.find(
+            (f) => f.L67Enum === "WEBMETHOD_INTERFACER"
+          );
+
+          // WIN_METHOD
+          if (interfacerFeature?.L67Status === true) {
+            options.push(PARSER_ORDER_MAP[1]);
+          }
+
+          // WEB_METHOD
+          if (webMethodFeature?.L67Status === true) {
+            options.push(PARSER_ORDER_MAP[2]);
+          }
+
+          setParserOptions(options);
+        }
+
+        // ✅ Interfacer Instrument dropdown
+        if (Array.isArray(res.InterfacerInstrument)) {
+          const interfacerList = res.InterfacerInstrument.map((item) => ({
+            label: item.InstrumentName, // what user sees
+            value: item.INSTRUMENTID, // what you store
+          }));
+
+          setInterfacerOptions([
+            { label: "Create New", value: -2 }, // 👈 mandatory
+            ...interfacerList,
+          ]);
+        }
+      } catch (err) {
+        console.error("Dropdown load failed", err);
+      }
+    };
+
+    loadDropdowns();
+  }, [isOpen]);
 
   // ✅ preload data for EDIT
   useEffect(() => {
+    if (!isOpen) return;
+
     if (mode === "edit" && initialData) {
       setForm({
         instrumentCode: initialData.instrumentcode || "",
         instrumentAlias: initialData.instrumentAlias || "",
         instrumentModel: initialData.instrumentModel || "",
         instrumentMake: initialData.instrumentMake || "",
-        lockType: initialData.lockType || "",
+        lockType: initialData.lockType || "A",
         parserType: initialData.parserType || "NONE",
         interfacerMapped: false,
         interfacerInstrument: "",
@@ -53,18 +175,43 @@ const AddInstrumentModal = ({
     if (mode === "add") {
       setForm(initialForm);
     }
-  }, [mode, initialData]);
 
-  const handleSubmit = () => {
-    setSubmitted(true);
+    setSubmitted(false); // reset errors every time
+  }, [isOpen, mode, initialData]);
 
-    if (!isSubmitValid()) return;
+const handleSubmit = () => {
+  setSubmitted(true);
 
-    onSave(form);
+  if (!isSubmitValid()) return;
+
+  // store form temporarily
+  setPendingForm(form);
+
+  // open audit trail
+  setShowAuditTrail(true);
+};
+
+const handleAuditAuthorized = async (auditPayload) => {
+  try {
+    const finalPayload = {
+      ...pendingForm,
+      AuditTrailValues: auditPayload.AuditTrailValues,
+    };
+
+    // 🔥 actual save happens here
+    await onSave(finalPayload);
+
+    // cleanup
+    setShowAuditTrail(false);
+    setPendingForm(null);
     setForm(initialForm);
     setSubmitted(false);
     onClose();
-  };
+  } catch (err) {
+    console.error("Save failed", err);
+  }
+};
+
 
   // Submit validation (ONLY 2 fields)
   const isSubmitValid = () => {
@@ -85,102 +232,109 @@ const AddInstrumentModal = ({
 
   return (
     <>
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <Draggable nodeRef={nodeRef} handle=".modal-header" bounds="parent">
-        <div
-          ref={nodeRef}
-          className="bg-white w-[600px] max-h-[99vh] rounded shadow-lg flex flex-col  animate-slideFromTop"
-        >
-          {/* HEADER */}
-          <div className="modal-header cursor-move flex justify-between px-4 py-2 bg-slate-100 border-b">
-            <label
-              className="text-[#0e5bca] text-[18px]"
-              style={{ fontFamily: "Helvetica Neue, Arial, sans-serif" }}
-            >
-              {mode === "edit"
-                ? t("masters.editInstrument")
-                : t("masters.addInstrument")}
-            </label>
-            <button
-              onClick={() => {
-                setSubmitted(false);
-                setForm(initialForm);
-                onClose();
-              }}
-              className="text-gray-400 text-xl"
-            >
-              ×
-            </button>
-          </div>
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 ">
+        <Draggable nodeRef={nodeRef} handle=".modal-header" bounds="parent">
+          <div
+            ref={nodeRef}
+            className="bg-white w-[600px] max-h-[99vh] rounded-lg shadow-lg flex flex-col  animate-slideFromTop"
+          >
+            {/* HEADER */}
+            <div className="modal-header cursor-move flex justify-between px-4 py-2 bg-slate-100 border-b rounded-t-lg">
+              <label
+                className="text-[#0e5bca] text-[18px]"
+                style={{ fontFamily: "Helvetica Neue, Arial, sans-serif" }}
+              >
+                {mode === "edit"
+                  ? t("masters.editInstrument")
+                  : t("masters.addInstrument")}
+              </label>
+              <button
+                onClick={() => {
+                  setSubmitted(false);
+                  setForm(initialForm);
+                  onClose();
+                }}
+                className="text-gray-400 text-xl"
+              >
+                ×
+              </button>
+            </div>
 
-          {/* BODY */}
-          <div className="px-4 py-4 rounded space-y-4 overflow-y-auto flex-1">
-            <label className="block text-center text-green-700 text-[12px] font-bold font-roboto">
-              {t("masters.availableLicense")}: 19
-            </label>
+            {/* BODY */}
+            <div className="px-4 py-4 overflow-y-auto flex-1">
+              <label
+                className={`block text-center text-[12px] font-bold font-roboto ${
+                  availableLicense > 0 ? "text-green-700" : "text-[#ff0000]"
+                }`}
+              >
+                {availableLicense > 0
+                  ? `${t("masters.availableLicense")}: ${availableLicense}`
+                  : "Insufficient License to create instrument"}
+              </label>
 
-            <div className="space-y-7 w-[340px]">
-              <div>
-                <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  {t("masters.instrumentCode")}
-                  <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="instrumentCode"
-                  value={form.instrumentCode}
-                  onChange={(e) =>
-                    setForm({ ...form, instrumentCode: e.target.value })
-                  }
-                  className={`
-    w-full px-1 py-1 text-sm outline-none
-    border-b-2
+              <div className="space-y-7 w-[340px]">
+                <div>
+                  <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
+                    {t("masters.instrumentCode")}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="instrumentCode"
+                    value={form.instrumentCode}
+                    onChange={(e) =>
+                      setForm({ ...form, instrumentCode: e.target.value })
+                    }
+                    className={`
+    w-full bg-transparent pb-1 text-[12px] font-semibold outline-none font-['Verdana'] text-[#555]
+      border-b-2 
     ${submitted && !form.instrumentCode ? "border-red-500" : "border-gray-300"}
 
     focus:border-blue-500
   `}
-                />
-              </div>
+                  />
+                </div>
 
-              <div>
-                <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  {t("masters.instrumentAlias")}
-                  <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="instrumentAlias"
-                  value={form.instrumentAlias}
-                  onChange={(e) =>
-                    setForm({ ...form, instrumentAlias: e.target.value })
-                  }
-                  className={`
-    w-full px-1 py-1 text-sm outline-none
-    border-b-2
+                <div>
+                  <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
+                    {t("masters.instrumentAlias")}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="instrumentAlias"
+                    value={form.instrumentAlias}
+                    onChange={(e) =>
+                      setForm({ ...form, instrumentAlias: e.target.value })
+                    }
+                    className={`
+    w-full bg-transparent pb-1 text-[12px] font-semibold outline-none font-['Verdana'] text-[#555]
+      border-b-2 
   ${submitted && !form.instrumentAlias ? "border-red-500" : "border-gray-300"}
 
     focus:border-blue-500
   `}
-                />
-              </div>
+                  />
+                </div>
 
-              <div>
-                <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  {t("masters.instrumentModel")}
-                  {form.interfacerMapped && (
-                    <span className="text-red-500">*</span>
-                  )}
-                </label>
+                <div>
+                  <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
+                    {t("masters.instrumentModel")}
+                    {form.interfacerMapped && (
+                      <span className="text-red-500">*</span>
+                    )}
+                  </label>
 
-                <input
-                  type="text"
-                  name="instrumentModel"
-                  value={form.instrumentModel}
-                  onChange={(e) =>
-                    setForm({ ...form, instrumentModel: e.target.value })
-                  }
-                  className={`
-  w-full px-1 py-1 text-sm outline-none border-b-2
+                  <input
+                    type="text"
+                    name="instrumentModel"
+                    value={form.instrumentModel}
+                    onChange={(e) =>
+                      setForm({ ...form, instrumentModel: e.target.value })
+                    }
+                    className={`
+  w-full bg-transparent pb-1 text-[12px] font-semibold outline-none font-['Verdana'] text-[#555]
+      border-b-2 
  ${
    submitted && form.interfacerMapped && !form.instrumentModel
      ? "border-red-500"
@@ -189,26 +343,27 @@ const AddInstrumentModal = ({
 
   focus:border-blue-500
 `}
-                />
-              </div>
+                  />
+                </div>
 
-              <div>
-                <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  {t("masters.instrumentMake")}
-                  {form.interfacerMapped && (
-                    <span className="text-red-500">*</span>
-                  )}
-                </label>
+                <div>
+                  <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
+                    {t("masters.instrumentMake")}
+                    {form.interfacerMapped && (
+                      <span className="text-red-500">*</span>
+                    )}
+                  </label>
 
-                <input
-                  type="text"
-                  name="instrumentMake"
-                  value={form.instrumentMake}
-                  onChange={(e) =>
-                    setForm({ ...form, instrumentMake: e.target.value })
-                  }
-                  className={`
-  w-full px-1 py-1 text-sm outline-none border-b-2
+                  <input
+                    type="text"
+                    name="instrumentMake"
+                    value={form.instrumentMake}
+                    onChange={(e) =>
+                      setForm({ ...form, instrumentMake: e.target.value })
+                    }
+                    className={`
+ w-full bg-transparent pb-1 text-[12px] font-semibold outline-none font-['Verdana'] text-[#555]
+      border-b-2 
 ${
   submitted && form.interfacerMapped && !form.instrumentMake
     ? "border-red-500"
@@ -217,164 +372,164 @@ ${
 
   focus:border-blue-500
 `}
-                />
-              </div>
-
-              <div>
-                <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  {t("masters.lockType")}
-                  <span className="text-red-500">*</span>
-                </label>
-                <AnimatedDropdown
-                  name="lockType"
-                  value={form.lockType}
-                  options={["Automatic", "Manual"]}
-                  displayKey="label"
-                  valueKey="value"
-                  onChange={(e) =>
-                    setForm({ ...form, lockType: e.target.value })
-                  }
-                  required
-                  showError={submitted}
-                />
-              </div>
-
-              <div>
-                <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  {t("masters.parserType")}
-                  <span className="text-red-500">*</span>
-                </label>
-                <AnimatedDropdown
-                  name="parserType"
-                  value={form.parserType}
-                  options={[
-                    { label: "NONE", value: "NONE" },
-                    { label: "WIN_METHOD", value: "WIN_METHOD" },
-                    { label: "WEB_METHOD", value: "WEB_METHOD" },
-
-                  ]}
-                  displayKey="label"
-                  valueKey="value"
-                  onChange={(e) =>
-                    setForm({ ...form, parserType: e.target.value })
-                  }
-                  required
-                  showError={submitted}
-                />
-              </div>
-
-              {/* Checkboxes */}
-              <div className="flex gap-8">
-                <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
-                  {t("masters.interfacerMapped")}
-                  <input
-                    type="checkbox"
-                    checked={form.interfacerMapped}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        interfacerMapped: e.target.checked,
-                        interfacerInstrument: e.target.checked ? "CREATE_NEW" : "",
-
-                      })
-                    }
                   />
-                </label>
+                </div>
 
-                <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
-                  {t("statuses.active")}
-                  <input
-                    type="checkbox"
-                    checked={form.active}
-                    onChange={(e) =>
-                      setForm({ ...form, active: e.target.checked })
-                    }
-                  />
-                </label>
-              </div>
-
-              {form.interfacerMapped && (
                 <div>
                   <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                    {t("masters.interfacerInstrument")}
+                    {t("masters.lockType")}
                     <span className="text-red-500">*</span>
                   </label>
                   <AnimatedDropdown
-                    name="interfacerInstrument"
-                    value={form.interfacerInstrument}
-                    options={[
-                      { label: "Create New", value: "CREATE_NEW" },
-                      { label: "Roche Cobas 6800/8800", value: "INST_A" },
-                      { label: "DiaSorin LIASION", value: "INST_B" },
-                      { label: "Agaram Chromeleon", value: "INST_C" },
-                    ]}
+                    name="lockType"
+                    value={form.lockType}
+                    options={LOCK_TYPE_OPTIONS}
                     displayKey="label"
                     valueKey="value"
                     onChange={(e) =>
-                      setForm({
-                        ...form,
-                        interfacerInstrument: e.target.value,
-                      })
+                      setForm({ ...form, lockType: e.target.value })
                     }
                     required
                     showError={submitted}
                   />
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* FOOTER */}
-          <div className="flex justify-end gap-2 px-4 py-3 border-t">
-            {form.interfacerMapped && (
+                <div>
+                  <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
+                    {t("masters.parserType")}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <AnimatedDropdown
+                    name="parserType"
+                    value={form.parserType}
+                    options={parserOptions}
+                    displayKey="label"
+                    valueKey="value"
+                    onChange={(e) =>
+                      setForm({ ...form, parserType: e.target.value })
+                    }
+                    required
+                    showError={submitted}
+                  />
+                </div>
+
+                {/* Checkboxes */}
+                <div className="flex gap-8">
+                  <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
+                    {t("masters.interfacerMapped")}
+                    <input
+                      type="checkbox"
+                      checked={form.interfacerMapped}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          interfacerMapped: e.target.checked,
+                          interfacerInstrument: e.target.checked ? -2 : "",
+                        })
+                      }
+                    />
+                  </label>
+
+                  <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
+  {t("statuses.active")}
+  <input
+    type="checkbox"
+    checked={form.active}
+    onChange={(e) =>
+      setForm({
+        ...form,
+        active: e.target.checked,  // ✅ fix here
+      })
+    }
+  />
+</label>
+
+                </div>
+
+                {form.interfacerMapped && (
+                  <div>
+                    <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
+                      {t("masters.interfacerInstrument")}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <AnimatedDropdown
+                      name="interfacerInstrument"
+                      value={form.interfacerInstrument}
+                      options={interfacerOptions}
+                      displayKey="label"
+                      valueKey="value"
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          interfacerInstrument: e.target.value,
+                        })
+                      }
+                      required
+                      showError={submitted}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* FOOTER */}
+            <div className="flex justify-end gap-2 px-4 py-3 border-t">
+              {form.interfacerMapped && (
+                <button
+                  onClick={() => {
+                    setSubmitted(true);
+
+                    if (!isCommSettingsValid()) return;
+
+                    setShowCommSettings(true);
+                  }}
+                  className="flex items-center gap-1 px-[12px] py-[6px] rounded text-[11px] font-bold shadow-sm bg-[#2883fe] text-white"
+                >
+                  <IoIosSettings className="w-4 h-4" />
+                  {t("masters.communicationSettings")}
+                </button>
+              )}
+
+              <button
+                onClick={handleSubmit}
+                disabled={form.interfacerMapped || hasInsufficientLicense}
+                className={`flex items-center gap-1 px-[12px] text-white py-[6px] rounded text-[11px] font-bold shadow-sm ${
+                  form.interfacerMapped || hasInsufficientLicense
+                    ? "bg-blue-300 cursor-not-allowed"
+                    : "bg-[#2883fe]"
+                }`}
+              >
+                <FiCheckSquare className="w-4 h-4"/>
+                {t("button.submit")}
+              </button>
+
               <button
                 onClick={() => {
-                  setSubmitted(true);
-
-                  if (!isCommSettingsValid()) return;
-
-                  setShowCommSettings(true);
+                  setSubmitted(false);
+                  setForm(initialForm);
+                  onClose();
                 }}
-                className="flex items-center gap-1 px-[12px] py-[6px] rounded text-[11px] font-bold shadow-sm bg-[#2883fe] text-white"
+                className="border px-[12px] py-[6px] rounded text-[11px] text-[#8092a4] font-bold"
               >
-                <IoIosSettings className="w-4 h-4" />
-                {t("masters.communicationSettings")}
+                {t("button.close")}
               </button>
-            )}
-
-            <button
-              onClick={handleSubmit}
-              disabled={form.interfacerMapped}
-              className={`flex items-center gap-1 px-[12px] text-white py-[6px] rounded text-[11px] font-bold shadow-sm ${
-                form.interfacerMapped
-                  ? "bg-blue-300 cursor-not-allowed"
-                  : "bg-[#2883fe]"
-              }`}
-            >
-              <FiCheckSquare className="w-4 h-4" />
-              {t("button.submit")}
-            </button>
-
-            <button
-              onClick={() => {
-                setSubmitted(false);
-                setForm(initialForm);
-                onClose();
-              }}
-              className="border px-[12px] py-[6px] rounded text-[11px] text-[#8092a4] font-bold"
-            >
-              {t("button.close")}
-            </button>
+            </div>
           </div>
-        </div>
-      </Draggable>
-    </div>
-     <CommunicationSettingsModal
+        </Draggable>
+      </div>
+      <CommunicationSettingsModal
         isOpen={showCommSettings}
         interfacerInstrument={form.interfacerInstrument}
         onClose={() => setShowCommSettings(false)}
       />
-      </>
+      <AuditTrail
+  isOpen={showAuditTrail}
+  onClose={() => setShowAuditTrail(false)}
+  onAuthorized={handleAuditAuthorized}
+  actionLabel={mode === "edit" ? "Update" : "Submit"}
+/>
+
+    </>
   );
 };
 

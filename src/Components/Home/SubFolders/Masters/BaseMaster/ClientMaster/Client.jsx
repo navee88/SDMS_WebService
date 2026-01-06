@@ -10,8 +10,9 @@ import useAxios from "../../../../../../Services/servicecall";
 import { CF_decrypt } from "../../../../../Common/encryptiondecryption";
 import AddClientModal from "./AddClientModal";
 import AuditTrail from "../../../../../Layout/Common/AuditTrail";
-import PrintTable from "./PrintTable";
+import PrintTable from "../../../../../Layout/Common/PrintTable";
 import Errordialog from "../../../../../Layout/Common/Errordialog";
+import { handleExportCommon } from "../../../../../Layout/Common/exportService";
 // adjust path if needed
 
 /* ================== MAIN COMPONENT ================== */
@@ -398,54 +399,20 @@ const handlePrint = () => {
 
   setDoPrint(true);
 };
+const handleExport = () => {
+  handleExportCommon({
+    rows,
+    buildRequest: buildClientExportRequest,
+    postData,
+    setLoading,
+    setLoadingText,
+    setErrorDialog,
+  });
+};
 
 
   /* ---------------- EXPORT TO EXCEL FUNCTIONALITY ---------------- */
-  const handleExport = async () => {
 
-    if (!rows || rows.length === 0) {
-      setErrorDialog({
-        open: true,
-        message: "Select an existing record.", // i18n key also works
-        type: "information",
-      });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setLoadingText("Preparing export file...");
-
-      const requestPayload = buildClientExportRequest();
-      const response = await postData(
-        "basemaster/exportDataFile",
-        requestPayload
-      );
-
-      if (response?.ExportDataViewURL) {
-        const exportUrl = CF_decrypt(response.ExportDataViewURL);
-        window.open(exportUrl, "_blank");
-      } else {
-        // ⚠️ API success but no file URL
-        setErrorDialog({
-          open: true,
-          message: "Export file not generated",
-          type: "error",
-        });
-      }
-    } catch (err) {
-      console.error("Export failed:", err);
-
-      setErrorDialog({
-        open: true,
-        message: "Export failed",
-        type: "error",
-      });
-    } finally {
-      setLoading(false);
-      setLoadingText("");
-    }
-  };
   const buildPrintRequest = () => ({
   sModuleName: "Client Master",
   ActiveUserDetails: buildClientRequest().ActiveUserDetails,
@@ -584,12 +551,12 @@ const handlePrint = () => {
         </div>
       )} */}
       {loading && (
-  <div className="fixed inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center z-[9999]">
-    <div className="w-14 h-14 border-4 border-[#2883fe] border-t-transparent rounded-full animate-spin" />
-    <p className="mt-4 text-[#2883fe] font-semibold text-sm">
-      {loadingText || "Processing..."}
-    </p>
-  </div>
+ <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="  rounded-sm flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1A57A6]"></div>
+           <p className="text-sm font-medium">{loadingText}</p>
+          </div>
+        </div>
 )}
 
       <GridLayout
@@ -628,7 +595,7 @@ const handlePrint = () => {
   <PrintTable
     columns={columns}
     rows={rows}
-    title="Client Configuration"
+    title="Client Master"
     subtitle="View Client Configuration Report"
     printRequest={buildPrintRequest()}
     onDone={() => setDoPrint(false)}
