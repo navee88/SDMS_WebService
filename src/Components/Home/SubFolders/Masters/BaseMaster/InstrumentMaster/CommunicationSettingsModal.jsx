@@ -9,6 +9,8 @@ const CommunicationSettingsModal = ({
   onClose,
   interfacerInstrument,
 }) => {
+
+
 const disableRules = {
   CREATE_NEW: {
     ip: true,
@@ -53,11 +55,13 @@ const disableRules = {
     Parity: false,
   },
 };
-
 const ruleKey =
-  interfacerInstrument === "" ? "CREATE_NEW" : interfacerInstrument;
+  interfacerInstrument === -2
+    ? "CREATE_NEW"
+    : "INST_A"; // default for existing instruments
 
 const disabled = disableRules[ruleKey] || {};
+
 
   const nodeRef = useRef(null);
   const [form, setForm] = useState({
@@ -66,26 +70,40 @@ const disabled = disableRules[ruleKey] || {};
     stopBits: "-1",
     handShake: "NONE",
   });
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const getBorderClass = (disabled, value) => {
+    if (disabled) return "border-gray-200";
+    if (isSubmitted && !value) return "border-red-500";
+    return "border-gray-300 focus:border-blue-500";
+  };
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
+  
+const handleClose = () => {
+  setIsSubmitted(false);   // ✅ reset validation
+  onClose();               // close modal
+};
+
 
   if (!isOpen) return null;
+
 
   return (
     <div className="fixed rounded inset-0 bg-black/40 flex items-center justify-center z-[60]">
       <Draggable nodeRef={nodeRef} handle=".modal-header">
-        <div ref={nodeRef} className="bg-white  w-[600px] rounded shadow-lg  animate-slideFromTop">
+        <div ref={nodeRef} className="bg-white  w-[600px] rounded-lg  shadow-lg  animate-slideFromTop">
           {/* HEADER */}
-          <div className="modal-header cursor-move flex justify-between px-4 py-2 bg-slate-100 border-b">
+          <div className="modal-header cursor-move flex justify-between px-4 py-2 bg-slate-100 border-b rounded-t-lg">
             <label
               className="text-[#0e5bca] text-[18px]"
               style={{ fontFamily: "Helvetica Neue, Arial, sans-serif" }}
             >
               Communication Settings
             </label>
-            <button onClick={onClose} className="text-gray-400 text-xl">
+            <button onClick={handleClose} className="text-gray-400 text-xl">
               ×
             </button>
           </div>
@@ -134,9 +152,11 @@ const disabled = disableRules[ruleKey] || {};
                 IP Address
               </label>
               <input
+  value={form.ip || ""}
   disabled={disabled.ip}
-  className={`w-full border-b-2  pb-1 text-[12px] font-semibold outline-none
-    ${disabled.ip ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "border-gray-300 focus:border-blue-500"}
+  className={`w-full border-b-2 pb-1 text-[12px] font-semibold outline-none
+    ${disabled.ip ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}
+    ${getBorderClass(disabled.ip, form.ip)}
   `}
 />
 
@@ -166,9 +186,11 @@ const disabled = disableRules[ruleKey] || {};
                 TCP Port Number
               </label>
              <input
+  value={form.tcp || ""}
   disabled={disabled.tcp}
-  className={`w-full border-b-2  pb-1 text-[12px] font-semibold outline-none
-    ${disabled.tcp ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "border-gray-300 focus:border-blue-500"}
+  className={`w-full border-b-2 pb-1 text-[12px] font-semibold outline-none
+    ${disabled.tcp ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}
+    ${getBorderClass(disabled.tcp, form.tcp)}
   `}
 />
             </div>
@@ -178,9 +200,11 @@ const disabled = disableRules[ruleKey] || {};
                 Data Bits
               </label>
               <input
+  value={form.dataBits || ""}
   disabled={disabled.dataBits}
-  className={`w-full border-b-2  pb-1 text-[12px] font-semibold outline-none
-    ${disabled.dataBits ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "border-gray-300 focus:border-blue-500"}
+  className={`w-full border-b-2 pb-1 text-[12px] font-semibold outline-none
+    ${disabled.dataBits ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}
+    ${getBorderClass(disabled.dataBits, form.dataBits)}
   `}
 />
 
@@ -190,10 +214,13 @@ const disabled = disableRules[ruleKey] || {};
               <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
                 COM Port Number
               </label>
-             <input
+             
+<input
+  value={disabled.com || ""}
   disabled={disabled.com}
-  className={`w-full border-b-2  pb-1 text-[12px] font-semibold outline-none
-    ${disabled.com ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "border-gray-300 focus:border-blue-500"}
+  className={`w-full border-b-2 pb-1 text-[12px] font-semibold outline-none
+    ${disabled.com ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}
+    ${getBorderClass(disabled.com, form.com)}
   `}
 />
 
@@ -223,10 +250,12 @@ const disabled = disableRules[ruleKey] || {};
               <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
                 Baud Rate
               </label>
-              <input
+<input
+  value={disabled.baud|| ""}
   disabled={disabled.baud}
-  className={`w-full border-b-2  pb-1 text-[12px] font-semibold outline-none
-    ${disabled.baud ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "border-gray-300 focus:border-blue-500"}
+  className={`w-full border-b-2 pb-1 text-[12px] font-semibold outline-none
+    ${disabled.baud ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}
+    ${getBorderClass(disabled.baud, form.baud)}
   `}
 />
 
@@ -236,20 +265,26 @@ const disabled = disableRules[ruleKey] || {};
               <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
                 Termination Idle Seconds
               </label>
-              <input className="w-full border-b-2  pb-1 text-[12px] font-semibold outline-none font-['Verdana'] text-[#555]
-            border-gray-300 cursor-pointer focus:border-blue-500" />
+              <input
+  value={form.terminationIdle || ""}
+  className={`w-full border-b-2 pb-1 text-[12px] font-semibold outline-none
+    ${getBorderClass(false, form.terminationIdle)}
+  `}
+/>
+
             </div>
           </div>
 
           {/* FOOTER */}
           <div className="flex justify-end gap-2 px-4 py-3 border-t">
-            <button className="bg-[#2883fe] text-white px-4 py-1 rounded text-[12px] font-bold flex items-center gap-1">
+            <button onClick={() => setIsSubmitted(true)} className="bg-[#2883fe] text-white px-4 py-1 rounded text-[12px] font-bold flex items-center gap-1">
               <FiCheckSquare />
               Submit
             </button>
 
+
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="border px-4 py-1 rounded text-[12px]"
             >
               Close
@@ -260,5 +295,7 @@ const disabled = disableRules[ruleKey] || {};
     </div>
   );
 };
+
+
 
 export default CommunicationSettingsModal;
