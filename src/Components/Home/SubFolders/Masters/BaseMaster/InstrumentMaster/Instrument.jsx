@@ -9,6 +9,8 @@ import AddInstrumentModal from "./AddInstrumentModal";
 import { useTranslation } from "react-i18next";
 import useAxios from "../../../../../../Services/servicecall";
 import {CF_decrypt} from "../../../../../Common/encryptiondecryption";
+import PrintTable from "../../../../../Layout/Common/PrintTable";
+
 import { Loader2 } from "lucide-react";
 
 
@@ -103,6 +105,11 @@ const [loadingText, setLoadingText] = useState("");
   const [modalMode, setModalMode] = useState("add");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [rowToRetire, setRowToRetire] = useState(null);
+    const [errorDialog, setErrorDialog] = useState({
+      open: false,
+      message: "",
+      type: "information",
+    });
 
   const selectedRow = useMemo(
     () => rows.find((r) => r.id === selectedRowId),
@@ -177,13 +184,9 @@ const [loadingText, setLoadingText] = useState("");
 
         // ✅ AUDIT FIELDS
         createdBy: item.sCreatedBy || "-",
-        createdOn: item.dCreatedOn
-          ? new Date(item.dCreatedOn).toLocaleDateString("en-GB")
-          : "-",
+        createdOn: item.dCreatedOn || "-",
         modifiedBy: item.sModifiedBy || "-",
-        modifiedOn: item.dModifiedOn
-          ? new Date(item.dModifiedOn).toLocaleDateString("en-GB")
-          : "-"
+        modifiedOn: item.dModifiedOn || "-",
       }));
 
       setRows(mappedRows);
@@ -326,239 +329,26 @@ useEffect(() => {
 
   /* ---------------- PRINT FUNCTIONALITY ---------------- */
 
+    const [doPrint, setDoPrint] = React.useState(false);
+  
   const handlePrint = () => {
-    const now = new Date();
-    const printDate = now.toLocaleDateString("en-GB");
-    const printTime = now.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Instrument Management - Print</title>
-        <style>
-          @media print {
-            @page {
-              margin: 20px;
-            }
-            body {
-              font-family: Arial, sans-serif;
-              margin: 0;
-              padding: 20px;
-            }
-            .print-header {
-              text-align: center;
-              margin-bottom: 30px;
-              border-bottom: 2px solid #000;
-              padding-bottom: 10px;
-            }
-            .print-title {
-              font-size: 24px;
-              font-weight: bold;
-              color: #333;
-              margin-bottom: 5px;
-            }
-            .print-subtitle {
-              font-size: 16px;
-              color: #666;
-              margin-bottom: 10px;
-            }
-            .print-meta {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 20px;
-              font-size: 12px;
-              color: #555;
-            }
-            .print-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 20px;
-            }
-            .print-table th {
-              background-color: #f4f6f8;
-              color: #333;
-              font-weight: bold;
-              padding: 10px;
-              text-align: left;
-              border: 1px solid #ddd;
-            }
-            .print-table td {
-              padding: 8px 10px;
-              border: 1px solid #ddd;
-              font-size: 12px;
-            }
-            .print-table tr:nth-child(even) {
-              background-color: #f9f9f9;
-            }
-            .status-active {
-              color: #28a745;
-              font-weight: bold;
-            }
-            .status-inactive {
-              color: #dc3545;
-              font-weight: bold;
-            }
-            .status-retired {
-              color: #6c757d;
-              font-weight: bold;
-            }
-            .print-footer {
-              margin-top: 30px;
-              padding-top: 10px;
-              border-top: 1px solid #ddd;
-              font-size: 11px;
-              color: #777;
-              text-align: center;
-            }
-          }
-          body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-          }
-          .print-header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #000;
-            padding-bottom: 10px;
-          }
-          .print-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-          }
-          .print-subtitle {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 10px;
-          }
-          .print-meta {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            font-size: 12px;
-            color: #555;
-          }
-          .print-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-          }
-          .print-table th {
-            background-color: #f4f6f8;
-            color: #333;
-            font-weight: bold;
-            padding: 10px;
-            text-align: left;
-            border: 1px solid #ddd;
-          }
-          .print-table td {
-            padding: 8px 10px;
-            border: 1px solid #ddd;
-            font-size: 12px;
-          }
-          .print-table tr:nth-child(even) {
-            background-color: #f9f9f9;
-          }
-          .status-active {
-            color: #28a745;
-            font-weight: bold;
-          }
-          .status-inactive {
-            color: #dc3545;
-            font-weight: bold;
-          }
-          .status-retired {
-            color: #6c757d;
-            font-weight: bold;
-          }
-          .print-footer {
-            margin-top: 30px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
-            font-size: 11px;
-            color: #777;
-            text-align: center;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="print-header">
-          <div class="print-title">${t("masters.instrumentmaster")}</div>
-          <div class="print-subtitle">Instrument Details Report</div>
-        </div>
-        
-        <div class="print-meta">
-          <div>
-            <strong>Total Instruments:</strong> ${rows.length}<br>
-            <strong>Active:</strong> ${
-              rows.filter((r) => r.status === "Active").length
-            }<br>
-            <strong>Inactive:</strong> ${
-              rows.filter((r) => r.status === "Inactive").length
-            }
-          </div>
-          <div>
-            <strong>Print Date:</strong> ${printDate}<br>
-            <strong>Print Time:</strong> ${printTime}<br>
-            <strong>Retired:</strong> ${
-              rows.filter((r) => r.status === "Retired").length
-            }
-          </div>
-        </div>
-
-        <table class="print-table">
-          <thead>
-            <tr>
-              <th>${t("masters.instrumentcode")}</th>
-              <th>${t("masters.instrumentaliasname")}</th>
-              <th>${t("statuses.status")}</th>
-
-            </tr>
-          </thead>
-          <tbody>
-            ${rows
-              .map(
-                (row) => `
-              <tr>
-                <td>${row.instrumentcode}</td>
-                <td>${row.instrumentAlias}</td>
-                <td class="status-${row.status.toLowerCase()}">${
-                  row.status
-                }</td>
-              </tr>
-            `
-              )
-              .join("")}
-          </tbody>
-        </table>
-
-        <div class="print-footer">
-          <p>Generated by Instrument Management System</p>
-          <p>Page 1 of 1</p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    // Open print window
-    const printWindow = window.open("", "_blank", "width=900,height=600");
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-
-    // Wait for content to load then print
-    printWindow.onload = function () {
-      printWindow.focus();
-      printWindow.print();
-      // Optional: Close after printing
-      // printWindow.close();
-    };
+    if (!rows || rows.length === 0) {
+      setErrorDialog({
+        open: true,
+        message: "Select an existing record.",
+        type: "information",
+      });
+      return;
+    }
+  
+    setDoPrint(true);
   };
+
+    const buildPrintRequest = () => ({
+  sModuleName: "Instrument Master",
+  ActiveUserDetails: buildInstrumentRequest().ActiveUserDetails,
+  ApplicationCode: "SDMS",
+});
 
   /* ---------------- GRID COLUMNS ---------------- */
 
@@ -573,7 +363,7 @@ useEffect(() => {
           <div
             onClick={() => setSelectedRowId(row.id)}
             className={`cursor-pointer ${
-              row.id === selectedRowId ? "font-semibold" : ""
+              row.id === selectedRowId ? "font-bold" : ""
             }`}
           >
             {row.instrumentcode}
@@ -589,7 +379,7 @@ useEffect(() => {
           <div
             onClick={() => setSelectedRowId(row.id)}
             className={`cursor-pointer ${
-              row.id === selectedRowId ? "font-semibold" : ""
+              row.id === selectedRowId ? "font-bold" : ""
             }`}
           >
             {row.instrumentAlias}
@@ -696,6 +486,7 @@ useEffect(() => {
           </div>
         )}
 
+
       {/* GRID CONTAINER */}
       <div className="flex-1 overflow-hidden">
         <GridLayout
@@ -725,6 +516,16 @@ useEffect(() => {
         mode={modalMode}
         initialData={selectedRow}
       />
+      {doPrint && (
+  <PrintTable
+    columns={columns}
+    rows={rows}
+    title="Instrument Master"
+    subtitle="View Instrument Configuration Report"
+    printRequest={buildPrintRequest()}
+    onDone={() => setDoPrint(false)}
+  />
+)}
 
       {/* CONFIRMATION POPUP */}
       {isConfirmOpen && rowToRetire && (

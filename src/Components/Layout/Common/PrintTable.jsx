@@ -1,7 +1,5 @@
-import React from "react";
-import useAxios from "../../../../../../Services/servicecall";
-import { CF_decrypt } from "../../../../../Common/encryptiondecryption";
-
+import React,{useEffect} from "react";
+import useAxios from "../../../Services/servicecall";
 const PrintTable = ({
   columns,
   rows,
@@ -126,7 +124,7 @@ const PrintTable = ({
       </html>
     `;
 
-  React.useEffect(() => {
+useEffect(() => {
     const printWindow = window.open("", "_blank");
     printWindow.document.write(printContent);
     printWindow.document.close();
