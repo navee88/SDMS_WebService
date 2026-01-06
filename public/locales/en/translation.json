@@ -247,7 +247,10 @@
     "minuppercase": "Minimum number of Uppercase characters",
     "minlowercase": "Minimum number of Lowercase characters",
     "minnumeric": "Minimum number of Numeric characters",
-    "minspecial": "Minimum number of Special characters"
+    "minspecial": "Minimum number of Special characters",
+    "columnName":"Column Name",
+    "oldValue":"Old Value",
+    "newValue":"New Value"
     
   },
   "statuses": {
@@ -585,11 +588,8 @@
     "addInstrument": "Add Instrument",
     "editInstrument": "Edit Instrument",
     "communicationSettings": "Communication Settings",
-    "submitting": "Submitting...",
-    "notetext": "NOTE: The total length of complex password must be greater than or equal to minimum password length and less than or equal to maximum password length.",
-    "failedtofetchpolicy": "Failed to fetch password policy",
-    "failedtosavepolicy": "Failed to save password policy",
-    "policysavedsuccess": "Password policy saved successfully"
+    "submitting": "Submitting..."
+    
  
     
   },
@@ -746,7 +746,14 @@
     "taskname": "Task Name",
     "delete":"Delete",
     "nogroupsavailable": "No Groups Available",
-    "site":"Site Name"
+    "site":"Site Name",
+    "notetext": "NOTE: The total length of complex password must be greater than or equal to minimum password length and less than or equal to maximum password length.",
+    "failedtofetchpolicy": "Failed to fetch password policy",
+    "failedtosavepolicy": "Failed to save password policy",
+    "policysavedsuccess": "Password policy saved successfully",
+    "totalComplexLessThanMin":"Complex password policy should not be less than Minimum password length",
+    "totalComplexExceedsMax":"Total complex requirements exceed maximum password length",
+    "complexRequirementsNegative":"Complex requirements cannot be negative"
         
   }
 }

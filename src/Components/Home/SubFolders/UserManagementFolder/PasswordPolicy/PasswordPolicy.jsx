@@ -1,22 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CheckSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
 import Errordialog from '../../../../Layout/Common/Errordialog';
+import AuditTrail from '../../../../Layout/Common/AuditTrail';
 import servicecall from '../../../../../Services/servicecall';
 import { CF_decrypt } from '../../../../../Components/Common/encryptiondecryption.js';
-
-const drawerWidthCollapsed = 60;
-const topBarHeight = 60;
 
 export default function PasswordPolicy() {
   const [dbLogin, setDbLogin] = useState(true);
   const [complexPolicy, setComplexPolicy] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [infoDialog, setInfoDialog] = useState({
-    open: false,
-    message: "",
-    type: "information"
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAudit, setShowAudit] = useState(false);
+  const [validationPending, setValidationPending] = useState(false);
+  const [pendingValidationResult, setPendingValidationResult] = useState({
+    errors: [],
+    warnings: []
   });
   
   // Default values (will be updated from API)
@@ -32,7 +31,12 @@ export default function PasswordPolicy() {
     minSpecial: 0,
   });
 
-  const tabLabels = ["Password Policy"];
+  const [infoDialog, setInfoDialog] = useState({
+    open: false,
+    message: "",
+    type: "information"
+  });
+
   const { t } = useTranslation();
   const { postData } = servicecall();
 
@@ -53,14 +57,22 @@ export default function PasswordPolicy() {
     const getDecryptedValue = (key) => {
       try {
         const encryptedValue = sessionStorage.getItem(key);
-        if (!encryptedValue) return "";
+        if (!encryptedValue || encryptedValue.trim() === "") {
+          return "";
+        }
         
+        // Only decrypt if it looks like encrypted data
         if (encryptedValue.length > 50 && encryptedValue.includes('==')) {
-          return CF_decrypt(encryptedValue);
+          try {
+            return CF_decrypt(encryptedValue);
+          } catch (decryptError) {
+            console.warn(`Decryption failed for ${key}, returning as-is`);
+            return encryptedValue;
+          }
         }
         return encryptedValue;
       } catch (error) {
-        console.error(`Error decrypting ${key}:`, error);
+        console.error(`Error processing ${key}:`, error);
         return "";
       }
     };
@@ -75,7 +87,7 @@ export default function PasswordPolicy() {
     const sdbtype = getDecryptedValue("sdbtype") || "MSSQL";
     const sCategories = getDecryptedValue("sCategories") || "DB";
     const sUserStatus = getDecryptedValue("sUserStatus") || "";
-    const sTenantID = getDecryptedValue("sTenantID") || "";
+    const sTenantID = getDecryptedValue("") ;
 
     return {
       sUserDomainName: sDomainName,
@@ -95,116 +107,131 @@ export default function PasswordPolicy() {
 
   // Fetch password policy data from API
   const fetchPasswordPolicy = useCallback(async () => {
-    setLoading(true);
     try {
-      // Mock API call - replace with actual API endpoint
       const passObjDet = {
         ActiveUserDetails: getActiveUserDetails(),
         ApplicationCode: "SDMS"
       };
       
-      // For now, using mock data - replace with actual API call
-      // const response = await postData("PasswordPolicy/GetPasswordPolicy", passObjDet);
-      
-      // Mock response data (replace with actual API response)
-      const mockResponse = {
-        oResObj: {
-          dbLogin: true,
-          complexPolicy: false,
-          minPasswordLength: 4,
-          maxPasswordLength: 10,
-          passwordHistory: 5,
-          passwordExpiry: 90,
-          autolockPolicy: 3,
-          minUppercase: 0,
-          minLowercase: 0,
-          minNumeric: 0,
-          minSpecial: 0,
-        }
-      };
-      
-      let data = mockResponse.oResObj; // Change to actual API response parsing
-      
-      // Uncomment this when API is ready
-      /*
-      const response = await postData("PasswordPolicy/GetPasswordPolicy", passObjDet);
+      // Call the API to get password policy
+      console.log("Fetching password policy from API: User/GetPasswordPolicy");
+      const response = await postData("User/GetPasswordPolicy", passObjDet);
       
       if (!response) {
-        showInfoDialog(t('masters.failedtofetchpolicy') || 'Failed to fetch password policy', "error");
+        showInfoDialog(t('usermanagement.failedtofetchpolicy') || 'Failed to fetch password policy', "error");
         return;
       }
       
       let data = response;
-      if (typeof response === 'string' && response.length > 50) {
+      if (typeof response === 'string' && response.length > 50 && response.includes('==')) {
         try {
           const decrypted = CF_decrypt(response);
           data = JSON.parse(decrypted);
         } catch (decryptError) {
           console.error('Failed to decrypt response:', decryptError);
+          showInfoDialog(t('label.failedtoparseresponse') || 'Failed to parse response', "error");
+          return;
         }
       }
       
-      if (data && data.oResObj) {
-        data = data.oResObj;
-      }
-      */
+      console.log("Processed password policy data:", data);
       
-      // Update state with API data
-      setDbLogin(data.dbLogin || true);
-      setComplexPolicy(data.complexPolicy || false);
-      setValues({
-        minPasswordLength: data.minPasswordLength || 4,
-        maxPasswordLength: data.maxPasswordLength || 10,
-        passwordHistory: data.passwordHistory || 5,
-        passwordExpiry: data.passwordExpiry || 90,
-        autolockPolicy: data.autolockPolicy || 3,
-        minUppercase: data.minUppercase || 0,
-        minLowercase: data.minLowercase || 0,
-        minNumeric: data.minNumeric || 0,
-        minSpecial: data.minSpecial || 0,
-      });
+      // Update state with API data - Direct from response as per jQuery
+      if (data) {
+        setDbLogin(data.DBBased === true || data.DBBased === 1);
+        setComplexPolicy(data.nComplexPasswrd === true || data.nComplexPasswrd === 1);
+        setValues({
+          minPasswordLength: data.nMinPasswrdLength || 4,
+          maxPasswordLength: data.nMaxPasswrdLength || 10,
+          passwordHistory: data.nPasswordHistory || 5,
+          passwordExpiry: data.nPasswordExpiry || 90,
+          autolockPolicy: data.nLockPolicy || 3,
+          minUppercase: data.nMinCapitalChar || 0,
+          minLowercase: data.nMinSmallChar || 0,
+          minNumeric: data.nMinNumericChar || 0,
+          minSpecial: data.nMinSpecialChar || 0,
+        });
+      }
       
     } catch (error) {
       console.error('Error fetching password policy:', error);
-      showInfoDialog(t('masters.failedtofetchpolicy') || 'Failed to fetch password policy', "error");
-    } finally {
-      setLoading(false);
+      showInfoDialog(t('usermanagement.failedtofetchpolicy') || 'Failed to fetch password policy', "error");
     }
   }, [postData, showInfoDialog, t, getActiveUserDetails]);
 
   // Save password policy data to API
-  const handleSave = useCallback(async () => {
+  const handleSaveWithAudit = useCallback(async (auditValues, submittedValues = null) => {
+    console.log("Starting save with audit values:", auditValues);
+    
+    const valuesToSave = submittedValues || values;
+    
+    // FIRST: Run validation before saving
+    const validationResult = validateData(valuesToSave);
+    
+    // Check for blocking errors
+    if (validationResult.errors.length > 0) {
+      console.log("Validation errors found after audit:", validationResult.errors);
+      showInfoDialog(validationResult.errors.join('\n'), "error");
+      return;
+    }
+    
+    // Check for warnings
+    if (validationResult.warnings.length > 0) {
+      console.log("Validation warnings found after audit:", validationResult.warnings);
+      // Show warnings in orange
+      showInfoDialog(validationResult.warnings.join('\n'), "warning");
+      
+      // If there are warnings, we can still proceed after user sees them
+      // The dialog will close automatically when user clicks OK
+      // We'll continue with save after a short delay
+      setTimeout(() => {
+        proceedWithSave(auditValues, valuesToSave);
+      }, 500);
+      return;
+    }
+    
+    // If no warnings or errors, proceed with save
+    proceedWithSave(auditValues, valuesToSave);
+    
+  }, [dbLogin, complexPolicy, values, postData, showInfoDialog, t, getActiveUserDetails, fetchPasswordPolicy]);
+
+  // Function to proceed with actual save after validation
+  const proceedWithSave = useCallback(async (auditValues, valuesToSave) => {
     try {
-      setLoading(true);
+      const activeUserDetails = getActiveUserDetails();
       
+      // Prepare the request object as per API specification
       const passObjDet = {
-        dbLogin: dbLogin,
-        complexPolicy: complexPolicy,
-        ...values,
-        ActiveUserDetails: getActiveUserDetails(),
-        ApplicationCode: "SDMS"
+        pswdObj: {
+          nMinPasswrdLength: valuesToSave.minPasswordLength || 0,
+          nMaxPasswrdLength: valuesToSave.maxPasswordLength || 0,
+          nPasswordHistory: valuesToSave.passwordHistory || 0,
+          nPasswordExpiry: valuesToSave.passwordExpiry || 0,
+          nLockPolicy: valuesToSave.autolockPolicy || 0,
+          nMinCapitalChar: valuesToSave.minUppercase || 0,
+          nMinSmallChar: valuesToSave.minLowercase || 0,
+          nMinNumericChar: valuesToSave.minNumeric || 0,
+          nMinSpecialChar: valuesToSave.minSpecial || 0,
+          nComplexPasswrd: complexPolicy ? 1 : 0,
+          nDBBased: dbLogin ? 1 : 0
+        },
+        AuditTrailValues: auditValues,
+        ApplicationCode: "SDMS",
+        ActiveUserDetails: activeUserDetails
       };
       
-      // Mock API call - replace with actual API endpoint
-      // const response = await postData("PasswordPolicy/SavePasswordPolicy", passObjDet);
+      console.log("Saving password policy with data:", passObjDet);
       
-      // Mock success response
-      const mockResponse = {
-        success: true,
-        message: "Password policy saved successfully"
-      };
-      
-      // Uncomment this when API is ready
-      /*
-      const response = await postData("PasswordPolicy/SavePasswordPolicy", passObjDet);
+      // Call the API to save password policy
+      const response = await postData("User/PasswordpolicySave", passObjDet);
       
       if (!response) {
-        showInfoDialog(t('masters.failedtosavepolicy') || 'Failed to save password policy', "error");
+        showInfoDialog(t('usermanagement.failedtosavepolicy') || 'Failed to save password policy', "error");
         return;
       }
       
       let data = response;
-      if (typeof response === 'string' && response.length > 50) {
+      if (typeof response === 'string' && response.length > 50 && response.includes('==')) {
         try {
           const decrypted = CF_decrypt(response);
           data = JSON.parse(decrypted);
@@ -213,23 +240,147 @@ export default function PasswordPolicy() {
         }
       }
       
-      if (data.success) {
-        showInfoDialog(data.message || t('masters.policysavedsuccess') || 'Password policy saved successfully', "success");
-      } else {
-        showInfoDialog(data.message || t('masters.failedtosavepolicy') || 'Failed to save password policy', "error");
-      }
-      */
+      console.log("Processed save response:", data);
       
-      // Mock success
-      showInfoDialog(mockResponse.message || t('masters.policysavedsuccess') || 'Password policy saved successfully', "success");
+      // Check if save was successful
+      if (data && data.oResObj && data.oResObj.bStatus === true) {
+        showInfoDialog(
+          data.oResObj.sInformation || t('usermanagement.policysavedsuccess') || 'Password policy saved successfully', 
+          "success"
+        );
+        // Refresh data after successful save
+        fetchPasswordPolicy();
+      } else if (data && data.Message) {
+        showInfoDialog(
+          data.Message || t('usermanagement.failedtosavepolicy') || 'Failed to save password policy', 
+          "error"
+        );
+      } else {
+        showInfoDialog(t('usermanagement.failedtosavepolicy') || 'Failed to save password policy', "error");
+      }
       
     } catch (error) {
       console.error('Error saving password policy:', error);
-      showInfoDialog(t('masters.failedtosavepolicy') || 'Failed to save password policy', "error");
+      showInfoDialog(t('usermanagement.failedtosavepolicy') || 'Failed to save password policy', "error");
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
-  }, [dbLogin, complexPolicy, values, postData, showInfoDialog, t, getActiveUserDetails]);
+  }, [dbLogin, complexPolicy, postData, showInfoDialog, t, getActiveUserDetails, fetchPasswordPolicy]);
+
+  // Validation function
+  const validateData = useCallback((dataToValidate) => {
+    console.log("Validating data:", dataToValidate);
+    
+    // Parse all values as integers for proper comparison
+    const minLength = parseInt(dataToValidate.minPasswordLength) || 0;
+    const maxLength = parseInt(dataToValidate.maxPasswordLength) || 0;
+    
+    console.log("Parsed values - minLength:", minLength, "maxLength:", maxLength);
+    
+    // Separate arrays for errors (blocking) and warnings (non-blocking)
+    const validationErrors = [];
+    const validationWarnings = [];
+    
+    // Validate min and max password length (ERRORS - blocking)
+    if (minLength < 4 || minLength > 20) {
+      validationErrors.push(t('usermanagement.minPasswordLengthRange') || 'Minimum password length must be between 4 and 20');
+    }
+    
+    if (maxLength < 4 || maxLength > 20) {
+      validationErrors.push(t('usermanagement.maxPasswordLengthRange') || 'Maximum password length must be between 4 and 20');
+    }
+    
+    if (minLength > maxLength) {
+      validationErrors.push(t('usermanagement.minGreaterThanMax') || 'Minimum password length cannot be greater than maximum password length');
+    }
+    
+    // Parse other values too
+    const passwordHistory = parseInt(dataToValidate.passwordHistory) || 0;
+    const passwordExpiry = parseInt(dataToValidate.passwordExpiry) || 0;
+    const autolockPolicy = parseInt(dataToValidate.autolockPolicy) || 0;
+    
+    // Validate password history (ERRORS - blocking)
+    if (passwordHistory < 1 || passwordHistory > 5) {
+      validationErrors.push(t('usermanagement.passwordHistoryRange') || 'Password history must be between 1 and 5');
+    }
+    
+    // Validate password expiry (ERRORS - blocking)
+    if (passwordExpiry < 1 || passwordExpiry > 180) {
+      validationErrors.push(t('usermanagement.passwordExpiryRange') || 'Password expiry must be between 1 and 180 days');
+    }
+    
+    // Validate autolock policy (ERRORS - blocking)
+    if (autolockPolicy < 1 || autolockPolicy > 5) {
+      validationErrors.push(t('usermanagement.autolockPolicyRange') || 'Autolock policy must be between 1 and 5');
+    }
+    
+    // Validate complex password requirements if enabled
+    if (complexPolicy) {
+      const minUppercase = parseInt(dataToValidate.minUppercase) || 0;
+      const minLowercase = parseInt(dataToValidate.minLowercase) || 0;
+      const minNumeric = parseInt(dataToValidate.minNumeric) || 0;
+      const minSpecial = parseInt(dataToValidate.minSpecial) || 0;
+      
+      const totalComplexRequirements = minUppercase + minLowercase + minNumeric + minSpecial;
+      
+      console.log("Complex requirements total:", totalComplexRequirements);
+      console.log("minLength:", minLength, "maxLength:", maxLength);
+      
+      // WARNING: Total complex requirements less than minimum length (SHOW IN ORANGE)
+      if (totalComplexRequirements < minLength) {
+        validationWarnings.push(t('usermanagement.totalComplexLessThanMin') || 'Complex password policy should not be less than Minimum password length');
+      }
+      
+      // ERROR: Total complex requirements exceed maximum length (blocking)
+      if (totalComplexRequirements > maxLength) {
+        validationWarnings.push(t('usermanagement.totalComplexExceedsMax') || 'Total complex requirements exceed maximum password length');
+      }
+      
+      // ERROR: Negative values (blocking)
+      if (minUppercase < 0 || minLowercase < 0 || minNumeric < 0 || minSpecial < 0) {
+        validationWarnings.push(t('usermanagement.complexRequirementsNegative') || 'Complex requirements cannot be negative');
+      }
+    }
+    
+    return {
+      errors: validationErrors,
+      warnings: validationWarnings
+    };
+  }, [complexPolicy, t]);
+
+  // Handle audit authorization
+  const handleAuditAuthorized = useCallback((auditData) => {
+    console.log("Audit authorized with data:", auditData);
+    
+    // Extract data from AuditTrailValues
+    const auditValues = auditData.AuditTrailValues;
+    
+    if (auditValues) {
+      console.log("Proceeding with save...");
+      
+      // Save current values BEFORE closing audit
+      const currentValues = { ...values };
+      
+      // Close audit dialog
+      setShowAudit(false);
+      
+      // Proceed with save (which will run validation and show warnings/errors)
+      handleSaveWithAudit(auditValues, currentValues);
+    } else {
+      console.error("Audit data missing in AuditTrailValues");
+      showInfoDialog(t('usermanagement.auditDataMissing') || 'Audit data missing', "error");
+      setShowAudit(false);
+    }
+  }, [values, t, showInfoDialog, handleSaveWithAudit]);
+
+  // Handle save button click (opens audit trail FIRST)
+  const handleSaveClick = useCallback(() => {
+    console.log("Save button clicked, current values:", values);
+    
+    // FIRST: Open audit trail dialog
+    console.log("Opening audit trail...");
+    setShowAudit(true);
+  }, [values]);
 
   const handleValueChange = (field, value) => {
     const numValue = parseInt(value) || 0;
@@ -261,252 +412,220 @@ export default function PasswordPolicy() {
     fetchPasswordPolicy();
   }, [fetchPasswordPolicy, showInfoDialog, t]);
 
-  if (loading) {
-    return (
-      <div
-        className="fixed"
-        style={{
-          top: `${topBarHeight}px`,
-          left: `${drawerWidthCollapsed}px`,
-          width: `calc(100% - ${drawerWidthCollapsed}px)`,
-          height: `calc(100vh - ${topBarHeight}px)`,
-        }}
-      >
-        <div className="h-full bg-[#f1f3f5] flex flex-col items-center justify-center">
-          <div className="text-gray-500 text-base mb-2.5">
-            {t('label.loading') || 'Loading...'}
-          </div>
-          <div className="text-gray-400 text-xs">
-            Fetching password policy data...
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div
-      className="fixed"
-      style={{
-        top: `${topBarHeight}px`,
-        left: `${drawerWidthCollapsed}px`,
-        width: `calc(100% - ${drawerWidthCollapsed}px)`,
-        height: `calc(100vh - ${topBarHeight}px)`,
-      }}
-    >
-      {infoDialog.open && (
-        <Errordialog
-          message={infoDialog.message}
-          type={infoDialog.type}
-          onClose={closeInfoDialog}
-        />
-      )}
-      
-      <div className="h-full bg-[#f1f3f5] flex flex-col">
-        <div className="border-b border-[#ccc]" />
+    <>
+      <div className="fixed w-[1290px]">
         
-        <div className="flex gap-8 border-b">
-          {tabLabels.map((label, idx) => (
-            <button
-              key={idx}
-              className={`pb-2 px-1 text-[1.4rem] font-semibold capitalize transition-colors ${
-                idx === 0
-                  ? 'text-[#034896] border-b-2 border-[#1565c0]'
-                  : 'text-[#666] hover:text-[#034896]'
-              }`}
-            >
-              {t('label.tabtitle') || label}
-            </button>
-          ))}
-        </div>
-        
-        {/* Main white background content */}
-        <div className="flex-1 px-4 py-4 bg-white rounded overflow-auto">
-          {/* Top row: Database login (left), Save button (right) */}
-          <div className="flex items-center justify-between mb-2">
-            {/* Left: Database Login */}
-            <div className="flex items-center">
-              <span className="mr-3 text-[#405f7d] text-[12px] mb-1 font-semibold font-roboto">
-                {t('label.databaselogin') || 'Database Based Login'}
-              </span>
-              <div className="relative inline-block w-10 align-middle select-none">
-                <input
-                  type="checkbox"
-                  checked={dbLogin}
-                  onChange={() => setDbLogin(!dbLogin)}
-                  className="sr-only"
-                  id="db-login-toggle"
-                />
-                <label
-                  htmlFor="db-login-toggle"
-                  className={`block h-5 w-10 rounded-full cursor-pointer transition-colors ${
-                    dbLogin ? 'bg-blue-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform ${
-                      dbLogin ? 'transform translate-x-5' : ''
-                    }`}
+        {infoDialog.open && (
+          <Errordialog
+            message={infoDialog.message}
+            type={infoDialog.type}
+            onClose={closeInfoDialog}
+          />
+        )}
+        <div className="h-full bg-[#ffffff] flex flex-col ">
+          <div className=" mb-0" />
+          
+          {/* Main white background content */}
+          <div className="flex-1 px-4 py-4 bg-white rounded overflow-auto">
+            {/* Top row: Database login (left), Save button (right) */}
+            <div className="flex items-center justify-between mb-2">
+              {/* Left: Database Login */}
+              <div className="flex items-center">
+                <span className="mr-3 text-[#405f7d] text-[12px] mb-1 font-semibold font-roboto">
+                  {t('label.databaselogin') || 'Database Based Login'}
+                </span>
+                <div className="relative inline-block w-10 align-middle select-none">
+                  <input
+                    type="checkbox"
+                    checked={dbLogin}
+                    onChange={() => setDbLogin(!dbLogin)}
+                    className="sr-only"
+                    id="db-login-toggle"
                   />
-                </label>
-              </div>
-            </div>
-            
-                       {/* Right: Save button */}
-            <button 
-              onClick={handleSave}
-              disabled={loading}
-              className="flex items-center gap-1 px-3 py-1.5 bg-[#f3f3f3] text-[#3992f8] font-roboto font-bold text-[11px] rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <CheckSquare className="w-4 h-4" />
-              {t('button.save') || 'Save'}
-            </button>
-          </div>
-
-          {/* Main content area with two columns */}
-          <div className="flex gap-8">
-            {/* Left column - Password Policy */}
-            <div className="w-auto">
-              <div className="space-y-0">
-                {[
-                  { 
-                    labelKey: "label.minlength",
-                    labelDefault: "Minimum Password Length(Between 4 and 20 Characters)", 
-                    field: "minPasswordLength", 
-                    min: 4,
-                    max: 20
-                  },
-                  { 
-                    labelKey: "label.maxlength",
-                    labelDefault: "Maximum Password Length(Between 4 and 20 Characters)", 
-                    field: "maxPasswordLength", 
-                    min: 4,
-                    max: 20
-                  },
-                  { 
-                    labelKey: "label.history",
-                    labelDefault: "Password History(Between 1 and 5 Times)", 
-                    field: "passwordHistory", 
-                    min: 1,
-                    max: 5
-                  },
-                  { 
-                    labelKey: "label.expiry",
-                    labelDefault: "Password Expiry(Between 1 and 180 Days)", 
-                    field: "passwordExpiry", 
-                    min: 1,
-                    max: 180
-                  },
-                  { 
-                    labelKey: "label.autolock",
-                    labelDefault: "Autolock Policy(Between 1 and 5 Times)", 
-                    field: "autolockPolicy", 
-                    min: 1,
-                    max: 5
-                  },
-                ].map((item, i) => (
-                  <div key={i} className="flex flex-col mb-4">
-                    <label className="text-[#405f7d] text-[12px] mb-1 font-semibold font-roboto">
-                      {t(item.labelKey) || item.labelDefault}
-                    </label>
-                    <div className="w-65">
-                      <AnimatedInput
-                        type="number"
-                        value={values[item.field]}
-                        onChange={(e) => handleValueChange(item.field, e.target.value)}
-                        min={item.min}
-                        max={item.max}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right column - Complex Password Policy */}
-            <div className="w-1/2 ml-14">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h2 className="text-[#0049b0] font-roboto font-bold text-[14px] mb-5">
-                    {t('label.complexpasswordpolicy') || 'Complex Password Policy'}
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-[#405f7d] font-semibold font-roboto text-[12px] mb-0">
-                      {t('label.complexpasswordpolicy') || 'Complex Password Policy'}
-                    </h2>
-                    <input
-                      type="checkbox"
-                      checked={complexPolicy}
-                      onChange={() => setComplexPolicy(!complexPolicy)}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ml-5"
+                  <label
+                    htmlFor="db-login-toggle"
+                    className={`block h-5 w-10 rounded-full cursor-pointer transition-colors ${
+                      dbLogin ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform ${
+                        dbLogin ? 'transform translate-x-5' : ''
+                      }`}
                     />
-                  </div>
+                  </label>
+                </div>
+              </div>
+              {/* Right: Save button */}
+              <button 
+                onClick={handleSaveClick}
+                disabled={isSubmitting}
+                className="flex items-center gap-1 px-3 py-1.5 bg-[#f0f2f5] text-[#2883fe] font-roboto font-bold text-[11px] rounded transition-colors hover:opacity-90 hover:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <CheckSquare className="w-4 h-4" />
+                {isSubmitting ? t('button.saving') || 'Saving...' : t('button.save') || 'Save'}
+              </button>
+            </div>
+
+            {/* Main content area with two columns */}
+            <div className="flex gap-8">
+              {/* Left column - Password Policy */}
+              <div className="w-auto">
+                <div className="space-y-0">
+                  {[
+                    { 
+                      labelKey: "label.minlength",
+                      labelDefault: "Minimum Password Length(Between 4 and 20 Characters)", 
+                      field: "minPasswordLength", 
+                      min: 4,
+                      max: 20
+                    },
+                    { 
+                      labelKey: "label.maxlength",
+                      labelDefault: "Maximum Password Length(Between 4 and 20 Characters)", 
+                      field: "maxPasswordLength", 
+                      min: 4,
+                      max: 20
+                    },
+                    { 
+                      labelKey: "label.history",
+                      labelDefault: "Password History(Between 1 and 5 Times)", 
+                      field: "passwordHistory", 
+                      min: 1,
+                      max: 5
+                    },
+                    { 
+                      labelKey: "label.expiry",
+                      labelDefault: "Password Expiry(Between 1 and 180 Days)", 
+                      field: "passwordExpiry", 
+                      min: 1,
+                      max: 180
+                    },
+                    { 
+                      labelKey: "label.autolock",
+                      labelDefault: "Autolock Policy(Between 1 and 5 Times)", 
+                      field: "autolockPolicy", 
+                      min: 1,
+                      max: 5
+                    },
+                  ].map((item, i) => (
+                    <div key={i} className="flex flex-col mb-4">
+                      <label className="text-[#405f7d] text-[12px] mb-1 font-semibold font-roboto">
+                        {t(item.labelKey) || item.labelDefault}
+                      </label>
+                      <div className="w-65">
+                        <AnimatedInput
+                          type="number"
+                          value={values[item.field]}
+                          onChange={(e) => handleValueChange(item.field, e.target.value)}
+                          min={item.min}
+                          max={item.max}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {complexPolicy && (
-                <>
-                  {/* NOTE - yellow highlight */}
-                   <div className="px-0 py-0 bg-[#ff0] mb-3 max-w-[615px]">
-                    <p className="font-semibold font-roboto text-[#405f7d] text-[12px]">
-                      {t('masters.notetext') || 'NOTE: The total length of complex password must be greater than or equal to minimum password length and less than or equal to maximum password length.'}
-                    </p>
+              {/* Right column - Complex Password Policy */}
+              <div className="w-1/2 ml-14">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h2 className="text-[#0049b0] font-roboto font-bold text-[14px] mb-5">
+                      {t('label.complexpasswordpolicy') || 'Complex Password Policy'}
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-[#405f7d] font-semibold font-roboto text-[12px] mb-0">
+                        {t('label.complexpasswordpolicy') || 'Complex Password Policy'}
+                      </h2>
+                      <input
+                        type="checkbox"
+                        checked={complexPolicy}
+                        onChange={() => setComplexPolicy(!complexPolicy)}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ml-5"
+                      />
+                    </div>
                   </div>
+                </div>
 
-                  {/* Inputs for complex password */}
-                  <div className="space-y-0">
-                    {[
-                      { 
-                        labelKey: "label.minuppercase",
-                        labelDefault: "Minimum number of Uppercase characters", 
-                        field: "minUppercase", 
-                        min: 0,
-                        max: 20
-                      },
-                      { 
-                        labelKey: "label.minlowercase",
-                        labelDefault: "Minimum number of Lowercase characters", 
-                        field: "minLowercase", 
-                        min: 0,
-                        max: 20
-                      },
-                      { 
-                        labelKey: "label.minnumeric",
-                        labelDefault: "Minimum number of Numeric characters", 
-                        field: "minNumeric", 
-                        min: 0,
-                        max: 20
-                      },
-                      { 
-                        labelKey: "label.minspecial",
-                        labelDefault: "Minimum number of Special characters", 
-                        field: "minSpecial", 
-                        min: 0,
-                        max: 20
-                      },
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex flex-col mb-4">
-                        <label className="text-[#405f7d] text-[12px] mb-1 font-semibold font-roboto">
-                          {t(item.labelKey) || item.labelDefault}
-                        </label>
-                        <div className="w-60">
-                          <AnimatedInput
-                            type="number"
-                            value={values[item.field]}
-                            onChange={(e) => handleValueChange(item.field, e.target.value)}
-                            min={item.min}
-                            max={item.max}
-                          />
+                {complexPolicy && (
+                  <>
+                    {/* NOTE - yellow highlight */}
+                    <div className="px-0 py-0 bg-[#ff0] mb-3 max-w-[615px]">
+                      <p className="font-semibold font-roboto text-[#405f7d] text-[12px]">
+                        {t('usermanagement.notetext') || 'NOTE: The total length of complex password must be greater than or equal to minimum password length and less than or equal to maximum password length.'}
+                      </p>
+                    </div>
+
+                    {/* Inputs for complex password */}
+                    <div className="space-y-0">
+                      {[
+                        { 
+                          labelKey: "label.minuppercase",
+                          labelDefault: "Minimum number of Uppercase characters", 
+                          field: "minUppercase", 
+                          min: 0,
+                          max: 20
+                        },
+                        { 
+                          labelKey: "label.minlowercase",
+                          labelDefault: "Minimum number of Lowercase characters", 
+                          field: "minLowercase", 
+                          min: 0,
+                          max: 20
+                        },
+                        { 
+                          labelKey: "label.minnumeric",
+                          labelDefault: "Minimum number of Numeric characters", 
+                          field: "minNumeric", 
+                          min: 0,
+                          max: 20
+                        },
+                        { 
+                          labelKey: "label.minspecial",
+                          labelDefault: "Minimum number of Special characters", 
+                          field: "minSpecial", 
+                          min: 0,
+                          max: 20
+                        },
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex flex-col mb-4">
+                          <label className="text-[#405f7d] text-[12px] mb-1 font-semibold font-roboto">
+                            {t(item.labelKey) || item.labelDefault}
+                          </label>
+                          <div className="w-60">
+                            <AnimatedInput
+                              type="number"
+                              value={values[item.field]}
+                              onChange={(e) => handleValueChange(item.field, e.target.value)}
+                              min={item.min}
+                              max={item.max}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Audit Trail Dialog - RENDERED OUTSIDE THE FIXED CONTAINER */}
+      {showAudit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <AuditTrail
+            isOpen={showAudit}
+            onClose={() => setShowAudit(false)}
+            onAuthorized={handleAuditAuthorized}
+            actionLabel={t('button.save') || 'Save'}
+            disableReason={false}
+          />
+        </div>
+      )}
+    </>
   );
 }
