@@ -3306,7 +3306,7 @@ const UserMaster = () => {
                         ) : (
                             <GridLayout
                                 columns={columns}
-                                height="80%"
+                                height="100%"
                                 detailPanelWidth="46%"
                                 data={userData}
                                 getRowId={(row) => row.id}

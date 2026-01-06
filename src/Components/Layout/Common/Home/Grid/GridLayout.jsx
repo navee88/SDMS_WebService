@@ -605,8 +605,8 @@ const TableHeaderCell = React.memo(({
 }) => {
   const containerRef = useRef();
   useOnClickOutside(containerRef, () => { if (isActive) onToggle(null); });
-  const isSortable = !isSelectionColumn || enableSort;
-
+  // const isSortable = !isSelectionColumn || enableSort; -----------athira changed
+     const isSortable = (enableSort === true) || (enableSort !== false && !isSelectionColumn);
 
   return (
     <th
@@ -964,13 +964,27 @@ const GridLayout = ({
     document.body.style.cursor = 'col-resize';
   }, [colWidths]);
 
+// -------------------comment by kiruba-------------
+  // useEffect(() => {
+  //   if (autoSelectFirst && safeData.length > 0) {
+  //       setSelectedItem(prev => (!prev ? safeData[0] : prev));
+  //   }
+  // }, [safeData, autoSelectFirst]); 
+
 
   useEffect(() => {
-    if (autoSelectFirst && safeData.length > 0) {
-        setSelectedItem(prev => (!prev ? safeData[0] : prev));
-    }
-  }, [safeData, autoSelectFirst]); 
+      if (!autoSelectFirst || safeData.length === 0) return;
+ 
+      setSelectedItem(prev => {
+        if (!prev) return safeData[0];
+ 
+        //keep same selected row after data update
+        const stillExists = safeData.find(r => r._gridId === prev._gridId);
+        return stillExists || prev;
+      });
+    }, [safeData, autoSelectFirst]);
 
+ 
 
   useEffect(() => {
     if (!manualPagination) setLocalPage(1);
