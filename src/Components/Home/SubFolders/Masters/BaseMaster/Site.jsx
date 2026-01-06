@@ -18,93 +18,7 @@ const UsersPage = ({ onRowClick, userData, setUserData, selectedIndex, selectedR
     const [activePopup, setActivePopup] = useState(null);
     const { t } = useTranslation();
 
-    const mockData = [
-        {
-            id: 101,
-            siteCode: "MU-001",
-            siteName: "Kolkata",
-            live: true
-        },
-        {
-            id: 10102,
-            siteCode: "MU-002",
-            siteName: "Chennai",
-            live: true
-        },
-        {
-            id: 103,
-            siteCode: "MU-003",
-            siteName: "Mumbai",
-            live: true
-        },
-        {
-            id: 104,
-            siteCode: "MU-004",
-            siteName: "Bangalore",
-            live: true
-        },
-        {
-            id: 105,
-            siteCode: "MU-005",
-            siteName: "Mumbai",
-            live: true
-        },
-        {
-            id: 106,
-            siteCode: "MU-006",
-            siteName: "Bangalore",
-            live: true
-        },
-        {
-            id: 107,
-            siteCode: "MU-007",
-            siteName: "Chennai",
-            live: true
-        }
-    ];
-
-
-
-    //   useEffect(() => {
-    //     const fetchUsers = async () => {
-    //       try {
-    //         setLoading(true);
-    //         const response = await axios.get('http://localhost:5173/users');
-    //         setUserData(response.data);
-    //         setLoading(false);
-    //       } catch (err) {
-    //         console.error("Error fetching data:", err);
-    //         setError(err.message || "Something went wrong");
-    //         setLoading(false);
-    //       }
-    //     };
-
-    //     fetchUsers();
-    //   }, []);
-
-    // useEffect(() => {
-    //     setLoading(true);
-    //     setTimeout(() => {
-    //         setUserData(mockData);
-    //         setLoading(false);
-    //         // Select first record after data is loaded
-    //         if (mockData.length > 0 && onRowClick) {
-    //             onRowClick(mockData[0]);
-    //         }
-    //     }, 300);
-    // }, []);
-
-    // useEffect(() => {
-    //     setLoading(true);
-    //     setTimeout(() => {
-    //         setUserData(mockData);
-    //         setLoading(false);
-    //     }, 300);
-    // }, []);
-
     useEffect(() => {
-        // Data will be loaded by parent component's fetchSiteData()
-        // Just manage loading state based on userData prop
         if (userData.length > 0) {
             setLoading(false);
         }
@@ -138,29 +52,22 @@ const UsersPage = ({ onRowClick, userData, setUserData, selectedIndex, selectedR
 
     const renderUserDetail = (user) => (
         <div className="space-y-3 text-[12px]">
-
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.siteAddress")}</div>
-                <div className="col-span-2">{user.siteAddress}</div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.contactPerson")}</div>
-                <div className="col-span-2">{user.contactPerson}</div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.mobileNo")}</div>
-                <div className="col-span-2">{user.mobileNo}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.faxNo")}</div>
-                <div className="col-span-2">{user.faxNo}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.email")}</div>
-                <div className="col-span-2">{user.email}</div>
-            </div>
+            {[
+                { label: "siteAddress", value: user.siteAddress || "" },
+                { label: "contactPerson", value: user.contactPerson || "" },
+                { label: "mobileNo", value: user.mobileNo || "" },
+                { label: "faxNo", value: user.faxNo || "" },
+                { label: "email", value: user.email || "" },
+            ].map((field, index) => (
+                <div key={index} className="grid grid-cols-3 gap-4">
+                    <div className="font-semibold text-[12px] font-['Roboto'] text-[#405F7D]">
+                        {t(`label.${field.label}`)}
+                    </div>
+                    <div className="col-span-2 font-semibold text-[12px] font-['Roboto'] text-[#353F49]">
+                        {field.value}
+                    </div>
+                </div>
+            ))}
         </div>
     );
 

@@ -441,34 +441,25 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
 
     const renderUserDetail = (user) => (
         <div className="space-y-3 text-[12px]">
-
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.sourcePath")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.sourcePath}D:\SDMSFTP\SourcePath</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.type")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.type}TS1</div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.restoreLocation")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.restoreLocation}D:\SDMSFTP\Restore</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.errorDescription")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.errorDescription}NO Error</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.restoredBy")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.restoredBy}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.restoredOn")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.restoredOn}</div>
-            </div>
-
+            {[
+                { label: "sourcePath", value: user.sourcePath || "D:\\SDMSFTP\\SourcePath" },
+                { label: "type", value: user.type || "TS1" },
+                { label: "restoreLocation", value: user.restoreLocation || "D:\\SDMSFTP\\Restore" },
+                { label: "errorDescription", value: user.errorDescription || "NO Error" },
+                { label: "restoredBy", value: user.restoredBy || "" },
+                { label: "restoredOn", value: user.restoredOn || "" },
+            ].map((field, index) => (
+                <div key={index} className="grid grid-cols-3 gap-4">
+                    <div className="font-semibold text-[12px] font-['Roboto'] text-[#405F7D]">
+                        {t(`label.${field.label}`)}
+                    </div>
+                    <div className="col-span-2 font-semibold text-[12px] font-['Roboto'] text-[#353F49]">
+                        {field.value}
+                    </div>
+                </div>
+            ))}
         </div>
+
     );
 
 

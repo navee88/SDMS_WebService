@@ -20,6 +20,8 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import useAxios from '../../../../../Services/servicecall';
 import { CF_encrypt, CF_decrypt } from '../../../../../Components/Common/encryptiondecryption';
+// import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
+import { CF_sessionGet } from "../../../../Common/CF_session";
 
 const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => {
     const [selectedArchiveId, setSelectedArchiveId] = useState(archiveList.length > 0 ? archiveList[0].id : null);
@@ -341,6 +343,12 @@ const getCurrentDate = () => {
 
 
 const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showReviewHistory, loading, userColumns, reviewHistoryColumns, exportTrigger }) => {
+    useEffect(() => {
+        console.log("=== UsersPage Data Update ===");
+        console.log("showReviewHistory:", showReviewHistory);
+        console.log("userData length:", userData.length);
+        console.log("userData sample:", userData.slice(0, 3));
+    }, [userData, showReviewHistory]);
     const [error, setError] = useState(null);
     const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
@@ -407,45 +415,86 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
         saveAs(file, fileName);
     }, [exportTrigger, userData, userColumns, reviewHistoryColumns, showReviewHistory]);
 
+    const parseModifiedXML = (raw) => {
+        if (!raw) return [];
+
+        const decoded = raw
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&amp;/g, "&");
+
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(decoded, "text/xml");
+
+        const root = xmlDoc.documentElement;
+        if (!root) return [];
+
+        return Array.from(root.children).map(node => ({
+            column: toPascalCaseWithSpace(node.tagName.replace(/^L\d+/i, "")),
+            oldValue: node.getAttribute("Old_Value"),
+            newValue: node.getAttribute("New_Value"),
+        }));
+    };
+
+    const toPascalCaseWithSpace = (value = "") => {
+        if (!value) return "";
+
+        return value
+            .replace(/([a-z])([A-Z])/g, "$1 $2") // add space between camelCase
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, char => char.toUpperCase());
+    };
 
     const renderUserDetail = (user) => (
         <div className="space-y-3 text-[12px]">
+            {[
+                { label: "comments", value: user.comments || "" },
+                { label: "userName", value: user.userName || "" },
+                { label: "profileName", value: user.profileName || "" },
+                { label: "systemComments", value: user.systemComments || "" },
+                { label: "reviewComments", value: user.reviewComments || "" },
+                { label: "reviewedBy", value: user.reviewedBy || "" },
+                { label: "reviewedDate", value: user.reviewedDate || "" },
+            ].map((field, index) => (
+                <div key={index} className="grid grid-cols-3 gap-4">
+                    <div className="font-semibold text-[12px] font-['Roboto'] text-[#405F7D]">
+                        {t(`label.${field.label}`)}
+                    </div>
+                    <div className="col-span-2 font-semibold text-[12px] font-['Roboto'] text-[#353F49]">
+                        {field.value}
+                    </div>
+                </div>
+            ))}
 
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.comments")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.comments}</div>
+            <div className="font-semibold text-[12px] font-['Roboto'] text-[#405F7D]">
+                {t("label.modifiedData")}
             </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.userName")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.userName}</div>
-            </div>
+            {/* Modified Data Section */}
+            {parseModifiedXML(user.modifiedData).length > 0 && (
+                <div className="mt-2 space-y-1 text-[12px]">
+                    {/* Header */}
+                    <div className="grid grid-cols-3 font-semibold text-[#1E90FF] text-[14px]">
+                        <span>{t("label.columnName")}</span>
+                        <span>{t("label.oldValue")}</span>
+                        <span>{t("label.newValue")}</span>
+                    </div>
 
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.profileName")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.profileName}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.systemComments")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.systemComments}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.reviewComments")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.reviewComments}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.reviewedBy")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.reviewedBy}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.reviewedDate")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.reviewedDate}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.modifiedData")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.modifiedData}</div>
-            </div>
-
-
+                    {/* Rows */}
+                    {parseModifiedXML(user.modifiedData).map((row, idx) => (
+                        <div key={idx} className="grid grid-cols-3">
+                            <span className="text-[#405F7D] font-semibold text-[12px] font-['Roboto']">
+                                {toPascalCaseWithSpace(row.column)}
+                            </span>
+                            <span className="text-[#FF1D1D] font-semibold text-[12px] font-['Roboto']">
+                                {row.oldValue}
+                            </span>
+                            <span className="text-[#0C860C] font-semibold text-[12px] font-['Roboto']">
+                                {row.newValue}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 
@@ -459,13 +508,15 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
     }
 
 
+
     return (
         <div className="flex-1 overflow-hidden flex flex-col">
-            {showReviewHistory ? (
+            {/* {showReviewHistory ? (
                 <>
                     <GridLayout
                         columns={reviewHistoryColumns}
-                        data={userData.filter(row => selectedRows.includes(row.id))}
+                        // data={userData.filter(row => selectedRows.includes(row.id))}
+                        data={userData}
                     />
                     <div className="flex justify-end p-4 border-t border-gray-200">
                         <button
@@ -476,6 +527,25 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
                                     const event = new CustomEvent('closeReviewHistory');
                                     window.dispatchEvent(event);
                                 }
+                            }}
+                            className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
+                        >
+                            {t("button.close")}
+                        </button>
+                    </div>
+                </> */}
+            {showReviewHistory ? (
+                <>
+                    <GridLayout
+                        columns={reviewHistoryColumns}
+                        data={userData}
+                    />
+                    <div className="flex justify-end p-4 border-t border-gray-200">
+                        <button
+                            onClick={() => {
+                                // Trigger event to close and restore data
+                                const event = new CustomEvent('closeReviewHistory');
+                                window.dispatchEvent(event);
                             }}
                             className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
                         >
@@ -493,6 +563,32 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
         </div>
     );
 };
+
+function CF_activeUserdetails() {
+    const ActiveUserDetails = {
+        sUserDomainName: CF_sessionGet("sDomainName", 1) || "SDMS",
+        sSessionID: CF_sessionGet("sSessionID", 1) || "",
+        sUserID: CF_sessionGet("sUserID", 1) || "",
+        sTimeZoneID:
+            (CF_sessionGet("sTimeZoneID", 1) || "Asia/Kolkata") +
+            "<~>" +
+            (CF_sessionGet("UTCStatus", 1) || "true"),
+        sApplicationName: "SDMS",
+        sdbtype: CF_sessionGet("sdbtype", 1) || "POSTGRESQL",
+        sUsername: CF_sessionGet("sUsername", 1) || "",
+        sSiteCode: CF_sessionGet("sSiteCode", 1) || "CH        ",
+        sCategories: CF_sessionGet("sCategories", 1) || "DB",
+        sUserGroupID: CF_sessionGet("sUserGroupID", 1) || "G1        ",
+        sUserStatus: "",
+        sTenantID: CF_sessionGet("sTenantID", 1) || ""
+    };
+
+    return {
+        ActiveUserDetails,
+        ApplicationCode: "SDMS"
+    };
+}
+
 
 const AuditTrailHistory = () => {
     const { currentLanguage, changeLanguage, languages } = useLanguage();
@@ -553,6 +649,7 @@ const AuditTrailHistory = () => {
             createDate: "2025-12-22 18:22:00"
         }
     ]);
+    const [originalGridData, setOriginalGridData] = useState([]);
 
 
     const menuRef = useRef(null);
@@ -643,10 +740,48 @@ const AuditTrailHistory = () => {
 
     const isCustomDate = recordsDuration === "Custom_Date";
 
+    // const handleDurationChange = (value) => {
+    //     const actualValue = value?.target?.value || value?.value || value;
+    //     setRecordsDuration(actualValue);
+    // };
+
     const handleDurationChange = (value) => {
         const actualValue = value?.target?.value || value?.value || value;
         setRecordsDuration(actualValue);
+
+        const today = new Date();
+        let from = new Date(today);
+        let to = new Date(today);
+
+        switch (actualValue) {
+            case "Current_Date":
+                // today → today
+                break;
+
+            case "Last_7_Days":
+                from.setDate(today.getDate() - 7);
+                break;
+
+            case "Last_30_Days":
+                from.setDate(today.getDate() - 30);
+                break;
+
+            case "Last_1_Year":
+                from.setFullYear(today.getFullYear() - 1);
+                break;
+
+            case "Custom_Date":
+                // user manually selects dates
+                return;
+
+            default:
+                return;
+        }
+
+        setFromDate(from);
+        setToDate(to);
     };
+
 
     useEffect(() => {
         const initializeComponent = async () => {
@@ -661,15 +796,28 @@ const AuditTrailHistory = () => {
         initializeComponent();
     }, []);
 
+    // useEffect(() => {
+    //     const handleCloseReviewHistory = () => {
+    //         setShowReviewHistory(false);
+    //         setSelectedRows([]);
+    //     };
+
+    //     window.addEventListener('closeReviewHistory', handleCloseReviewHistory);
+    //     return () => window.removeEventListener('closeReviewHistory', handleCloseReviewHistory);
+    // }, []);
     useEffect(() => {
         const handleCloseReviewHistory = () => {
+            // ← RESTORE ORIGINAL GRID DATA
+            if (originalGridData.length > 0) {
+                setUserData(originalGridData);
+            }
             setShowReviewHistory(false);
             setSelectedRows([]);
         };
 
         window.addEventListener('closeReviewHistory', handleCloseReviewHistory);
         return () => window.removeEventListener('closeReviewHistory', handleCloseReviewHistory);
-    }, []);
+    }, [originalGridData]); // ← Add dependency
 
     //calculate the current date minus the records duration date
     const formatDateDDMMYYYY = (date) => {
@@ -820,7 +968,10 @@ const AuditTrailHistory = () => {
             key: 'serialNo',
             label: t('label.serialNo'),
             width: 100,
-            render: (row, index) => <span className="text-gray-700">{index + 1}</span>
+            render: (row, index) => {
+                console.log("SerialNo Render - Row:", row, "Index:", index);
+                return <span className="text-gray-700">{index + 1}</span>
+            }
         },
         {
             key: 'moduleName',
@@ -831,7 +982,7 @@ const AuditTrailHistory = () => {
         {
             key: 'actions',
             label: t('label.actions'),
-            width: 150,
+            width: 200,
             render: (row) => <span className="text-gray-700">{row.actions}</span>
         },
         {
@@ -905,39 +1056,90 @@ const AuditTrailHistory = () => {
             return;
         }
 
+        // Check if selected rows are reviewed
+        const selectedRowsData = userData.filter(row => selectedRows.includes(row.id));
+        const hasUnreviewedRows = selectedRowsData.some(row =>
+            !row.reviewStatus || row.reviewStatus !== 'Reviewed'
+        );
+
+        if (hasUnreviewedRows) {
+            setErrorDialog({
+                show: true,
+                message: "Please select only reviewed records.",
+                type: "information"
+            });
+            return;
+        }
+
         try {
             setLoading(true);
+
+            // ← SAVE CURRENT GRID DATA BEFORE SWITCHING
+            setOriginalGridData([...userData]);
+
             const payload = {
-                selectedRowIds: selectedRows,
-                ActiveUserDetails: getSessionUserDetails()
+                arraylist: selectedRows,
+                ...CF_activeUserdetails()
             };
 
+            console.log("=== REVIEW HISTORY DEBUG ===");
+            console.log("Selected Rows (IDs):", selectedRows);
             console.log("Review History Payload:", payload);
-            const result = await postData('AuditTrail/GetReviewHistory', payload);
-            console.log("Review History Result:", result);
 
-            if (result && Array.isArray(result)) {
-                const mappedData = result.map((item, index) => ({
-                    id: item.id,
-                    moduleName: item.ModuleName || '',
-                    actions: item.Actions || '',
-                    comments: item.Comments || '',
-                    reviewStatus: item.ReviewStatus || '',
-                    reviewComments: item.ReviewComments || '',
-                    reviewedBy: item.ReviewedBy || '',
-                    reviewedDate: item.ReviewedDate || ''
-                }));
+            const result = await postData('AuditTrail/GetReviewDetails', payload);
 
+            console.log("Raw API Response:", result);
+            console.log("ReviewList:", result?.ReviewList);
+
+            if (result && result.ReviewList && Array.isArray(result.ReviewList)) {
+                console.log("Number of items in ReviewList:", result.ReviewList.length);
+
+                const mappedData = result.ReviewList.map((item, index) => {
+                    const mapped = {
+                        id: item.SerialNo || index + 1,
+                        moduleName: item.ModuleName || '',
+                        actions: item.Action || '',
+                        comments: item.Comments || '',
+                        reviewStatus: item['Review Status'] || '',
+                        reviewComments: item['Review Comments'] || '',
+                        reviewedBy: item['Reviewed By'] || '',
+                        reviewedDate: item['Reviewed Date'] || ''
+                    };
+                    console.log(`Mapped review item ${index}:`, mapped);
+                    return mapped;
+                });
+
+                console.log("Final Mapped Review Data:", mappedData);
                 setUserData(mappedData);
+
+                // ← DON'T UPDATE selectedRows, keep them as is
+                setShowReviewHistory(true);
+            } else {
+                setErrorDialog({
+                    show: true,
+                    message: "No review history found.",
+                    type: "information"
+                });
             }
 
-            setShowReviewHistory(true);
             setLoading(false);
         } catch (error) {
             console.error('Error fetching review history:', error);
             setLoading(false);
         }
     };
+
+    // const handleReview = () => {
+    //     if (selectedRows.length === 0) {
+    //         setErrorDialog({
+    //             show: true,
+    //             message: "Select an existing record.",
+    //             type: "information"
+    //         });
+    //         return;
+    //     }
+    //     setShowAuditTrail(true);
+    // };
 
     const handleReview = () => {
         if (selectedRows.length === 0) {
@@ -967,13 +1169,13 @@ const AuditTrailHistory = () => {
 
         try {
             const payload = {
-                selectedRowIds: selectedRows,
+                arraylist: selectedRows,
                 AuditTrailValues: auditData.AuditTrailValues,
-                ActiveUserDetails: getSessionUserDetails()
+                ...CF_activeUserdetails()
             };
 
             console.log("Submit Review Payload:", payload);
-            const result = await postData('AuditTrail/SubmitReview', payload);
+            const result = await postData('AuditTrail/ReviewBtnValidation', payload);
             console.log("Submit Review Result:", result);
 
             if (result.AuditTrailLogin === false) {
@@ -981,17 +1183,30 @@ const AuditTrailHistory = () => {
                 return;
             }
 
-            if (result.rtnmsg === "Success") {
-                setUserData(prev => prev.map(row =>
-                    selectedRows.includes(row.id)
-                        ? { ...row, reviewStatus: "Reviewed" }
-                        : row
-                ));
+            if (result.Message === "Success" && result.TransDetail) {
+                // Map the response data
+                const updatedData = userData.map(row => {
+                    const reviewedItem = result.TransDetail.find(
+                        item => item.SerialNo === row.id
+                    );
+                    if (reviewedItem) {
+                        return {
+                            ...row,
+                            reviewStatus: reviewedItem['Review Status'] || 'Reviewed',
+                            reviewComments: reviewedItem['Review Comments'],
+                            reviewedBy: reviewedItem['Reviewed By'],
+                            reviewedDate: reviewedItem['Reviewed Date']
+                        };
+                    }
+                    return row;
+                });
+
+                setUserData(updatedData);
                 setShowAuditTrail(false);
                 setSelectedRows([]);
                 setPasswordError(false);
             } else {
-                alert(result.rtnmsg || 'Failed to submit review');
+                alert(result.Message || 'Failed to submit review');
             }
         } catch (error) {
             console.error('Error submitting review:', error);
@@ -1137,20 +1352,22 @@ const AuditTrailHistory = () => {
 
     const handleReset = async () => {
         const currentUserID = getSessionUserDetails().sUserID;
-        const currentUser = userList.find(u => u.L02UserID.trim() === currentUserID.trim());
+        const currentUser = userList.find(
+            u => String(u.L02UserID).trim() === String(currentUserID).trim()
+        );
         const defaultUser = currentUser ? currentUser.L02UserName : "All";
 
-        setSelectedUser(defaultUser);
+        setSelectedUser("All");
         setSelectedModule("All");
         setSelectedAuditType("All");
-        setRecordsDuration("Current_Date"); // Not "Current Date"
+        setRecordsDuration("Current_Date");
         setFromDate(today);
         setToDate(today);
         setSelectedRows([]);
         setShowReviewHistory(false);
         setSelectedArchiveName("");
 
-        await fetchAuditTrailData();
+        // await fetchAuditTrailData();
     };
 
     const handlePrint = async () => {
@@ -1373,8 +1590,8 @@ const AuditTrailHistory = () => {
 
             const isEncrypted = (value) => {
                 if (typeof value !== 'string') return false;
-                if (value.length < 70) return false;                 // too short → not encrypted
-                return /^[0-9a-fA-F]{64}/.test(value);               // salt + iv must be hex
+                if (value.length < 70) return false;
+                return /^[0-9a-fA-F]{64}/.test(value);
             };
 
             const safeDecrypt = (value) => {
@@ -1382,42 +1599,63 @@ const AuditTrailHistory = () => {
                     return '';
                 }
                 if (!isEncrypted(value)) {
-                    // value is already plain text (U1, Administrator, MSSQL, etc.)
                     return value;
                 }
-
-                return CF_decrypt(value);
+                try {
+                    return CF_decrypt(value);
+                } catch (error) {
+                    console.debug('Decryption skipped for value');
+                    return '';
+                }
             };
 
+            // Decrypt all values
+            const sUserID = safeDecrypt(encryptedUserID);
+            const sSiteCode = safeDecrypt(encryptedSiteCode);
+            const sTenantID = safeDecrypt(encryptedTenantID);
+            const sUsername = safeDecrypt(encryptedUsername);
+            const sUserDomainName = safeDecrypt(encryptedDomain);
+            const sCategories = safeDecrypt(encryptedCategories);
+            const sUserGroupID = safeDecrypt(encryptedUserGroup);
+            const sSessionID = safeDecrypt(encryptedSessionID);
+            const sTimeZoneID = safeDecrypt(encryptedTimeZone);
+            const sdbtype = safeDecrypt(encryptedDBType);
 
-
-            return {
-                sUserID: safeDecrypt(encryptedUserID),
-                sSiteCode: safeDecrypt(encryptedSiteCode),
-                sTenantID: safeDecrypt(encryptedTenantID),
-                sUsername: safeDecrypt(encryptedUsername),
-                sUserDomainName: safeDecrypt(encryptedDomain),
-                sCategories: safeDecrypt(encryptedCategories),
-                sUserGroupID: safeDecrypt(encryptedUserGroup),
-                sSessionID: safeDecrypt(encryptedSessionID),
-                sTimeZoneID: safeDecrypt(encryptedTimeZone),
-                sdbtype: safeDecrypt(encryptedDBType),
+            const userDetails = {
+                sUserID: sUserID || 'U1',
+                sSiteCode: sSiteCode || 'CH-001    ',  // Match your actual site code with spaces
+                sTenantID: sTenantID || '',
+                sUsername: sUsername || 'Administrator',
+                sUserDomainName: sUserDomainName || 'SDMS',
+                sCategories: sCategories || 'DB',
+                sUserGroupID: sUserGroupID || 'G1        ',  // With spaces to match backend
+                sSessionID: sSessionID || '',
+                sTimeZoneID: sTimeZoneID || 'Asia/Kolkata',  // Remove the <~>true part
+                sdbtype: sdbtype || 'MSSQL',  // ← Fixed! Use MSSQL as default
                 sApplicationName: "SDMS",
                 sUserStatus: ""
             };
+
+            console.log("=== SESSION USER DETAILS ===");
+            console.log("Full User Details:", userDetails);
+            console.log("Site Code:", `"${userDetails.sSiteCode}"`);
+            console.log("Site Code length:", userDetails.sSiteCode.length);
+            console.log("DB Type:", userDetails.sdbtype);
+
+            return userDetails;
         } catch (error) {
             console.error('Error getting session user details:', error);
             return {
-                sUserID: '',
-                sSiteCode: '',
+                sUserID: 'U1',
+                sSiteCode: 'CH-001    ',
                 sTenantID: '',
-                sUsername: '',
-                sUserDomainName: '',
-                sCategories: '',
-                sUserGroupID: '',
+                sUsername: 'Administrator',
+                sUserDomainName: 'SDMS',
+                sCategories: 'DB',
+                sUserGroupID: 'G1        ',
                 sSessionID: '',
-                sTimeZoneID: '',
-                sdbtype: '',
+                sTimeZoneID: 'Asia/Kolkata',
+                sdbtype: 'MSSQL',  // ← Fixed default
                 sApplicationName: "SDMS",
                 sUserStatus: ""
             };
@@ -1443,9 +1681,11 @@ const AuditTrailHistory = () => {
 
     const fetchUserList = async () => {
         try {
-            const payload = {
-                ActiveUserDetails: getSessionUserDetails()
-            };
+            // const payload = {
+            //     ActiveUserDetails: getSessionUserDetails()
+            // };
+
+            const payload = CF_activeUserdetails();
 
             console.log("Fetch User List Payload:", payload);
             const result = await postData('AuditTrail/CFRTranUsername', payload);
@@ -1513,148 +1753,137 @@ const AuditTrailHistory = () => {
         modifiedData: item.ModifiedData ?? ''
     });
 
-
     const fetchAuditTrailData = async () => {
         setLoading(true);
+
         try {
-            const auditTrailType =
-                selectedAuditType === "System Generated"
-                    ? "System Generated"
-                    : selectedAuditType === "User Generated"
-                        ? "User Generated"
-                        : "All";
+            // const formatDate = (dateStr) => {
+            //     const [year, month, day] = dateStr.split("-");
+            //     return `${day}/${month}/${year}`;
+            // };
 
-            const currentUserDetails = getSessionUserDetails();
-            const sUserIDFromUI = "All"; // jQuery starts with "All"
-
-            // Convert dates to DD/MM/YYYY
-            const formatDate = (dateStr) => {
-                const [year, month, day] = dateStr.split('-');
-                return `${day}/${month}/${year}`;
+            const formatDate = (date) => {
+                const d = new Date(date);
+                return `${String(d.getDate()).padStart(2, "0")}/${String(
+                    d.getMonth() + 1
+                ).padStart(2, "0")}/${d.getFullYear()}`;
             };
 
-            const isFilter = selectedUser !== "All" || selectedModule !== "All";
+
+
+
+            // Get ActiveUserDetails + ApplicationCode (COMMON FUNCTION)
+            const commonPayload = CF_activeUserdetails();
+
+            const currentUserID =
+                commonPayload.ActiveUserDetails.sUserID?.trim() || "U1";
+
+            // Find user by ID
+            const currentUser = userList.find(u =>
+                String(u.L02UserID).trim() === currentUserID
+            );
+
+            // API EXPECTS USER NAME
+            const sUserIDFromUI = currentUser?.L02UserName || "All";
 
             const payload = {
-                auditTrailType: auditTrailType,
-                sUserIDFromUI: sUserIDFromUI,
+                sUserIDFromUI,
+                auditTrailType: "All",
+                sModuleName: "All",
                 sFromDate: formatDate(fromDate),
                 sToDate: formatDate(toDate),
-                sModuleName: selectedModule || "All",
-                ActiveUserDetails: currentUserDetails,
-                ApplicationCode: currentUserDetails.sApplicationName || "SDMS"
+                ...commonPayload
             };
 
-            console.log("Fetch Audit Trail Payload:", payload);
+            console.log("=== CFTTransViewLoad PAYLOAD ===", payload);
 
-            const apiUrl = isFilter
-                ? 'AuditTrail/CFRTransactionFilter'
-                : 'AuditTrail/CFTTransViewLoad';
+            const result = await postData(
+                "AuditTrail/CFTTransViewLoad",
+                payload
+            );
 
-            const result = await postData(apiUrl, payload);
-
-            console.log("Fetch Audit Trail Result:", result);
-
-            if (result && Array.isArray(result) && result.length > 0) {
-                const mappedData = isFilter
-                    ? result.map(mapCFRFilter)
-                    : result.map(mapCFTViewLoad);
-
-                setUserData(mappedData);
-                console.log("Mapped Data:", mappedData);
+            if (Array.isArray(result) && result.length > 0) {
+                setUserData(result.map((item, i) =>
+                    mapCFTViewLoad(item, i)
+                ));
             } else {
-                console.log("No data returned");
                 setUserData([]);
             }
-            setLoading(false);
-        } catch (error) {
-            console.error('Error fetching audit trail data:', error);
-            setLoading(false);
+        } catch (err) {
+            console.error("Initial load error:", err);
             setUserData([]);
+        } finally {
+            setLoading(false);
         }
     };
-
 
     const handleFilter = async () => {
         setLoading(true);
         setSelectedArchiveName("");
 
         try {
-            let sUserIDFromUI;
-            if (selectedUser === "All") {
-                sUserIDFromUI = "-1";   // BACKEND EXPECTS THIS
-            } else {
-                const user = userList.find(u => u.L02UserName === selectedUser);
-                sUserIDFromUI = user ? user.L02UserID.toString().trim() : "-1";
-            }
+            // const formatDate = (date) => {
+            //     const d = new Date(date);
+            //     return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")
+            //         }/${d.getFullYear()}`;
+            // };
 
-            // Date format (DO NOT CHANGE)
             const formatDate = (date) => {
                 const d = new Date(date);
-                const day = String(d.getDate()).padStart(2, '0');
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const year = d.getFullYear();
-                return `${day}/${month}/${year}`;
+                return `${String(d.getDate()).padStart(2, "0")}/${String(
+                    d.getMonth() + 1
+                ).padStart(2, "0")}/${d.getFullYear()}`;
             };
 
 
+            // 🔹 COMMON ActiveUserDetails
+            const commonPayload = CF_activeUserdetails();
 
-            const auditTrailType =
-                selectedAuditType === "System Generated"
-                    ? "System Generated"
-                    : selectedAuditType === "User Generated"
-                        ? "User Generated"
-                        : "All";
+            let sUserIDFromUI = "-1"; // DEFAULT → All users
 
+            if (selectedUser !== "All") {
+                const user = userList.find(
+                    u => u.L02UserName === selectedUser
+                );
 
+                if (user && user.L02UserID) {
+                    sUserIDFromUI = String(user.L02UserID).trim();
+                }
+            }
             const payload = {
+                sUserIDFromUI,
+                sModulename: selectedModule || "All",
+                auditTrailType: selectedAuditType || "All",
                 sFromDate: formatDate(fromDate),
                 sToDate: formatDate(toDate),
-                sUserIDFromUI: sUserIDFromUI,
-                sModulename: selectedModule?.trim() || "All",
-                auditTrailType: auditTrailType,
-                ActiveUserDetails: getSessionUserDetails()
+                ...commonPayload
             };
 
-            console.log("Filter Payload (FINAL):", payload);
+            console.log("=== CFRTransactionFilter PAYLOAD ===", payload);
 
-            const result = await postData('AuditTrail/CFRTransactionFilter', payload);
-            console.log("Filter Result:", result);
+            const result = await postData(
+                "AuditTrail/CFRTransactionFilter",
+                payload
+            );
 
-            if (Array.isArray(result)) {
-                setUserData(result.map((item, index) => ({
-                    id: index + 1,
-                    select: false,
-                    moduleName: item.ModuleName || '',
-                    actions: item.Actions || '',
-                    transactionOn: item.TransactionDate || '',
-                    reviewStatus: item['Review Status'] || '',
-                    requestedClient: item.RequestedClient || '',
-                    affectedClient: item.AffectedClient || '',
-                    instrumentName: item.InstrumentID || '',
-                    reason: item.Reason || '',
-                    comments: item.Comments || '',
-                    reviewComments: item['Review Comments'] || '',
-                    reviewedBy: item['Reviewed By'] || '',
-                    reviewedDate: item['Reviewed Date'] || '',
-                    userName: item['User Name'] || '',
-                    profileName: item['User Full Name'] || '',
-                    systemComments: item.SystemComments || '',
-                    modifiedData: item.ModifiedData || ''
-                })));
+            if (Array.isArray(result) && result.length > 0) {
+                setUserData(result.map((item, i) =>
+                    mapCFRFilter(item, i)
+                ));
             } else {
                 setUserData([]);
             }
 
             setSelectedRows([]);
             setShowReviewHistory(false);
-        } catch (error) {
-            console.error("Filter error:", error);
+        } catch (err) {
+            console.error("Filter error:", err);
             setUserData([]);
         } finally {
             setLoading(false);
         }
     };
+
 
     const logViewAuditTrail = async () => {
         try {
@@ -1836,11 +2065,15 @@ const AuditTrailHistory = () => {
             {showAuditTrail && (
                 <AuditTrail
                     isOpen={showAuditTrail}
-                    onClose={() => setShowAuditTrail(false)}
+                    onClose={() => {
+                        setShowAuditTrail(false);
+                        setPasswordError(false);
+                    }}
                     onAuthorized={handleAuditTrailAuthorized}
                     actionLabel="Submit"
                     defaultReason="Reviewed"
                     disableReason={true}
+                    passwordError={passwordError}
                 />
             )}
 

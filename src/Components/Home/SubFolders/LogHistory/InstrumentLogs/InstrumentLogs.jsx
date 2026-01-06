@@ -472,39 +472,25 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
 
     const renderUserDetail = (user) => (
         <div className="space-y-3 text-[12px]">
-
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.loginUsername")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.size}Administrator</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.domain")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.domain}DESKTOP-CU9J5T2</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.taskId")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.taskId}TS_1</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.fileSource")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.fileSource}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.fileName")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.fileName}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.fileStatus")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.fileStatus}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.transactionOn")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.transactionOn}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.comments")}</div>
-                <div className="col-span-2 font-semibold text-[#353F49]">{user.comments}</div>
-            </div>
+            {[
+                { label: "loginUsername", value: user.size || "Administrator" },
+                { label: "domain", value: user.domain || "DESKTOP-CU9J5T2" },
+                { label: "taskId", value: user.taskId || "TS_1" },
+                { label: "fileSource", value: user.fileSource || "" },
+                { label: "fileName", value: user.fileName || "" },
+                { label: "fileStatus", value: user.fileStatus || "" },
+                { label: "transactionOn", value: user.transactionOn || "" },
+                { label: "comments", value: user.comments || "" },
+            ].map((field, index) => (
+                <div key={index} className="grid grid-cols-3 gap-4">
+                    <div className="font-semibold text-[12px] font-['Roboto'] text-[#405F7D]">
+                        {t(`label.${field.label}`)}
+                    </div>
+                    <div className="col-span-2 font-semibold text-[12px] font-['Roboto'] text-[#353F49]">
+                        {field.value}
+                    </div>
+                </div>
+            ))}
         </div>
     );
 
@@ -700,7 +686,7 @@ const InstrumentLogs = () => {
         setRecordsDuration("Current Date");
         setFromDate(today);
         setToDate(today);
-        
+
         // Reset to original mock data
         // setLoading(true);
         // setTimeout(() => {
