@@ -429,32 +429,23 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
 
   const renderUserDetail = (user) => (
     <div className="space-y-3 text-[12px]">
-
-      <div className="grid grid-cols-3 gap-4">
-        <div className="font-semibold text-700 text-[#405F7D]">{t("label.size")}</div>
-        <div className="col-span-2 font-semibold text-[#353F49]">{user.size}450 mb</div>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="font-semibold text-700 text-[#405F7D]">{t("label.versionNo")}</div>
-        <div className="col-span-2 font-semibold text-[#353F49]">{user.versionNo}2</div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div className="font-semibold text-700 text-[#405F7D]">{t("label.location")}</div>
-        <div className="col-span-2 font-semibold text-[#353F49]">{user.errorDescription}D:/SDMSFTP/Uploads</div>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="font-semibold text-700 text-[#405F7D]">{t("label.userName")}</div>
-        <div className="col-span-2 font-semibold text-[#353F49]">{user.userName}</div>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="font-semibold text-700 text-[#405F7D]">{t("label.taskExecutedOn")}</div>
-        <div className="col-span-2 font-semibold text-[#353F49]">{user.downloadedOn}</div>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="font-semibold text-700 text-[#405F7D]">{t("label.checksum")}</div>
-        <div className="col-span-2 font-semibold text-[#353F49]">{user.checksum}</div>
-      </div>
+      {[
+        { label: "size", value: user.size || "450 mb" },
+        { label: "versionNo", value: user.versionNo || "2" },
+        { label: "location", value: user.errorDescription || "D:/SDMSFTP/Uploads" },
+        { label: "userName", value: user.userName || "" },
+        { label: "taskExecutedOn", value: user.downloadedOn || "" },
+        { label: "checksum", value: user.checksum || "" },
+      ].map((field, index) => (
+        <div key={index} className="grid grid-cols-3 gap-4">
+          <div className="font-semibold text-[12px] font-['Roboto'] text-[#405F7D]">
+            {t(`label.${field.label}`)}
+          </div>
+          <div className="col-span-2 font-semibold text-[12px] font-['Roboto'] text-[#353F49]">
+            {field.value}
+          </div>
+        </div>
+      ))}
     </div>
   );
 

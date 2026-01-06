@@ -131,34 +131,23 @@ const UsersPage = () => {
 
     const renderUserDetail = (user) => (
         <div className="space-y-3 text-[12px]">
-
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.storageName")}</div>
-                <div className="col-span-2">{user.storageName}</div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.taskStatus")}</div>
-                <div className="col-span-2">{user.taskStatus}</div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.scheduleId")}</div>
-                <div className="col-span-2">{user.scheduleId}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.taskId")}</div>
-                <div className="col-span-2">{user.taskId}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.sourcePath")}</div>
-                <div className="col-span-2">{user.sourcePath}</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-700 text-[#405F7D]">{t("label.queue")}</div>
-                <div className="col-span-2">{user.queue}</div>
-            </div>
-
+            {[
+                { label: "storageName", value: user.storageName },
+                { label: "taskStatus", value: user.taskStatus },
+                { label: "scheduleId", value: user.scheduleId },
+                { label: "taskId", value: user.taskId },
+                { label: "sourcePath", value: user.sourcePath },
+                { label: "queue", value: user.queue },
+            ].map((field) => (
+                <div key={field.label} className="grid grid-cols-3 gap-4">
+                    <div className="font-semibold text-[12px] font-['Roboto'] text-[#405F7D]">
+                        {t(`label.${field.label}`)}
+                    </div>
+                    <div className="col-span-2 font-semibold text-[12px] font-['Roboto'] text-[#353F49]">
+                        {field.value}
+                    </div>
+                </div>
+            ))}
         </div>
     );
 
@@ -282,7 +271,7 @@ function UploadQueue() {
         setActivePopup(null);
     };
 
-   
+
 
     return (
         <div className="px-4 font-roboto h-[calc(100vh-150px)] flex flex-col">
@@ -314,7 +303,7 @@ function UploadQueue() {
                 <UsersPage />
             </div>
 
-           
+
 
             {/* Audit Trail */}
             <AuditTrail

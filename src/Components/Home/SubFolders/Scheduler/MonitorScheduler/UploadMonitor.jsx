@@ -383,26 +383,23 @@ const UsersPage = ({ filters, refreshKey }) => {
 
   const renderUserDetail = (user) => (
     <div className="space-y-3 text-[12px]">
-
-      <div className="grid grid-cols-3 gap-4">
-        <div className="font-semibold text-700 text-[#405F7D]">{t("label.taskId")}</div>
-        <div className="col-span-2 font-semibold text-[#353F49]">{user.taskId}T1</div>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="font-semibold text-700 text-[#405F7D]">{t("label.scheduleId")}</div>
-        <div className="col-span-2 font-semibold text-[#353F49]">{user.scheduleId}TS1</div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div className="font-semibold text-700 text-[#405F7D]">{t("label.sourcePath")}</div>
-        <div className="col-span-2 font-semibold text-[#353F49]">{user.sourcePath}D:\SDMSFTP\Scheduler</div>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="font-semibold text-700 text-[#405F7D]">{t("label.noOfUploadCount")}</div>
-        <div className="col-span-2 font-semibold text-[#353F49]">{user.queue}0</div>
-      </div>
-
+      {[
+        { label: "taskId", value: user.taskId || "T1" },
+        { label: "scheduleId", value: user.scheduleId || "TS1" },
+        { label: "sourcePath", value: user.sourcePath || "D:\\SDMSFTP\\Scheduler" },
+        { label: "noOfUploadCount", value: user.queue || "0" },
+      ].map((field, index) => (
+        <div key={index} className="grid grid-cols-3 gap-4">
+          <div className="font-semibold text-[12px] font-['Roboto'] text-[#405F7D]">
+            {t(`label.${field.label}`)}
+          </div>
+          <div className="col-span-2 font-semibold text-[12px] font-['Roboto'] text-[#353F49]">
+            {field.value}
+          </div>
+        </div>
+      ))}
     </div>
+
   );
 
 
