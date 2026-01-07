@@ -1,11 +1,12 @@
 import { FiCheckSquare } from "react-icons/fi";
 import AnimatedDropdown from "../../../../../Layout/Common/AnimatedDropdown";
 import Draggable from "react-draggable";
-import { get } from "react-hook-form";
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import useAxios from "../../../../../../Services/servicecall";
 import { CF_decrypt } from "../../../../../Common/encryptiondecryption";
 import AddInstrumentModal from "../InstrumentMaster/AddInstrumentModal";
+import { useTranslation } from "react-i18next";
+
 
 const AddClientModal = ({
   initialData,
@@ -17,6 +18,7 @@ const AddClientModal = ({
 
   const [submitted, setSubmitted] = useState(false);
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
+  const { t } = useTranslation();
 
   const { postData } = useAxios();
 
@@ -155,7 +157,7 @@ const AddClientModal = ({
               className="text-[#0e5bca] text-[18px]"
               style={{ fontFamily: "Helvetica Neue, Arial, sans-serif" }}
             >
-              {initialData ? "Edit Client" : "Add Client"}
+              {initialData ? t("masters.editclient") : t("masters.addclient")}
             </label>
 
             <button
@@ -172,7 +174,7 @@ const AddClientModal = ({
             <div className="w-[300px] space-y-4">
               <div>
                 <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  Client Name <span className="text-red-500">*</span>
+                  {t("label.clientName")}<span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -192,7 +194,7 @@ const AddClientModal = ({
 
               <div>
                 <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  Client Alias Name <span className="text-red-500">*</span>
+                  {t("masters.clientaliasname")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -213,7 +215,7 @@ const AddClientModal = ({
               <AnimatedDropdown
                 label={
                   <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                    Client Type <span className="text-red-500">*</span>
+                    {t("masters.clienttype")} <span className="text-red-500">*</span>
                   </label>
                 }
                 name="clientType"
@@ -229,7 +231,7 @@ const AddClientModal = ({
             {/* CHECKBOXES */}
             <div className="flex gap-12 ">
               <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
-                Active
+               {t("statuses.active")}
                 <input
                   type="checkbox"
                   checked={form.active}
@@ -240,7 +242,7 @@ const AddClientModal = ({
               </label>
 
               <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
-                Gateway Client
+                {t("masters.gatewayclient")}
                 <input
                   type="checkbox"
                   checked={form.gatewayClient}
@@ -255,14 +257,14 @@ const AddClientModal = ({
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
-                  Instrument
+                  {t("label.instrument")}
                 </label>
                 <button
                   type="button"
                   className="bg-blue-500 text-white px-[12px] py-[6px] rounded text-[11px] font-bold font-roboto"
                   onClick={() => setShowInstrumentModal(true)}
                 >
-                  Add
+                  {t("button.add")}
                 </button>
               </div>
 
@@ -308,7 +310,7 @@ const AddClientModal = ({
 
                     {filteredInstruments.length === 0 && (
                       <div className="text-gray-400 text-xs pt-[53px] text-center py-4">
-                        All the instruments or already mapped to this client.
+                        {t("masters.noinstrumentsfound")}
                       </div>
                     )}
                   </div>
@@ -324,13 +326,13 @@ const AddClientModal = ({
               className="bg-[#2883fe] flex text-[#ffffff] px-[12px] py-[6px] rounded text-[11px] font-bold font-roboto shadow-sm items-center gap-1"
             >
               <FiCheckSquare className="w-4 h-4" />{" "}
-              <span className="leading-none">Submit</span>
+              <span className="leading-none">{t("button.submit")}</span>
             </button>
             <button
               onClick={onClose}
               className="border px-[12px] py-[6px] rounded text-[11px] text-[#8092a4] font-roboto font-bold"
             >
-              <span className="leading-none">Close</span>
+              <span className="leading-none">{t("button.close")}</span>
             </button>
           </div>
         </div>

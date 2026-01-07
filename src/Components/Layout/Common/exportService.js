@@ -1,8 +1,7 @@
 import {CF_decrypt} from "../../../Components/Common/encryptiondecryption";
 
-/**
- * Common export handler
- */
+
+
 export const handleExportCommon = async ({
   rows,
   buildRequest,
@@ -10,19 +9,21 @@ export const handleExportCommon = async ({
   setLoading,
   setLoadingText,
   setErrorDialog,
+  t
 }) => {
+ 
   if (!rows || rows.length === 0) {
     setErrorDialog({
       open: true,
-      message: "Select an existing record.",
+      message: t("masters.selectRecord"),
       type: "information",
     });
     return;
   }
-
   try {
     setLoading(true);
-    setLoadingText("Preparing export file...");
+    setLoadingText(t("scheduler.loading"));
+
 
     const requestPayload = buildRequest();
     const response = await postData(

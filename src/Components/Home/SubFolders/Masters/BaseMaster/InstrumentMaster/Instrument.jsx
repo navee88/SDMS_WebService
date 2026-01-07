@@ -14,49 +14,7 @@ import PrintTable from "../../../../../Layout/Common/PrintTable";
 import { Loader2 } from "lucide-react";
 
 
-/* ---------------- MOCK DATA ---------------- */
 
-const mockRows = [
-  {
-    id: "1",
-    instrumentcode: "INST-001",
-    instrumentAlias: "Weighing Scale",
-    instrumentModel: "WS-500",
-    instrumentMake: "Shimadzu",
-    clientName: "Logilab",
-    status: "Active",
-    createdBy: "Admin",
-    createdOn: "12-Dec-2024",
-    modifiedBy: "Supervisor",
-    modifiedOn: "20-Dec-2024",
-  },
-  {
-    id: "2",
-    instrumentcode: "INST-002",
-    instrumentAlias: "PH Meter",
-    instrumentModel: "PH-700",
-    instrumentMake: "Mettler",
-    clientName: "Agro Labs",
-    status: "Inactive",
-    createdBy: "Admin",
-    createdOn: "10-Dec-2024",
-    modifiedBy: "Manager",
-    modifiedOn: "18-Dec-2024",
-  },
-  {
-    id: "3",
-    instrumentcode: "INST-003",
-    instrumentAlias: "HPLC",
-    instrumentModel: "LC-2030",
-    instrumentMake: "Shimadzu",
-    clientName: "BioTech",
-    status: "Retired",
-    createdBy: "Admin",
-    createdOn: "05-Dec-2024",
-    modifiedBy: "Admin",
-    modifiedOn: "15-Dec-2024",
-  },
-];
 
 /* ---------------- SMALL UI HELPER ---------------- */
 
@@ -158,7 +116,7 @@ const [loadingText, setLoadingText] = useState("");
     const loadInstrumentGrid = async () => {
   try {
     setLoading(true);
-    setLoadingText("Loading Instrument Data...");
+    setLoadingText(t("masters.loadinginstrumentdata"));
 
     const response = await postData(
       "basemaster/getInstrument",
@@ -180,7 +138,7 @@ const [loadingText, setLoadingText] = useState("");
         clientName: item.sAssociatedToClient || "-",
 
         // ✅ STATUS
-        status: item.sInstrumentStatus || "Inactive",
+        status: item.sInstrumentStatus || "",
 
         // ✅ AUDIT FIELDS
         createdBy: item.sCreatedBy || "-",
@@ -228,7 +186,7 @@ useEffect(() => {
                 instrumentAlias: formData.instrumentAlias,
                 instrumentModel: formData.instrumentModel,
                 instrumentMake: formData.instrumentMake,
-                status: formData.active ? "Active" : "Inactive",
+                status: formData.active ? t("statuses.deactive") : t("statuses.active"),
                 modifiedBy: "Admin",
                 modifiedOn: new Date().toLocaleDateString("en-GB"),
               }
@@ -390,6 +348,7 @@ useEffect(() => {
         key: "status",
         label: t("statuses.status"),
         width: 140,
+        enableSearch: true,
         render: (row) => {
           const isSelected = row.id === selectedRowId;
           const isActive = row.status === "Active";
@@ -478,13 +437,13 @@ useEffect(() => {
         />
       </div>
       {loading && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
-            <div className="bg-white p-8 rounded-2xl shadow-2xl flex items-center gap-4">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-              <span className="text-lg font-medium">{loadingText}</span>
-            </div>
+ <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="  rounded-sm flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1A57A6]"></div>
+           <p className="text-sm font-medium">{loadingText}</p>
           </div>
-        )}
+        </div>
+)}
 
 
       {/* GRID CONTAINER */}
