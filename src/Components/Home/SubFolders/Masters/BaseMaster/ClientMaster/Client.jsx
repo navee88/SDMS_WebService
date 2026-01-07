@@ -5,7 +5,7 @@ import { MdPrint } from "react-icons/md";
 import { IoMdAdd } from "react-icons/io";
 import { FaEdit } from "react-icons/fa";
 import { TiExport } from "react-icons/ti";
-import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import useAxios from "../../../../../../Services/servicecall";
 import { CF_decrypt } from "../../../../../Common/encryptiondecryption";
 import AddClientModal from "./AddClientModal";
@@ -18,6 +18,7 @@ import { handleExportCommon } from "../../../../../Layout/Common/exportService";
 /* ================== MAIN COMPONENT ================== */
 const Client = () => {
   const mappedInstrumentCache = useRef({});
+  const { t } = useTranslation();
 
   const [rows, setRows] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -118,7 +119,7 @@ const Client = () => {
   const loadClientGridData = useCallback(async () => {
     try {
       setLoading(true);
-      setLoadingText("Loading Client Data...");
+      setLoadingText(t("masters.loadingclientdata"));
 
       const response = await postData(
         "basemaster/getClient",
@@ -135,7 +136,7 @@ const Client = () => {
           id: item.sClientID || index.toString(),
           clientName: item.sClientName,
           clientAlias: item.sClientAliasName,
-          status: item.sClientStatus === "DeActive" ? "Deactive" : "Active",
+          status: item.sClientStatus === "DeActive" ? t("statuses.deactive") : t("statuses.active"),
           clientType: item.sClientTypeName,
           ipAddress: item.sIPAddress,
           createdBy: item.sCreatedBy,
@@ -240,7 +241,7 @@ const Client = () => {
 
   try {
     setLoading(true);
-    setLoadingText("Loading Client Data...");
+    setLoadingText(t("masters.loadingclientdata"));
 
     const isEdit = pendingClientData.mode === "EDIT";
 
@@ -256,12 +257,57 @@ const Client = () => {
 
     const response = await postData(apiUrl, requestPayload);
 
-    if (response?.Rtn === "Success") {
-      // 🔥 KEY CHANGE
-      setSelectedRowId(isEdit ? pendingClientData.clientId : null);
+//     if (response?.Rtn === "Success") {
 
-      await loadClientGridData();
-    }else if (response?.Rtn === "Warning") {
+//   // 🔥 CLEAR MAPPED INSTRUMENT CACHE
+//   mappedInstrumentCache.current = {};
+
+//   setSelectedRowId(isEdit ? pendingClientData.clientId : null);
+
+//   await loadClientGridData();
+// }
+if (response?.Rtn === "Success") {
+
+  mappedInstrumentCache.current = {};
+
+  if (isEdit) {
+    setRows((prevRows) => {
+      // ❌ remove old row
+      const filtered = prevRows.filter(
+        (r) => r.id !== pendingClientData.clientId
+      );
+
+      // ✅ build updated row
+      const updatedRow = {
+        id: pendingClientData.clientId,
+        clientName: pendingClientData.clientName,
+        clientAlias: pendingClientData.clientAlias,
+        status:
+          pendingClientData.status === "Active"
+            ? t("statuses.active")
+            : t("statuses.deactive"),
+        clientType: pendingClientData.clientTypeName,
+        ipAddress: pendingClientData.ipAddress,
+        createdBy: pendingClientData.createdBy,
+        createdOn: pendingClientData.createdOn,
+        modifiedBy: activeUserDetails.sUsername,
+        modifiedOn: new Date().toISOString(),
+        mappedInstrument:
+          mappedInstrumentCache.current[pendingClientData.clientId] || "-",
+      };
+
+      // ➕ add updated row back
+      return [updatedRow, ...filtered];
+    });
+
+    setSelectedRowId(pendingClientData.clientId);
+  } else {
+    // ADD case → fallback to reload if needed
+    await loadClientGridData();
+  }
+}
+
+else if (response?.Rtn === "Warning") {
       setErrorDialog({
         open: true,
         message: response.Message?.sClientName || "Warning occurred",
@@ -359,15 +405,15 @@ const Client = () => {
       ],
 
       HeaderDetails: [
-        "Client Name",
-        "Client Alias Name",
-        "Status",
-        "Client Type",
-        "IP Address",
-        "Created By",
-        "Created On",
-        "Modified By",
-        "Modified On",
+        t("label.clientName"),
+        t("masters.clientaliasname"),
+        t("statuses.status"),
+        t("masters.clienttype"),
+        t("masters.ipaddress"),
+        t("masters.createdBy"),
+        t("masters.createdOn"),
+        t("masters.modifiedBy"),
+        t("masters.modifiedOn"),
       ],
 
       ActiveUserDetails: buildClientRequest().ActiveUserDetails,
@@ -391,7 +437,7 @@ const handlePrint = () => {
   if (!rows || rows.length === 0) {
     setErrorDialog({
       open: true,
-      message: "Select an existing record.",
+      message: t("masters.selectRecord"),
       type: "information",
     });
     return;
@@ -407,6 +453,7 @@ const handleExport = () => {
     setLoading,
     setLoadingText,
     setErrorDialog,
+    t
   });
 };
 
@@ -425,7 +472,7 @@ const handleExport = () => {
     () => [
       {
         key: "clientName",
-        label: "Client Name",
+        label: t("label.clientName"),
         width: 160,
         enableSearch: true,
         render: (row) => (
@@ -443,7 +490,7 @@ const handleExport = () => {
       },
       {
         key: "clientAlias",
-        label: "Client Alias Name",
+        label: t("masters.clientaliasname"),
         width: 220,
         enableSearch: true,
         render: (row) => (
@@ -461,8 +508,9 @@ const handleExport = () => {
       },
       {
         key: "status",
-        label: "Status",
+        label:  t("statuses.status"),
         width: 160,
+        enableSearch: true,
         render: (row) => {
           const isSelected = row.id === selectedRowId;
           const isActive = row.status === "Active";
@@ -487,13 +535,13 @@ const handleExport = () => {
 
   const renderDetailPanel = (row) => (
     <div className="space-y-2 ">
-      <DetailRow label="Client Type" value={row.clientType} />
-      <DetailRow label="IP Address" value={row.ipAddress} />
-      <DetailRow label="Created By" value={row.createdBy} />
-      <DetailRow label="Created On" value={row.createdOn} />
-      <DetailRow label="Modified By" value={row.modifiedBy} />
-      <DetailRow label="Modified On" value={row.modifiedOn} />
-      <DetailRow label="Mapped Instrument" value={row.mappedInstrument} />
+      <DetailRow label={t("masters.clienttype")} value={row.clientType} />
+      <DetailRow label={t("masters.ipaddress")} value={row.ipAddress} />
+      <DetailRow label={t("masters.createdBy")} value={row.createdBy} />
+      <DetailRow label={t("masters.createdOn")} value={row.createdOn} />
+      <DetailRow label={t("masters.modifiedBy")} value={row.modifiedBy} />
+      <DetailRow label={t("masters.modifiedOn")} value={row.modifiedOn} />
+      <DetailRow label={t("masters.mappedinstrument")} value={row.mappedInstrument} />
     </div>
   );
 
@@ -504,7 +552,7 @@ const handleExport = () => {
       <div className="flex justify-end gap-2 p-3 ">
         <ActionButton
           icon={IoMdAdd}
-          label="Add"
+          label={t("button.add")}
           onClick={() => {
             setEditingRow(null);
             setShowModal(true);
@@ -512,12 +560,12 @@ const handleExport = () => {
         />
         <ActionButton
   icon={FaEdit}
-  label="Edit"
+  label={t("button.edit")}
   onClick={() => {
     if (!selectedRowId) {
       setErrorDialog({
         open: true,
-        message: "Select an existing record.",
+        message: t("masters.selectRecord"),
         type: "information",
       });
       return;
@@ -528,7 +576,8 @@ const handleExport = () => {
     if (!rowToEdit) {
       setErrorDialog({
         open: true,
-        message: "Select an existing record.",
+        message:t("masters.selectRecord")
+,
         type: "information",
       });
       return;
@@ -538,9 +587,9 @@ const handleExport = () => {
   }}
 />
 
-        <ActionButton icon={TiExport} label="Export" onClick={handleExport} />
+        <ActionButton icon={TiExport} label={t("button.export")} onClick={handleExport} />
 
-        <ActionButton icon={MdPrint} label="Print" onClick={handlePrint} />
+        <ActionButton icon={MdPrint} label={t("button.print")} onClick={handlePrint} />
       </div>
       {/* {loading && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
@@ -550,6 +599,15 @@ const handleExport = () => {
           </div>
         </div>
       )} */}
+      {/* {loading && (
+  <div className="fixed inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center z-[9999]">
+    <div className="w-14 h-14 border-4 border-[#2883fe] border-t-transparent rounded-full animate-spin" />
+    <p className="mt-4 text-[#2883fe] font-semibold text-sm">
+      {loadingText || "Processing..."}
+    </p>
+  </div>
+)} */}
+ 
       {loading && (
  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="  rounded-sm flex flex-col items-center gap-4">
@@ -595,14 +653,13 @@ const handleExport = () => {
   <PrintTable
     columns={columns}
     rows={rows}
-    title="Client Master"
-    subtitle="View Client Configuration Report"
+  title={t("label.client")}
+  subtitle={t("masters.client")}
+
     printRequest={buildPrintRequest()}
     onDone={() => setDoPrint(false)}
   />
 )}
-
-
       {showAuditTrail && (
         <AuditTrail
           isOpen={showAuditTrail}
