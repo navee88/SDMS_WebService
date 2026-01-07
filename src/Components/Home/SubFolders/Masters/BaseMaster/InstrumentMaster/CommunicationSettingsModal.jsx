@@ -8,6 +8,7 @@ const CommunicationSettingsModal = ({
   isOpen,
   onClose,
   interfacerInstrument,
+  onSubmit, 
 }) => {
 
 
@@ -64,12 +65,21 @@ const disabled = disableRules[ruleKey] || {};
 
 
   const nodeRef = useRef(null);
-  const [form, setForm] = useState({
-    commType: "TCP_SERVER",
-    parity: "NONE",
-    stopBits: "-1",
-    handShake: "NONE",
-  });
+  const initialFormState = {
+  commType: "TCP_SERVER",
+  parity: "NONE",
+  stopBits: "-1",
+  handShake: "NONE",
+  ip: "",
+  tcp: "",
+  dataBits: "",
+  com: "",
+  baud: "",
+  terminationIdle: "",
+};
+
+  const [form, setForm] = useState(initialFormState);
+
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const getBorderClass = (disabled, value) => {
@@ -84,6 +94,7 @@ const disabled = disableRules[ruleKey] || {};
   
 const handleClose = () => {
   setIsSubmitted(false);   // ✅ reset validation
+  setForm(initialFormState); 
   onClose();               // close modal
 };
 
@@ -151,14 +162,18 @@ const handleClose = () => {
               <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
                 IP Address
               </label>
-              <input
+
+<input
+  name="ip"
   value={form.ip || ""}
+  onChange={handleChange}
   disabled={disabled.ip}
   className={`w-full border-b-2 pb-1 text-[12px] font-semibold outline-none
     ${disabled.ip ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}
     ${getBorderClass(disabled.ip, form.ip)}
   `}
 />
+
 
             </div>
 
@@ -186,7 +201,9 @@ const handleClose = () => {
                 TCP Port Number
               </label>
              <input
+             name="tcp"
   value={form.tcp || ""}
+  onChange={handleChange}
   disabled={disabled.tcp}
   className={`w-full border-b-2 pb-1 text-[12px] font-semibold outline-none
     ${disabled.tcp ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}
@@ -200,7 +217,9 @@ const handleClose = () => {
                 Data Bits
               </label>
               <input
+ name="dataBits"
   value={form.dataBits || ""}
+  onChange={handleChange}
   disabled={disabled.dataBits}
   className={`w-full border-b-2 pb-1 text-[12px] font-semibold outline-none
     ${disabled.dataBits ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}
@@ -216,7 +235,9 @@ const handleClose = () => {
               </label>
              
 <input
-  value={disabled.com || ""}
+  name="com"
+  value={form.com || ""}
+  onChange={handleChange}
   disabled={disabled.com}
   className={`w-full border-b-2 pb-1 text-[12px] font-semibold outline-none
     ${disabled.com ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}
@@ -251,7 +272,9 @@ const handleClose = () => {
                 Baud Rate
               </label>
 <input
-  value={disabled.baud|| ""}
+ name="baud"
+  value={form.baud || ""}
+  onChange={handleChange}
   disabled={disabled.baud}
   className={`w-full border-b-2 pb-1 text-[12px] font-semibold outline-none
     ${disabled.baud ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}
@@ -266,7 +289,9 @@ const handleClose = () => {
                 Termination Idle Seconds
               </label>
               <input
+  name="terminationIdle"
   value={form.terminationIdle || ""}
+  onChange={handleChange}
   className={`w-full border-b-2 pb-1 text-[12px] font-semibold outline-none
     ${getBorderClass(false, form.terminationIdle)}
   `}
@@ -277,7 +302,14 @@ const handleClose = () => {
 
           {/* FOOTER */}
           <div className="flex justify-end gap-2 px-4 py-3 border-t">
-            <button onClick={() => setIsSubmitted(true)} className="bg-[#2883fe] text-white px-4 py-1 rounded text-[12px] font-bold flex items-center gap-1">
+            <button onClick={() => {
+    setIsSubmitted(true);
+
+    // basic validation example
+    if (!form.commType) return;
+
+    onSubmit(form); // ✅ tell parent to open AuditTrail
+  }} className="bg-[#2883fe] text-white px-4 py-1 rounded text-[12px] font-bold flex items-center gap-1">
               <FiCheckSquare />
               Submit
             </button>

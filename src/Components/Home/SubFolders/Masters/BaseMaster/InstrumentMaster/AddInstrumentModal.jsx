@@ -30,13 +30,13 @@ const [pendingForm, setPendingForm] = useState(null);
   const hasInsufficientLicense = isAddMode && availableLicense < 1;
 
   const PARSER_ORDER_MAP = {
-    0: { label: "NONE", value: "NONE" },
-    1: { label: "WIN_METHOD", value: "WIN_METHOD" },
-    2: { label: "WEB_METHOD", value: "WEB_METHOD" },
+    0: { label: t("masters.none"), value: t("masters.none")},
+    1: { label: t("masters.winmethod"), value: "WIN_METHOD" },
+    2: { label: t("masters.webmethod"), value: "WEB_METHOD" },
   };
   const LOCK_TYPE_OPTIONS = [
-    { label: "Automatic", value: "A" },
-    { label: "Manual", value: "M" },
+    { label: t("masters.automatic"), value: "A" },
+    { label: t("masters.manual"), value: "M" },
   ];
 
   const nodeRef = useRef(null);
@@ -56,6 +56,14 @@ const [pendingForm, setPendingForm] = useState(null);
   };
 
   const [form, setForm] = useState(initialForm);
+
+const [commData, setCommData] = useState(null);
+
+const handleCommSubmit = (data) => {
+  setCommData(data);
+  setShowAuditTrail(true); // ✅ OPEN AUDIT TRAIL
+};
+
   useEffect(() => {
     if (!isOpen) return;
     const getSessionValue = (key) => {
@@ -109,30 +117,41 @@ const [pendingForm, setPendingForm] = useState(null);
         setAvailableLicense(res.AvailableLicense || 0);
         // ✅ Parser Type dropdown (from Feature)
         if (Array.isArray(res.Feature)) {
-          const options = [
-            PARSER_ORDER_MAP[0], // 👈 NONE always
-          ];
+  const options = [
+    PARSER_ORDER_MAP[0], // 👈 NONE always
+  ];
 
-          const interfacerFeature = res.Feature.find(
-            (f) => f.L67Enum === "INTERFACER_SETTINGS"
-          );
+  const interfacerFeature = res.Feature.find(
+    (f) => f.L67Enum === "INTERFACER_SETTINGS"
+  );
 
-          const webMethodFeature = res.Feature.find(
-            (f) => f.L67Enum === "WEBMETHOD_INTERFACER"
-          );
+  const webMethodFeature = res.Feature.find(
+    (f) => f.L67Enum === "WEBMETHOD_INTERFACER"
+  );
 
-          // WIN_METHOD
-          if (interfacerFeature?.L67Status === true) {
-            options.push(PARSER_ORDER_MAP[1]);
-          }
+  const dbType = getSessionValue("sdbtype")?.toLowerCase();
 
-          // WEB_METHOD
-          if (webMethodFeature?.L67Status === true) {
-            options.push(PARSER_ORDER_MAP[2]);
-          }
+  // ✅ MSSQL → allow both if enabled
+  if (dbType === "mssql") {
+    if (interfacerFeature?.L67Status === true) {
+      options.push(PARSER_ORDER_MAP[1]); // WIN_METHOD
+    }
 
-          setParserOptions(options);
-        }
+    if (webMethodFeature?.L67Status === true) {
+      options.push(PARSER_ORDER_MAP[2]); // WEB_METHOD
+    }
+  }
+
+  // ✅ POSTGRES → ONLY WIN_METHOD if enabledPOSTGRESQL
+  else if (dbType === "postgresql") {
+    if (interfacerFeature?.L67Status === true) {
+      options.push(PARSER_ORDER_MAP[1]); // WIN_METHOD only
+    }
+  }
+
+  setParserOptions(options);
+}
+
 
         // ✅ Interfacer Instrument dropdown
         if (Array.isArray(res.InterfacerInstrument)) {
@@ -194,16 +213,18 @@ const handleSubmit = () => {
 const handleAuditAuthorized = async (auditPayload) => {
   try {
     const finalPayload = {
-      ...pendingForm,
+      ...pendingForm,          // instrument data
+      CommunicationSettings: commData, // ✅ comm data
       AuditTrailValues: auditPayload.AuditTrailValues,
     };
 
-    // 🔥 actual save happens here
     await onSave(finalPayload);
 
     // cleanup
+    setShowCommSettings(false);
     setShowAuditTrail(false);
     setPendingForm(null);
+    setCommData(null);
     setForm(initialForm);
     setSubmitted(false);
     onClose();
@@ -211,6 +232,7 @@ const handleAuditAuthorized = async (auditPayload) => {
     console.error("Save failed", err);
   }
 };
+
 
 
   // Submit validation (ONLY 2 fields)
@@ -262,15 +284,20 @@ const handleAuditAuthorized = async (auditPayload) => {
 
             {/* BODY */}
             <div className="px-4 py-4 overflow-y-auto flex-1">
-              <label
-                className={`block text-center text-[12px] font-bold font-roboto ${
-                  availableLicense > 0 ? "text-green-700" : "text-[#ff0000]"
-                }`}
-              >
-                {availableLicense > 0
-                  ? `${t("masters.availableLicense")}: ${availableLicense}`
-                  : "Insufficient License to create instrument"}
-              </label>
+                {/* License Info */}
+{(availableLicense > 0 || isAddMode) && (
+  <label
+    className={`block text-center text-[12px] font-bold font-roboto ${
+      availableLicense > 0 ? "text-green-700" : "text-[#ff0000]"
+    }`}
+  >
+    {availableLicense > 0
+      ? `${t("masters.availableLicense")}: ${availableLicense}`
+      : isAddMode
+      ? "Insufficient License to create instrument"
+      : ""}
+  </label>
+)}
 
               <div className="space-y-7 w-[340px]">
                 <div>
@@ -480,6 +507,7 @@ ${
                     setSubmitted(true);
 
                     if (!isCommSettingsValid()) return;
+                    setPendingForm(form);  
 
                     setShowCommSettings(true);
                   }}
@@ -518,10 +546,13 @@ ${
         </Draggable>
       </div>
       <CommunicationSettingsModal
-        isOpen={showCommSettings}
-        interfacerInstrument={form.interfacerInstrument}
-        onClose={() => setShowCommSettings(false)}
-      />
+  isOpen={showCommSettings}
+  interfacerInstrument={form.interfacerInstrument}
+  instrumentData={pendingForm}      // ✅ pass instrument data
+  onSubmit={handleCommSubmit}        // ✅ receive comm submit
+  onClose={() => setShowCommSettings(false)}
+/>
+
       <AuditTrail
   isOpen={showAuditTrail}
   onClose={() => setShowAuditTrail(false)}
