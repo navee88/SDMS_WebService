@@ -84,8 +84,9 @@
     "prompt": "Prompt",
     "somethingwentwrong": "Something went wrong",
     "error": "Error",
-    "confirmation":" Confirmation"
-  },
+    "confirmation":" Confirmation",
+    "confirmationlogout":" Confirmation"
+ },
   "loginImage": {
     "documents": "Documents & Files",
     "gateway": "CFR Gateway",
@@ -268,7 +269,8 @@
     "stopped": "Stopped",
     "client":"Client",
     "status":"Status",
-    "active":"Active"
+    "active":"Active",
+    "deactive":"Deactive"
  
   },
  
@@ -588,10 +590,19 @@
     "addInstrument": "Add Instrument",
     "editInstrument": "Edit Instrument",
     "communicationSettings": "Communication Settings",
-    "submitting": "Submitting..."
-    
- 
-    
+    "submitting": "Submitting...",
+    "addclient": "Add Client",
+    "editclient": "Edit Client",
+    "selectrecord":"Select an existing record.",
+    "noinstrumentsfound":"All the instruments are already mapped to this client.",
+    "loadingclientdata":"Loading client data...",
+    "loadinginstrumentdata":"Loading instrument data...",
+    "none":"NONE",
+    "winmethod":"WIN_METHOD",
+    "webmethod":"WEB_METHOD",
+    "automatic":"Automatic",
+    "manual":"Manual"
+   
   },
   "usermanagement": {
     "ftpusermappingview": "Storage User Mapping",
