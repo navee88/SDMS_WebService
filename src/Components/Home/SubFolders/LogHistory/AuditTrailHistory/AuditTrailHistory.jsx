@@ -6,7 +6,6 @@ import {
     Printer,
     PackageOpenIcon,
     ArchiveIcon,
-
 } from 'lucide-react';
 import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
 import exportIcon from "../../../../../Assests/Icons/export-icon.png"
@@ -22,6 +21,8 @@ import useAxios from '../../../../../Services/servicecall';
 import { CF_encrypt, CF_decrypt } from '../../../../../Components/Common/encryptiondecryption';
 // import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
 import { CF_sessionGet } from "../../../../Common/CF_session";
+import { handleExportCommon } from '../../../../Layout/Common/exportService';
+import PrintTable from '../../../../Layout/Common/PrintTable';
 
 const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => {
     const [selectedArchiveId, setSelectedArchiveId] = useState(archiveList.length > 0 ? archiveList[0].id : null);
@@ -511,29 +512,6 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
 
     return (
         <div className="flex-1 overflow-hidden flex flex-col">
-            {/* {showReviewHistory ? (
-                <>
-                    <GridLayout
-                        columns={reviewHistoryColumns}
-                        // data={userData.filter(row => selectedRows.includes(row.id))}
-                        data={userData}
-                    />
-                    <div className="flex justify-end p-4 border-t border-gray-200">
-                        <button
-                            onClick={() => {
-                                setSelectedRows([]);
-                                // This prop needs to be passed from parent
-                                if (typeof window !== 'undefined') {
-                                    const event = new CustomEvent('closeReviewHistory');
-                                    window.dispatchEvent(event);
-                                }
-                            }}
-                            className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
-                        >
-                            {t("button.close")}
-                        </button>
-                    </div>
-                </> */}
             {showReviewHistory ? (
                 <>
                     <GridLayout
@@ -616,39 +594,13 @@ const AuditTrailHistory = () => {
     const [showReviewHistory, setShowReviewHistory] = useState(false);
     const [showAuditTrail, setShowAuditTrail] = useState(false);
     const [errorDialog, setErrorDialog] = useState({ show: false, message: "", type: "" });
-    const [showCreateArchiveDialog, setShowCreateArchiveDialog] = useState(false);
-    const [showOpenArchiveDialog, setShowOpenArchiveDialog] = useState(false);
+    // const [showCreateArchiveDialog, setShowCreateArchiveDialog] = useState(false);
+    // const [showOpenArchiveDialog, setShowOpenArchiveDialog] = useState(false);
     const [showOpenArchivePopup, setShowOpenArchivePopup] = useState(false);
     const [selectedArchiveName, setSelectedArchiveName] = useState("");
     const [showCreateAuditLog, setShowCreateAuditLog] = useState(false);
     const [showOpenAuditLog, setShowOpenAuditLog] = useState(false);
-    const [archiveList, setArchiveList] = useState([
-        {
-            id: 1,
-            name: "CFRArchiving_5_20251223",
-            createDate: "2025-12-23 14:02:07"
-        },
-        {
-            id: 2,
-            name: "CFRArchiving_4_20251223",
-            createDate: "2025-12-23 13:19:36"
-        },
-        {
-            id: 3,
-            name: "CFRArchiving_3_20251223",
-            createDate: "2025-12-23 13:18:43"
-        },
-        {
-            id: 4,
-            name: "CFRArchiving_2_20251223",
-            createDate: "2025-12-23 13:17:52"
-        },
-        {
-            id: 5,
-            name: "CFRArchiving_1_20251222",
-            createDate: "2025-12-22 18:22:00"
-        }
-    ]);
+    const [archiveList, setArchiveList] = useState([]);
     const [originalGridData, setOriginalGridData] = useState([]);
 
 
@@ -681,6 +633,8 @@ const AuditTrailHistory = () => {
     const [moduleList, setModuleList] = useState([]);
     const [isFilterCollapsed, setIsFilterCollapsed] = useState(false);
     const [passwordError, setPasswordError] = useState(false);
+    const [doPrint, setDoPrint] = useState(false);
+
     const { postData } = useAxios();
 
     const enabledActions = ALL_ACTION_ORDER.filter(action => configState[action]);
@@ -796,28 +750,50 @@ const AuditTrailHistory = () => {
         initializeComponent();
     }, []);
 
-    // useEffect(() => {
-    //     const handleCloseReviewHistory = () => {
-    //         setShowReviewHistory(false);
-    //         setSelectedRows([]);
-    //     };
-
-    //     window.addEventListener('closeReviewHistory', handleCloseReviewHistory);
-    //     return () => window.removeEventListener('closeReviewHistory', handleCloseReviewHistory);
-    // }, []);
     useEffect(() => {
         const handleCloseReviewHistory = () => {
-            // ← RESTORE ORIGINAL GRID DATA
             if (originalGridData.length > 0) {
-                setUserData(originalGridData);
+                setUserData([...originalGridData]); // Force new array reference
             }
             setShowReviewHistory(false);
-            setSelectedRows([]);
+            // setSelectedRows([]);
         };
 
         window.addEventListener('closeReviewHistory', handleCloseReviewHistory);
         return () => window.removeEventListener('closeReviewHistory', handleCloseReviewHistory);
-    }, [originalGridData]); // ← Add dependency
+    }, [originalGridData]);
+
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && userData.length === 0 && !loading) {
+                console.log("Page visible - reloading data");
+                handleFilter();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [userData.length, loading]);
+
+    // useEffect(() => {
+    //     const handleVisibilityChange = () => {
+    //         if (document.visibilityState === 'visible') {
+    //             console.log("Page became visible - checking data");
+
+    //             // Only reload if we don't have data or we're not already loading
+    //             if (userData.length === 0 && !loading) {
+    //                 console.log("Data was lost - reloading...");
+    //                 handleFilter();
+    //             }
+    //         }
+    //     };
+
+    //     document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    //     return () => {
+    //         document.removeEventListener('visibilitychange', handleVisibilityChange);
+    //     };
+    // }, [userData.length, loading]);
 
     //calculate the current date minus the records duration date
     const formatDateDDMMYYYY = (date) => {
@@ -909,6 +885,7 @@ const AuditTrailHistory = () => {
             label: t('label.moduleName'),
             width: 150,
             enableSearch: true,
+            resizable: true,
             render: (row) => <span className="text-gray-700">{row.moduleName}</span>
         },
         {
@@ -916,6 +893,7 @@ const AuditTrailHistory = () => {
             label: t('label.actions'),
             width: 150,
             enableSearch: true,
+            resizable: true,
             render: (row) => <span className="text-gray-700">{row.actions}</span>
         },
         {
@@ -924,6 +902,7 @@ const AuditTrailHistory = () => {
             width: 200,
             inputType: 'date',
             enableSearch: true,
+            resizable: true,
             render: (row) => <span className="text-gray-700">{row.transactionOn}</span>
         },
         {
@@ -931,6 +910,7 @@ const AuditTrailHistory = () => {
             label: t('label.reviewStatus'),
             width: 150,
             enableSearch: true,
+            resizable: true,
             render: (row) => <span className="text-gray-700">{row.reviewStatus}</span>
         },
         {
@@ -938,6 +918,7 @@ const AuditTrailHistory = () => {
             label: t('label.requestedClient'),
             width: 200,
             enableSearch: true,
+            resizable: true,
             render: (row) => <span className="text-gray-700">{row.requestedClient}</span>
         },
         {
@@ -945,6 +926,7 @@ const AuditTrailHistory = () => {
             label: t('label.affectedClient'),
             width: 200,
             enableSearch: true,
+            resizable: true,
             render: (row) => <span className="text-gray-700">{row.affectedClient}</span>
         },
         {
@@ -952,6 +934,7 @@ const AuditTrailHistory = () => {
             label: t('label.instrumentName'),
             width: 200,
             enableSearch: true,
+            resizable: true,
             render: (row) => <span className="text-gray-700">{row.instrumentName}</span>
         },
         {
@@ -959,9 +942,17 @@ const AuditTrailHistory = () => {
             label: t('label.reason'),
             width: 150,
             enableSearch: true,
+            resizable: true,
             render: (row) => <span className="text-gray-700">{row.reason}</span>
         }
     ], [selectedRows, t]);
+
+    // Force re-render when userData changes
+    useEffect(() => {
+        console.log("=== USER DATA CHANGED ===");
+        console.log("New userData length:", userData.length);
+        console.log("Sample row:", userData[0]);
+    }, [userData]);
 
     const reviewHistoryColumns = useMemo(() => [
         {
@@ -970,7 +961,7 @@ const AuditTrailHistory = () => {
             width: 100,
             render: (row, index) => {
                 console.log("SerialNo Render - Row:", row, "Index:", index);
-                return <span className="text-gray-700">{index + 1}</span>
+                return <span className="text-gray-700">{row.id}</span>
             }
         },
         {
@@ -1017,6 +1008,12 @@ const AuditTrailHistory = () => {
         }
     ], [t]);
 
+    useEffect(() => {
+        // Force re-initialize column widths when columns change
+        console.log("User Columns updated:", userColumns.length);
+        console.log("Review History Columns updated:", reviewHistoryColumns.length);
+    }, [userColumns, reviewHistoryColumns]);
+
     // Add handleRowSelection here too
     const handleRowSelection = (id) => {
         console.log('Before:', selectedRows);
@@ -1058,6 +1055,7 @@ const AuditTrailHistory = () => {
 
         // Check if selected rows are reviewed
         const selectedRowsData = userData.filter(row => selectedRows.includes(row.id));
+        //For the selected rows, check if reviewStatus is 'Reviewed'
         const hasUnreviewedRows = selectedRowsData.some(row =>
             !row.reviewStatus || row.reviewStatus !== 'Reviewed'
         );
@@ -1129,18 +1127,6 @@ const AuditTrailHistory = () => {
         }
     };
 
-    // const handleReview = () => {
-    //     if (selectedRows.length === 0) {
-    //         setErrorDialog({
-    //             show: true,
-    //             message: "Select an existing record.",
-    //             type: "information"
-    //         });
-    //         return;
-    //     }
-    //     setShowAuditTrail(true);
-    // };
-
     const handleReview = () => {
         if (selectedRows.length === 0) {
             setErrorDialog({
@@ -1165,7 +1151,9 @@ const AuditTrailHistory = () => {
     }
 
     const handleAuditTrailAuthorized = async (auditData) => {
+        console.log("=== REVIEW BUTTON DEBUG ===");
         console.log("Audit Data:", auditData);
+        console.log("Selected Rows:", selectedRows);
 
         try {
             const payload = {
@@ -1174,517 +1162,541 @@ const AuditTrailHistory = () => {
                 ...CF_activeUserdetails()
             };
 
-            console.log("Submit Review Payload:", payload);
+            console.log("Submit Review Request Payload:", payload);
             const result = await postData('AuditTrail/ReviewBtnValidation', payload);
-            console.log("Submit Review Result:", result);
+            console.log("Submit Review Response:", result);
 
             if (result.AuditTrailLogin === false) {
                 setPasswordError(true);
                 return;
             }
 
-            if (result.Message === "Success" && result.TransDetail) {
-                // Map the response data
-                const updatedData = userData.map(row => {
-                    const reviewedItem = result.TransDetail.find(
-                        item => item.SerialNo === row.id
-                    );
-                    if (reviewedItem) {
-                        return {
-                            ...row,
-                            reviewStatus: reviewedItem['Review Status'] || 'Reviewed',
-                            reviewComments: reviewedItem['Review Comments'],
-                            reviewedBy: reviewedItem['Reviewed By'],
-                            reviewedDate: reviewedItem['Reviewed Date']
-                        };
-                    }
-                    return row;
-                });
-
-                setUserData(updatedData);
+            if (result.Message === "Success") {
                 setShowAuditTrail(false);
-                setSelectedRows([]);
                 setPasswordError(false);
+
+                // RELOAD ENTIRE GRID AFTER REVIEW
+                await handleFilter(); // This will refresh with current filters
+
+                setSelectedRows([]);
             } else {
-                alert(result.Message || 'Failed to submit review');
+                setErrorDialog({
+                    show: true,
+                    message: result.Message || 'Failed to submit review',
+                    type: "error"
+                });
             }
         } catch (error) {
             console.error('Error submitting review:', error);
-            alert('Failed to submit review. Please try again.');
+            setErrorDialog({
+                show: true,
+                message: 'Failed to submit review. Please try again.',
+                type: "error"
+            });
         }
     };
 
     const handleCreateArchive = () => {
-        setShowCreateArchiveDialog(true);
+        setErrorDialog({
+            show: true,
+            message: "Do you want to create archive?",
+            type: "confirmation",
+            onConfirm: () => {
+                setErrorDialog({ show: false, message: "", type: "" });
+                setShowCreateAuditLog(true);
+            }
+        });
     };
 
-    const handleCreateArchiveConfirm = () => {
-        setShowCreateArchiveDialog(false);
-        setShowCreateAuditLog(true);
-    };
+    // const handleArchiveAuditLogAuthorized = async (auditData) => {
+    //     console.log('=== CREATE ARCHIVE DEBUG ===');
+    //     console.log('Audit Data:', auditData);
+
+    //     try {
+    //         const payload = {
+    //             sUserIDFromUI: selectedUser || "All",
+    //             auditTrailType: selectedAuditType || "All",
+    //             sModuleName: selectedModule || "All",
+    //             AuditTrailValues: auditData.AuditTrailValues,
+    //             ...CF_activeUserdetails()
+    //         };
+
+    //         console.log("Create Archive Request Payload:", payload);
+    //         const result = await postData('AuditTrail/createarchive', payload);
+    //         console.log("Create Archive Response:", result);
+
+    //         if (result.AuditTrailLogin === false) {
+    //             setPasswordError(true);
+    //             return;
+    //         }
+
+    //         if (result.str === "Success") {
+    //             setShowCreateAuditLog(false);
+    //             setPasswordError(false);
+    //             setSelectedArchiveName("");
+
+    //             console.log("Reloading grid after archive creation...");
+
+    //             // ← SIMPLE FIX: Just call handleFilter to reload
+    //             await handleFilter();
+
+    //         } else {
+    //             setErrorDialog({
+    //                 show: true,
+    //                 message: result.str || 'Failed to create archive',
+    //                 type: "error"
+    //             });
+    //         }
+    //     } catch (error) {
+    //         console.error('Error creating archive:', error);
+    //         setErrorDialog({
+    //             show: true,
+    //             message: 'Failed to create archive. Please try again.',
+    //             type: "error"
+    //         });
+    //     }
+    // };
 
     const handleArchiveAuditLogAuthorized = async (auditData) => {
-        console.log('Create Archive Audit Trail Data:', auditData);
+        console.log('=== CREATE ARCHIVE DEBUG ===');
+        console.log('Audit Data:', auditData);
 
         try {
             const payload = {
+                sUserIDFromUI: selectedUser || "All",
+                auditTrailType: selectedAuditType || "All",
+                sModuleName: selectedModule || "All",
                 AuditTrailValues: auditData.AuditTrailValues,
-                ActiveUserDetails: getSessionUserDetails()
+                ...CF_activeUserdetails()
             };
 
-            console.log("Create Archive Payload:", payload);
-            const result = await postData('AuditTrail/CreateArchive', payload);
-            console.log("Create Archive Result:", result);
+            console.log("Create Archive Request Payload:", payload);
+            const result = await postData('AuditTrail/createarchive', payload);
+            console.log("Create Archive Response:", result);
 
             if (result.AuditTrailLogin === false) {
                 setPasswordError(true);
                 return;
             }
 
-            if (result.rtnmsg === "Success") {
-                const newArchive = {
-                    id: result.archiveId || archiveList.length + 1,
-                    name: result.archiveName || `CFRArchiving_${archiveList.length + 1}_${new Date().toISOString().split('T')[0].replace(/-/g, '')}`,
-                    createDate: result.createDate || new Date().toISOString().replace('T', ' ').substring(0, 19)
-                };
-
-                setArchiveList(prev => [newArchive, ...prev]);
+            if (result.str === "Success") {
                 setShowCreateAuditLog(false);
                 setPasswordError(false);
+                setSelectedArchiveName("");
 
+                // Show SUCCESS popup
                 setErrorDialog({
                     show: true,
-                    message: `Archive "${newArchive.name}" created successfully!`,
+                    message: "Archive created successfully.",
                     type: "success"
                 });
+
+                console.log("Reloading grid after archive creation...");
+                await handleFilter();
+
             } else {
-                alert(result.rtnmsg || 'Failed to create archive');
+                // Show ERROR popup with actual error message
+                setErrorDialog({
+                    show: true,
+                    message: result.Message || result.str || 'Failed to create archive',
+                    type: "error"
+                });
             }
         } catch (error) {
             console.error('Error creating archive:', error);
-            alert('Failed to create archive. Please try again.');
+
+            // Show ERROR popup with error details
+            setErrorDialog({
+                show: true,
+                message: error.response?.data?.Message || error.message || 'Failed to create archive. Please try again.',
+                type: "error"
+            });
         }
     };
 
     const handleOpenArchive = () => {
-        setShowOpenArchiveDialog(true);
-    };
-
-    const handleOpenArchiveConfirm = () => {
-        setShowOpenArchiveDialog(false);
-        setShowOpenAuditLog(true);
+        setErrorDialog({
+            show: true,
+            message: "Do you want to open archive?",
+            type: "confirmation",
+            onConfirm: () => {
+                setErrorDialog({ show: false, message: "", type: "" });
+                setShowOpenAuditLog(true);
+            }
+        });
     };
 
     const handleOpenArchiveAuditLogAuthorized = async (auditData) => {
+        console.log('=== OPEN ARCHIVE DEBUG ===');
         console.log('Open Archive Audit Trail Data:', auditData);
 
         try {
             const payload = {
+                auditTrailType: selectedAuditType || "All",
                 AuditTrailValues: auditData.AuditTrailValues,
-                ActiveUserDetails: getSessionUserDetails()
+                ...CF_activeUserdetails()
             };
 
-            console.log("Open Archive Log Payload:", payload);
-            const result = await postData('AuditTrail/OpenArchiveLog', payload);
-            console.log("Open Archive Log Result:", result);
+            console.log("Open Archive Log Request Payload:", payload);
+            const result = await postData('AuditTrail/openarchive', payload);
+            console.log("Open Archive Log Response:", result);
 
             if (result.AuditTrailLogin === false) {
                 setPasswordError(true);
                 return;
             }
 
-            if (result.rtnmsg === "Success") {
+            if (result.str === "Success" && result.openarchivelist) {
+                const mappedArchiveList = result.openarchivelist.map((item, index) => ({
+                    id: index + 1,
+                    name: item.Name,
+                    createDate: item.CRDate
+                }));
+
+                console.log("Mapped Archive List:", mappedArchiveList);
+
+                setArchiveList(mappedArchiveList);
                 setShowOpenAuditLog(false);
                 setShowOpenArchivePopup(true);
                 setPasswordError(false);
+            } else {
+                setErrorDialog({
+                    show: true,
+                    message: result.str || 'Failed to load archive list',
+                    type: "error"
+                });
             }
         } catch (error) {
             console.error('Error logging open archive:', error);
-            alert('Failed to log open archive action.');
+            setErrorDialog({
+                show: true,
+                message: 'Failed to log open archive action.',
+                type: "error"
+            });
         }
     };
 
     const handleArchiveSelect = async (archive) => {
+        console.log('=== LOAD ARCHIVE DATA DEBUG ===');
+        console.log('Selected Archive:', archive);
+
         setSelectedArchiveName(archive.name);
         setShowOpenArchivePopup(false);
         setLoading(true);
 
         try {
+            const commonPayload = CF_activeUserdetails();
+
             const payload = {
-                sArchiveId: archive.id,
-                sArchiveName: archive.name,
-                ActiveUserDetails: getSessionUserDetails()
+                sArchivetablename: archive.name,
+                sModuleName: selectedModule || "All",
+                sArchiveUserID: selectedUser || "All",
+                auditTrailType: selectedAuditType || "All",
+                ...commonPayload
             };
 
-            console.log("Load Archive Data Payload:", payload);
-            const result = await postData('AuditTrail/LoadArchiveData', payload);
-            console.log("Load Archive Data Result:", result);
+            console.log("Load Archive Data Request Payload:", payload);
+            const result = await postData('AuditTrail/OpenArchiveListLoad', payload);
+            console.log("Load Archive Data Response:", result);
+            console.log("Number of records in response:", result?.list?.length);
 
-            if (result && Array.isArray(result)) {
-                const mappedData = result.map((item, index) => ({
-                    id: index + 1,
+            if (result && result.list && Array.isArray(result.list)) {
+                const mappedData = result.list.map((item, index) => ({
+                    id: item.SerialNo || index + 1,
                     select: false,
                     moduleName: item.ModuleName || '',
                     actions: item.Actions || '',
-                    transactionOn: item.TransactionOn || '',
-                    reviewStatus: item.ReviewStatus || '',
+                    transactionOn: item.TransactionDate || '',
+                    reviewStatus: item['Review Status'] || '',
                     requestedClient: item.RequestedClient || '',
                     affectedClient: item.AffectedClient || '',
                     instrumentName: item.InstrumentName || '',
                     reason: item.Reason || '',
                     comments: item.Comments || '',
-                    reviewComments: item.ReviewComments || '',
-                    reviewedBy: item.ReviewedBy || '',
-                    reviewedDate: item.ReviewedDate || ''
+                    reviewComments: item['Review Comments'] || '',
+                    reviewedBy: item['Reviewed By'] || '',
+                    reviewedDate: item['Reviewed Date'] || '',
+                    userName: item['User Name'] || '',
+                    profileName: item['User Full Name'] || '',
+                    systemComments: item.SystemComments || '',
+                    modifiedData: item.ModifiedData || ''
                 }));
 
-                setUserData(mappedData);
+                console.log("Mapped Archive Grid Data:", mappedData);
+
+                // ← FORCE UPDATE THE GRID
+                setUserData([...mappedData]);
+                setShowReviewHistory(false);
+                setSelectedRows([]);
+            } else {
+                console.warn("No data found in archive response");
+                setUserData([]);
+                setErrorDialog({
+                    show: true,
+                    message: "No data found in selected archive.",
+                    type: "information"
+                });
             }
 
-            setShowReviewHistory(false);
-            setSelectedRows([]);
             setLoading(false);
         } catch (error) {
             console.error('Error loading archive data:', error);
             setLoading(false);
+            setErrorDialog({
+                show: true,
+                message: 'Failed to load archive data.',
+                type: "error"
+            });
         }
     };
 
     const handleReset = async () => {
-        const currentUserID = getSessionUserDetails().sUserID;
-        const currentUser = userList.find(
-            u => String(u.L02UserID).trim() === String(currentUserID).trim()
-        );
-        const defaultUser = currentUser ? currentUser.L02UserName : "All";
-
         setSelectedUser("All");
         setSelectedModule("All");
         setSelectedAuditType("All");
         setRecordsDuration("Current_Date");
         setFromDate(today);
         setToDate(today);
-        setSelectedRows([]);
         setShowReviewHistory(false);
         setSelectedArchiveName("");
-
-        // await fetchAuditTrailData();
     };
 
-    const handlePrint = async () => {
-        const columnsToShow = showReviewHistory ? reviewHistoryColumns : userColumns;
-        const dataToShow = showReviewHistory
-            ? userData.filter(row => selectedRows.includes(row.id))
-            : userData;
+    // const handlePrint = async () => {
+    //     const columnsToShow = showReviewHistory ? reviewHistoryColumns : userColumns;
+    //     const dataToShow = showReviewHistory
+    //         ? userData.filter(row => selectedRows.includes(row.id))
+    //         : userData;
 
-        const tableHTML = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Audit Trail History</title>
-            <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { 
-                    font-family: 'Roboto', Arial, sans-serif; 
-                    padding: 30px;
-                    background-color: #ffffff;
-                }
-                h1 { 
-                    text-align: center; 
-                    color: #2883FE; 
-                    margin-bottom: 30px;
-                    font-size: 28px;
-                    font-weight: 600;
-                }
-                .print-info {
-                    text-align: right;
-                    color: #666;
-                    font-size: 12px;
-                    margin-bottom: 15px;
-                }
-                table { 
-                    width: 100%; 
-                    border-collapse: collapse; 
-                    margin-top: 20px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                }
-                th, td { 
-                    border: 1px solid #ddd; 
-                    padding: 12px 8px; 
-                    text-align: left;
-                    font-size: 13px;
-                }
-                th { 
-                    background-color: #f9f9f9; 
-                    color: #000000; 
-                    font-weight: bold;
-                    text-transform: uppercase;
-                    font-size: 12px;
-                    letter-spacing: 0.5px;
-                }
-                tr:nth-child(even) { 
-                    background-color: #fafafa; 
-                }
-                tr:hover {
-                    background-color: #f5f5f5;
-                }
-                td {
-                    color: #333;
-                }
-                @media print {
-                    body { 
-                        padding: 15px;
-                    }
-                    table {
-                        box-shadow: none;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="print-info">
-                Printed on: ${new Date().toLocaleString()}
-            </div>
-            <h1>Audit Trail History</h1>
-            <table>
-                <thead>
-                    <tr>
-                        ${columnsToShow
-                .filter(col => col.key !== 'select')
-                .map(col => `<th>${col.label}</th>`)
-                .join('')}
-                    </tr>
-                </thead>
-                <tbody>
-                    ${dataToShow.map((row, index) => `
-                        <tr>
-                            ${columnsToShow
-                        .filter(col => col.key !== 'select')
-                        .map(col => {
-                            if (col.key === 'serialNo') return `<td>${index + 1}</td>`;
-                            return `<td>${row[col.key] || ''}</td>`;
-                        })
-                        .join('')}
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            <script>
-                window.onload = function() { 
-                    setTimeout(function() {
-                        window.print();
-                    }, 250);
-                }
+    //     const tableHTML = `
+    //     <!DOCTYPE html>
+    //     <html>
+    //     <head>
+    //         <title>Audit Trail History</title>
+    //         <style>
+    //             * { margin: 0; padding: 0; box-sizing: border-box; }
+    //             body { 
+    //                 font-family: 'Roboto', Arial, sans-serif; 
+    //                 padding: 30px;
+    //                 background-color: #ffffff;
+    //             }
+    //             h1 { 
+    //                 text-align: center; 
+    //                 color: #2883FE; 
+    //                 margin-bottom: 30px;
+    //                 font-size: 28px;
+    //                 font-weight: 600;
+    //             }
+    //             .print-info {
+    //                 text-align: right;
+    //                 color: #666;
+    //                 font-size: 12px;
+    //                 margin-bottom: 15px;
+    //             }
+    //             table { 
+    //                 width: 100%; 
+    //                 border-collapse: collapse; 
+    //                 margin-top: 20px;
+    //                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    //             }
+    //             th, td { 
+    //                 border: 1px solid #ddd; 
+    //                 padding: 12px 8px; 
+    //                 text-align: left;
+    //                 font-size: 13px;
+    //             }
+    //             th { 
+    //                 background-color: #f9f9f9; 
+    //                 color: #000000; 
+    //                 font-weight: bold;
+    //                 text-transform: uppercase;
+    //                 font-size: 12px;
+    //                 letter-spacing: 0.5px;
+    //             }
+    //             tr:nth-child(even) { 
+    //                 background-color: #fafafa; 
+    //             }
+    //             tr:hover {
+    //                 background-color: #f5f5f5;
+    //             }
+    //             td {
+    //                 color: #333;
+    //             }
+    //             @media print {
+    //                 body { 
+    //                     padding: 15px;
+    //                 }
+    //                 table {
+    //                     box-shadow: none;
+    //                 }
+    //             }
+    //         </style>
+    //     </head>
+    //     <body>
+    //         <div class="print-info">
+    //             Printed on: ${new Date().toLocaleString()}
+    //         </div>
+    //         <h1>Audit Trail History</h1>
+    //         <table>
+    //             <thead>
+    //                 <tr>
+    //                     ${columnsToShow
+    //             .filter(col => col.key !== 'select')
+    //             .map(col => `<th>${col.label}</th>`)
+    //             .join('')}
+    //                 </tr>
+    //             </thead>
+    //             <tbody>
+    //                 ${dataToShow.map((row, index) => `
+    //                     <tr>
+    //                         ${columnsToShow
+    //                     .filter(col => col.key !== 'select')
+    //                     .map(col => {
+    //                         if (col.key === 'serialNo') return `<td>${index + 1}</td>`;
+    //                         return `<td>${row[col.key] || ''}</td>`;
+    //                     })
+    //                     .join('')}
+    //                     </tr>
+    //                 `).join('')}
+    //             </tbody>
+    //         </table>
+    //         <script>
+    //             window.onload = function() { 
+    //                 setTimeout(function() {
+    //                     window.print();
+    //                 }, 250);
+    //             }
 
-                window.onafterprint = function() {
-                    setTimeout(function() {
-                        window.close();
-                    }, 500);
-                };
+    //             window.onafterprint = function() {
+    //                 setTimeout(function() {
+    //                     window.close();
+    //                 }, 500);
+    //             };
 
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape') {
-                        window.close();
-                    }
-                });
-            </script>
-        </body>
-        </html>
-    `;
-        const printWindow = window.open('', 'PrintWindow', 'width=1200,height=800,left=100,top=50');
-        if (printWindow) {
-            printWindow.document.write(tableHTML);
-            printWindow.document.close();
-            printWindow.focus();
-        } else {
-            alert('Please allow popups for this site to print.');
-        }
-        // API call after print
-        try {
-            const payload = {
-                sModuleName: "Audit Trail History",
-                ActiveUserDetails: getSessionUserDetails()
-            };
-
-            await postData('basemaster/print', payload);
-        } catch (error) {
-            console.error('Error logging print action:', error);
-        }
-    };
-
-    // const handleExport = () => {
-    //     if (userData.length === 0) {
-    //         setErrorDialog({
-    //             show: true,
-    //             message: "No data available to export.",
-    //             type: "information"
-    //         });
-    //         return;
+    //             document.addEventListener('keydown', function(e) {
+    //                 if (e.key === 'Escape') {
+    //                     window.close();
+    //                 }
+    //             });
+    //         </script>
+    //     </body>
+    //     </html>
+    // `;
+    //     const printWindow = window.open('', 'PrintWindow', 'width=1200,height=800,left=100,top=50');
+    //     if (printWindow) {
+    //         printWindow.document.write(tableHTML);
+    //         printWindow.document.close();
+    //         printWindow.focus();
+    //     } else {
+    //         alert('Please allow popups for this site to print.');
     //     }
-    //     setExportTrigger(prev => prev + 1);
+    //     // API call after print
+    //     try {
+    //         const payload = {
+    //             sModuleName: "Audit Trail History",
+    //             ActiveUserDetails: CF_activeUserdetails()
+    //         };
+
+    //         await postData('basemaster/print', payload);
+    //     } catch (error) {
+    //         console.error('Error logging print action:', error);
+    //     }
     // };
 
 
-    const handleExport = async () => {
-        if (userData.length === 0) {
+    const handlePrint = () => {
+        if (!userData || userData.length === 0) {
             setErrorDialog({
                 show: true,
-                message: "No data available to export.",
+                message: "No data available to print.",
                 type: "information"
             });
             return;
         }
-
-        try {
-            const columnsToExport = showReviewHistory ? reviewHistoryColumns : userColumns;
-
-            const headers = columnsToExport
-                .filter(col => col.key !== 'select')
-                .map(col => col.label);
-
-            const rows = userData.map((row, index) =>
-                columnsToExport
-                    .filter(col => col.key !== 'select')
-                    .map(col => {
-                        if (col.key === 'serialNo') return index + 1;
-                        return row[col.key] ?? "";
-                    })
-            );
-
-            const payload = {
-                sFileName: showReviewHistory ? "Review_History" : "Audit_Trail_History",
-                AllRows: userData,
-                HeaderDetails: headers,
-                AllowKeys: columnsToExport.filter(col => col.key !== 'select').map(col => col.key),
-                sBrowserURL: window.location.origin,
-                ActiveUserDetails: getSessionUserDetails()
-            };
-
-            console.log("Export Payload:", payload);
-            const result = await postData('basemaster/exportDataFile', payload);
-            console.log("Export Result:", result);
-
-            if (result && result.ExportDataViewURL) {
-                const urlPath = CF_decrypt(result.ExportDataViewURL);
-                const win = window.open(urlPath, '_blank');
-                if (!win) {
-                    alert('Please allow popups for this website');
-                }
-            }
-        } catch (error) {
-            console.error('Error exporting data:', error);
-        }
+        setDoPrint(true);
     };
 
-    const getSessionUserDetails = () => {
-        try {
-            const encryptedUserID = sessionStorage.getItem('sUserID');
-            const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
-            const encryptedTenantID = sessionStorage.getItem('sTenantID');
-            const encryptedUsername = sessionStorage.getItem('sUsername');
-            const encryptedDomain = sessionStorage.getItem('sDomainName');
-            const encryptedCategories = sessionStorage.getItem('sCategories');
-            const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
-            const encryptedSessionID = sessionStorage.getItem('sSessionID');
-            const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
-            const encryptedDBType = sessionStorage.getItem('sdbtype');
+    const buildPrintRequest = () => ({
+        sModuleName: "Audit Trail History",
+        ActiveUserDetails: CF_activeUserdetails().ActiveUserDetails,
+        ApplicationCode: "SDMS"
+    });
 
-            const isEncrypted = (value) => {
-                if (typeof value !== 'string') return false;
-                if (value.length < 70) return false;
-                return /^[0-9a-fA-F]{64}/.test(value);
-            };
+    const buildExportRequest = () => {
+        const userDetails = CF_activeUserdetails();
 
-            const safeDecrypt = (value) => {
-                if (!value || value === 'null' || value === 'undefined') {
-                    return '';
-                }
-                if (!isEncrypted(value)) {
-                    return value;
-                }
-                try {
-                    return CF_decrypt(value);
-                } catch (error) {
-                    console.debug('Decryption skipped for value');
-                    return '';
-                }
-            };
+        return {
+            AllRows: userData.map((row, index) => ({
+                SerialNo: row.id || index + 1,
+                SDMSELN: "1",
+                "Reviewed By": row.reviewedBy || null,
+                Actions: row.actions || "",
+                "User Name": row.userName || "",
+                UTCTransactionDate: row.transactionOn || "",
+                ModuleName: row.moduleName || "",
+                Comments: row.comments || "",
+                "Review Status": row.reviewStatus || null,
+                visibleindex: index,
+                ModifiedData: row.modifiedData || "",
+                "User Full Name": row.profileName || "",
+                Reason: row.reason || "",
+                SystemComments: row.systemComments || "",
+                "Reviewed Date UTC": row.reviewedDate || null,
+                uid: index,
+                "Review Comments": row.reviewComments || null,
+                boundindex: index,
+                "Reviewed Date": null,
+                ManipulateType: "View",
+                uniqueid: `${Date.now()}-${index}`,
+                TransactionDate: row.transactionOn || ""
+            })),
 
-            // Decrypt all values
-            const sUserID = safeDecrypt(encryptedUserID);
-            const sSiteCode = safeDecrypt(encryptedSiteCode);
-            const sTenantID = safeDecrypt(encryptedTenantID);
-            const sUsername = safeDecrypt(encryptedUsername);
-            const sUserDomainName = safeDecrypt(encryptedDomain);
-            const sCategories = safeDecrypt(encryptedCategories);
-            const sUserGroupID = safeDecrypt(encryptedUserGroup);
-            const sSessionID = safeDecrypt(encryptedSessionID);
-            const sTimeZoneID = safeDecrypt(encryptedTimeZone);
-            const sdbtype = safeDecrypt(encryptedDBType);
+            sFileName: "Audit Trail",  // ← CHANGE THIS
+            sBrowserURL: window.location.origin,
 
-            const userDetails = {
-                sUserID: sUserID || 'U1',
-                sSiteCode: sSiteCode || 'CH-001    ',  // Match your actual site code with spaces
-                sTenantID: sTenantID || '',
-                sUsername: sUsername || 'Administrator',
-                sUserDomainName: sUserDomainName || 'SDMS',
-                sCategories: sCategories || 'DB',
-                sUserGroupID: sUserGroupID || 'G1        ',  // With spaces to match backend
-                sSessionID: sSessionID || '',
-                sTimeZoneID: sTimeZoneID || 'Asia/Kolkata',  // Remove the <~>true part
-                sdbtype: sdbtype || 'MSSQL',  // ← Fixed! Use MSSQL as default
-                sApplicationName: "SDMS",
-                sUserStatus: ""
-            };
+            AllowKeys: [
+                "ModuleName",
+                "Actions",
+                "TransactionDate",
+                "Review Status",
+                "User Name",
+                "User Full Name",
+                "Comments",
+                "Reason"
+            ],
 
-            console.log("=== SESSION USER DETAILS ===");
-            console.log("Full User Details:", userDetails);
-            console.log("Site Code:", `"${userDetails.sSiteCode}"`);
-            console.log("Site Code length:", userDetails.sSiteCode.length);
-            console.log("DB Type:", userDetails.sdbtype);
+            HeaderDetails: [
+                "Module Name",
+                "Actions",
+                "Transaction Date",
+                "Review Status",
+                "User Name",
+                "User Full Name",
+                "Comments",
+                "Reason"
+            ],
 
-            return userDetails;
-        } catch (error) {
-            console.error('Error getting session user details:', error);
-            return {
-                sUserID: 'U1',
-                sSiteCode: 'CH-001    ',
-                sTenantID: '',
-                sUsername: 'Administrator',
-                sUserDomainName: 'SDMS',
-                sCategories: 'DB',
-                sUserGroupID: 'G1        ',
-                sSessionID: '',
-                sTimeZoneID: 'Asia/Kolkata',
-                sdbtype: 'MSSQL',  // ← Fixed default
-                sApplicationName: "SDMS",
-                sUserStatus: ""
-            };
-        }
+            ActiveUserDetails: userDetails.ActiveUserDetails,
+            ApplicationCode: userDetails.ApplicationCode
+        };
     };
 
-    const fetchClientList = async () => {
-        try {
-            const payload = {
-                ActiveUserDetails: getSessionUserDetails()
-            };
-
-            const result = await postData('AuditTrail/AuditTrailClientname', payload);
-            console.log("Client List Result:", result);
-
-            if (result && Array.isArray(result)) {
-                setClientList(result);
-            }
-        } catch (error) {
-            console.error('Error fetching client list:', error);
-        }
+    const handleExport = () => {
+        handleExportCommon({
+            rows: userData,
+            buildRequest: buildExportRequest,
+            postData,
+            setLoading,
+            setLoadingText: (text) => setLoading(!!text),
+            setErrorDialog: (config) => setErrorDialog({
+                show: config.open,
+                message: config.message,
+                type: config.type
+            })
+        });
     };
 
     const fetchUserList = async () => {
         try {
-            // const payload = {
-            //     ActiveUserDetails: getSessionUserDetails()
-            // };
-
             const payload = CF_activeUserdetails();
 
             console.log("Fetch User List Payload:", payload);
@@ -1699,11 +1711,10 @@ const AuditTrailHistory = () => {
         }
     };
 
-
     const fetchModuleList = async () => {
         try {
             const payload = {
-                ActiveUserDetails: getSessionUserDetails()
+                ActiveUserDetails: CF_activeUserdetails()
             };
 
             console.log("Fetch Module List Payload:", payload);
@@ -1757,20 +1768,12 @@ const AuditTrailHistory = () => {
         setLoading(true);
 
         try {
-            // const formatDate = (dateStr) => {
-            //     const [year, month, day] = dateStr.split("-");
-            //     return `${day}/${month}/${year}`;
-            // };
-
             const formatDate = (date) => {
                 const d = new Date(date);
                 return `${String(d.getDate()).padStart(2, "0")}/${String(
                     d.getMonth() + 1
                 ).padStart(2, "0")}/${d.getFullYear()}`;
             };
-
-
-
 
             // Get ActiveUserDetails + ApplicationCode (COMMON FUNCTION)
             const commonPayload = CF_activeUserdetails();
@@ -1818,16 +1821,17 @@ const AuditTrailHistory = () => {
     };
 
     const handleFilter = async () => {
+        console.log("=== FILTER DEBUG ===");
+        console.log("Selected User:", selectedUser);
+        console.log("Selected Module:", selectedModule);
+        console.log("Selected Audit Type:", selectedAuditType);
+        console.log("From Date:", fromDate);
+        console.log("To Date:", toDate);
+
         setLoading(true);
         setSelectedArchiveName("");
 
         try {
-            // const formatDate = (date) => {
-            //     const d = new Date(date);
-            //     return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")
-            //         }/${d.getFullYear()}`;
-            // };
-
             const formatDate = (date) => {
                 const d = new Date(date);
                 return `${String(d.getDate()).padStart(2, "0")}/${String(
@@ -1835,11 +1839,9 @@ const AuditTrailHistory = () => {
                 ).padStart(2, "0")}/${d.getFullYear()}`;
             };
 
-
-            // 🔹 COMMON ActiveUserDetails
             const commonPayload = CF_activeUserdetails();
 
-            let sUserIDFromUI = "-1"; // DEFAULT → All users
+            let sUserIDFromUI = "-1";
 
             if (selectedUser !== "All") {
                 const user = userList.find(
@@ -1850,6 +1852,7 @@ const AuditTrailHistory = () => {
                     sUserIDFromUI = String(user.L02UserID).trim();
                 }
             }
+
             const payload = {
                 sUserIDFromUI,
                 sModulename: selectedModule || "All",
@@ -1859,12 +1862,15 @@ const AuditTrailHistory = () => {
                 ...commonPayload
             };
 
-            console.log("=== CFRTransactionFilter PAYLOAD ===", payload);
+            console.log("Filter Request Payload:", payload);
 
             const result = await postData(
                 "AuditTrail/CFRTransactionFilter",
                 payload
             );
+
+            console.log("Filter Response:", result);
+            console.log("Number of filtered records:", result?.length);
 
             if (Array.isArray(result) && result.length > 0) {
                 setUserData(result.map((item, i) =>
@@ -1883,22 +1889,6 @@ const AuditTrailHistory = () => {
             setLoading(false);
         }
     };
-
-
-    const logViewAuditTrail = async () => {
-        try {
-            const payload = {
-                ActiveUserDetails: getSessionUserDetails()
-            };
-
-            const result = await postData('AuditTrail/AuditTrailHistoryViewAudit', payload);
-            console.log("Raw audit data count:", result?.length);
-
-        } catch (error) {
-            console.error('Error logging view audit trail:', error);
-        }
-    };
-
 
     if (loading) {
         return (
@@ -2081,23 +2071,13 @@ const AuditTrailHistory = () => {
                 <Errordialog
                     message={errorDialog.message}
                     type={errorDialog.type}
-                    onClose={() => setErrorDialog({ show: false, message: "", type: "" })}
-                />
-            )}
-
-            {showCreateArchiveDialog && (
-                <Errordialog
-                    message="Do you want to create archive?"
-                    type="confirmation"
-                    onClose={handleCreateArchiveConfirm}
-                />
-            )}
-
-            {showOpenArchiveDialog && (
-                <Errordialog
-                    message="Do you want to open archive?"
-                    type="confirmation"
-                    onClose={handleOpenArchiveConfirm}
+                    onClose={() => {
+                        if (errorDialog.onConfirm) {
+                            errorDialog.onConfirm();
+                        } else {
+                            setErrorDialog({ show: false, message: "", type: "" });
+                        }
+                    }}
                 />
             )}
 
@@ -2129,10 +2109,21 @@ const AuditTrailHistory = () => {
                     onArchiveSelect={handleArchiveSelect}
                 />
             )}
+
+
+            {doPrint && (
+                <PrintTable
+                    columns={showReviewHistory ? reviewHistoryColumns : userColumns}
+                    rows={userData}
+                    title="Audit Trail History"
+                    subtitle={showReviewHistory ? "Review History Report" : "Audit Trail History Report"}
+                    printRequest={buildPrintRequest()}
+                    onDone={() => setDoPrint(false)}
+                />
+            )}
         </div>
     )
 }
-
 export default AuditTrailHistory
 
 
