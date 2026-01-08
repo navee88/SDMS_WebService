@@ -157,31 +157,29 @@ const Client = () => {
   }, [postData, buildClientRequest]);
 
   console.log("Client Rows:", rows);
+  const loadUnmappedInstruments = useCallback(async () => {
+  try {
+    const response = await postData(
+      "basemaster/getClientUnmappingInstrumentMaster",
+      buildClientRequest()
+    );
+
+    if (Array.isArray(response)) {
+      setUnmappedInstruments(
+        response.map((inst) => ({
+          sInstrumentID: inst.sInstrumentID.trim(),
+          sInstrumentName: inst.sInstrumentName.trim(),
+        }))
+      );
+    }
+  } catch (err) {
+    console.error("Error fetching unmapped instruments:", err);
+  }
+}, [postData, buildClientRequest]);
+
   useEffect(() => {
-    const fetchUnmappedInstruments = async () => {
-      try {
-        const response = await postData(
-          "basemaster/getClientUnmappingInstrumentMaster",
-          buildClientRequest()
-        );
-
-        if (Array.isArray(response)) {
-          setUnmappedInstruments(
-            response.map((inst) => ({
-              sInstrumentID: inst.sInstrumentID.trim(), // I3
-              sInstrumentName: inst.sInstrumentName.trim(), // IN002
-            }))
-          );
-
-          console.log("Unmapped Instruments:", unmappedInstruments); // Debug log
-        }
-      } catch (err) {
-        console.error("Error fetching unmapped instruments:", err);
-      }
-    };
-
-    fetchUnmappedInstruments();
-  }, []);
+  loadUnmappedInstruments();
+}, [loadUnmappedInstruments]);
 
   const buildInstrumentUnMappingByClient = (selectedInstruments = []) => {
     return selectedInstruments.map((inst) => ({
@@ -304,6 +302,7 @@ if (response?.Rtn === "Success") {
   } else {
     // ADD case → fallback to reload if needed
     await loadClientGridData();
+     setSelectedRowId(null);
   }
 }
 
@@ -637,6 +636,8 @@ const handleExport = () => {
           initialData={editingRow}
           allInstruments={editingRow?.allInstruments || unmappedInstruments} // 🔥 PASS HERE
           onClose={() => setShowModal(false)}
+          onReloadUnmapped={loadUnmappedInstruments}  
+
           onSubmit={(clientData) => {
             setPendingClientData({
               ...clientData,

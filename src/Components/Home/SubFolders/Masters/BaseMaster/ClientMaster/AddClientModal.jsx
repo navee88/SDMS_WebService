@@ -13,6 +13,7 @@ const AddClientModal = ({
   allInstruments = [],
   onClose,
   onSubmit,
+  onReloadUnmapped,
 }) => {
   const nodeRef = useRef(null);
 
@@ -21,6 +22,8 @@ const AddClientModal = ({
   const { t } = useTranslation();
 
   const { postData } = useAxios();
+
+
 
   const getSessionValue = (key) => {
     const value = sessionStorage.getItem(key);
@@ -70,9 +73,10 @@ const AddClientModal = ({
 
   const [clientTypes, setClientTypes] = useState([]);
   const [instrumentSearch, setInstrumentSearch] = useState("");
-  const [selectedInstruments, setSelectedInstruments] = useState(
-    initialData?.selectedInstruments || []
-  );
+   const [selectedInstruments, setSelectedInstruments] = useState(
+  initialData?.selectedInstruments || []
+);
+const [unmappedInstruments, setUnmappedInstruments] = useState([]);
 
   const isAddMode = !initialData;
 
@@ -142,6 +146,25 @@ const AddClientModal = ({
     setSubmitted(false);
     onClose();
   };
+useEffect(() => {
+  if (initialData) {
+    const unmapped = allInstruments
+      .filter(
+        (inst) =>
+          !initialData.selectedInstruments?.some(
+            (sel) => sel.sInstrumentID === inst.sInstrumentID
+          )
+      )
+      .map((i) => ({
+        sInstrumentID: i.sInstrumentID.trim(),
+        sInstrumentName: i.sInstrumentName.split("(")[0].trim(),
+      }));
+
+    setUnmappedInstruments(unmapped);
+  }
+}, [initialData, allInstruments]);
+
+
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 ">
@@ -341,10 +364,15 @@ const AddClientModal = ({
         <AddInstrumentModal
           isOpen={showInstrumentModal}
           onClose={() => setShowInstrumentModal(false)}
-          onSave={(newInstrument) => {
-            setSelectedInstruments((prev) => [...prev, newInstrument]);
-            setShowInstrumentModal(false);
-          }}
+          onSave={async () => {
+    setShowInstrumentModal(false);
+
+    // 🔥 RELOAD FROM API (source of truth)
+    if (onReloadUnmapped) {
+      await onReloadUnmapped();
+    }
+  }}
+
         />
       )}
     </div>
