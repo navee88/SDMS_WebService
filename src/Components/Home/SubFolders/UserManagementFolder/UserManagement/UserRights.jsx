@@ -1059,7 +1059,7 @@ const UserRights = () => {
     }
 
     return (
-        <div className="flex flex-col font-roboto bg-white w-full h-screen overflow-hidden">
+        <div className="flex flex-col font-roboto bg-white w-full h-[80vh] overflow-hidden">
             {infoDialog.open && (
                 <Errordialog
                     message={infoDialog.message}
@@ -1169,7 +1169,7 @@ const UserRights = () => {
                                     selectable={false}
                                     hidePagination={true}
                                     enableSelection={false}
-                                    height="80%"
+                                    height="100%"
                                     className="overflow-visible relative z-0"
                                     wrapperClassName="overflow-visible relative z-0"
                                     containerClassName="overflow-visible relative z-0"

@@ -39,8 +39,7 @@ const MergeFileCountRow = ({ mergeCount, currentCount, onMergeChange, disabled, 
               }
             }}
             disabled={disabled}
-            className="w-16 h-7 px-2 text-xs text-center border border-gray-300 rounded bg-white hover:border-gray-400 text-[#405F7D]"
-            style={{ fontFamily: 'Verdana, Arial, sans-serif' }}
+            className="w-16 h-7 px-2 text-xs text-center font-['verdana'] border border-gray-300 rounded bg-white hover:border-gray-400 text-[#405F7D]"
           />
         </div>
         
@@ -299,7 +298,7 @@ const TagGrid = ({ tags, onTagValueClick, t, showValidationError, onTagEditReque
                 <div 
                   key={`tag-${idx}-${tag.tagID}`}
                   onClick={() => handleRowClick(tag, idx)}
-                  className={`grid grid-cols-2 border-b border-gray-100 last:border-b-0 group min-h-[5px]
+                  className={`grid grid-cols-2 border-b border-[#e7e6e6] last:border-b-1 min-h-[2px]
                     ${isSelected ? 'bg-[#eef2f9]' : 'bg-white'}
                     ${tag.editable ? 'cursor-pointer hover:bg-[#eef2f9]' : 'cursor-default'}
                   `}
@@ -325,7 +324,7 @@ const TagGrid = ({ tags, onTagValueClick, t, showValidationError, onTagEditReque
                     {tag.editable && (
                       <button
                         onClick={(e) => handleEditClick(tag, idx, e)}
-                        className="ml-1 opacity-100 hover:opacity-80 transition-opacity"
+                        className="gridcellpopuppenciltool ilat_tagvaluetooltip"
                         title="Edit tag value"
                         disabled={isThisTagLoading}
                       >

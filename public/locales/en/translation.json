@@ -251,7 +251,11 @@
     "minspecial": "Minimum number of Special characters",
     "columnName":"Column Name",
     "oldValue":"Old Value",
-    "newValue":"New Value"
+    "newValue":"New Value",
+    "fileType":"File Type",
+    "captureDate":"Capture Date",
+    "captureDateUTC":"Capture Date (UTC Timezone)" 
+ 
     
   },
   "statuses": {
@@ -601,7 +605,9 @@
     "winmethod":"WIN_METHOD",
     "webmethod":"WEB_METHOD",
     "automatic":"Automatic",
-    "manual":"Manual"
+    "manual":"Manual",
+    "selectInterfacerMessage":"Enabled the InterFACER Mapped"
+ 
    
   },
   "usermanagement": {
@@ -698,12 +704,9 @@
     "userrightssavefailed": "User Rights Save Failed!",
     "userrightssavesuccess": "User Rights Saved Successfully",
     "enablerightsinpreference": "Enable the Rights in Preference Settings",
-    "adminigroupnamecannotbeeditedordeactivate": "Administrator cannot be Edited or Deactivated",
     "adminusercantreset": "Administrator or System User cannot be Reset",
-    "groupdeactivesocannotedit": "Selected User Group is Deactivated, So it cannot be Edited.",
     "schedulerrightssavedsuccessfully": "Scheduler Rights Saved Successfully",
     "importusersuccessmessage": "Users Imported Successfully. Ensure whether all the Users appears else check the Data Format",
-    "importuserfailedmessage": "Imported Failed!",
     "importuserpartialmessage": "Users imported partially.",
     "ftpusermappedsuccessfully": "User Mapped Successfully",
     "minimumpasswordlengthshouldnotbegreaterthanmaximumpasswordlength": "Minimum Password Length should not be greater than Maximum Password Length",
@@ -764,7 +767,35 @@
     "policysavedsuccess": "Password policy saved successfully",
     "totalComplexLessThanMin":"Complex password policy should not be less than Minimum password length",
     "totalComplexExceedsMax":"Total complex requirements exceed maximum password length",
-    "complexRequirementsNegative":"Complex requirements cannot be negative"
+    "complexRequirementsNegative":"Complex requirements cannot be negative",
+     "isrequired": "is required",
+    "groupnamealreadyexists": "Group name already exists",
+    "failedtofetchusergroups": "Failed to fetch user groups",
+    "actdeactfailed": "Failed to activate/deactivate user group",
+    "updatefailed": "Failed to update user group",
+    "groupupdatesuccessfully": "User group updated successfully",
+    "groupaddedsuccessfully": "User group added successfully",
+    "saving": "Saving...",
+    "confirmactivedeactivategroup": "Do you want to Activate/ Deactivate the User Group?",
+    "groupdeactivatedsuccessfully": "User group deactivated successfully",
+    "groupactivatedsuccessfully": "User group activated successfully",
+    "sessionexpired": "Session expired. Please login again.",
+    "adminigroupnamecannotbeeditedordeactivate": "Administrator group cannot be edited or deactivated",
+    "groupdeactivesocannotedit": "Cannot edit a deactivated user group",
+    "importuserfailedmessage": "Import failed",
+     "messages": "Messages",
+    "nomessage": "No Message",
+    "to": "To",
+    "message": "Message",
+    "clear": "Clear",
+    "send": "Send",
+    "sending": "Sending...",
+    "messagesent": "Message sent successfully",
+    "messagesentfailed": "Failed to send message",
+    "chathistorydeletesuccess": "Chat history deleted successfully",
+    "clearchatfailed": "Failed to clear chat history",
+    "chatconfirmation": "Are you sure you want to clear chat history?",
+    "youhavenohistoryhere": "You have no history here"
         
   }
 }
