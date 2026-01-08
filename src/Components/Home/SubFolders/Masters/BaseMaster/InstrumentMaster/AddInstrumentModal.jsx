@@ -8,6 +8,7 @@ import CommunicationSettingsModal from "./CommunicationSettingsModal";
 import useAxios from "../../../../../../Services/servicecall";
 import { CF_decrypt } from "../../../../../Common/encryptiondecryption";
 import AuditTrail from "../../../../../Layout/Common/AuditTrail"; 
+import Errordialog from "../../../../../Layout/Common/Errordialog";
 
 const AddInstrumentModal = ({
   isOpen,
@@ -25,14 +26,20 @@ const AddInstrumentModal = ({
   const [interfacerOptions, setInterfacerOptions] = useState([]);
   const [showAuditTrail, setShowAuditTrail] = useState(false);
 const [pendingForm, setPendingForm] = useState(null);
+const [showInterfacerWarning, setShowInterfacerWarning] = useState(false);
+const [originalInterfacerMapped, setOriginalInterfacerMapped] = useState(false);
+
+
+
 
   const isAddMode = mode === "add";
+  const isEditMode = mode === "edit";
   const hasInsufficientLicense = isAddMode && availableLicense < 1;
 
   const PARSER_ORDER_MAP = {
     0: { label: t("masters.none"), value: t("masters.none")},
-    1: { label: t("masters.winmethod"), value: "WIN_METHOD" },
-    2: { label: t("masters.webmethod"), value: "WEB_METHOD" },
+    1: { label: t("masters.winmethod"), value: t("masters.winmethod") },
+    2: { label: t("masters.webmethod"), value: t("masters.webmethod") },
   };
   const LOCK_TYPE_OPTIONS = [
     { label: t("masters.automatic"), value: "A" },
@@ -56,6 +63,13 @@ const [pendingForm, setPendingForm] = useState(null);
   };
 
   const [form, setForm] = useState(initialForm);
+const showParserInterfacerMsg =
+  submitted &&
+  (form.parserType === "WIN_METHOD" ||
+    form.parserType === "WEB_METHOD") &&
+  !form.interfacerMapped;
+
+
 
 const [commData, setCommData] = useState(null);
 
@@ -110,8 +124,6 @@ const handleCommSubmit = (data) => {
           "basemaster/getMapInstrumentBasedDataFillValues",
           buildDropdownRequest()
         );
-        console.log("Dropdown request", buildDropdownRequest());
-        console.log("Dropdown data", res);
 
         // ✅ Available license
         setAvailableLicense(res.AvailableLicense || 0);
@@ -174,41 +186,153 @@ const handleCommSubmit = (data) => {
   }, [isOpen]);
 
   // ✅ preload data for EDIT
-  useEffect(() => {
-    if (!isOpen) return;
+ useEffect(() => {
+  if (!isOpen || mode !== "edit" || !initialData?.Instrument) return;
 
-    if (mode === "edit" && initialData) {
-      setForm({
-        instrumentCode: initialData.instrumentcode || "",
-        instrumentAlias: initialData.instrumentAlias || "",
-        instrumentModel: initialData.instrumentModel || "",
-        instrumentMake: initialData.instrumentMake || "",
-        lockType: initialData.lockType || "A",
-        parserType: initialData.parserType || "NONE",
-        interfacerMapped: false,
-        interfacerInstrument: "",
-        active: initialData.status === "Active",
-      });
-    }
+  const inst = initialData.Instrument;
+  const isMapped = inst.iInterfaceStatus === 1;
 
-    if (mode === "add") {
-      setForm(initialForm);
-    }
+  setForm({
+    instrumentCode: inst.sInstrumentName || "",
+    instrumentAlias: inst.sInstrumentAliasName || "",
+    instrumentModel: inst.sInstrumentModel || "",
+    instrumentMake: inst.sInstrumentMake || "",
+    lockType: inst.sLockType || "A",
+    parserType:
+      inst.iL11ParserType === 1
+        ? "WIN_METHOD"
+        : inst.iL11ParserType === 2
+        ? "WEB_METHOD"
+        : "NONE",
+    interfacerMapped: isMapped,
+    interfacerInstrument: initialData.iInterfacerInstID ?? -2,
+    active: Number(inst.iInstrumentStatus) === 1,
+  });
 
-    setSubmitted(false); // reset errors every time
-  }, [isOpen, mode, initialData]);
+  // 🔥 STORE ORIGINAL STATE
+  setOriginalInterfacerMapped(isMapped);
+
+  setSubmitted(false);
+}, [isOpen, mode, initialData]);
+
+
 
 const handleSubmit = () => {
   setSubmitted(true);
 
   if (!isSubmitValid()) return;
 
-  // store form temporarily
-  setPendingForm(form);
+  const isParserNeedsInterfacer =
+    (form.parserType === "WIN_METHOD" ||
+      form.parserType === "WEB_METHOD") &&
+    !form.interfacerMapped;
 
-  // open audit trail
+  // 🚫 BLOCK audit trail popup
+  if (isParserNeedsInterfacer) {
+    return;
+  }
+
+  setPendingForm(form);
   setShowAuditTrail(true);
 };
+
+const buildInsertInstrumentPayload = (
+  finalPayload,
+  auditPayload
+) => {
+  return {
+    Instrument: {
+      sInstrumentName: finalPayload.instrumentCode,
+      sInstrumentAliasName: finalPayload.instrumentAlias,
+      sInstrumentModel: finalPayload.instrumentModel || "",
+      sInstrumentMake: finalPayload.instrumentMake || "",
+      sLockType: finalPayload.lockType,
+
+      // 🔥 MUST BE NUMBER
+      iL11ParserType:
+        finalPayload.parserType === "WIN_METHOD"
+          ? 1
+          : finalPayload.parserType === "WEB_METHOD"
+          ? 2
+          : 0,
+
+      // 🔥 MUST BE NUMBER
+      iInterfaceStatus: finalPayload.interfacerMapped ? 1 : 0,
+
+      // 🔥 MUST BE NUMBER
+      iInstrumentStatus: finalPayload.active ? 1 : 0,
+
+      sInstrumentID: "",
+    },
+
+    // 🔥 REQUIRED
+    sActionType: "Insert_Normal_Instrument",
+
+    ActiveUserDetails: {
+      sUserDomainName: CF_decrypt(sessionStorage.getItem("sDomainName")),
+      sSessionID: CF_decrypt(sessionStorage.getItem("sSessionID")),
+      sUserID: CF_decrypt(sessionStorage.getItem("sUserID")),
+      sTimeZoneID:
+        CF_decrypt(sessionStorage.getItem("sTimeZoneID")) + "<~>true",
+      sApplicationName: "SDMS",
+      sdbtype: CF_decrypt(sessionStorage.getItem("sdbtype")),
+      sUsername: CF_decrypt(sessionStorage.getItem("sUsername")),
+      sSiteCode: CF_decrypt(sessionStorage.getItem("sSiteCode")),
+      sCategories: CF_decrypt(sessionStorage.getItem("sCategories")),
+      sUserGroupID: CF_decrypt(sessionStorage.getItem("sUserGroupID")),
+      sUserStatus: "",
+      sTenantID: "",
+    },
+
+    ApplicationCode: "SDMS",
+  };
+};
+const buildEditInstrumentPayload = (
+  finalPayload,
+  auditPayload,
+  initialData
+) => {
+  return {
+    Instrument: {
+      sInstrumentID: initialData?.Instrument?.sInstrumentID,
+      sInstrumentName: finalPayload.instrumentCode,
+      sInstrumentAliasName: finalPayload.instrumentAlias,
+      sInstrumentModel: finalPayload.instrumentModel || "",
+      sInstrumentMake: finalPayload.instrumentMake || "",
+      sLockType: finalPayload.lockType,
+
+      iL11ParserType:
+        finalPayload.parserType === "WIN_METHOD"
+          ? 1
+          : finalPayload.parserType === "WEB_METHOD"
+          ? 2
+          : 0,
+
+      iInterfaceStatus: finalPayload.interfacerMapped ? 1 : 0,
+      iInstrumentStatus: finalPayload.active ? 1 : 0,
+    },
+
+    AuditTrailValues: auditPayload.AuditTrailValues,
+    ActiveUserDetails: {
+      sUserDomainName: CF_decrypt(sessionStorage.getItem("sDomainName")),
+      sSessionID: CF_decrypt(sessionStorage.getItem("sSessionID")),
+      sUserID: CF_decrypt(sessionStorage.getItem("sUserID")),
+      sTimeZoneID:
+        CF_decrypt(sessionStorage.getItem("sTimeZoneID")) + "<~>true",
+      sApplicationName: "SDMS",
+      sdbtype: CF_decrypt(sessionStorage.getItem("sdbtype")),
+      sUsername: CF_decrypt(sessionStorage.getItem("sUsername")),
+      sSiteCode: CF_decrypt(sessionStorage.getItem("sSiteCode")),
+      sCategories: CF_decrypt(sessionStorage.getItem("sCategories")),
+      sUserGroupID: CF_decrypt(sessionStorage.getItem("sUserGroupID")),
+      sUserStatus: "",
+      sTenantID: "",
+    },
+
+    ApplicationCode: "SDMS",
+  };
+};
+
 
 const handleAuditAuthorized = async (auditPayload) => {
   try {
@@ -217,8 +341,30 @@ const handleAuditAuthorized = async (auditPayload) => {
       CommunicationSettings: commData, // ✅ comm data
       AuditTrailValues: auditPayload.AuditTrailValues,
     };
+    const response = isEditMode
+  ? await postData(
+      "basemaster/editInstrument",
+      buildEditInstrumentPayload(finalPayload, auditPayload, initialData)
+    )
+  : await postData(
+      "basemaster/insertInstrument",
+      buildInsertInstrumentPayload(finalPayload, auditPayload)
+    );
+console.log("Insert/Edit Instrument request",buildEditInstrumentPayload(finalPayload, auditPayload, initialData) );
 
-    await onSave(finalPayload);
+
+
+
+if (response?.Rtn !== "Success") {
+  throw new Error("Insert Instrument failed");
+}
+
+
+await onSave({
+  sInstrumentID: finalPayload.instrumentCode, // fallback
+  sInstrumentName: finalPayload.instrumentAlias,
+});
+
 
     // cleanup
     setShowCommSettings(false);
@@ -232,6 +378,16 @@ const handleAuditAuthorized = async (auditPayload) => {
     console.error("Save failed", err);
   }
 };
+const confirmUnmapInterfacer = () => {
+  setForm((prev) => ({
+    ...prev,
+    interfacerMapped: false,
+    interfacerInstrument: "",
+  }));
+
+  setShowInterfacerWarning(false);
+};
+
 
 
 
@@ -251,6 +407,7 @@ const handleAuditAuthorized = async (auditPayload) => {
   };
 
   if (!isOpen) return null;
+  
 
   return (
     <>
@@ -422,53 +579,78 @@ ${
                 </div>
 
                 <div>
-                  <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                    {t("masters.parserType")}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <AnimatedDropdown
-                    name="parserType"
-                    value={form.parserType}
-                    options={parserOptions}
-                    displayKey="label"
-                    valueKey="value"
-                    onChange={(e) =>
-                      setForm({ ...form, parserType: e.target.value })
-                    }
-                    required
-                    showError={submitted}
-                  />
-                </div>
+  <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
+    {t("masters.parserType")}
+    <span className="text-red-500">*</span>
+  </label>
+
+  <AnimatedDropdown
+    name="parserType"
+    value={form.parserType}
+    options={parserOptions}
+    displayKey="label"
+    valueKey="value"
+    onChange={(e) =>
+      setForm({ ...form, parserType: e.target.value })
+    }
+    required
+    showError={submitted}
+  />
+
+  {showParserInterfacerMsg && (
+  <div className=" text-[11px] text-red-600 font-roboto">
+    {t("masters.selectInterfacerMessage") ||
+      "Enabled the InterFACER Mapped."}
+  </div>
+)}
+
+</div>
+
 
                 {/* Checkboxes */}
                 <div className="flex gap-8">
                   <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
                     {t("masters.interfacerMapped")}
                     <input
-                      type="checkbox"
-                      checked={form.interfacerMapped}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          interfacerMapped: e.target.checked,
-                          interfacerInstrument: e.target.checked ? -2 : "",
-                        })
-                      }
-                    />
+  type="checkbox"
+  checked={form.interfacerMapped}
+  onChange={(e) => {
+    const checked = e.target.checked;
+
+    // ✅ EDIT MODE + was originally checked + user tries to uncheck
+    if (
+      isEditMode &&
+      originalInterfacerMapped &&
+      !checked
+    ) {
+      setShowInterfacerWarning(true);
+      return;
+    }
+
+    // normal behavior
+    setForm({
+      ...form,
+      interfacerMapped: checked,
+      interfacerInstrument: checked ? -2 : "",
+    });
+  }}
+/>
+
                   </label>
 
                   <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
   {t("statuses.active")}
   <input
-    type="checkbox"
-    checked={form.active}
-    onChange={(e) =>
-      setForm({
-        ...form,
-        active: e.target.checked,  // ✅ fix here
-      })
-    }
-  />
+  type="checkbox"
+  checked={form.active}   // 👈 THIS is mandatory
+  onChange={(e) =>
+    setForm((prev) => ({
+      ...prev,
+      active: e.target.checked,
+    }))
+  }
+/>
+
 </label>
 
                 </div>
@@ -559,6 +741,14 @@ ${
   onAuthorized={handleAuditAuthorized}
   actionLabel={mode === "edit" ? "Update" : "Submit"}
 />
+{showInterfacerWarning && (
+  <Errordialog
+    type="warning"
+    message="Changes in interfacer instrument , AgaramInterfacer Services will restart. Do you want to continue?"
+    onClose={confirmUnmapInterfacer}
+  />
+)}
+
 
     </>
   );
