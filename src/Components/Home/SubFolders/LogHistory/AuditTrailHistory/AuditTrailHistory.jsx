@@ -1208,55 +1208,6 @@ const AuditTrailHistory = () => {
         });
     };
 
-    // const handleArchiveAuditLogAuthorized = async (auditData) => {
-    //     console.log('=== CREATE ARCHIVE DEBUG ===');
-    //     console.log('Audit Data:', auditData);
-
-    //     try {
-    //         const payload = {
-    //             sUserIDFromUI: selectedUser || "All",
-    //             auditTrailType: selectedAuditType || "All",
-    //             sModuleName: selectedModule || "All",
-    //             AuditTrailValues: auditData.AuditTrailValues,
-    //             ...CF_activeUserdetails()
-    //         };
-
-    //         console.log("Create Archive Request Payload:", payload);
-    //         const result = await postData('AuditTrail/createarchive', payload);
-    //         console.log("Create Archive Response:", result);
-
-    //         if (result.AuditTrailLogin === false) {
-    //             setPasswordError(true);
-    //             return;
-    //         }
-
-    //         if (result.str === "Success") {
-    //             setShowCreateAuditLog(false);
-    //             setPasswordError(false);
-    //             setSelectedArchiveName("");
-
-    //             console.log("Reloading grid after archive creation...");
-
-    //             // ← SIMPLE FIX: Just call handleFilter to reload
-    //             await handleFilter();
-
-    //         } else {
-    //             setErrorDialog({
-    //                 show: true,
-    //                 message: result.str || 'Failed to create archive',
-    //                 type: "error"
-    //             });
-    //         }
-    //     } catch (error) {
-    //         console.error('Error creating archive:', error);
-    //         setErrorDialog({
-    //             show: true,
-    //             message: 'Failed to create archive. Please try again.',
-    //             type: "error"
-    //         });
-    //     }
-    // };
-
     const handleArchiveAuditLogAuthorized = async (auditData) => {
         console.log('=== CREATE ARCHIVE DEBUG ===');
         console.log('Audit Data:', auditData);
@@ -1424,7 +1375,7 @@ const AuditTrailHistory = () => {
 
                 console.log("Mapped Archive Grid Data:", mappedData);
 
-                // ← FORCE UPDATE THE GRID
+                // FORCE UPDATE THE GRID
                 setUserData([...mappedData]);
                 setShowReviewHistory(false);
                 setSelectedRows([]);
