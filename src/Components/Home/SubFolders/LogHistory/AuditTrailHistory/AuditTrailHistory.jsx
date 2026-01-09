@@ -85,8 +85,10 @@ const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => 
             onClose={onClose}
             title="Open Archive"
             content={
-                <div className="p-4">
-                    <div className="mb-4" style={{ height: '400px' }}>
+                // <div className="p-4">
+                <div className="p-4 flex flex-col" style={{ maxHeight: '600px' }}>
+                    {/* <div className="mb-4" style={{ height: '400px' }}> */}
+                    <div className="mb-4 overflow-auto flex-1" style={{ minHeight: '400px', maxHeight: '500px' }}>
                         <GridLayout
                             columns={archiveColumns}
                             data={archiveList}
@@ -94,7 +96,8 @@ const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => 
                             selectedRows={selectedArchiveId ? [selectedArchiveId] : []}
                         />
                     </div>
-                    <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200">
+                    {/* <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200"> */}
+                    <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200 bg-white sticky bottom-0">
                         <button
                             onClick={handleOpen}
                             className="flex items-center gap-2 px-4 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-sm font-semibold rounded transition-colors"
@@ -594,8 +597,6 @@ const AuditTrailHistory = () => {
     const [showReviewHistory, setShowReviewHistory] = useState(false);
     const [showAuditTrail, setShowAuditTrail] = useState(false);
     const [errorDialog, setErrorDialog] = useState({ show: false, message: "", type: "" });
-    // const [showCreateArchiveDialog, setShowCreateArchiveDialog] = useState(false);
-    // const [showOpenArchiveDialog, setShowOpenArchiveDialog] = useState(false);
     const [showOpenArchivePopup, setShowOpenArchivePopup] = useState(false);
     const [selectedArchiveName, setSelectedArchiveName] = useState("");
     const [showCreateAuditLog, setShowCreateAuditLog] = useState(false);

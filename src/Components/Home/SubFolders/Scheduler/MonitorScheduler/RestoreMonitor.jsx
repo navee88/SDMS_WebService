@@ -14,6 +14,10 @@ import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import Errordialog from '../../../../Layout/Common/Errordialog';
+import { CF_encrypt, CF_decrypt } from '../../../../../Components/Common/encryptiondecryption';
+import { CF_sessionGet } from "../../../../Common/CF_session";
+import { handleExportCommon } from '../../../../Layout/Common/exportService';
+import useAxios from '../../../../../Services/servicecall';
 
 const ACTION_ICONS = {
     "Open": FolderOpen,
@@ -254,122 +258,26 @@ const getCurrentDate = () => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    // return `${year}-${month}-${day}`;
+    return `${day}/${month}/${year}`;
 };
 
 
-const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) => {
+const UsersPage = ({ filters, exportTrigger, onDataCountChange }) => {
     const [userData, setUserData] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
-
-    const mockData = [
-        {
-            id: 1,
-            clientName: "DESKTOP-CU9J5T2",
-            fileName: "sample1",
-            taskStatus: "Completed"
-        },
-        {
-            id: 2,
-            clientName: "DESKTOP-CU9J5T2",
-            fileName: "sample2",
-            taskStatus: "Completed"
-        },
-        {
-            id: 3,
-            clientName: "DESKTOP-CU9J5T2",
-            fileName: "sample3",
-            taskStatus: "Completed"
-        },
-        {
-            id: 4,
-            clientName: "DESKTOP-CU9J5T2",
-            fileName: "sample4",
-            taskStatus: "Completed"
-        },
-        {
-            id: 5,
-            clientName: "DESKTOP-CU9J5T2",
-            fileName: "sample5",
-            taskStatus: "Completed"
-        },
-        {
-            id: 6,
-            clientName: "DESKTOP-CU9J5T2",
-            fileName: "sample6",
-            taskStatus: "Completed"
-        },
-        {
-            id: 7,
-            clientName: "DESKTOP-CU9J5T2",
-            fileName: "sample7",
-            taskStatus: "Completed"
-        }
-    ];
-
-
-
-    //   useEffect(() => {
-    //     const fetchUsers = async () => {
-    //       try {
-    //         setLoading(true);
-    //         const response = await axios.get('http://localhost:5173/users');
-    //         setUserData(response.data);
-    //         setLoading(false);
-    //       } catch (err) {
-    //         console.error("Error fetching data:", err);
-    //         setError(err.message || "Something went wrong");
-    //         setLoading(false);
-    //       }
-    //     };
-
-    //     fetchUsers();
-    //   }, []);
-
-    // useEffect(() => {
-    //     setLoading(true);
-    //     setTimeout(() => {
-    //         setUserData(mockData);
-    //         setLoading(false);
-    //     }, 300);
-
-    // }, []);
-
-
-    const filteredData = useMemo(() => {
-        let data = mockData;
-
-        if (filters?.fileName) {
-            data = data.filter(item =>
-                item.fileName.toLowerCase().includes(filters.fileName.toLowerCase())
-            );
-        }
-
-        if (filters?.clientName) {
-            data = data.filter(item =>
-                item.clientName === filters.clientName
-            );
-        }
-
-        return data;
-    }, [filters, refreshKey]);
+    const { currentLanguage, changeLanguage, languages } = useLanguage();
 
     useEffect(() => {
-        setLoading(true);
-
-        const timer = setTimeout(() => {
-            setUserData(filteredData);
+        if (filters?.data) {
+            setUserData(filters.data);
             if (onDataCountChange) {
-                onDataCountChange(filteredData.length);
+                onDataCountChange(filters.data.length);
             }
-            setLoading(false);
-        }, 300);
-
-        return () => clearTimeout(timer);
-    }, [filteredData, onDataCountChange]);
+        }
+    }, [filters, onDataCountChange]);
 
     const userColumns = useMemo(() => [
         {
@@ -393,7 +301,7 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
             enableSearch: true,
             render: (row) => <span className="text-gray-700">{row.taskStatus}</span>
         }
-    ], []);
+    ], [t]);
 
     useEffect(() => {
         if (exportTrigger === 0) return;
@@ -463,15 +371,6 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
     );
 
 
-    if (loading) {
-        return <div className="p-8 text-center text-gray-500">Loading...</div>;
-    }
-
-    if (error) {
-        return <div className="p-8 text-center text-red-500"></div>;
-    }
-
-
     return (
         <div className="flex flex-col mt-2">
             <GridLayout
@@ -483,27 +382,61 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
     );
 };
 
+function CF_activeUserdetails() {
+    const ActiveUserDetails = {
+        sUserDomainName: CF_sessionGet("sDomainName", 1) || "SDMS",
+        sSessionID: CF_sessionGet("sSessionID", 1) || "",
+        sUserID: CF_sessionGet("sUserID", 1) || "",
+        sTimeZoneID:
+            (CF_sessionGet("sTimeZoneID", 1) || "Asia/Kolkata") +
+            "<~>" +
+            (CF_sessionGet("UTCStatus", 1) || "true"),
+        sApplicationName: "SDMS",
+        sdbtype: CF_sessionGet("sdbtype", 1) || "POSTGRESQL",
+        sUsername: CF_sessionGet("sUsername", 1) || "",
+        sSiteCode: CF_sessionGet("sSiteCode", 1) || "CH        ",
+        sCategories: CF_sessionGet("sCategories", 1) || "DB",
+        sUserGroupID: CF_sessionGet("sUserGroupID", 1) || "G1        ",
+        sUserStatus: "",
+        sTenantID: CF_sessionGet("sTenantID", 1) || ""
+    };
 
+    return {
+        ActiveUserDetails,
+        ApplicationCode: "SDMS"
+    };
+}
 
 const RestoreMonitor = () => {
     const today = getCurrentDate();
-    // const [hideEmpty, setHideEmpty] = useState(true);
+    const { t } = useTranslation();
+    const { postData } = useAxios(); // ← Move here (was after usage)
+
+    // States
     const [isOpen, setIsOpen] = useState(true);
+    const [loading, setLoading] = useState(false); // ← Add this (was missing)
+    const [userData, setUserData] = useState([]); // ← Add this (was missing)
     const [showConfig, setShowConfig] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [visibleCount, setVisibleCount] = useState(9);
     const [recordsDuration, setRecordsDuration] = useState("Current Date");
     const [fromDate, setFromDate] = useState(today);
     const [toDate, setToDate] = useState(today);
-    const options = ["User A", "User B"]
-    const [selectedClient, setSelectedClient] = useState(options[0]);
+    const [selectedClient, setSelectedClient] = useState(""); // ← Change from options[0]
     const [taskId, setTaskId] = useState("");
     const [fileName, setFileName] = useState("");
     const [filters, setFilters] = useState({});
-    const [refreshKey, setRefreshKey] = useState(0);
     const [exportTrigger, setExportTrigger] = useState(0);
     const [showErrorDialog, setShowErrorDialog] = useState(false);
     const [dataCount, setDataCount] = useState(0);
+    const [clientList, setClientList] = useState([]);
+    const [taskList, setTaskList] = useState([]);
+    const [errorDialog, setErrorDialog] = useState({ show: false, message: "", type: "" });
+    const [isClientTouched, setIsClientTouched] = useState(false);
+    const [isTaskTouched, setIsTaskTouched] = useState(false);
+
+
+    const { currentLanguage, changeLanguage, languages } = useLanguage();
 
     const menuRef = useRef(null);
     const actionContainerRef = useRef(null);
@@ -634,8 +567,8 @@ const RestoreMonitor = () => {
             }
 
             case "Custom Date":
-                startDate = formatDateDDMMYYYY(fromDate);
-                endDate = formatDateDDMMYYYY(toDate);
+                startDate = formatDateDDMMYYYY(new Date(fromDate));
+                endDate = formatDateDDMMYYYY(new Date(toDate));
                 break;
 
             default:
@@ -645,31 +578,220 @@ const RestoreMonitor = () => {
         return { startDate, endDate };
     };
 
-    const { currentLanguage, changeLanguage, languages } = useLanguage();
-    const { t } = useTranslation();
+    const fetchClientList = async () => {
+        try {
+            const payload = CF_activeUserdetails();
+            const result = await postData('AuditTrail/AuditTrailClientname', payload);
+
+            if (Array.isArray(result) && result.length > 0) {
+                const clients = result.map(item => item.L06ClientName);
+
+                setClientList(clients);
+
+                setSelectedClient(prev =>
+                    prev ? prev : clients[0]
+                );
+            }
+        } catch (error) {
+            console.error('Error fetching client list:', error);
+        }
+    };
+
+
+    const fetchTaskList = async () => {
+        try {
+            const payload = {
+                sType: "R",
+                ...CF_activeUserdetails()
+            };
+
+            const result = await postData('Scheduler/getTaskDownload', payload);
+
+            if (Array.isArray(result) && result.length > 0) {
+                const tasks = result.map(item => item.sTaskID);
+
+                setTaskList(tasks);
+
+                // AUTO SELECT FIRST TASK
+                setTaskId(prev =>
+                    prev ? prev : tasks[0]
+                );
+            }
+        } catch (error) {
+            console.error('Error fetching task list:', error);
+        }
+    };
+
+
+    useEffect(() => {
+        const initializeComponent = async () => {
+            await Promise.all([
+                fetchClientList(),
+                fetchTaskList()
+            ]);
+            // INITIAL LOAD with bStatus=true (like jQuery)
+            await handleInitialLoad();
+        };
+        initializeComponent();
+    }, []);
+
+    // ADD THIS NEW FUNCTION (matches jQuery initial load)
+    const handleInitialLoad = async () => {
+        setLoading(true);
+        try {
+            const sFromDate = formatDateDDMMYYYY(today);
+            const sToDate = formatDateDDMMYYYY(today);
+
+            const payload = {
+                bStatus: true,
+                sFromDate: sFromDate,
+                sToDate: sToDate,
+                sClientID: "",
+                sFileName: "",
+                sDownloadTaskID: "",
+                ...CF_activeUserdetails()
+            };
+
+            const result = await postData('Scheduler/getRestoreMonitor', payload);
+
+            if (result && Array.isArray(result)) {
+                const mappedData = result.map((item, index) => ({
+                    id: index + 1,
+                    clientName: item.sClientName || "",
+                    fileName: item.sFileName || "",
+                    taskStatus: item.sTaskStatus || "",
+                    sourcePath: item.sSourcePath || "",
+                    type: item.sFileType || "",
+                    restoreLocation: item.sRestoreLocation || "",
+                    errorDescription: item.sErrorDescription || "",
+                    restoredBy: item.sRestoreBy || "",
+                    restoredOn: item.sTimeStamp || ""
+                }));
+
+                setUserData(mappedData);
+                setFilters({ ...payload, data: mappedData });
+            }
+            setLoading(false);
+        } catch (error) {
+            console.error('Error in initial load:', error);
+            setLoading(false);
+        }
+    };
+
+    const fetchRestoreMonitor = async ({ isRefresh = false } = {}) => {
+        console.group("Restore Monitor API");
+        setLoading(true);
+
+        try {
+            const { startDate, endDate } = getDateRange(recordsDuration, fromDate, toDate);
+
+            const payload = {
+                bStatus: false,
+                sFromDate: startDate,
+                sToDate: endDate,
+                sClientID: selectedClient || "",
+                sFileName: fileName || "",
+                sDownloadTaskID: taskId || "",
+                ...CF_activeUserdetails()
+            };
+
+            console.log("Request Payload:", payload);
+
+            const response = await postData("Scheduler/getRestoreMonitor", payload);
+
+            console.log("API Response:", response);
+
+            if (Array.isArray(response)) {
+                const mapped = response.map((item, index) => ({
+                    id: index + 1,
+                    clientName: item.sClientName || "",
+                    fileName: item.sFileName || "",
+                    taskStatus: item.sTaskStatus || "",
+                    sourcePath: item.sSourcePath || "",
+                    type: item.sFileType || "",
+                    restoreLocation: item.sRestoreLocation || "",
+                    errorDescription: item.sErrorDescription || "",
+                    restoredBy: item.sRestoreBy || "",
+                    restoredOn: item.sTimeStamp || ""
+                }));
+
+                setUserData(mapped);
+                setFilters({ data: mapped });
+            }
+        } catch (err) {
+            console.error("Restore Monitor Error:", err);
+        } finally {
+            setLoading(false);
+            console.groupEnd();
+        }
+    };
 
     const handleFilter = () => {
-        const payload = {
-            clientName: selectedClient,
-            taskId,
-            fileName,
-            recordsDuration,
-            fromDate,
-            toDate
-        };
-        setFilters(payload);
+        console.log("Filter Clicked");
+        fetchRestoreMonitor();
     };
 
     const handleRefresh = () => {
-        setRefreshKey(prev => prev + 1);
+        console.log("Refresh Clicked");
+        fetchRestoreMonitor({ isRefresh: true });
     };
+
+
+    const buildExportRequest = () => {
+        const userDetails = CF_activeUserdetails();
+
+        return {
+            AllRows: userData.map((row, index) => ({
+                sClientName: row.clientName || "",
+                sSourcePath: row.sourcePath || "",
+                sTaskStatus: row.taskStatus || "",
+                sFileName: row.fileName || "",
+                sFileType: row.type || "",
+                sRestoreLocation: row.restoreLocation || "",
+                sErrorDescription: row.errorDescription || null,
+                sRestoreBy: row.restoredBy || "",
+                sTimeStamp: row.restoredOn || "",
+                sDownloadTskID: row.downloadTskID || "", // ← Now available
+                sTaskID: row.taskID || "",                // ← Now available
+                sUTCTimeStamp: row.utcTimeStamp || "",    // ← Now available
+                sSiteCode: row.siteCode || "",            // ← Now available
+                visibleindex: index,
+                boundindex: index,
+                uid: index,
+                uniqueid: `${Date.now()}-${index}`
+            })),
+            sFileName: "RestoreMonitor",
+            sBrowserURL: window.location.origin,
+            AllowKeys: [
+                "sClientName", "sSourcePath", "sTaskStatus", "sFileName",
+                "sFileType", "sRestoreLocation", "sErrorDescription",
+                "sRestoreBy", "sTimeStamp"
+            ],
+            HeaderDetails: [
+                "Client Name", "Source Path", "Task Status", "Filename",
+                "Type", "Restore Location", "Error Description",
+                "Restored By", "Restored On"
+            ],
+            ActiveUserDetails: userDetails.ActiveUserDetails,
+            ApplicationCode: userDetails.ApplicationCode
+        };
+    };
+
+
     const handleExport = () => {
-        if (dataCount === 0) {
-            setShowErrorDialog(true);
-            return;
-        }
-        setExportTrigger(prev => prev + 1);
+        console.log("Export Clicked");
+
+        handleExportCommon({
+            rows: userData,
+            buildRequest: buildExportRequest,
+            postData,
+            setLoading,
+            setLoadingText: () => { },
+            setErrorDialog,
+            t
+        });
     };
+
 
     return (
         <div className="flex flex-col w-full font-roboto rounded-md font-[roboto]">
@@ -681,11 +803,15 @@ const RestoreMonitor = () => {
                             <AnimatedDropdown
                                 label={t("label.clientName")}
                                 value={selectedClient}
-                                options={options}
-                                onChange={(e) => setSelectedClient(e.target.value)}
-                                // isSearchable={true}
-                                allowFreeInput={true}
+                                options={clientList}
+                                onChange={(val) => {
+                                    setSelectedClient(val?.target?.value ?? val);
+                                    setIsClientTouched(true);
+                                }}
+                                allowFreeInput
                             />
+
+
                         </div>
 
 
@@ -693,12 +819,14 @@ const RestoreMonitor = () => {
                             <AnimatedDropdown
                                 label={t("label.taskId")}
                                 value={taskId}
-                                options={["Task-001", "Task-002", "Task-003"]}
-                                onChange={(e) => setTaskId(e.target.value)}
-                                // isSearchable={true}
-                                allowFreeInput={true}
-                            // borderColor="[border-bottom-color:#91DCF3]"
+                                options={taskList}
+                                onChange={(val) => {
+                                    setTaskId(val?.target?.value ?? val);
+                                    setIsTaskTouched(true);
+                                }}
+                                allowFreeInput
                             />
+
 
                         </div>
 
@@ -786,7 +914,6 @@ const RestoreMonitor = () => {
                 <div className="flex-1 overflow-hidden">
                     <UsersPage
                         filters={filters}
-                        refreshKey={refreshKey}
                         exportTrigger={exportTrigger}
                         onDataCountChange={setDataCount}
                     />
@@ -794,11 +921,11 @@ const RestoreMonitor = () => {
                 </div>
             </div>
 
-            {showErrorDialog && (
+            {errorDialog.show && (
                 <Errordialog
-                    message="Select an existing record."
-                    type="information"
-                    onClose={() => setShowErrorDialog(false)}
+                    message={errorDialog.message}
+                    type={errorDialog.type}
+                    onClose={() => setErrorDialog({ show: false, message: "", type: "" })}
                 />
             )}
         </div>
