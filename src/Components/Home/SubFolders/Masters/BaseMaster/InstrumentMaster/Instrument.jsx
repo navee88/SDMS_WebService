@@ -327,55 +327,6 @@ const buildExportRequest = () => ({
 });
 
   /* ---------------- EXPORT FUNCTIONALITY ---------------- */
-
-  const handleExport = () => {
-    // Convert rows to CSV format
-    const headers = [
-      t("masters.instrumentcode"),
-      t("masters.instrumentAlias"),
-      t("masters.instrumentModel"),
-      t("masters.instrumentMake"),
-      t("masters.associatedClient"),
-      t("masters.status"),
-      t("masters.createdBy"),
-      t("masters.createdOn"),
-      t("masters.modifiedBy"),
-      t("masters.modifiedOn"),
-    ];
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) =>
-        [
-          `"${row.instrumentcode}"`,
-          `"${row.instrumentAlias}"`,
-          `"${row.instrumentModel}"`,
-          `"${row.instrumentMake}"`,
-          `"${row.clientName}"`,
-          `"${row.status}"`,
-          `"${row.createdBy}"`,
-          `"${row.createdOn}"`,
-          `"${row.modifiedBy}"`,
-          `"${row.modifiedOn}"`,
-        ].join(",")
-      ),
-    ].join("\n");
-
-    // Create and download CSV file
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `instruments_${new Date().toISOString().slice(0, 10)}.csv`
-    );
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   /* ---------------- PRINT FUNCTIONALITY ---------------- */
 
     const [doPrint, setDoPrint] = React.useState(false);
@@ -536,7 +487,8 @@ const buildExportRequest = () => ({
         />
       </div>
       {loading && (
- <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+ <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+
           <div className="  rounded-sm flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1A57A6]"></div>
            <p className="text-sm font-medium">{loadingText}</p>
@@ -574,6 +526,8 @@ const buildExportRequest = () => ({
         onSave={handleSave}
         mode={modalMode}
         initialData={editInstrumentData}
+          setLoading={setLoading}          // 👈 NEW
+  setLoadingText={setLoadingText}  // 👈 NEW
       />
       {doPrint && (
   <PrintTable
