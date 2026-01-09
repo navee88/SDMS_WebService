@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Search, ChevronDown, FileText, SquarePen, CheckSquare } from 'lucide-react';
-import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
+import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayoutTest';
 import { useLanguage } from '../../../../../Context/LanguageContext';
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -19,95 +19,9 @@ const UsersPage = ({
     showViewDetails,
     viewDetailsData
 }) => {
-    // const [userData, setUserData] = useState([]);
-    // const [loading, setLoading] = useState(true);
-    // const [error, setError] = useState(null);
     const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { t } = useTranslation();
-    // const [selectedRows, setSelectedRows] = useState([]);
-    // const [selectedRowData, setSelectedRowData] = useState(null);
     const { postData } = useAxios();
-    // const navigate = useNavigate();
-
-
-
-    // useEffect(() => {
-    //     const fetchData = async () => {
-    //         setLoading(true);
-    //         try {
-    //             // Audit call
-    //             // await postData('Scheduler/MonitorSchedulerViewAudit', CF_activeUserdetails());
-
-    //             // Grid load
-    //             // const response = await postData('Scheduler/UploadqueueSchedulerViewgrid', CF_activeUserdetails());
-
-    //             // Map the response to match your component structure
-    //             // const mappedData = response.map((item, index) => ({
-    //             //     id: index + 1,
-    //             //     clientName: item.L06ClientName,
-    //             //     instrument: item.L11InstrumentName,
-    //             //     live: item.L13LiveArchive,
-    //             //     storageName: item.L09FTPAliasName,
-    //             //     taskStatus: item.Status,
-    //             //     scheduleId: item.L13ScheduleID,
-    //             //     taskId: item.L52TaskID,
-    //             //     sourcePath: item.L52TaskSourcePath,
-    //             //     queue: item.L62Queue
-    //             // }));
-
-    //             // setUserData(mappedData);
-    //             const loadGrid = async () => {
-    //                 const response = await postData(
-    //                     'Scheduler/UploadqueueSchedulerViewgrid',
-    //                     CF_activeUserdetails()
-    //                 );
-
-    //                 const mapped = response.map((item, index) => ({
-    //                     id: index + 1,
-    //                     clientName: item.L06ClientName,
-    //                     instrument: item.L11InstrumentName,
-    //                     live: item.L13LiveArchive,
-    //                     storageName: item.L09FTPAliasName,
-    //                     taskStatus: item.Status,
-    //                     scheduleId: item.L13ScheduleID,
-    //                     taskId: item.L52TaskID,
-    //                     sourcePath: item.L52TaskSourcePath,
-    //                     queue: item.L62Queue
-    //                 }));
-
-    //                 setUserData(mapped);
-
-    //                 // Auto-select first row
-    //                 if (mapped.length > 0) {
-    //                     setSelectedRowId(mapped[0].id);
-    //                     setSelectedRowData(mapped[0]);
-    //                 }
-    //             };
-    //         } catch (error) {
-    //             console.error("Error fetching data:", error);
-    //             setError(error.message || "Something went wrong");
-    //         } finally {
-    //             setLoading(false);
-    //         }
-    //     };
-
-    //     fetchData();
-    // }, []);
-
-    // useEffect(() => {
-    //     loadGrid();
-    // }, []);
-
-
-
-    // const handleRowSelection = (id) => {
-    //     setSelectedRows([id]); // Only allow single selection
-    //     const selectedData = userData.find(row => row.id === id);
-    //     setSelectedRowData(selectedData);
-    //     if (onRowSelect) {
-    //         onRowSelect(selectedData);
-    //     }
-    // };
 
     const userColumns = useMemo(() => [
         {
@@ -166,7 +80,7 @@ const UsersPage = ({
             label: t('label.instrument'),
             width: 180,
             enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.instrument}</span>
+            render: (row) => <span className="text-gray-700">{row.instrumentName}</span>
         },
         {
             key: 'taskId',
@@ -180,7 +94,7 @@ const UsersPage = ({
             label: t('label.fileName'),
             width: 200,
             enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.filename}</span>
+            render: (row) => <span className="text-gray-700">{row.fileName}</span>
         },
         {
             key: 'fileType',
@@ -201,15 +115,8 @@ const UsersPage = ({
             label: t('label.captureDateUTC'),
             width: 150,
             enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.captureDateUTC}</span>
+            render: (row) => <span className="text-gray-700">{row.utcCaptureDate}</span>
         },
-        {
-            key: 'errorDescription',
-            label: t('label.errorDescription'),
-            width: 150,
-            enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.errorDescription}</span>
-        }
     ], [t]);
 
 
@@ -235,20 +142,6 @@ const UsersPage = ({
         </div>
     );
 
-
-    // if (loading) {
-    //     return <div className="p-8 text-center text-gray-500">Loading...</div>;
-    // }
-
-    // if (error) {
-    //     return <div className="p-8 text-center text-red-500"></div>;
-    // }
-
-
-
-
-
-    // UPDATE the return section:
     return (
         <div className="flex-1 overflow-hidden flex flex-col">
             {showViewDetails ? (
@@ -275,10 +168,13 @@ const UsersPage = ({
                 <GridLayout
                     columns={userColumns}
                     data={data}
+                    getRowId={(row) => row.id}
+                    externalSelectedId={selectedRowId}
                     selectedRows={[selectedRowId]}
                     onRowClick={(row) => onRowSelect(row)}
                     renderDetailPanel={renderUserDetail}
                 />
+
             )}
         </div>
     );
@@ -325,16 +221,7 @@ function UploadQueue() {
     const [userData, setUserData] = useState([]);
     const [selectedRowId, setSelectedRowId] = useState(null);
     const [loading, setLoading] = useState(true);
-
-    // const loadGrid = async () => {
-    //     setLoading(true);
-    //     try {
-    //         const response = await postData(...);
-    //         setUserData(mapped);
-    //     } finally {
-    //         setLoading(false);
-    //     }
-    // };
+    const [forceGridUpdate, setForceGridUpdate] = useState(0);
 
     // Add state for information dialog
     const [infoDialog, setInfoDialog] = useState({
@@ -390,67 +277,6 @@ function UploadQueue() {
         setShowAudit(true);
     };
 
-    // const handleAuthorizedUpdate = async (auditData) => {
-    //     if (!selectedRowData) {
-    //         showInfoDialog("Please select a row first!", "information");
-    //         return;
-    //     }
-
-    //     try {
-    //         const requestData = {
-    //             AuditTrailValues: {
-    //                 sUserPassword: auditData.password,
-    //                 sUserDomainName: "SDMS",
-    //                 sComments: auditData.comments,
-    //                 sUserName: auditData.userName,
-    //                 sReasonNo: auditData.reasonNo,
-    //                 sReasonName: auditData.reasonName
-    //             },
-    //             ...CF_activeUserdetails(),
-    //             bLiveStatus: true,
-    //             sScheduleID: selectedRowData.scheduleId
-    //         };
-
-    //         const response = await postData('Scheduler/UpdateScheduleModeBtn', requestData);
-
-    //         // Handle error response first
-    //         if (response.returnMsg) {
-    //             showInfoDialog(response.returnMsg, "information");
-    //             setShowAudit(false);
-    //             return; // Stop execution here
-    //         }
-
-    //         // Handle success response
-    //         if (response.Rtn === "Success" && response.returnservice) {
-    //             showInfoDialog("Schedule mode updated successfully", "success");
-
-    //             // Update the grid with new data from returnservice
-    //             const mappedData = response.returnservice.map((item, index) => ({
-    //                 id: index + 1,
-    //                 clientName: item.L06ClientName,
-    //                 instrument: item.L11InstrumentName,
-    //                 live: item.L13LiveArchive,
-    //                 storageName: item.L09FTPAliasName,
-    //                 taskStatus: item.Status,
-    //                 scheduleId: item.L13ScheduleID,
-    //                 taskId: item.L52TaskID,
-    //                 sourcePath: item.L52TaskSourcePath,
-    //                 queue: item.L62Queue
-    //             }));
-
-    //             // Reload grid in UsersPage - you'll need to lift state up or use a callback
-    //             // For now, refresh the entire page or call the initial fetch again
-    //             // window.location.reload(); // Simple solution, or implement proper state management
-    //         }
-
-    //         setShowAudit(false);
-    //     } catch (error) {
-    //         console.error("Error updating schedule mode:", error);
-    //         showInfoDialog("Error updating schedule mode", "error");
-    //         setShowAudit(false);
-    //     }
-    // };
-
     const handleAuthorizedUpdate = async (auditData) => {
         try {
             const requestData = {
@@ -472,20 +298,20 @@ function UploadQueue() {
                 requestData
             );
 
-            // ❌ Error case from backend
+            // Error case from backend
             if (response.returnMsg) {
                 showInfoDialog(response.returnMsg, "information");
                 setShowAudit(false);
                 return;
             }
 
-            // ✅ Success
+            // Success
             if (response.Rtn === "Success") {
                 showInfoDialog("Schedule mode updated successfully", "success");
 
-                // 🔥 Update grid immediately
+                // Update grid immediately
                 const updatedGrid = response.returnservice.map((item, index) => ({
-                    id: index + 1,
+                    id: item.L13ScheduleID,
                     clientName: item.L06ClientName,
                     instrument: item.L11InstrumentName,
                     live: item.L13LiveArchive,
@@ -499,7 +325,7 @@ function UploadQueue() {
 
                 setUserData(updatedGrid);
 
-                // 🔁 Restore selection
+                // Restore selection
                 const updatedRow = updatedGrid.find(
                     r => r.scheduleId === selectedRowData.scheduleId
                 );
@@ -520,8 +346,6 @@ function UploadQueue() {
     // Handler to close popup and show info dialog
     const handlePopupClose = () => {
         setActivePopup(null);
-        // Show info dialog after closing popup
-        // showInfoDialog("Schedule mode popup closed", "success");
     };
 
     // Handler to submit form
@@ -532,7 +356,6 @@ function UploadQueue() {
         }
 
         if (!scheduleMode) {
-            // showInfoDialog("Please select a schedule mode", "information");
             return;
         }
 
@@ -545,30 +368,6 @@ function UploadQueue() {
         // showInfoDialog("Schedule mode updated successfully", "success");
         setActivePopup(null);
     };
-
-    // const handleViewDetails = async () => {
-    //     if (!selectedRowData) {
-    //         showInfoDialog("Please select a row first!", "information");
-    //         return;
-    //     }
-
-    //     try {
-    //         const response = await postData('Scheduler/UploadqueueViewDetailsGrid', {
-    //             sTaskID: selectedRowData.taskId,
-    //             ...CF_activeUserdetails()
-    //         });
-
-    //         if (!response || response.length === 0) {
-    //             showInfoDialog("No records found here!", "information");
-    //             return;
-    //         }
-
-    //         setViewDetailsData(response);
-    //         setShowViewDetails(true);
-    //     } catch (error) {
-    //         showInfoDialog("Error fetching details", "error");
-    //     }
-    // };
 
     const handleViewDetails = async () => {
         if (!selectedRowData) {
@@ -592,7 +391,7 @@ function UploadQueue() {
 
             // Map the response data
             const mappedDetailsData = response.map((item, index) => ({
-                id: index + 1,
+                id: item.L13ScheduleID,
                 clientName: item.L06ClientName,
                 instrumentName: item.L11InstrumentName,
                 taskId: item.L62TaskID,
@@ -610,29 +409,19 @@ function UploadQueue() {
         }
     };
 
-    // useEffect(() => {
-    //     const handleCloseViewDetails = () => {
-    //         setShowViewDetails(false);
-    //         setViewDetailsData([]);
-    //     };
-
-    //     window.addEventListener('closeViewDetails', handleCloseViewDetails);
-    //     return () => window.removeEventListener('closeViewDetails', handleCloseViewDetails);
-    // }, []);
-
     useEffect(() => {
         const handleCloseViewDetails = () => {
             setShowViewDetails(false);
-            // DON'T clear viewDetailsData and selectedRowData - keep them
-            // setViewDetailsData([]); // REMOVE THIS LINE
-            // Keep selectedRowData intact so row selection persists
+
+            // Force grid to update and restore selection
+            setTimeout(() => {
+                setForceGridUpdate(prev => prev + 1);
+            }, 50);
         };
 
         window.addEventListener('closeViewDetails', handleCloseViewDetails);
         return () => window.removeEventListener('closeViewDetails', handleCloseViewDetails);
     }, []);
-
-
 
     const loadGrid = async () => {
 
@@ -644,7 +433,7 @@ function UploadQueue() {
             );
 
             const mapped = response.map((item, index) => ({
-                id: index + 1,
+                id: item.L13ScheduleID,
                 clientName: item.L06ClientName,
                 instrument: item.L11InstrumentName,
                 live: item.L13LiveArchive,
@@ -657,10 +446,17 @@ function UploadQueue() {
             }));
 
             setUserData(mapped);
+            // restore previous selection
+            if (selectedRowData) {
+                const sameRow = mapped.find(
+                    r => r.scheduleId === selectedRowData.scheduleId
+                );
 
-            if (mapped.length > 0) {
-                setSelectedRowId(mapped[0].id);
-                setSelectedRowData(mapped[0]);
+                if (sameRow) {
+                    setSelectedRowId(sameRow.id);
+                    setSelectedRowData(sameRow);
+                    return;
+                }
             }
         } catch (error) {
             console.error("Error fetching data:", error);
@@ -673,6 +469,7 @@ function UploadQueue() {
     useEffect(() => {
         loadGrid();
     }, []);
+
 
     return (
         <div className="px-4 font-roboto h-[calc(100vh-150px)] flex flex-col">
@@ -701,14 +498,9 @@ function UploadQueue() {
 
             {/* UsersPage takes full width & height */}
             <div className="flex-1 overflow-hidden">
-                {/* <UsersPage
-                    onRowSelect={setSelectedRowData}
-                    showViewDetails={showViewDetails}
-                    viewDetailsData={viewDetailsData}
-                /> */}
-
                 <UsersPage
-                    data={userData}
+                    key={forceGridUpdate}
+                    data={userData} 
                     selectedRowId={selectedRowId}
                     onRowSelect={(row) => {
                         setSelectedRowId(row.id);

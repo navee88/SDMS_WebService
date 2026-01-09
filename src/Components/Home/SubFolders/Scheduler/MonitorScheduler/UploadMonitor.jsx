@@ -10,6 +10,8 @@ import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
 import { useLanguage } from '../../../../../Context/LanguageContext';
 import { useTranslation } from "react-i18next";
+import useAxios from '../../../../../Services/servicecall';
+import { CF_sessionGet } from "../../../../Common/CF_session";
 
 const ACTION_ICONS = {
   "Open": FolderOpen,
@@ -256,6 +258,24 @@ const getCurrentDate = () => {
 };
 
 
+function CF_activeUserdetails() {
+  const ActiveUserDetails = {
+    sUserDomainName: CF_sessionGet("sDomainName", 1) || "SDMS",
+    sSessionID: CF_sessionGet("sSessionID", 1) || "",
+    sUserID: CF_sessionGet("sUserID", 1) || "",
+    sTimeZoneID: (CF_sessionGet("sTimeZoneID", 1) || "Asia/Kolkata") + "<~>" + (CF_sessionGet("UTCStatus", 1) || "true"),
+    sApplicationName: "SDMS",
+    sdbtype: CF_sessionGet("sdbtype", 1) || "POSTGRESQL",
+    sUsername: CF_sessionGet("sUsername", 1) || "",
+    sSiteCode: CF_sessionGet("sSiteCode", 1) || "CH        ",
+    sCategories: CF_sessionGet("sCategories", 1) || "DB",
+    sUserGroupID: CF_sessionGet("sUserGroupID", 1) || "G1        ",
+    sUserStatus: "",
+    sTenantID: CF_sessionGet("sTenantID", 1) || ""
+  };
+  return { ActiveUserDetails, ApplicationCode: "SDMS" };
+}
+
 
 const UsersPage = ({ filters, refreshKey }) => {
   const [userData, setUserData] = useState([]);
@@ -263,98 +283,50 @@ const UsersPage = ({ filters, refreshKey }) => {
   const [error, setError] = useState(null);
   const { currentLanguage, changeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
-
-  const mockData = [
-    {
-      id: 1,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "CU-Summary1 (CU-Summary1)",
-      storageName: "sdms-ftp"
-    },
-    {
-      id: 2,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "CU-Summary1 (CU-Summary1)",
-      storageName: "sdms-ftp"
-    },
-    {
-      id: 3,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "MU-Summary1 (MU-Summary1)",
-      storageName: "sdms-ftp"
-    },
-    {
-      id: 4,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "AU-Summary1 (AU-Summary1)",
-      storageName: "sdms-ftp"
-    },
-    {
-      id: 5,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "CU-Summary1 (CU-Summary1)",
-      storageName: "sdms-ftp"
-    },
-    {
-      id: 6,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "CU-Summary1 (CU-Summary1)",
-      storageName: "sdms-ftp"
-    },
-    {
-      id: 7,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "CU-Summary1 (CU-Summary1)",
-      storageName: "sdms-ftp"
-    }
-  ];
-
-
-
-  //   useEffect(() => {
-  //     const fetchUsers = async () => {
-  //       try {
-  //         setLoading(true);
-  //         const response = await axios.get('http://localhost:5173/users');
-  //         setUserData(response.data);
-  //         setLoading(false);
-  //       } catch (err) {
-  //         console.error("Error fetching data:", err);
-  //         setError(err.message || "Something went wrong");
-  //         setLoading(false);
-  //       }
-  //     };
-
-  //     fetchUsers();
-  //   }, []);
+  const { postData } = useAxios();
 
   useEffect(() => {
-    setLoading(true);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const bflag = filters.isInitialLoad === true;
 
-    // MOCK FILTERING (local)
-    let filteredData = mockData;
+        const requestData = {
+          bflag: bflag,
+          sFromDate: filters.fromDate ? formatDateDDMMYYYY(new Date(filters.fromDate)) : formatDateDDMMYYYY(new Date()),
+          sToDate: filters.toDate ? formatDateDDMMYYYY(new Date(filters.toDate)) : formatDateDDMMYYYY(new Date()),
+          ...CF_activeUserdetails()
+        };
 
-    if (filters?.fromDate && filters?.toDate) {
-      // example condition – customize later
-      filteredData = mockData.filter(item =>
-        item.instrument // placeholder logic
-      );
-    }
+        console.log("API Request:", requestData);
 
-    setTimeout(() => {
-      setUserData(filteredData);
-      setLoading(false);
-    }, 300);
+        const response = await postData(
+          'Scheduler/uploadmonitorSchedulerViewgrid',
+          requestData
+        );
 
-    //  API 
-    /*
-    axios.post('/api/upload-monitor/data', filters)
-      .then(res => setUserData(res.data))
-      .finally(() => setLoading(false));
-    */
+        const mapped = response.map((item) => ({
+          id: item.L13ScheduleID,
+          clientName: item.L06ClientName,
+          instrument: item.L11InstrumentName,
+          storageName: item.L09FTPAliasName,
+          taskId: item.L52TaskID,
+          scheduleId: item.L13ScheduleID,
+          sourcePath: item.L52TaskSourcePath,
+          queue: item.L31UploadCount
+        }));
 
+        setUserData(mapped);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setError(error.message || "Something went wrong");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [filters, refreshKey]);
-
 
   const userColumns = useMemo(() => [
     {
@@ -424,7 +396,13 @@ const UsersPage = ({ filters, refreshKey }) => {
 };
 
 
-
+const formatDateDDMMYYYY = (date) => {
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
 const UploadMonitor = () => {
   const today = getCurrentDate();
@@ -439,108 +417,85 @@ const UploadMonitor = () => {
   const [filename, setFilename] = useState("");
   // filter and refresh state
   const [filters, setFilters] = useState({
-    recordsDuration,
-    fromDate,
-    toDate,
+    recordsDuration: "Current Date",
+    fromDate: today,
+    toDate: today,
+    isInitialLoad: true
   });
 
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const { postData } = useAxios();
 
+  const loadGrid = async () => {
+    try {
+      // Calculate dates based on recordsDuration
+      let calculatedFromDate = fromDate;
+      let calculatedToDate = toDate;
 
+      const currentDate = new Date();
 
-  const menuRef = useRef(null);
-  const actionContainerRef = useRef(null);
-  const buttonRefs = useRef([]);
-
-  const [configState, setConfigState] = useState({
-    "Restore": true,
-    "Folder Download": true,
-    "File Upload": true,
-    "Folder Upload": true,
-    "Version History": true,
-    "Work Complete": true,
-    "Workflow History": true,
-    "Tag": true,
-    "Open": true,
-    "File Download": true,
-    "Audit Trail History": true,
-    "Attribute": true,
-    "Multi-File Select": true,
-    "Instrument": true,
-    "Workflow Status": true,
-    "Task Status": true,
-    "Parser Status": false
-  });
-
-  const enabledActions = ALL_ACTION_ORDER.filter(action => configState[action]);
-
-  useEffect(() => {
-    const calculateVisibleActions = () => {
-      if (!actionContainerRef.current) return;
-
-      const containerWidth = actionContainerRef.current.offsetWidth;
-      const reservedSpace = 140;
-      const availableWidth = containerWidth - reservedSpace;
-
-      let accumulatedWidth = 0;
-      let count = 0;
-
-      for (let i = 0; i < buttonRefs.current.length; i++) {
-        const button = buttonRefs.current[i];
-        if (!button) continue;
-
-        const buttonWidth = button.offsetWidth + 8;
-
-        if (accumulatedWidth + buttonWidth <= availableWidth) {
-          accumulatedWidth += buttonWidth;
-          count++;
-        } else {
-          break;
-        }
+      if (recordsDuration === "Current Date") {
+        calculatedFromDate = getCurrentDate();
+        calculatedToDate = getCurrentDate();
+      } else if (recordsDuration === "Last 7 Days") {
+        const start = new Date();
+        start.setDate(currentDate.getDate() - 7);
+        calculatedFromDate = start.toISOString().split('T')[0];
+        calculatedToDate = getCurrentDate();
+      } else if (recordsDuration === "Last 30 Days") {
+        const start = new Date();
+        start.setDate(currentDate.getDate() - 30);
+        calculatedFromDate = start.toISOString().split('T')[0];
+        calculatedToDate = getCurrentDate();
+      } else if (recordsDuration === "Last 1 Year") {
+        const start = new Date();
+        start.setFullYear(currentDate.getFullYear() - 1);
+        calculatedFromDate = start.toISOString().split('T')[0];
+        calculatedToDate = getCurrentDate();
       }
 
-      setVisibleCount(Math.max(1, count));
-    };
+      const requestData = {
+        bflag: isInitialLoad,
+        sFromDate: formatDateDDMMYYYY(new Date(calculatedFromDate)),
+        sToDate: formatDateDDMMYYYY(new Date(calculatedToDate)),
+        ...CF_activeUserdetails()
+      };
 
-    calculateVisibleActions();
+      console.log("API Request:", requestData);
 
-    window.addEventListener('resize', calculateVisibleActions);
+      const response = await postData(
+        'Scheduler/uploadmonitorSchedulerViewgrid',
+        requestData
+      );
 
-    const timer = setTimeout(calculateVisibleActions, 100);
+      return response.map((item) => ({
+        id: item.L13ScheduleID,
+        clientName: item.L06ClientName,
+        instrument: item.L11InstrumentName,
+        storageName: item.L09FTPAliasName,
+        taskId: item.L52TaskID,
+        scheduleId: item.L13ScheduleID,
+        sourcePath: item.L52TaskSourcePath,
+        queue: item.L31UploadCount
+      }));
 
-    return () => {
-      window.removeEventListener('resize', calculateVisibleActions);
-      clearTimeout(timer);
-    };
-  }, [configState, enabledActions.length]);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      return [];
+    }
+  };
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    loadGrid();
   }, []);
 
-  const visibleActions = enabledActions.slice(0, visibleCount);
-  const overflowActions = enabledActions.slice(visibleCount);
 
   const isCustomDate = recordsDuration === "Custom Date";
 
   const handleDurationChange = (value) => {
     const actualValue = value?.target?.value || value?.value || value;
     setRecordsDuration(actualValue);
-  };
-
-  //calculate the current date minus the records duration date
-  const formatDateDDMMYYYY = (date) => {
-    const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
   };
 
   const getDateRange = (duration, fromDate, toDate) => {
@@ -592,17 +547,56 @@ const UploadMonitor = () => {
   const { currentLanguage, changeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
 
-  const handleFilter = () => {
-    const payload = {
-      duration: recordsDuration,
-      fromDate,
-      toDate,
-    };
-    setFilters(payload);
+  const applyFilters = ({ isRefresh = false } = {}) => {
+    const currentDate = new Date();
+
+    let calculatedFromDate = fromDate;
+    let calculatedToDate = toDate;
+
+    if (recordsDuration === "Current Date") {
+      calculatedFromDate = getCurrentDate();
+      calculatedToDate = getCurrentDate();
+    } else if (recordsDuration === "Last 7 Days") {
+      const start = new Date();
+      start.setDate(currentDate.getDate() - 7);
+      calculatedFromDate = start.toISOString().split("T")[0];
+      calculatedToDate = getCurrentDate();
+    } else if (recordsDuration === "Last 30 Days") {
+      const start = new Date();
+      start.setDate(currentDate.getDate() - 30);
+      calculatedFromDate = start.toISOString().split("T")[0];
+      calculatedToDate = getCurrentDate();
+    } else if (recordsDuration === "Last 1 Year") {
+      const start = new Date();
+      start.setFullYear(currentDate.getFullYear() - 1);
+      calculatedFromDate = start.toISOString().split("T")[0];
+      calculatedToDate = getCurrentDate();
+    }
+
+    setFromDate(calculatedFromDate);
+    setToDate(calculatedToDate);
+
+    setFilters({
+      recordsDuration,
+      fromDate: calculatedFromDate,
+      toDate: calculatedToDate,
+      isInitialLoad: false
+    });
+
+    // trigger UsersPage useEffect
+    setRefreshKey(prev => prev + 1);
   };
 
+
+  const handleFilter = () => {
+    setIsInitialLoad(false);
+    applyFilters();
+  };
+
+
   const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+    setIsInitialLoad(false);
+    applyFilters({ isRefresh: true });
   };
 
   return (
@@ -674,53 +668,14 @@ const UploadMonitor = () => {
       <div className="px-4 font-roboto h-[calc(100vh-150px)] flex flex-col">
         {/* UsersPage takes full width & height */}
         <div className="flex-1 overflow-hidden">
-          <UsersPage filters={filters} refreshKey={refreshKey} />
+          <UsersPage
+            filters={filters}
+            refreshKey={refreshKey}
+          // fromDate={fromDate}
+          // toDate={toDate}
+          />
         </div>
       </div>
-
-
-      {/* <div className="flex gap-2 px-4">
-        <div className="w-1/2 flex flex-col h-[calc(100vh-200px)]">
-          <div className="h-[38px] mb-2"></div>
-          <div className="flex-1">
-            <InstrumentGrid />
-          </div>
-        </div> */}
-
-      {/* Right Side - Details Panel */}
-      {/* <div className="w-1/2 flex flex-col h-[calc(100vh-200px)]">
-          <div className="h-[38px] mb-2"></div> */}
-      {/* Details Table */}
-      {/* <div className="border border-gray-300 rounded-lg overflow-hidden flex-1 overflow-y-auto">
-            <table className="w-full text-xs">
-              <tbody>
-
-
-                <tr> 
-                  <td className="px-4 py-2 font-semibold text-[#405F78]">{t('label.taskId')}</td> 
-                  <td className="px-4 py-2 font-semibold text-[#353F49]">T1</td>
-                </tr>
-                <tr> 
-                  <td className="px-4 py-2 font-semibold text-[#405F78]">{t('label.scheduleId')}</td>
-                  <td className="px-4 py-2 font-semibold text-[#353F49]">TS1</td>
-                </tr>
-                <tr>
-                  <td className="px-4 p-2 font-semibold text-[#405F78]">{t('label.sourcePath')}</td> 
-                  <td className="px-4 py-2 font-semibold text-[#353F49]">D:\SDMSFTP\Scheduler</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 font-semibold text-[#405F78]">{t('label.noOfUploadCount')}</td>
-                  <td className="px-4 py-2 font-semibold text-[#353F49]">0</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div > */}
-
-
-
-
     </div>
 
   )
