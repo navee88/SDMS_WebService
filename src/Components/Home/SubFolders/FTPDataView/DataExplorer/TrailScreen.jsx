@@ -234,7 +234,7 @@ const TrailScreen = ({
                             disabled={isSubmitting}
                             className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-700 text-sm font-semibold rounded transition-colors"
                         >
-                            {t("button.close")}
+                            {t("button.closed")}
                         </button>
                     </div>
                 </div>
