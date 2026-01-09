@@ -1,3 +1,4 @@
+import React, { lazy } from "react";
 import { LiaFolderOpen } from "react-icons/lia";
 import { LuFileSearch } from "react-icons/lu";
 import { GiPadlock } from "react-icons/gi";
@@ -6,44 +7,103 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSitemap } from "@fortawesome/free-solid-svg-icons";
 import { FaUser, FaCog } from "react-icons/fa";
 
-// ✅ IMPORT ALL COMPONENTS AS REFERENCES (NOT JSX)
+/* ================= LAZY IMPORTS ================= */
+
 import DataExplorer from "../../../../Pages/Home/FTP/DataExplorer";
-import Searchserverdata from "../../../../Pages/Home/FTP/Searchserverdata";
-import UserManagement from "../../../../Pages/Home/UserManagment/UserManagement";
-import Passwordpolicy from "../../../../Pages/Home/UserManagment/Passwordpolicy";
-import InstrumentLockSettings from "../../../../Pages/Home/LockSettings/InstrumentLockSettings";
-import MonitorScheduler from "../../../../Pages/Home/Scheduler/MonitorScheduler";
-import AuditTrailHistory from "../../../../Pages/Home/LogHistory/AuditTrailHistory";
-import DownloadLogs from "../../../../Pages/Home/LogHistory/DownloadLogs";
-import UploadLogs from "../../../../Pages/Home/LogHistory/UploadLogs";
-import RestoreLogs from "../../../../Pages/Home/LogHistory/RestoreLogs";
-import SchedulerConfigLogs from "../../../../Pages/Home/LogHistory/SchedulerConfigLogs";
-import InstrumentLogs from "../../../../Pages/Home/LogHistory/InstrumentLogs";
-import ServerAndLocalFileDeleteLogs from "../../../../Pages/Home/LogHistory/ServerAndLocalFileDeleteLogs";
-import DownloadScheduler from "../../../../Pages/Home/Scheduler/DownloadScheduler";
-import DataScheduler from "../../../../Pages/Home/Scheduler/DataScheduler";
-import BaseMaster from "../../../../Pages/Home/Masters/BaseMaster";
-import ParentParserKey from "../../../../Pages/Home/Masters/ParentParserKey";
-import TagsAndTemplates from "../../../../Pages/Home/Masters/TagsAndTemplates";
-import ViewEditScheduler from "../../../../Pages/Home/Scheduler/ViewEditScheduler";
-import LocalFileDeleteScheduler from "../../../../Pages/Home/Scheduler/LocalFileDeleteScheduler";
-import ServerFileDeleteScheduler from "../../../../Pages/Home/Scheduler/ServerFileDeleteScheduler";
-import ClientServiceMonitor from "../../../../Pages/Home/Scheduler/ClientServiceMonitor";
-import Configuration from "../../../../Pages/Home/Storage/Configuration";
-import Rights from "../../../../Pages/Home/Storage/Rights";
-import DownloadSchedulerWithProvider from "../../../../Context/DownloadSchedulerWithProvider";
-import InstrumentLockSettingsWrapper from "../../../../Context/InstrumentLockSettingsWrapper";
+
+const Searchserverdata = lazy(() =>
+  import("../../../../Pages/Home/FTP/Searchserverdata")
+);
+
+// Lock
+const InstrumentLockSettingsWrapper = lazy(() =>
+  import("../../../../Context/InstrumentLockSettingsWrapper")
+);
+
+// Scheduler
+const DataScheduler = lazy(() =>
+  import("../../../../Pages/Home/Scheduler/DataScheduler")
+);
+const ViewEditScheduler = lazy(() =>
+  import("../../../../Pages/Home/Scheduler/ViewEditScheduler")
+);
+const MonitorScheduler = lazy(() =>
+  import("../../../../Pages/Home/Scheduler/MonitorScheduler")
+);
+const LocalFileDeleteScheduler = lazy(() =>
+  import("../../../../Pages/Home/Scheduler/LocalFileDeleteScheduler")
+);
+const ServerFileDeleteScheduler = lazy(() =>
+  import("../../../../Pages/Home/Scheduler/ServerFileDeleteScheduler")
+);
+const DownloadSchedulerWithProvider = lazy(() =>
+  import("../../../../Context/DownloadSchedulerWithProvider")
+);
+const ClientServiceMonitor = lazy(() =>
+  import("../../../../Pages/Home/Scheduler/ClientServiceMonitor")
+);
+
+// Masters
+const BaseMaster = lazy(() =>
+  import("../../../../Pages/Home/Masters/BaseMaster")
+);
+const TagsAndTemplates = lazy(() =>
+  import("../../../../Pages/Home/Masters/TagsAndTemplates")
+);
+const ParentParserKey = lazy(() =>
+  import("../../../../Pages/Home/Masters/ParentParserKey")
+);
+
+// Storage
+const Configuration = lazy(() =>
+  import("../../../../Pages/Home/Storage/Configuration")
+);
+const Rights = lazy(() =>
+  import("../../../../Pages/Home/Storage/Rights")
+);
+
+// User
+const UserManagement = lazy(() =>
+  import("../../../../Pages/Home/UserManagment/UserManagement")
+);
+const Passwordpolicy = lazy(() =>
+  import("../../../../Pages/Home/UserManagment/Passwordpolicy")
+);
+
+// Logs
+const AuditTrailHistory = lazy(() =>
+  import("../../../../Pages/Home/LogHistory/AuditTrailHistory")
+);
+const DownloadLogs = lazy(() =>
+  import("../../../../Pages/Home/LogHistory/DownloadLogs")
+);
+const UploadLogs = lazy(() =>
+  import("../../../../Pages/Home/LogHistory/UploadLogs")
+);
+const RestoreLogs = lazy(() =>
+  import("../../../../Pages/Home/LogHistory/RestoreLogs")
+);
+const SchedulerConfigLogs = lazy(() =>
+  import("../../../../Pages/Home/LogHistory/SchedulerConfigLogs")
+);
+const InstrumentLogs = lazy(() =>
+  import("../../../../Pages/Home/LogHistory/InstrumentLogs")
+);
+const ServerAndLocalFileDeleteLogs = lazy(() =>
+  import("../../../../Pages/Home/LogHistory/ServerAndLocalFileDeleteLogs")
+);
+
+/* ================= MENU CONFIG ================= */
 
 export const menuConfig = [
   {
     icon: <LiaFolderOpen />,
     label: "FTP Data View",
     subItems: [
-      { label: "Data Explorer", content: DataExplorer },        
-      { label: "Search Server Data", content: Searchserverdata }, 
+      { label: "Data Explorer", content: DataExplorer },
+      { label: "Search Server Data", content: Searchserverdata },
     ],
   },
-
   {
     icon: <GiPadlock />,
     label: "Lock Settings",
@@ -51,7 +111,6 @@ export const menuConfig = [
       { label: "Instrument Lock Settings", content: InstrumentLockSettingsWrapper },
     ],
   },
-
   {
     icon: <RiCalendarScheduleLine />,
     label: "Scheduler",
@@ -65,7 +124,6 @@ export const menuConfig = [
       { label: "Client Service Monitor", content: ClientServiceMonitor },
     ],
   },
-
   {
     icon: <FontAwesomeIcon icon={faSitemap} />,
     label: "Masters",
@@ -75,7 +133,6 @@ export const menuConfig = [
       { label: "Parent Parser Key", content: ParentParserKey },
     ],
   },
-
   {
     icon: <RiFileCloudLine />,
     label: "Storage",
@@ -84,7 +141,6 @@ export const menuConfig = [
       { label: "Rights", content: Rights },
     ],
   },
-
   {
     icon: <FaUser />,
     label: "User Management",
@@ -93,7 +149,6 @@ export const menuConfig = [
       { label: "Password Policy", content: Passwordpolicy },
     ],
   },
-
   {
     icon: <LuFileSearch />,
     label: "Log History",
@@ -107,7 +162,6 @@ export const menuConfig = [
       { label: "Instrument Logs", content: InstrumentLogs },
     ],
   },
-
   {
     icon: <FaCog />,
     label: "Settings",

@@ -10,6 +10,14 @@ body{
     @apply w-full text-[14px] bg-blue-600 text-white py-2 rounded-sm font-semibold hover:bg-blue-700  transition-all
 }
 
+.btn-actionprimary{
+  @apply px-4 py-2 bg-blue-600 text-white rounded-[3px] hover:bg-blue-700 font-medium flex items-center gap-2 shadow-sm
+}
+
+.btn-actionsecondary{
+  @apply px-6 py-2 border border-gray-300 text-gray-700 rounded-[3px] hover:bg-gray-50 font-medium shadow-sm
+}
+
 ::-webkit-scrollbar{
   display: none;
 }

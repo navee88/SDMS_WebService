@@ -16,7 +16,7 @@ const CheckboxItem = React.memo(({ label, checked, onChange }) => (
   </div>
 ));
 
-const CUSTOM_FILTERS = ["Instrument", "Workflow Status", "Task Status"];
+// const CUSTOM_FILTERS = ["Instrument", "Workflow Status", "Task Status"];
 const CUSTOM_COLUMNS = ["Parser Status"];
 
 export default function ConfigModal({ onClose, currentVisibility, onSave, showDialog }) {
@@ -25,55 +25,17 @@ export default function ConfigModal({ onClose, currentVisibility, onSave, showDi
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
 
-  // const handleMouseDown = (e) => {
-  //   isDragging.current = true;
-  //   dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-  // };
-
-    const handleMouseDown = (e) => {
+  const handleMouseDown = (e) => {
     isDragging.current = true;
-    
-    // Check for touch or mouse event
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    
-    dragStart.current = { x: clientX - position.x, y: clientY - position.y };
+    dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
   };
 
-
   useEffect(() => {
-    const move = (e) => {
-      if (isDragging.current) {
-        // Prevent scrolling on touch
-        if (e.type === 'touchmove') {
-           // e.preventDefault(); 
-        }
-        
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        
-        setPosition({ x: clientX - dragStart.current.x, y: clientY - dragStart.current.y });
-      }
-    };
-    
-    const up = () => {
-      isDragging.current = false;
-    };
-
-    // Mouse Listeners
+    const move = (e) => isDragging.current && setPosition({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
+    const up = () => isDragging.current = false;
     window.addEventListener('mousemove', move);
     window.addEventListener('mouseup', up);
-    
-    // Touch Listeners
-    window.addEventListener('touchmove', move, { passive: false });
-    window.addEventListener('touchend', up);
-
-    return () => { 
-        window.removeEventListener('mousemove', move); 
-        window.removeEventListener('mouseup', up);
-        window.removeEventListener('touchmove', move); 
-        window.removeEventListener('touchend', up);
-    };
+    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
   }, []);
 
   const toggleVis = (key) => setTempVisibility(p => ({ ...p, [key]: !p[key] }));
@@ -90,12 +52,12 @@ export default function ConfigModal({ onClose, currentVisibility, onSave, showDi
   };
 
   const lists = useMemo(() => ({
-    filters: CUSTOM_FILTERS.map(i => <CheckboxItem key={i} label={i} checked={tempVisibility[i]} onChange={() => toggleVis(i)} />),
+    // filters: CUSTOM_FILTERS.map(i => <CheckboxItem key={i} label={i} checked={tempVisibility[i]} onChange={() => toggleVis(i)} />),
     columns: CUSTOM_COLUMNS.map(i => <CheckboxItem key={i} label={i} checked={tempVisibility[i]} onChange={() => toggleVis(i)} />),
     actions: [
-      "Open", "File Download", "Restore", "Folder Download", "File Upload", "Folder Upload",
-      "Version History", "Work Complete", "Workflow History", "Tag", "Audit Trail History",
-      "Attribute", "Multi-File Select"
+      "File Download", "Restore", "Folder Download",
+      "Version History", "Workflow History", "Tag","Audit Trail History",
+      "Attribute"
     ].map(i => <CheckboxItem key={i} label={i} checked={tempVisibility[i]} onChange={() => toggleVis(i)} />)
   }), [tempVisibility]);
 
@@ -126,21 +88,22 @@ export default function ConfigModal({ onClose, currentVisibility, onSave, showDi
         >
           <div
             onMouseDown={handleMouseDown}
-            onTouchStart={handleMouseDown}
             className="flex justify-between px-6 py-3 border-b border-slate-100 cursor-move bg-slate-50/50 rounded-t-md select-none"
           >
             <h2 className="text-xl font-semibold text-blue-700">Configuration</h2>
             <button onClick={onClose}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
           </div>
           <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <div><h3 className="text-blue-800 font-bold mb-3">Custom Filter</h3>{lists.filters}</div>
-              <div><h3 className="text-blue-800 font-bold mb-3">Custom Column</h3>{lists.columns}</div>
+             <div className="">
+              <h3 className="text-blue-800 font-bold mb-3">Custom Actions</h3>
+              {/* <div className="max-h-[250px] overflow-y-auto pr-2 custom-scrollbar" style={scrollbarStyles}>{lists.actions}</div> */}
+              <div className="max-h-[260px] overflow-y-auto pr-2 pl-2">{lists.actions}</div>
+
             </div>
             <div className="md:border-l md:border-slate-200 md:pl-8">
-              <h3 className="text-blue-800 font-bold mb-3">Custom Actions</h3>
-              <div className="max-h-[250px] overflow-y-auto pr-2 custom-scrollbar" style={scrollbarStyles}>{lists.actions}</div>
+              <div><h3 className="text-blue-800 font-bold mb-3">Custom Column</h3>{lists.columns}</div>
             </div>
+           
           </div>
           <div className="flex justify-end gap-3 px-6 py-4 border-t bg-slate-50/50 rounded-b-md">
             <button
