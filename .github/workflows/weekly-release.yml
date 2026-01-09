@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Main branch
         uses: actions/checkout@v4
         with:
-          ref: main # Check out the target branch
+          ref: Main # Check out the target branch
           fetch-depth: 0
 
       - name: Configure Git
@@ -26,6 +26,6 @@ jobs:
       - name: Merge Backup into Main
         run: |
           git fetch origin Backup
-          # Merge Backup into the current (main) branch
+          # Merge Backup into the current (Main) branch
           git merge origin/Backup --no-edit
-          git push origin main
+          git push origin Main

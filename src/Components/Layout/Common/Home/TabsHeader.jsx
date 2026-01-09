@@ -79,7 +79,7 @@ function TabsHeader({ tabs, selectedTab, setSelectedTab }) {
   const [hoveredTab, setHoveredTab] = useState(null);
 
   return (
-    <div className="flex gap-10 px-4 pt-4 bg-[#f0f4f8] border-b border-[#264ab2] h-[50px]">
+    <div className="flex z-0 gap-10 px-4 pt-4 bg-[#f0f4f8] border-b border-[#264ab2] h-[50px]">
       {tabs.map((tab, index) => {
         const isActive = selectedTab === index;
 

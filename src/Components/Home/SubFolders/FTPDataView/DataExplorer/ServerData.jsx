@@ -6,8 +6,6 @@ import {
   RotateCcw,
   RefreshCw,
   Settings,
-  ChevronUp,
-  ChevronDown,
   CheckSquare,
   MoreVertical,
   Loader2,
@@ -21,6 +19,7 @@ import { useServerDataApi, INITIAL_FILTER_STATE } from "./useServerDataApi";
 import ConfigModal from "./ConfigModal";
 import UsersPage from "../../../../Layout/Common/Home/Userpage";
 import PopupContentResolver from "./PopupContent";
+import { LuChevronsDown, LuChevronsUp } from "react-icons/lu";
 
 import {
   ACTION_ICONS,
@@ -28,7 +27,6 @@ import {
   INITIAL_CONFIG_STATE,
   getCurrentDate,
 } from "./Constantdata";
-
 
 const SummaryItem = React.memo(({ label, value }) => {
   let displayValue = "---";
@@ -51,41 +49,12 @@ const SummaryItem = React.memo(({ label, value }) => {
   );
 });
 
-const getFromToDates = (duration) => {
-  const today = new Date();
-  const to = new Date(today);
-  const from = new Date(today);
-
-  switch (duration) {
-    case "Last 7 Days":
-      from.setDate(today.getDate() - 7);
-      break;
-    case "Last 30 Days":
-      from.setDate(today.getDate() - 30);
-      break;
-    case "Last 1 Year":
-      from.setFullYear(today.getFullYear() - 1);
-      break;
-    case "Current Date":
-      break;
-    default:
-      return null;
-  }
-
-  return {
-    from: from.toISOString().split("T")[0],
-    to: to.toISOString().split("T")[0],
-  };
-};
-
 const formatDisplayDate = (dateStr) => {
   if (!dateStr) return "---";
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return "---";
   return d.toLocaleDateString("en-GB");
 };
-
-
 
 const PrimaryButton = React.memo(({ icon: Icon, label, onClick }) => (
   <button
@@ -112,13 +81,13 @@ const ActionButton = React.memo(({ icon: Icon, label, disabled, className = "" }
 
 const DatePicker = React.memo(({ label, value, onChange, max }) => (
   <div className="flex flex-col w-full">
-    <label className="text-[11px] text-slate-500 font-semibold">{label}</label>
+    <label className="text-[13px] text-slate-600 font-semibold">{label}</label>
     <input
       type="date"
       value={value}
       onChange={onChange}
       max={max}
-      className="px-2 py-1 border rounded text-[12px]"
+      className="px-2 bg-transparent py-1 border-b-2 border-slate-300  text-[12px]"
     />
   </div>
 ));
@@ -169,6 +138,9 @@ export default function ServerData() {
     isHiddenRetire,
     changeClientName,
     getInstrumentmappedClientID,
+    getFromToDates,
+    lastCustomDates,
+    setLastCustomDates,
   } = useServerDataApi();
 
   const [dialogData, setDialogData] = useState({ open: false, message: "", type: "" });
@@ -196,6 +168,19 @@ export default function ServerData() {
   const actionContainerRef = useRef(null);
   const buttonRefs = useRef([]);
   const initialLoadRef = useRef(false);
+
+  // --- COLUMN DEFINITIONS (New Addition) ---
+    const tagsColumns = useMemo(() => [
+    { key: 'category', label: 'Category', width: 100 },
+    { key: 'value', label: 'Value', width: 150 },
+    { key: 'createdBy', label: 'Created By', width: 120 },
+    { key: 'createdOn', label: 'Created On', width: 120 },
+  ], []);
+
+  const parsedDataColumns = useMemo(() => [
+    { key: 'fieldName', label: 'Field Name', width: 150 },
+    { key: 'fieldValue', label: 'Field Value', width: 250 },
+  ], []);
 
   const showDialog = useCallback((message, type = "error") => {
     setDialogData({ open: true, message, type });
@@ -226,32 +211,86 @@ export default function ServerData() {
     return ["All", ...new Set(types)];
   }, [workflowStatuses]);
 
-  // ✅ CRITICAL FIX: Ensure 'val' is a string so .find() logic works
   const handleInputChange = useCallback(
     async (field, value) => {
       let val = value;
-
-      // 1. Extract raw value if it's an event or object
-      // if (value?.target?.value !== undefined) {
-      //   val = value.target.value;
-      // } else if (typeof value === "object" && value !== null) {
-      //   val = value.value || value.label || ""; 
-      // }
-
       if (value?.target?.value !== undefined) {
-      val = value.target.value;
-    } else if (typeof value === "object" && value !== null) {
-      val = value.value || value.label || "";
-    }
+        val = value.target.value;
+      } else if (typeof value === "object" && value !== null) {
+        val = value.value || value.label || "";
+      }
 
+      // If recordsDuration changes, update dates in both form and applied filters
+      if (field === "recordsDuration") {
+        if (val === "Custom Date") {
+          // Restore last custom dates
+          setFilterForm((prev) => ({
+            ...prev,
+            recordsDuration: val,
+            fromDate: lastCustomDates.fromDate,
+            toDate: lastCustomDates.toDate,
+          }));
+          setAppliedFilters((prev) => ({
+            ...prev,
+            recordsDuration: val,
+            fromDate: lastCustomDates.fromDate,
+            toDate: lastCustomDates.toDate,
+          }));
+        } else {
+          // Save current dates as last custom dates (if coming from Custom Date)
+          if (filterForm.recordsDuration === "Custom Date") {
+            setLastCustomDates({
+              fromDate: filterForm.fromDate,
+              toDate: filterForm.toDate,
+            });
+          }
+          // Update dates based on the selected duration
+          const range = getFromToDates(val);
+          if (range) {
+            setFilterForm((prev) => ({
+              ...prev,
+              recordsDuration: val,
+              fromDate: range.from,
+              toDate: range.to,
+            }));
+            setAppliedFilters((prev) => ({
+              ...prev,
+              recordsDuration: val,
+              fromDate: range.from,
+              toDate: range.to,
+            }));
+          } else {
+            setFilterForm((prev) => ({
+              ...prev,
+              recordsDuration: val,
+              fromDate: "",
+              toDate: "",
+            }));
+            setAppliedFilters((prev) => ({
+              ...prev,
+              recordsDuration: val,
+              fromDate: "",
+              toDate: "",
+            }));
+          }
+          return;
+        }
+      }
+
+      // Update lastCustomDates for manual date changes
+      if (field === "fromDate" || field === "toDate") {
+        setLastCustomDates((prev) => ({
+          ...prev,
+          [field]: value.target.value,
+        }));
+      }
+
+      // For client and instrument changes, update appliedFilters as well
       setFilterForm((prev) => ({ ...prev, [field]: val }));
-    
+      setAppliedFilters((prev) => ({ ...prev, [field]: val }));
 
       if (field === "client") {
-        // Ensure we compare strings
         const clientObj = clients.find((c) => String(c.sClientName) === String(val));
-        
-        // Always try to find FTP Group, even if using 'All'
         const currentGroup = filterForm.storageGroup || (ftpGroups[0] ? ftpGroups[0].sFTPAliasName : "");
         const ftpObj = ftpGroups.find((g) => g.sFTPAliasName === currentGroup);
 
@@ -276,6 +315,11 @@ export default function ServerData() {
 
           if (!autoInstrumentSetRef.current && newInstruments?.length > 0) {
             autoInstrumentSetRef.current = true;
+            setAppliedFilters((prev) => ({
+              ...prev,
+              client: val,
+              instrument: newInstruments[0].sInstrumentName,
+            }));
             return {
               ...prev,
               client: val,
@@ -293,51 +337,6 @@ export default function ServerData() {
       }
 
       if (field === "instrument") {
-        setFilterForm((prev) => ({
-          ...prev,
-          instrument: val,
-        }));
-
-         if (field === "recordsDuration") {
-      if (val !== "Custom Date") {
-        const range = getFromToDates(val);
-
-        if (range) {
-          setFilterForm((prev) => ({
-            ...prev,
-            recordsDuration: val,
-            fromDate: range.from,
-            toDate: range.to,
-          }));
-
-          // 🔥 UPDATE SUMMARY IMMEDIATELY
-          setAppliedFilters((prev) => ({
-            ...prev,
-            recordsDuration: val,
-            fromDate: range.from,
-            toDate: range.to,
-          }));
-        }
-      } else {
-        setFilterForm((prev) => ({
-          ...prev,
-          recordsDuration: val,
-          fromDate: "",
-          toDate: "",
-        }));
-
-        setAppliedFilters((prev) => ({
-          ...prev,
-          recordsDuration: val,
-          fromDate: "",
-          toDate: "",
-        }));
-      }
-      return;
-    }
-
-  
-
         const instObj = instruments.find((i) => i.sInstrumentName === val);
         if (!instObj) return;
 
@@ -360,6 +359,11 @@ export default function ServerData() {
           client: mappedClient.sClientName,
           instrument: val,
         }));
+        setAppliedFilters((prev) => ({
+          ...prev,
+          client: mappedClient.sClientName,
+          instrument: val,
+        }));
       }
     },
     [
@@ -369,108 +373,110 @@ export default function ServerData() {
       filterForm.storageGroup,
       changeClientName,
       getInstrumentmappedClientID,
+      lastCustomDates,
+      setLastCustomDates,
+      getFromToDates,
     ]
   );
 
   const handleReset = useCallback(async () => {
     try {
-      setFilterForm(INITIAL_FILTER_STATE);
-      setAppliedFilters(INITIAL_FILTER_STATE);
-      setSavedFilters(INITIAL_FILTER_STATE);
-
+      // 1. Clear selection and UI states immediately
       setHasFiltered(false);
       setSelectedRow(null);
       setFileTagsData([]);
       setFileParsedData([]);
-      setLeftPanelData(null);
-
+      
       setLoadingScope("both");
       setIsGridLoading(true);
       setIsLeftLoading(true);
 
-      await loadInitialData();
+      // 2. Load the initial data and WAIT for the response
+      const response = await loadInitialData();
+
+      // 3. Prepare the new state. Start with empty/initial state.
+      let resetState = INITIAL_FILTER_STATE;
+
+      // 4. If server returns defaults, merge them in (Just like the initial load useEffect)
+      if (response?.defaults) {
+        resetState = {
+          ...INITIAL_FILTER_STATE,
+          storageGroup: response.defaults.storageGroup,
+          client: response.defaults.client,
+        };
+      }
+
+      // 5. Update all filter states with these defaults
+      setFilterForm(resetState);
+      setAppliedFilters(resetState);
+      setSavedFilters(resetState);
+
+      // 6. Restore the Left Panel Data (so the folder tree works)
+      if (response?.defaults) {
+        setLeftPanelData({
+          storageGroup: response.defaults.storageGroup,
+          client: response.defaults.client,
+          instrument: "",
+        });
+      } else {
+        setLeftPanelData(null);
+      }
+
+      // 7. Trigger the grid refresh
       setRefreshKey((prev) => prev + 1);
+
     } catch (error) {
       showDialog("Failed to reset application state: " + error.message, "error");
     }
   }, [loadInitialData, setSavedFilters, showDialog]);
 
 
-const handleFilter = useCallback(() => {
-  // ENTRY POINT DEBUG - This MUST print when button is clicked
-  console.log("🔥 handleFilter ENTERED - Function is being called!");
-  console.log("Timestamp:", new Date().toISOString());
-  
-  // Rest of your existing logic with logs
-  console.log("=== handleFilter called ===");
-  console.log("Initial filterForm state:", {
-    recordsDuration: filterForm.recordsDuration,
-    fromDate: filterForm.fromDate,
-    toDate: filterForm.toDate,
-  });
+  const handleFilter = useCallback(() => {
+    applyLocalStorageFilters(filterForm);
+    setSavedFilters(filterForm);
+    setHasFiltered(true);
+    setLoadingScope("both");
+    setIsGridLoading(true);
+    setIsLeftLoading(true);
 
-  let effectiveFromDate = filterForm.fromDate;
-  let effectiveToDate = filterForm.toDate;
+    setLeftPanelData({
+      storageGroup: filterForm.storageGroup,
+      client: filterForm.client,
+      instrument: filterForm.instrument,
+    });
+  }, [filterForm, applyLocalStorageFilters, setSavedFilters]);
 
-  if (filterForm.recordsDuration !== "Custom Date") {
-    console.log(`Calculating date range for: "${filterForm.recordsDuration}"`);
-    const range = getFromToDates(filterForm.recordsDuration);
-    
-    if (range) {
-      effectiveFromDate = range.from;
-      effectiveToDate = range.to;
-      console.log("✅ Dates calculated:", { from: range.from, to: range.to });
-      
-      setFilterForm(prev => ({
-        ...prev,
-        fromDate: range.from,
-        toDate: range.to
-      }));
-    }
-  }
-
-  const finalFilters = {
-    ...filterForm,
-    fromDate: effectiveFromDate,
-    toDate: effectiveToDate,
-  };
-
-  console.log("Final filters:", finalFilters);
-  
-  applyLocalStorageFilters(finalFilters);
-  setAppliedFilters(finalFilters);
-  setSavedFilters(finalFilters);
-  setHasFiltered(true);
-  setLoadingScope("both");
-  setIsGridLoading(true);
-  setIsLeftLoading(true);
-
-  setLeftPanelData({
-    storageGroup: finalFilters.storageGroup,
-    client: finalFilters.client,
-    instrument: finalFilters.instrument,
-  });
-
-  console.log("=== handleFilter completed ===");
-}, [filterForm, applyLocalStorageFilters, setSavedFilters]);
-
-
-
-
-
-
-
-
-  useEffect(() => {
+   useEffect(() => {
     if (!initialLoadRef.current) {
       initialLoadRef.current = true;
-      loadInitialData().catch((err) => {
-        showDialog("Failed to load server data: " + err.message, "error");
-      });
+      
+      // Update: Handle the promise response to set local state
+      loadInitialData()
+        .then((response) => {
+          if (response?.defaults) {
+            const newDefaults = {
+              ...INITIAL_FILTER_STATE,
+              storageGroup: response.defaults.storageGroup,
+              client: response.defaults.client,
+            };
+            
+            // Update both form and applied filters with the fetched defaults
+            setFilterForm((prev) => ({ ...prev, ...newDefaults }));
+            setAppliedFilters((prev) => ({ ...prev, ...newDefaults }));
+            
+            // Optional: Also update the left panel data immediately if needed
+            setLeftPanelData({
+               storageGroup: response.defaults.storageGroup,
+               client: response.defaults.client,
+               instrument: "",
+            });
+          }
+        })
+        .catch((err) => {
+          showDialog("Failed to load server data: " + err.message, "error");
+        });
     }
   }, [loadInitialData, showDialog]);
-
- 
 
 
   const handleRowSelect = useCallback((row) => {
@@ -536,31 +542,30 @@ const handleFilter = useCallback(() => {
     return () => clearTimeout(timer);
   }, [refreshKey, ftpGroups, appliedFilters, loadingScope]);
 
- const calculateVisibleActions = useCallback(() => {
-  if (!actionContainerRef.current) return;
+  const calculateVisibleActions = useCallback(() => {
+    if (!actionContainerRef.current) return;
 
-  const availableWidth = actionContainerRef.current.offsetWidth - 140; // your buffer
-  let accumulatedWidth = 0;
-  let count = 0;
+    const availableWidth = actionContainerRef.current.offsetWidth - 140;
+    let accumulatedWidth = 0;
+    let count = 0;
 
-  buttonRefs.current.forEach((button) => {
-    if (!button) return;
-    const w = button.offsetWidth + 8; // button + gap
-    if (accumulatedWidth + w < availableWidth) {
-      accumulatedWidth += w;
-      count += 1;
-    }
-  });
+    buttonRefs.current.forEach((button) => {
+      if (!button) return;
+      const w = button.offsetWidth + 8;
+      if (accumulatedWidth + w < availableWidth) {
+        accumulatedWidth += w;
+        count += 1;
+      }
+    });
 
-  setVisibleCount(Math.max(0, count));
-}, []);
+    setVisibleCount(Math.max(0, count));
+  }, []);
 
-
- useEffect(() => {
-  calculateVisibleActions(); // initial
-  window.addEventListener("resize", calculateVisibleActions);
-  return () => window.removeEventListener("resize", calculateVisibleActions);
-}, [calculateVisibleActions]);
+  useEffect(() => {
+    calculateVisibleActions();
+    window.addEventListener("resize", calculateVisibleActions);
+    return () => window.removeEventListener("resize", calculateVisibleActions);
+  }, [calculateVisibleActions]);
 
   const getIsActionDisabled = useCallback(
     (actionName) => {
@@ -587,21 +592,21 @@ const handleFilter = useCallback(() => {
   }, [isHiddenRetire]);
 
   return (
-    <div className="flex flex-col w-full font-sans rounded-md relative h-full">
+    <div className="flex  flex-col w-full font-sans rounded-md relative h-full">
       {isLoadingApi && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-2xl shadow-2xl flex items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="text-lg font-medium">Loading Server Data...</span>
+        <div className="fixed inset-0 bg-black/10 flex items-center justify-center z-50">
+          <div className="  rounded-sm flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" /> 
+           <p className="text-lg font-medium">Loading Server Data...</p>
           </div>
         </div>
       )}
 
       {/* FILTER BAR */}
-      <div className="bg-[#f0f4f8] px-4 pt-4 pb-2 relative rounded-t-md z-20">
+      <div className="bg-[#f0f4f8] px-4 pt-4 pb-2 relative rounded-t-md">
         {isFilterOpen ? (
-          <div className="flex flex-wrap items-end gap-3.5 mb-2">
-            <div className="w-60">
+          <div className="flex flex-wrap items-end gap-3.5 mb-2 z-0">
+            <div className="w-60 relative z-20">
               <AnimatedDropdown
                 label="Storage Group"
                 value={filterForm.storageGroup}
@@ -611,7 +616,7 @@ const handleFilter = useCallback(() => {
               />
             </div>
 
-            <div className="w-60">
+            <div className="w-60 relative z-20">
               <AnimatedDropdown
                 label="Client"
                 value={filterForm.client}
@@ -622,7 +627,7 @@ const handleFilter = useCallback(() => {
             </div>
 
             {configState["Instrument"] && (
-              <div className="w-60">
+              <div className="w-60 relative z-20">
                 <AnimatedDropdown
                   label="Instrument"
                   value={filterForm.instrument}
@@ -634,7 +639,7 @@ const handleFilter = useCallback(() => {
             )}
 
             {configState["Task Status"] && (
-              <div className="w-60">
+              <div className="w-60 relative z-20">
                 <AnimatedDropdown
                   label="Task Status"
                   value={filterForm.taskStatus}
@@ -646,7 +651,7 @@ const handleFilter = useCallback(() => {
             )}
 
             {configState["Workflow Status"] && (
-              <div className="w-60">
+              <div className="w-60 relative z-20">
                 <AnimatedDropdown
                   label="Workflow Status"
                   value={filterForm.workflowStatus}
@@ -657,23 +662,20 @@ const handleFilter = useCallback(() => {
               </div>
             )}
 
-            <div className="w-60">
-            <AnimatedDropdown
-  label="Records Duration"
-  value={filterForm.recordsDuration}
-  options={[
-    "Current Date",
-    "Last 7 Days",
-    "Last 30 Days", 
-    "Last 1 Year",
-    "Custom Date",
-  ]}
-  onChange={(val) => handleInputChange("recordsDuration", val)
-}
-  isSearchable
-/>
-
-
+            <div className="w-60 relative z-20">
+              <AnimatedDropdown
+                label="Records Duration"
+                value={filterForm.recordsDuration}
+                options={[
+                  "Current Date",
+                  "Last 7 Days",
+                  "Last 30 Days",
+                  "Last 1 Year",
+                  "Custom Date",
+                ]}
+                onChange={(val) => handleInputChange("recordsDuration", val)}
+                isSearchable
+              />
             </div>
 
             {filterForm.recordsDuration === "Custom Date" && (
@@ -682,7 +684,7 @@ const handleFilter = useCallback(() => {
                   <DatePicker
                     label="From"
                     value={filterForm.fromDate}
-                    onChange={(val) => handleInputChange("fromDate", val)}
+                    onChange={(e) => handleInputChange("fromDate", e)}
                     max={getCurrentDate()}
                   />
                 </div>
@@ -690,7 +692,7 @@ const handleFilter = useCallback(() => {
                   <DatePicker
                     label="To"
                     value={filterForm.toDate}
-                    onChange={(val) => handleInputChange("toDate", val)}
+                    onChange={(e) => handleInputChange("toDate", e)}
                     max={getCurrentDate()}
                   />
                 </div>
@@ -717,35 +719,37 @@ const handleFilter = useCallback(() => {
             </div>
           </div>
         ) : (
-          // ✅ FIXED: Using appliedFilters with robust display logic
           <div className="grid grid-cols-6 gap-3 py-2 px-1">
             <SummaryItem label="Storage Group" value={appliedFilters.storageGroup} />
-            <SummaryItem label="Client" value={filterForm.client} />
-<SummaryItem label="Instrument" value={filterForm.instrument} />
-
-        <SummaryItem label="From" value={formatDisplayDate(appliedFilters.fromDate)} />
-<SummaryItem label="To" value={formatDisplayDate(appliedFilters.toDate)} />
-
-
-
+            <SummaryItem label="Client" value={appliedFilters.client} />
+<SummaryItem
+  label="Instrument"
+  value={
+    appliedFilters.instrument === "" || appliedFilters.instrument === "All" || !appliedFilters.instrument
+      ? ""
+      : appliedFilters.instrument 
+  }
+/>
+            <SummaryItem label="From" value={formatDisplayDate(appliedFilters.fromDate)} />
+            <SummaryItem label="To" value={formatDisplayDate(appliedFilters.toDate)} />
           </div>
         )}
 
         {/* Arrow Toggle */}
         <button
-          className="absolute right-4 -bottom-3 z-10 bg-[#f0f4f8] hover:bg-slate-200 p-0.5 rounded shadow-sm cursor-pointer"
+          className="absolute right-4 -bottom-3 z-10 bg-[#f0f4f8] p-0.5 rounded shadow-sm cursor-pointer"
           onClick={toggleFilter}
         >
           {isFilterOpen ? (
-            <ChevronUp className="w-4 h-4 text-blue-600" />
+            <LuChevronsUp className="w-4 h-4 text-blue-600" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-blue-600" />
+            <LuChevronsDown className="w-4 h-4 text-blue-600" />
           )}
         </button>
       </div>
 
       {/* ACTION BAR */}
-      <div className="bg-white px-3 py-2 border-b border-slate-100">
+      <div className="bg-white mt-2.5 ms-1">
         <div
           ref={actionContainerRef}
           className="flex items-center flex-wrap gap-2 justify-start relative"
@@ -818,7 +822,7 @@ const handleFilter = useCallback(() => {
       </div>
 
       {/* FTP LAYOUT */}
-      <div className="pb-10 pt-6">
+      <div className="py-3 mb-10 z-0">
         <FtpLayout
           storageGroup={appliedFilters.storageGroup}
           rowData={gridData}
@@ -831,13 +835,16 @@ const handleFilter = useCallback(() => {
               label: "Parser Status",
               width: 120,
               enableSearch: true,
-              hidden: true,
+              // hidden: true,
+               hidden: !configState["Parser Status"],
             },
           ]}
           onRowSelect={handleRowSelect}
           refreshKey={refreshKey}
           tagsData={fileTagsData}
+          tagsColumns={tagsColumns}
           parsedData={fileParsedData}
+          parsedDataColumns={parsedDataColumns}
           configState={configState}
           isMiddleLoading={isGridLoading}
           isLeftLoading={isLeftLoading}
@@ -849,7 +856,9 @@ const handleFilter = useCallback(() => {
         />
       </div>
 
-      <UsersPage />
+       <div>user</div> 
+          
+       {/* <div> <UsersPage/> </div>    */}
 
       {/* MODALS */}
       {isConfigOpen && (

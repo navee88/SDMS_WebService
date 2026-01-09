@@ -75,7 +75,7 @@
 
 // export default React.memo(Homelayout);
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { menuConfig } from "./MenuConfig";
 import Sidebar from "../../../Sidebar/Sidebar";
@@ -139,7 +139,7 @@ function Homelayout() {
         className="relative bg-white overflow-hidden"
         style={{ gridArea: "main" }}
       >
-        {/* ================= FTP LAYER (PERSISTENT) ================= */}
+        {/* FTP LAYER (Data Explorer loads immediately) */}
         {ftpIndex !== -1 && (
           <div
             style={{
@@ -148,25 +148,27 @@ function Homelayout() {
               width: "100%",
             }}
           >
-            {menuConfig[ftpIndex].subItems.map((sub, index) => {
-              const Component = sub.content;
-              return (
-                <div
-                  key={sub.label}
-                  style={{
-                    display: selectedSub === index ? "block" : "none",
-                    height: "100%",
-                    width: "100%",
-                  }}
-                >
-                  <Component />
-                </div>
-              );
-            })}
+            <Suspense fallback={<LoadingSpinner />}>
+              {menuConfig[ftpIndex].subItems.map((sub, index) => {
+                const Component = sub.content;
+                return (
+                  <div
+                    key={sub.label}
+                    style={{
+                      display: selectedSub === index ? "block" : "none",
+                      height: "100%",
+                      width: "100%",
+                    }}
+                  >
+                    <Component />
+                  </div>
+                );
+              })}
+            </Suspense>
           </div>
         )}
 
-        {/* ================= OTHER MENUS ================= */}
+        {/* OTHER MENUS - Lazy loaded */}
         <AnimatePresence mode="wait">
           {!isFtpActive && (
             <motion.div
@@ -177,7 +179,9 @@ function Homelayout() {
               transition={{ duration: 0.5 }}
               style={{ height: "100%", width: "100%" }}
             >
-              {renderDynamicContent()}
+              <Suspense fallback={<LoadingSpinner />}>
+                {renderDynamicContent()}
+              </Suspense>
             </motion.div>
           )}
         </AnimatePresence>
@@ -186,4 +190,15 @@ function Homelayout() {
   );
 }
 
+// Loading fallback component
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1A57A6]"></div>
+    </div>
+  );
+}
+
 export default React.memo(Homelayout);
+
+

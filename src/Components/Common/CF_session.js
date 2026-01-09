@@ -24,3 +24,20 @@ export function CF_sessionGet(key, encrypt = 0) {
     return null;
   }
 }
+
+export function CF_sessionRemove(key) {
+  try {
+    sessionStorage.removeItem(key);
+  } catch (err) {
+    console.error("CF_sessionRemove error:", err);
+  }
+}
+
+export function CF_sessionClear() {
+  try {
+    sessionStorage.clear();
+  } catch (err) {
+    console.error("CF_sessionClear error:", err);
+  }
+}
+

@@ -230,9 +230,9 @@ function LoginForm({ onNavigate }) {
     e.stopPropagation();
     handleDialogClose();
   }
-  if (e.key === "Enter" && !dialogData.open) {
-    e.preventDefault(); 
-  }
+  // if (e.key === "Enter" && !dialogData.open) {
+  //   e.preventDefault(); 
+  // }
 });
 
 const getErrorMessage = useCallback((errorOrMessage) => {
@@ -544,7 +544,7 @@ showDialog(msg, "warning");
           <button
             type="button"
             onClick={toggleMoreInfo}
-            className="text-sm hover:font-bold font-semibold text-blue-600 hover:underline hover:translate-x-1 transform-all flex items-center"
+            className="text-sm hover:font-bold text font-semibold text-blue-600 hover:underline hover:translate-x-1 transform-all flex items-center"
           >
             {t('login.moreinformation')}
             <MdKeyboardDoubleArrowRight
