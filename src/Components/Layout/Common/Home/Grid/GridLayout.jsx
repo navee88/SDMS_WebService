@@ -757,6 +757,7 @@ const GridLayout = ({
   height = '610px',
   hideFilterRow = false,
   autoSelectFirst = true,
+  externalSelectedId = null,
   detailPanelWidth = '50%' // Default value provided here
 }) => {
   const { t } = useTranslation();
@@ -972,17 +973,35 @@ const GridLayout = ({
   // }, [safeData, autoSelectFirst]); 
 
 
+  // useEffect(() => {
+  //     if (!autoSelectFirst || safeData.length === 0) return;
+ 
+  //     setSelectedItem(prev => {
+  //       if (!prev) return safeData[0];
+ 
+  //       //keep same selected row after data update
+  //       const stillExists = safeData.find(r => r._gridId === prev._gridId);
+  //       return stillExists || prev;
+  //     });
+  //   }, [safeData, autoSelectFirst]);
+
   useEffect(() => {
       if (!autoSelectFirst || safeData.length === 0) return;
- 
+  
       setSelectedItem(prev => {
+        // NEW: If external ID is provided, find and select that row
+        if (externalSelectedId) {
+          const externalRow = safeData.find(r => r._gridId === externalSelectedId);
+          if (externalRow) return externalRow;
+        }
+  
         if (!prev) return safeData[0];
- 
+  
         //keep same selected row after data update
         const stillExists = safeData.find(r => r._gridId === prev._gridId);
-        return stillExists || prev;
+        return stillExists || safeData[0];
       });
-    }, [safeData, autoSelectFirst]);
+    }, [safeData, autoSelectFirst, externalSelectedId]);  // ADD externalSelectedId to dependencies
 
  
 
