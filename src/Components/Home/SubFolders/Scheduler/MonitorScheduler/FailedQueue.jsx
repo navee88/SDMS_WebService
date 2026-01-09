@@ -1,90 +1,84 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, FileText, SquarePen } from 'lucide-react';
-import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
+// import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import { useLanguage } from '../../../../../Context/LanguageContext';
 import { useTranslation } from "react-i18next";
 import { useCallback } from 'react'; // Add useCallback to existing imports
 import Errordialog from "../../../../Layout/Common/Errordialog";
+import useAxios from '../../../../../Services/servicecall';
+import { CF_sessionGet } from "../../../../Common/CF_session";
+import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayoutTest';
 
-const UsersPage = () => {
-  const [userData, setUserData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+const UsersPage = ({
+  data,
+  selectedRowId,
+  onRowSelect,
+  showViewDetails,
+  viewDetailsData
+}) => {
+  // const [userData, setUserData] = useState([]);
+  // const [loading, setLoading] = useState(true);
+  // const [error, setError] = useState(null);
   const { currentLanguage, changeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
 
-  const mockData = [
-    {
-      id: 1,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "CU-Summary1 (CU-Summary1)",
-      storageName: "sdms-ftp"
-    },
-    {
-      id: 2,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "CU-Summary1 (CU-Summary1)",
-      storageName: "sdms-ftp"
-    },
-    {
-      id: 3,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "MU-Summary1 (MU-Summary1)",
-      storageName: "sdms-ftp"
-    },
-    {
-      id: 4,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "AU-Summary1 (AU-Summary1)",
-      storageName: "sdms-ftp"
-    },
-    {
-      id: 5,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "CU-Summary1 (CU-Summary1)",
-      storageName: "sdms-ftp"
-    },
-    {
-      id: 6,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "CU-Summary1 (CU-Summary1)",
-      storageName: "sdms-ftp"
-    },
-    {
-      id: 7,
-      clientName: "DESKTOP-CU9J5T2",
-      instrument: "CU-Summary1 (CU-Summary1)",
-      storageName: "sdms-ftp"
-    }
-  ];
+  // const mockData = [
+  //   {
+  //     id: 1,
+  //     clientName: "DESKTOP-CU9J5T2",
+  //     instrument: "CU-Summary1 (CU-Summary1)",
+  //     storageName: "sdms-ftp"
+  //   },
+  //   {
+  //     id: 2,
+  //     clientName: "DESKTOP-CU9J5T2",
+  //     instrument: "CU-Summary1 (CU-Summary1)",
+  //     storageName: "sdms-ftp"
+  //   },
+  //   {
+  //     id: 3,
+  //     clientName: "DESKTOP-CU9J5T2",
+  //     instrument: "MU-Summary1 (MU-Summary1)",
+  //     storageName: "sdms-ftp"
+  //   },
+  //   {
+  //     id: 4,
+  //     clientName: "DESKTOP-CU9J5T2",
+  //     instrument: "AU-Summary1 (AU-Summary1)",
+  //     storageName: "sdms-ftp"
+  //   },
+  //   {
+  //     id: 5,
+  //     clientName: "DESKTOP-CU9J5T2",
+  //     instrument: "CU-Summary1 (CU-Summary1)",
+  //     storageName: "sdms-ftp"
+  //   },
+  //   {
+  //     id: 6,
+  //     clientName: "DESKTOP-CU9J5T2",
+  //     instrument: "CU-Summary1 (CU-Summary1)",
+  //     storageName: "sdms-ftp"
+  //   },
+  //   {
+  //     id: 7,
+  //     clientName: "DESKTOP-CU9J5T2",
+  //     instrument: "CU-Summary1 (CU-Summary1)",
+  //     storageName: "sdms-ftp"
+  //   }
+  // ];
 
 
+  // useEffect(() => {
+  //   setLoading(true);
+  //   setTimeout(() => {
+  //     // setUserData(mockData);
+  //     setLoading(false);
+  //   }, 300);
 
-  //   useEffect(() => {
-  //     const fetchUsers = async () => {
-  //       try {
-  //         setLoading(true);
-  //         const response = await axios.get('http://localhost:5173/users');
-  //         setUserData(response.data);
-  //         setLoading(false);
-  //       } catch (err) {
-  //         console.error("Error fetching data:", err);
-  //         setError(err.message || "Something went wrong");
-  //         setLoading(false);
-  //       }
-  //     };
+  // }, []);
 
-  //     fetchUsers();
-  //   }, []);
 
-  useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setUserData(mockData);
-      setLoading(false);
-    }, 300);
-
-  }, []);
 
   const userColumns = useMemo(() => [
     {
@@ -110,6 +104,65 @@ const UsersPage = () => {
     }
   ], []);
 
+  const ViewDetailsColumns = useMemo(() => [
+    {
+      key: 'clientName',
+      label: t('label.clientName'),
+      width: 180,
+      enableSearch: true,
+      render: (row) => <span className="text-gray-700">{row.clientName}</span>
+    },
+    {
+      key: 'instrument',
+      label: t('label.instrument'),
+      width: 180,
+      enableSearch: true,
+      render: (row) => <span className="text-gray-700">{row.instrumentName}</span>
+    },
+    {
+      key: 'taskId',
+      label: t('label.taskId'),
+      width: 120,
+      enableSearch: true,
+      render: (row) => <span className="text-gray-700">{row.taskId}</span>
+    },
+    {
+      key: 'filename',
+      label: t('label.fileName'),
+      width: 200,
+      enableSearch: true,
+      render: (row) => <span className="text-gray-700">{row.fileName}</span>
+    },
+    {
+      key: 'fileType',
+      label: t('label.fileType'),
+      width: 120,
+      enableSearch: true,
+      render: (row) => <span className="text-gray-700">{row.fileType}</span>
+    },
+    {
+      key: 'captureDate',
+      label: t('label.captureDate'),
+      width: 200,
+      enableSearch: true,
+      render: (row) => <span className="text-gray-700">{row.captureDate}</span>
+    },
+    {
+      key: 'captureDateUTC',
+      label: t('label.captureDateUTC'),
+      width: 150,
+      enableSearch: true,
+      render: (row) => <span className="text-gray-700">{row.utcCaptureDate}</span>
+    },
+    {
+      key: 'errorDescription',
+      label: t('label.errorDescription'),
+      width: 250,
+      enableSearch: true,
+      render: (row) => <span className="text-gray-700">{row.errorDescription}</span>
+    }
+  ], [t]);
+
 
   const renderUserDetail = (user) => (
     <div className="space-y-3 text-[12px]">
@@ -133,28 +186,70 @@ const UsersPage = () => {
 
   );
 
-
-  if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="p-8 text-center text-red-500"></div>;
-  }
-
-
   return (
-    <div className="flex flex-col mt-2">
-      <GridLayout
-        columns={userColumns}
-        data={userData}
-        renderDetailPanel={renderUserDetail}
-      />
+    <div className="flex-1 overflow-hidden flex flex-col">
+      {showViewDetails ? (
+        <>
+          <div className="flex justify-end p-4">
+            <button
+              onClick={() => {
+                const event = new CustomEvent('closeViewDetails');
+                window.dispatchEvent(event);
+              }}
+              className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded transition-colors"
+            >
+              {t("button.close")}
+            </button>
+          </div>
+          <GridLayout
+            columns={ViewDetailsColumns}
+            data={viewDetailsData}
+          />
+        </>
+      ) : (
+        <GridLayout
+          columns={userColumns}
+          data={data}
+          getRowId={(row) => row.id}
+          externalSelectedId={selectedRowId}
+          selectedRows={[selectedRowId]}
+          onRowClick={(row) => onRowSelect(row)}
+          renderDetailPanel={renderUserDetail}
+        />
+      )}
     </div>
   );
 };
 
+function CF_activeUserdetails() {
+  const ActiveUserDetails = {
+    sUserDomainName: CF_sessionGet("sDomainName", 1) || "SDMS",
+    sSessionID: CF_sessionGet("sSessionID", 1) || "",
+    sUserID: CF_sessionGet("sUserID", 1) || "",
+    sTimeZoneID: (CF_sessionGet("sTimeZoneID", 1) || "Asia/Kolkata") + "<~>" + (CF_sessionGet("UTCStatus", 1) || "true"),
+    sApplicationName: "SDMS",
+    sdbtype: CF_sessionGet("sdbtype", 1) || "POSTGRESQL",
+    sUsername: CF_sessionGet("sUsername", 1) || "",
+    sSiteCode: CF_sessionGet("sSiteCode", 1) || "CH        ",
+    sCategories: CF_sessionGet("sCategories", 1) || "DB",
+    sUserGroupID: CF_sessionGet("sUserGroupID", 1) || "G1        ",
+    sUserStatus: "",
+    sTenantID: CF_sessionGet("sTenantID", 1) || ""
+  };
+  return { ActiveUserDetails, ApplicationCode: "SDMS" };
+}
+
+
 function FailedQueue() {
+  const { postData } = useAxios();
+  const [selectedRowData, setSelectedRowData] = useState(null);
+  const [selectedRowId, setSelectedRowId] = useState(null);
+  const [viewDetailsData, setViewDetailsData] = useState([]);
+  const [showViewDetails, setShowViewDetails] = useState(false);
+  const [forceGridUpdate, setForceGridUpdate] = useState(0);
+  const [userData, setUserData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const { currentLanguage, changeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
@@ -201,10 +296,101 @@ function FailedQueue() {
   );
 
 
-  return (
+  const handleViewDetails = async () => {
+    if (!selectedRowData) {
+      showInfoDialog("Please select a row first!", "information");
+      return;
+    }
 
+    try {
+      const requestData = {
+        sTaskID: selectedRowData.taskId,
+        ActiveUserDetails: CF_activeUserdetails().ActiveUserDetails,
+        ApplicationCode: "SDMS"
+      };
+
+      const response = await postData('Scheduler/FailedQueueViewDetailsGrid', requestData);
+
+      if (!response || response.length === 0) {
+        showInfoDialog("No records found here!", "information");
+        return;
+      }
+
+      const mappedDetailsData = response.map((item) => ({
+        id: item.L32TaskID,
+        clientName: item.L06ClientName,
+        instrumentName: item.L11InstrumentName,
+        taskId: item.L32TaskID,
+        fileName: item.L32FileName,
+        fileType: item.L32FileType,
+        captureDate: item.CaptureDate,
+        utcCaptureDate: item.UTCCaptureDate,
+        errorDescription: item.L32ErrorDescription
+      }));
+
+      setViewDetailsData(mappedDetailsData);
+      setShowViewDetails(true);
+    } catch (error) {
+      console.error("Error fetching details:", error);
+      showInfoDialog("Error fetching details", "error");
+    }
+  };
+
+
+  const loadGrid = async () => {
+    setLoading(true);
+    try {
+      const response = await postData(
+        'Scheduler/FailedqueueSchedulerViewgrid',
+        CF_activeUserdetails()
+      );
+
+      const mapped = response.map((item) => ({
+        id: item.L13ScheduleID,
+        clientName: item.L06ClientName,
+        instrument: item.L11InstrumentName,
+        storageName: item.L09FTPAliasName,
+        taskStatus: item.Status,
+        scheduleId: item.L13ScheduleID,
+        taskId: item.L52TaskID,
+        sourcePath: item.L52TaskSourcePath,
+        queue: item.L32Queue
+      }));
+
+      setUserData(mapped);
+
+      if (selectedRowData) {
+        const sameRow = mapped.find(r => r.scheduleId === selectedRowData.scheduleId);
+        if (sameRow) {
+          setSelectedRowId(sameRow.id);
+          setSelectedRowData(sameRow);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadGrid();
+  }, []);
+
+  useEffect(() => {
+    const handleCloseViewDetails = () => {
+      setShowViewDetails(false);
+      setTimeout(() => {
+        setForceGridUpdate(prev => prev + 1);
+      }, 50);
+    };
+
+    window.addEventListener('closeViewDetails', handleCloseViewDetails);
+    return () => window.removeEventListener('closeViewDetails', handleCloseViewDetails);
+  }, []);
+  
+  return (
     <div className="px-4 font-roboto h-[calc(100vh-150px)] flex flex-col">
-      {/* Information Dialog */}
       {infoDialog.open && (
         <Errordialog
           message={infoDialog.message}
@@ -212,21 +398,32 @@ function FailedQueue() {
           onClose={closeInfoDialog}
         />
       )}
-      {/* Top Action Buttons (same place) */}
-      <div className="flex justify-end gap-2 mt-4">
-        <ActionButton
-          icon={FileText}
-          label={t('button.viewDetails')}
-          onClick={() => showInfoDialog("No records found here!", "information")}
+
+      {!showViewDetails && (
+        <div className="flex justify-end gap-2 mt-4">
+          <ActionButton
+            icon={FileText}
+            label={t('button.viewDetails')}
+            onClick={handleViewDetails}
+          />
+        </div>
+      )}
+
+      <div className="flex-1 overflow-hidden">
+        <UsersPage
+          key={forceGridUpdate}
+          data={userData}
+          selectedRowId={selectedRowId}
+          onRowSelect={(row) => {
+            setSelectedRowId(row.id);
+            setSelectedRowData(row);
+          }}
+          showViewDetails={showViewDetails}
+          viewDetailsData={viewDetailsData}
         />
       </div>
-
-      {/* UsersPage takes full width & height */}
-      <div className="flex-1 overflow-hidden">
-        <UsersPage />
-      </div>
     </div>
-  )
+  );
 }
 
 export default FailedQueue

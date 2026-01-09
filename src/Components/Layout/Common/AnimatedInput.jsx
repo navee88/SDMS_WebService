@@ -22,7 +22,7 @@ const AnimatedInput = forwardRef(({
     <div className="relative mb-4">
       {/* Label – SAME AS AnimatedDropdown */}
       {label && (
-        <label className="mb-1 block text-xs font-roboto font-semibold text-gray-600">
+        <label className="mb-[2px] block text-[12px] font-roboto font-semibold text-[#405F7D]">
           {label}
           {required && <span className="ml-1 text-red-700">*</span>}
         </label>
@@ -62,7 +62,7 @@ const AnimatedInput = forwardRef(({
             bg-transparent
             border-0
             border-b-2
-            px-1 py-2
+            px-1 pb-1 pt-1
             text-sm font-semibold
             outline-none
             transition-colors
