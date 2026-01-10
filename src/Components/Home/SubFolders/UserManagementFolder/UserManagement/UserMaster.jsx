@@ -2825,7 +2825,13 @@ const UserMaster = () => {
     const columns = useMemo(() => [
         {
             key: 'L02UserName',
-            label: t('usermanagement.loginid'),
+            label: (
+                <div> 
+                    <span className="text-[12px] font-roboto text-[#353f49] font-bold">
+                        {t('usermanagement.loginid') || 'User Full Name'}
+                    </span>
+                </div>
+            ),
             width: 120,
             enableSearch: true,
             render: (row, isSelected) => (
@@ -2839,7 +2845,13 @@ const UserMaster = () => {
         },
         {
             key: 'L02UserFullName',
-            label: t('usermanagement.userfullname'),
+            label: (
+                <div> 
+                    <span className="text-[12px] font-roboto text-[#353f49] font-bold">
+                        {t('usermanagement.userfullname') || 'User Full Name'}
+                    </span>
+                </div>
+            ),
             width: 150,
             enableSearch: true,
             render: (row, isSelected) => (
@@ -2853,7 +2865,13 @@ const UserMaster = () => {
         },
         {
             key: 'UserGroupName',
-            label: t('usermanagement.usergroupname'),
+            label: (
+                <div> 
+                    <span className="text-[12px] font-roboto text-[#353f49] font-bold">
+                        {t('usermanagement.usergroupname') || 'User Full Name'}
+                    </span>
+                </div>
+            ),
             width: 120,
             enableSearch: true,
             render: (row, isSelected) => (
@@ -2867,7 +2885,13 @@ const UserMaster = () => {
         },
         {
             key: 'UserStatus',
-            label: t('usermanagement.userstatus'),
+            label: (
+                <div> 
+                    <span className="text-[12px] font-roboto text-[#353f49] font-bold">
+                        {t('usermanagement.userstatus') || 'User Full Name'}
+                    </span>
+                </div>
+            ),
             width: 100,
             enableSearch: true,
             render: (row, isSelected) => {

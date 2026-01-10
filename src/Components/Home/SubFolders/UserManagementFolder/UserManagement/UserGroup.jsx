@@ -742,7 +742,13 @@ const UserGroup = () => {
     const columns = useMemo(() => [
         {
             key: 'L01UserGroupName',
-            label: t('usermanagement.usergroupname'),
+            label: (
+                <div> 
+                    <span className="text-[12px] font-roboto text-[#353f49] font-bold">
+                        {t('usermanagement.usergroupname') || 'User Full Name'}
+                    </span>
+                </div>
+            ),
             width: 200,
             enableSearch: true,
             render: (row, isSelected) => (
@@ -756,7 +762,13 @@ const UserGroup = () => {
         },
         {
             key: 'gStatus',
-            label: t('usermanagement.userstatus'),
+            label: (
+                <div> 
+                    <span className="text-[12px] font-roboto text-[#353f49] font-bold">
+                        {t('usermanagement.userstatus') || 'User Full Name'}
+                    </span>
+                </div>
+            ),
             width: 150,
             enableSearch: true,
             render: (row, isSelected) => (
