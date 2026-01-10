@@ -98,7 +98,7 @@ function TabsHeader({ tabs, selectedTab, setSelectedTab }) {
             `}
             style={{ minWidth: "90px" }}
           >
-            <span className="relative z-10 text-md">
+            <span className="relative z-0 text-md">
               {tab.label}
             </span>
           </button>

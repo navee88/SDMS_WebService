@@ -737,7 +737,7 @@ export default function ServerData() {
 
         {/* Arrow Toggle */}
         <button
-          className="absolute right-4 -bottom-3 z-10 bg-[#f0f4f8] p-0.5 rounded shadow-sm cursor-pointer"
+          className="absolute right-4 -bottom-3 bg-[#f0f4f8] p-0.5 rounded shadow-sm cursor-pointer"
           onClick={toggleFilter}
         >
           {isFilterOpen ? (
