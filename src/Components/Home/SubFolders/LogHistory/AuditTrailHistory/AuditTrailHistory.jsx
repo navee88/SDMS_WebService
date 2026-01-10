@@ -85,19 +85,18 @@ const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => 
             onClose={onClose}
             title="Open Archive"
             content={
-                // <div className="p-4">
-                <div className="p-4 flex flex-col" style={{ maxHeight: '600px' }}>
-                    {/* <div className="mb-4" style={{ height: '400px' }}> */}
-                    <div className="mb-4 overflow-auto flex-1" style={{ minHeight: '400px', maxHeight: '500px' }}>
+                <div className="flex flex-col" style={{ height: '600px' }}>
+                    <div className="flex-1 overflow-hidden">
                         <GridLayout
                             columns={archiveColumns}
                             data={archiveList}
                             onRowClick={(row) => handleRowClick(row.id)}
                             selectedRows={selectedArchiveId ? [selectedArchiveId] : []}
+                            hidePagination={true}
+                            height="500px"  // Fixed height for the grid
                         />
                     </div>
-                    {/* <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200"> */}
-                    <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200 bg-white sticky bottom-0">
+                    <div className="flex justify-end gap-3 pt-3 px-4 pb-4 border-t border-gray-200 bg-white">
                         <button
                             onClick={handleOpen}
                             className="flex items-center gap-2 px-4 py-2 bg-[#2883FE] hover:bg-[#2883FE] text-white text-sm font-semibold rounded transition-colors"
