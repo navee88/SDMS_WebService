@@ -18,6 +18,8 @@ import { CF_encrypt, CF_decrypt } from '../../../../../Components/Common/encrypt
 import { CF_sessionGet } from "../../../../Common/CF_session";
 import { handleExportCommon } from '../../../../Layout/Common/exportService';
 import useAxios from '../../../../../Services/servicecall';
+import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
+
 
 const ACTION_ICONS = {
     "Open": FolderOpen,
@@ -285,127 +287,121 @@ const UsersPage = ({ filters, exportTrigger, onDataCountChange }) => {
             label: t('label.clientName'),
             width: 180,
             enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.clientName}</span>
+            render: (row) => (
+                <span className="text-[#373737] font-semibold" style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.clientName}
+                </span>
+            )
         },
         {
             key: 'fileName',
             label: t('label.fileName'),
             width: 250,
             enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.fileName}</span>
+            render: (row) => (
+                <span className="text-[#373737] font-semibold" style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.fileName}
+                </span>
+            )
         },
         {
             key: 'taskStatus',
             label: t('label.taskStatus'),
             width: 120,
             enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.taskStatus}</span>
+            render: (row) => {
+                const status = row.taskStatus?.toLowerCase() || '';
+                const color = status === 'done' ? 'text-green-600' : 'text-red-600';
+                return (
+                    <span
+                        className={`font-medium ${color} font-semibold`}
+                        style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}
+                    >
+                        {row.taskStatus}
+                    </span>
+                );
+            }
         }
     ], [t]);
 
-    useEffect(() => {
-        if (exportTrigger === 0) return;
-        if (!userData.length) return;
+useEffect(() => {
+    if (exportTrigger === 0) return;
+    if (!userData.length) return;
 
-        const headers = userColumns.map(col => col.label);
+    const headers = userColumns.map(col => col.label);
 
-        const rows = userData.map(row =>
-            userColumns.map(col => row[col.key] ?? "")
+    const rows = userData.map(row =>
+        userColumns.map(col => row[col.key] ?? "")
+    );
+
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+    const colWidths = userColumns.map((col) => {
+        const headerLength = col.label.length;
+        const maxDataLength = Math.max(
+            ...userData.map(row => {
+                const value = String(row[col.key] ?? "");
+                return value.length;
+            }),
+            0
         );
+        const maxLength = Math.max(headerLength, maxDataLength);
+        return { wch: maxLength + 2 };
+    });
 
-        const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    worksheet['!cols'] = colWidths;
 
-        const colWidths = userColumns.map((col) => {
-            const headerLength = col.label.length;
-            const maxDataLength = Math.max(
-                ...userData.map(row => {
-                    const value = String(row[col.key] ?? "");
-                    return value.length;
-                }),
-                0
-            );
-            const maxLength = Math.max(headerLength, maxDataLength);
-            return { wch: maxLength + 2 };
-        });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Upload Logs");
 
-        worksheet['!cols'] = colWidths;
+    const excelBuffer = XLSX.write(workbook, {
+        bookType: "xlsx",
+        type: "array"
+    });
 
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Upload Logs");
+    const file = new Blob([excelBuffer], {
+        type: "application/octet-stream"
+    });
 
-        const excelBuffer = XLSX.write(workbook, {
-            bookType: "xlsx",
-            type: "array"
-        });
-
-        const file = new Blob([excelBuffer], {
-            type: "application/octet-stream"
-        });
-
-        saveAs(file, `Manual_Upload_Logs_${Date.now()}.xlsx`);
-    }, [exportTrigger, userData, userColumns]);
+    saveAs(file, `Manual_Upload_Logs_${Date.now()}.xlsx`);
+}, [exportTrigger, userData, userColumns]);
 
 
 
-    const renderUserDetail = (user) => (
-        <div className="space-y-3 text-[12px]">
-            {[
-                { label: "sourcePath", value: user.sourcePath || "D:\\SDMSFTP\\SourcePath" },
-                { label: "type", value: user.type || "TS1" },
-                { label: "restoreLocation", value: user.restoreLocation || "D:\\SDMSFTP\\Restore" },
-                { label: "errorDescription", value: user.errorDescription || "NO Error" },
-                { label: "restoredBy", value: user.restoredBy || "" },
-                { label: "restoredOn", value: user.restoredOn || "" },
-            ].map((field, index) => (
-                <div key={index} className="grid grid-cols-3 gap-4">
-                    <div className="font-semibold text-[12px] font-['Roboto'] text-[#405F7D]">
-                        {t(`label.${field.label}`)}
-                    </div>
-                    <div className="col-span-2 font-semibold text-[12px] font-['Roboto'] text-[#353F49]">
-                        {field.value}
-                    </div>
+const renderUserDetail = (user) => (
+    <div className="space-y-3 text-[12px]">
+        {[
+            { label: "sourcePath", value: user.sourcePath || "" },
+            { label: "type", value: user.type || "" },
+            { label: "restoreLocation", value: user.restoreLocation || "" },
+            { label: "errorDescription", value: user.errorDescription || "" },
+            { label: "restoredBy", value: user.restoredBy || "" },
+            { label: "restoredOn", value: user.restoredOn || "" },
+        ].map((field, index) => (
+            <div key={index} className="grid grid-cols-3 gap-4">
+                <div className="font-semibold text-[12px] font-['Roboto'] text-[#405F7D]">
+                    {t(`label.${field.label}`)}
                 </div>
-            ))}
-        </div>
+                <div className="col-span-2 font-semibold text-[12px] font-['Roboto'] text-[#353F49]">
+                    {field.value}
+                </div>
+            </div>
+        ))}
+    </div>
 
-    );
+);
 
 
-    return (
-        <div className="flex flex-col mt-2">
-            <GridLayout
-                columns={userColumns}
-                data={userData}
-                renderDetailPanel={renderUserDetail}
-            />
-        </div>
-    );
+return (
+    <div className="flex flex-col mt-2">
+        <GridLayout
+            columns={userColumns}
+            data={userData}
+            renderDetailPanel={renderUserDetail}
+        />
+    </div>
+);
 };
-
-function CF_activeUserdetails() {
-    const ActiveUserDetails = {
-        sUserDomainName: CF_sessionGet("sDomainName", 1) || "SDMS",
-        sSessionID: CF_sessionGet("sSessionID", 1) || "",
-        sUserID: CF_sessionGet("sUserID", 1) || "",
-        sTimeZoneID:
-            (CF_sessionGet("sTimeZoneID", 1) || "Asia/Kolkata") +
-            "<~>" +
-            (CF_sessionGet("UTCStatus", 1) || "true"),
-        sApplicationName: "SDMS",
-        sdbtype: CF_sessionGet("sdbtype", 1) || "POSTGRESQL",
-        sUsername: CF_sessionGet("sUsername", 1) || "",
-        sSiteCode: CF_sessionGet("sSiteCode", 1) || "CH        ",
-        sCategories: CF_sessionGet("sCategories", 1) || "DB",
-        sUserGroupID: CF_sessionGet("sUserGroupID", 1) || "G1        ",
-        sUserStatus: "",
-        sTenantID: CF_sessionGet("sTenantID", 1) || ""
-    };
-
-    return {
-        ActiveUserDetails,
-        ApplicationCode: "SDMS"
-    };
-}
 
 const RestoreMonitor = () => {
     const today = getCurrentDate();
@@ -431,9 +427,11 @@ const RestoreMonitor = () => {
     const [dataCount, setDataCount] = useState(0);
     const [clientList, setClientList] = useState([]);
     const [taskList, setTaskList] = useState([]);
+    const [taskMapping, setTaskMapping] = useState({});
     const [errorDialog, setErrorDialog] = useState({ show: false, message: "", type: "" });
     const [isClientTouched, setIsClientTouched] = useState(false);
     const [isTaskTouched, setIsTaskTouched] = useState(false);
+    const [clientMapping, setClientMapping] = useState({});
 
 
     const { currentLanguage, changeLanguage, languages } = useLanguage();
@@ -528,9 +526,28 @@ const RestoreMonitor = () => {
     const formatDateDDMMYYYY = (date) => {
         const d = new Date(date);
         const day = String(d.getDate()).padStart(2, "0");
-        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");  // ← Month is correct
         const year = d.getFullYear();
-        return `${day}/${month}/${year}`;
+        return `${day}/${month}/${year}`;  // ← Change to uppercase MM if backend strict
+    };
+
+    // Add after formatDateDDMMYYYY function:
+    const formatDateYYYYMMDD = (ddmmyyyyDate) => {
+        if (!ddmmyyyyDate) return '';
+        const parts = ddmmyyyyDate.split('/');
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        return ddmmyyyyDate;
+    };
+
+    const formatDateDDMMYYYYfromInput = (yyyymmddDate) => {
+        if (!yyyymmddDate) return '';
+        const parts = yyyymmddDate.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return yyyymmddDate;
     };
 
     const getDateRange = (duration, fromDate, toDate) => {
@@ -578,19 +595,48 @@ const RestoreMonitor = () => {
         return { startDate, endDate };
     };
 
+    // const fetchClientList = async () => {
+    //     try {
+    //         const payload = CF_activeUserdetails();
+    //         const result = await postData('AuditTrail/AuditTrailClientname', payload);
+    //         console.log("Client List Response:", result);
+
+
+    //         if (Array.isArray(result) && result.length > 0) {
+    //             const clients = result.map(item => item.L06ClientName);
+
+    //             setClientList(clients);
+
+    //             setSelectedClient(prev =>
+    //                 prev ? prev : clients[0]
+    //             );
+    //         }
+    //     } catch (error) {
+    //         console.error('Error fetching client list:', error);
+    //     }
+    // };
+
     const fetchClientList = async () => {
         try {
             const payload = CF_activeUserdetails();
             const result = await postData('AuditTrail/AuditTrailClientname', payload);
+            console.log("Client List Response:", result);
 
             if (Array.isArray(result) && result.length > 0) {
-                const clients = result.map(item => item.L06ClientName);
+                // Create display list (just names)
+                const clientNames = result.map(item => item.L06ClientName);
 
-                setClientList(clients);
+                // Create mapping object: { "AGL107" : "C2        " }
+                const mapping = result.reduce((acc, item) => {
+                    acc[item.L06ClientName] = item.L06ClientID;
+                    return acc;
+                }, {});
 
-                setSelectedClient(prev =>
-                    prev ? prev : clients[0]
-                );
+                setClientList(clientNames);
+                setClientMapping(mapping);
+
+                // AUTO SELECT FIRST CLIENT NAME
+                setSelectedClient(prev => prev ? prev : clientNames[0]);
             }
         } catch (error) {
             console.error('Error fetching client list:', error);
@@ -606,16 +652,23 @@ const RestoreMonitor = () => {
             };
 
             const result = await postData('Scheduler/getTaskDownload', payload);
+            console.log("Task List Response:", result);
 
             if (Array.isArray(result) && result.length > 0) {
-                const tasks = result.map(item => item.sTaskID);
+                // Create display list (just labels)
+                const taskLabels = result.map(item => item.sTaskID);
 
-                setTaskList(tasks);
+                // Create mapping object: { "DT5_T12_C:\..." : "DT5       " }
+                const mapping = result.reduce((acc, item) => {
+                    acc[item.sTaskID] = item.sDownloadTaskID;
+                    return acc;
+                }, {});
 
-                // AUTO SELECT FIRST TASK
-                setTaskId(prev =>
-                    prev ? prev : tasks[0]
-                );
+                setTaskList(taskLabels);
+                setTaskMapping(mapping);
+
+                // AUTO SELECT FIRST TASK LABEL
+                setTaskId(prev => prev ? prev : taskLabels[0]);
             }
         } catch (error) {
             console.error('Error fetching task list:', error);
@@ -635,26 +688,28 @@ const RestoreMonitor = () => {
         initializeComponent();
     }, []);
 
-    // ADD THIS NEW FUNCTION (matches jQuery initial load)
     const handleInitialLoad = async () => {
         setLoading(true);
         try {
-            const sFromDate = formatDateDDMMYYYY(today);
-            const sToDate = formatDateDDMMYYYY(today);
+            const todayDate = new Date();
+            const sFromDate = formatDateDDMMYYYY(todayDate);
+            const sToDate = formatDateDDMMYYYY(todayDate);
 
             const payload = {
                 bStatus: true,
                 sFromDate: sFromDate,
                 sToDate: sToDate,
-                sClientID: "",
+                sClientID: "",  // ← Empty on initial load (correct)
                 sFileName: "",
                 sDownloadTaskID: "",
                 ...CF_activeUserdetails()
             };
+            console.log("Initial Load Payload:", payload);
 
             const result = await postData('Scheduler/getRestoreMonitor', payload);
 
             if (result && Array.isArray(result)) {
+                // ADD these missing fields to both mapping functions:
                 const mappedData = result.map((item, index) => ({
                     id: index + 1,
                     clientName: item.sClientName || "",
@@ -665,12 +720,18 @@ const RestoreMonitor = () => {
                     restoreLocation: item.sRestoreLocation || "",
                     errorDescription: item.sErrorDescription || "",
                     restoredBy: item.sRestoreBy || "",
-                    restoredOn: item.sTimeStamp || ""
+                    restoredOn: item.sTimeStamp || "",
+                    downloadTskID: item.sDownloadTskID || "",
+                    taskID: item.sTaskID || "",
+                    utcTimeStamp: item.sUTCTimeStamp || "",
+                    siteCode: item.sSiteCode || ""
                 }));
 
                 setUserData(mappedData);
                 setFilters({ ...payload, data: mappedData });
             }
+
+            console.log("Initial Load Response:", result);
             setLoading(false);
         } catch (error) {
             console.error('Error in initial load:', error);
@@ -689,9 +750,9 @@ const RestoreMonitor = () => {
                 bStatus: false,
                 sFromDate: startDate,
                 sToDate: endDate,
-                sClientID: selectedClient || "",
+                sClientID: clientMapping[selectedClient] || "",  // ← Convert name to ID
                 sFileName: fileName || "",
-                sDownloadTaskID: taskId || "",
+                sDownloadTaskID: taskMapping[taskId] || "",
                 ...CF_activeUserdetails()
             };
 
@@ -702,7 +763,8 @@ const RestoreMonitor = () => {
             console.log("API Response:", response);
 
             if (Array.isArray(response)) {
-                const mapped = response.map((item, index) => ({
+                // ADD these missing fields to both mapping functions:
+                const mappedData = response.map((item, index) => ({
                     id: index + 1,
                     clientName: item.sClientName || "",
                     fileName: item.sFileName || "",
@@ -712,11 +774,15 @@ const RestoreMonitor = () => {
                     restoreLocation: item.sRestoreLocation || "",
                     errorDescription: item.sErrorDescription || "",
                     restoredBy: item.sRestoreBy || "",
-                    restoredOn: item.sTimeStamp || ""
+                    restoredOn: item.sTimeStamp || "",
+                    downloadTskID: item.sDownloadTskID || "",
+                    taskID: item.sTaskID || "",
+                    utcTimeStamp: item.sUTCTimeStamp || "",
+                    siteCode: item.sSiteCode || ""
                 }));
 
-                setUserData(mapped);
-                setFilters({ data: mapped });
+                setUserData(mappedData);
+                setFilters({ data: mappedData });
             }
         } catch (err) {
             console.error("Restore Monitor Error:", err);
@@ -751,10 +817,10 @@ const RestoreMonitor = () => {
                 sErrorDescription: row.errorDescription || null,
                 sRestoreBy: row.restoredBy || "",
                 sTimeStamp: row.restoredOn || "",
-                sDownloadTskID: row.downloadTskID || "", // ← Now available
-                sTaskID: row.taskID || "",                // ← Now available
-                sUTCTimeStamp: row.utcTimeStamp || "",    // ← Now available
-                sSiteCode: row.siteCode || "",            // ← Now available
+                sDownloadTskID: row.downloadTskID || "",
+                sTaskID: row.taskID || "",
+                sUTCTimeStamp: row.utcTimeStamp || "",
+                sSiteCode: row.siteCode || "",
                 visibleindex: index,
                 boundindex: index,
                 uid: index,
@@ -814,7 +880,6 @@ const RestoreMonitor = () => {
 
                         </div>
 
-
                         <div className="w-60">
                             <AnimatedDropdown
                                 label={t("label.taskId")}
@@ -826,8 +891,6 @@ const RestoreMonitor = () => {
                                 }}
                                 allowFreeInput
                             />
-
-
                         </div>
 
                         <div className="w-60">
@@ -857,17 +920,18 @@ const RestoreMonitor = () => {
                                 <div className="w-52 pb-4">
                                     <DatePicker
                                         label="From"
-                                        value={fromDate}
-                                        onChange={setFromDate}
-                                        max={today}
+                                        value={formatDateYYYYMMDD(fromDate)}  // Convert to YYYY-MM-DD
+                                        onChange={(val) => setFromDate(formatDateDDMMYYYYfromInput(val))}  // Convert back
+                                        max={formatDateYYYYMMDD(today)}
                                     />
+
                                 </div>
                                 <div className="w-52 pb-4">
                                     <DatePicker
                                         label="To"
-                                        value={toDate}
-                                        onChange={setToDate}
-                                        max={today}
+                                        value={formatDateYYYYMMDD(toDate)}
+                                        onChange={(val) => setToDate(formatDateDDMMYYYYfromInput(val))}
+                                        max={formatDateYYYYMMDD(today)}
                                     />
                                 </div>
                             </>

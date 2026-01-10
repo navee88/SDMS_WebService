@@ -19,10 +19,10 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import useAxios from '../../../../../Services/servicecall';
 import { CF_encrypt, CF_decrypt } from '../../../../../Components/Common/encryptiondecryption';
-// import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
 import { CF_sessionGet } from "../../../../Common/CF_session";
 import { handleExportCommon } from '../../../../Layout/Common/exportService';
 import PrintTable from '../../../../Layout/Common/PrintTable';
+import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
 
 const OpenArchivePopup = ({ isOpen, onClose, archiveList, onArchiveSelect }) => {
     const [selectedArchiveId, setSelectedArchiveId] = useState(archiveList.length > 0 ? archiveList[0].id : null);
@@ -543,32 +543,6 @@ const UsersPage = ({ userData, setUserData, selectedRows, setSelectedRows, showR
         </div>
     );
 };
-
-function CF_activeUserdetails() {
-    const ActiveUserDetails = {
-        sUserDomainName: CF_sessionGet("sDomainName", 1) || "SDMS",
-        sSessionID: CF_sessionGet("sSessionID", 1) || "",
-        sUserID: CF_sessionGet("sUserID", 1) || "",
-        sTimeZoneID:
-            (CF_sessionGet("sTimeZoneID", 1) || "Asia/Kolkata") +
-            "<~>" +
-            (CF_sessionGet("UTCStatus", 1) || "true"),
-        sApplicationName: "SDMS",
-        sdbtype: CF_sessionGet("sdbtype", 1) || "POSTGRESQL",
-        sUsername: CF_sessionGet("sUsername", 1) || "",
-        sSiteCode: CF_sessionGet("sSiteCode", 1) || "CH        ",
-        sCategories: CF_sessionGet("sCategories", 1) || "DB",
-        sUserGroupID: CF_sessionGet("sUserGroupID", 1) || "G1        ",
-        sUserStatus: "",
-        sTenantID: CF_sessionGet("sTenantID", 1) || ""
-    };
-
-    return {
-        ActiveUserDetails,
-        ApplicationCode: "SDMS"
-    };
-}
-
 
 const AuditTrailHistory = () => {
     const { currentLanguage, changeLanguage, languages } = useLanguage();
@@ -1639,12 +1613,15 @@ const AuditTrailHistory = () => {
             setLoading,
             setLoadingText: (text) => setLoading(!!text),
             setErrorDialog: (config) => setErrorDialog({
-                show: config.open,
+                show: config.show, 
                 message: config.message,
                 type: config.type
-            })
+            }),
+            t 
         });
     };
+
+    
 
     const fetchUserList = async () => {
         try {

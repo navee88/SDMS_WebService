@@ -6,7 +6,7 @@ import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
 import AuditTrail from '../../../../Layout/Common/AuditTrail';
 import useAxios from '../../../../../Services/servicecall';
 import { CF_decrypt } from '../../../../../Components/Common/encryptiondecryption';
-
+import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
 
 function CFRSettings() {
   const { currentLanguage, changeLanguage, languages } = useLanguage();
@@ -42,21 +42,17 @@ function CFRSettings() {
     fetchReasons();
   }, []);
 
+
+  const { ActiveUserDetails, ApplicationCode } = CF_activeUserdetails();
   const fetchReasons = async () => {
     try {
-      const encryptedTenantID = sessionStorage.getItem('sTenantID');
-      const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
-      const encryptedDBType = sessionStorage.getItem('sdbtype');
 
       const payload = {
         silentaudit: true,
-        ApplicationCode: "SDMS",
-        ActiveUserDetails: {
-          sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
-          sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
-          sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
-        }
+        ApplicationCode,
+        ActiveUserDetails
       };
+
 
 
       const response = await postData('AuditTrail/GetReasons', payload);
@@ -101,37 +97,13 @@ function CFRSettings() {
 
   const handleAddReason = async (auditData) => {
     try {
-      // Get session data (same as Site.jsx)
-      const encryptedUserID = sessionStorage.getItem('sUserID');
-      const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
-      const encryptedTenantID = sessionStorage.getItem('sTenantID');
-      const encryptedUsername = sessionStorage.getItem('sUsername');
-      const encryptedDomain = sessionStorage.getItem('sDomainName');
-      const encryptedCategories = sessionStorage.getItem('sCategories');
-      const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
-      const encryptedSessionID = sessionStorage.getItem('sSessionID');
-      const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
-      const encryptedDBType = sessionStorage.getItem('sdbtype');
-
       const payload = {
         CFRReason: newReason.trim(),
-        ApplicationCode: "SDMS",
+        ApplicationCode,
         AuditTrailValues: auditData.AuditTrailValues,
-        ActiveUserDetails: {
-          sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
-          sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
-          sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
-          sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
-          sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
-          sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
-          sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
-          sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
-          sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
-          sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
-          sApplicationName: "SDMS",
-          sUserStatus: ""
-        }
+        ActiveUserDetails
       };
+
 
       const response = await postData('AuditTrail/AddReasons', payload);
       console.log("Add Response:", response);
@@ -161,37 +133,13 @@ function CFRSettings() {
     try {
       const remainingReasons = allStatuses.filter(s => s !== selectedStatus);
 
-      // Get session data
-      const encryptedUserID = sessionStorage.getItem('sUserID');
-      const encryptedSiteCode = sessionStorage.getItem('sSiteCode');
-      const encryptedTenantID = sessionStorage.getItem('sTenantID');
-      const encryptedUsername = sessionStorage.getItem('sUsername');
-      const encryptedDomain = sessionStorage.getItem('sDomainName');
-      const encryptedCategories = sessionStorage.getItem('sCategories');
-      const encryptedUserGroup = sessionStorage.getItem('sUserGroupID');
-      const encryptedSessionID = sessionStorage.getItem('sSessionID');
-      const encryptedTimeZone = sessionStorage.getItem('sTimeZoneID');
-      const encryptedDBType = sessionStorage.getItem('sdbtype');
-
       const payload = {
         ReasonList: remainingReasons,
-        ApplicationCode: "SDMS",
+        ApplicationCode,
         AuditTrailValues: auditData.AuditTrailValues,
-        ActiveUserDetails: {
-          sUserID: encryptedUserID ? CF_decrypt(encryptedUserID) : '',
-          sSiteCode: encryptedSiteCode ? CF_decrypt(encryptedSiteCode) : '',
-          sTenantID: encryptedTenantID ? CF_decrypt(encryptedTenantID) : '',
-          sUsername: encryptedUsername ? CF_decrypt(encryptedUsername) : '',
-          sUserDomainName: encryptedDomain ? CF_decrypt(encryptedDomain) : '',
-          sCategories: encryptedCategories ? CF_decrypt(encryptedCategories) : '',
-          sUserGroupID: encryptedUserGroup ? CF_decrypt(encryptedUserGroup) : '',
-          sSessionID: encryptedSessionID ? CF_decrypt(encryptedSessionID) : '',
-          sTimeZoneID: encryptedTimeZone ? CF_decrypt(encryptedTimeZone) : '',
-          sdbtype: encryptedDBType ? CF_decrypt(encryptedDBType) : '',
-          sApplicationName: "SDMS",
-          sUserStatus: ""
-        }
+        ActiveUserDetails
       };
+
 
       const response = await postData('AuditTrail/CFRSave', payload);
       console.log("Remove Response:", response);
