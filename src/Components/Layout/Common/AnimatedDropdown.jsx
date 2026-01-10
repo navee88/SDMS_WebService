@@ -513,7 +513,7 @@ const AnimatedDropdown = ({
         <div
           className={`
             absolute w-full bg-white shadow-xl rounded-md border
-            max-h-52 flex flex-col ${containerClasses}
+            max-h-52 flex flex-col ${containerClasses} z-50
           `}
         >
           {isSearchable && (
