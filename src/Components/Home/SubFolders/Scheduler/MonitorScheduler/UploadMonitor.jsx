@@ -12,6 +12,7 @@ import { useLanguage } from '../../../../../Context/LanguageContext';
 import { useTranslation } from "react-i18next";
 import useAxios from '../../../../../Services/servicecall';
 import { CF_sessionGet } from "../../../../Common/CF_session";
+import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
 
 const ACTION_ICONS = {
   "Open": FolderOpen,
@@ -256,26 +257,6 @@ const getCurrentDate = () => {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
-
-
-function CF_activeUserdetails() {
-  const ActiveUserDetails = {
-    sUserDomainName: CF_sessionGet("sDomainName", 1) || "SDMS",
-    sSessionID: CF_sessionGet("sSessionID", 1) || "",
-    sUserID: CF_sessionGet("sUserID", 1) || "",
-    sTimeZoneID: (CF_sessionGet("sTimeZoneID", 1) || "Asia/Kolkata") + "<~>" + (CF_sessionGet("UTCStatus", 1) || "true"),
-    sApplicationName: "SDMS",
-    sdbtype: CF_sessionGet("sdbtype", 1) || "POSTGRESQL",
-    sUsername: CF_sessionGet("sUsername", 1) || "",
-    sSiteCode: CF_sessionGet("sSiteCode", 1) || "CH        ",
-    sCategories: CF_sessionGet("sCategories", 1) || "DB",
-    sUserGroupID: CF_sessionGet("sUserGroupID", 1) || "G1        ",
-    sUserStatus: "",
-    sTenantID: CF_sessionGet("sTenantID", 1) || ""
-  };
-  return { ActiveUserDetails, ApplicationCode: "SDMS" };
-}
-
 
 const UsersPage = ({ filters, refreshKey }) => {
   const [userData, setUserData] = useState([]);
@@ -671,8 +652,6 @@ const UploadMonitor = () => {
           <UsersPage
             filters={filters}
             refreshKey={refreshKey}
-          // fromDate={fromDate}
-          // toDate={toDate}
           />
         </div>
       </div>

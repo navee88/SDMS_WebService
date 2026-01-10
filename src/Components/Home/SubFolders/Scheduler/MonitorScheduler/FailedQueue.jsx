@@ -8,7 +8,7 @@ import Errordialog from "../../../../Layout/Common/Errordialog";
 import useAxios from '../../../../../Services/servicecall';
 import { CF_sessionGet } from "../../../../Common/CF_session";
 import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
-
+import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
 
 const UsersPage = ({
   data,
@@ -220,25 +220,6 @@ const UsersPage = ({
     </div>
   );
 };
-
-function CF_activeUserdetails() {
-  const ActiveUserDetails = {
-    sUserDomainName: CF_sessionGet("sDomainName", 1) || "SDMS",
-    sSessionID: CF_sessionGet("sSessionID", 1) || "",
-    sUserID: CF_sessionGet("sUserID", 1) || "",
-    sTimeZoneID: (CF_sessionGet("sTimeZoneID", 1) || "Asia/Kolkata") + "<~>" + (CF_sessionGet("UTCStatus", 1) || "true"),
-    sApplicationName: "SDMS",
-    sdbtype: CF_sessionGet("sdbtype", 1) || "POSTGRESQL",
-    sUsername: CF_sessionGet("sUsername", 1) || "",
-    sSiteCode: CF_sessionGet("sSiteCode", 1) || "CH        ",
-    sCategories: CF_sessionGet("sCategories", 1) || "DB",
-    sUserGroupID: CF_sessionGet("sUserGroupID", 1) || "G1        ",
-    sUserStatus: "",
-    sTenantID: CF_sessionGet("sTenantID", 1) || ""
-  };
-  return { ActiveUserDetails, ApplicationCode: "SDMS" };
-}
-
 
 function FailedQueue() {
   const { postData } = useAxios();
