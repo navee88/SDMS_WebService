@@ -605,8 +605,8 @@ export default function ServerData() {
       {/* FILTER BAR */}
       <div className="bg-[#f0f4f8] px-4 pt-4 pb-2 relative rounded-t-md">
         {isFilterOpen ? (
-          <div className="flex flex-wrap items-end gap-3.5 mb-2 z-0">
-            <div className="w-60 relative z-20">
+          <div className="flex flex-wrap items-end gap-3.5 mb-2">
+            <div className="w-60 ">
               <AnimatedDropdown
                 label="Storage Group"
                 value={filterForm.storageGroup}
@@ -616,7 +616,7 @@ export default function ServerData() {
               />
             </div>
 
-            <div className="w-60 relative z-20">
+            <div className="w-60 ">
               <AnimatedDropdown
                 label="Client"
                 value={filterForm.client}
@@ -627,7 +627,7 @@ export default function ServerData() {
             </div>
 
             {configState["Instrument"] && (
-              <div className="w-60 relative z-20">
+              <div className="w-60 ">
                 <AnimatedDropdown
                   label="Instrument"
                   value={filterForm.instrument}
@@ -639,7 +639,7 @@ export default function ServerData() {
             )}
 
             {configState["Task Status"] && (
-              <div className="w-60 relative z-20">
+              <div className="w-60 ">
                 <AnimatedDropdown
                   label="Task Status"
                   value={filterForm.taskStatus}
@@ -651,7 +651,7 @@ export default function ServerData() {
             )}
 
             {configState["Workflow Status"] && (
-              <div className="w-60 relative z-20">
+              <div className="w-60 ">
                 <AnimatedDropdown
                   label="Workflow Status"
                   value={filterForm.workflowStatus}
@@ -662,7 +662,7 @@ export default function ServerData() {
               </div>
             )}
 
-            <div className="w-60 relative z-20">
+            <div className="w-60 ">
               <AnimatedDropdown
                 label="Records Duration"
                 value={filterForm.recordsDuration}
