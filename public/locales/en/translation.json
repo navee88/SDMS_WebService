@@ -279,7 +279,8 @@
   },
  
 "common":{
-  "incorrectusernameorpassword":"Incorrect Username or Password"
+  "incorrectusernameorpassword":"Incorrect Username or Password",
+  "loading":"Loading..."
 },
 "instrumentlocktag":{
  
@@ -794,7 +795,7 @@
     "messagesentfailed": "Failed to send message",
     "chathistorydeletesuccess": "Chat history deleted successfully",
     "clearchatfailed": "Failed to clear chat history",
-    "chatconfirmation": "Are you sure you want to clear chat history?",
+    "chatconfirmation": "Are you sure want to clear the chat history? Once done, you cannot restore it.",
     "youhavenohistoryhere": "You have no history here"
         
   }
