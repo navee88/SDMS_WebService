@@ -30,8 +30,9 @@ const UsersPage = ({
             label: t("label.clientName"),
             width: 200,
             enableSearch: true,
-            render: (row) => (
-                <span className="text-gray-700">
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
                     {row.clientName}
                 </span>
             )
@@ -41,9 +42,10 @@ const UsersPage = ({
             label: t("label.instrument"),
             width: 250,
             enableSearch: true,
-            render: (row) => (
-                <span className="text-gray-700">
-                    {row.instrument}
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.storageName}
                 </span>
             )
         },
@@ -71,52 +73,84 @@ const UsersPage = ({
             label: t('label.clientName'),
             width: 180,
             enableSearch: true,
-            render: (row, index) => {
-                console.log("ClientName Render - Row:", row, "Index:", index);
-                return <span className="text-gray-700">{row.clientName}</span>
-            }
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.clientName}
+                </span>
+            )
         },
         {
             key: 'instrument',
             label: t('label.instrument'),
             width: 180,
             enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.instrumentName}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.instrumentName}
+                </span>
+            )
         },
         {
             key: 'taskId',
             label: t('label.taskId'),
             width: 120,
             enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.taskId}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.taskId}
+                </span>
+            )
         },
         {
             key: 'filename',
             label: t('label.fileName'),
             width: 200,
             enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.fileName}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.fileName}
+                </span>
+            )
         },
         {
             key: 'fileType',
             label: t('label.fileType'),
             width: 120,
             enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.fileType}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.fileType}
+                </span>
+            )
         },
         {
             key: 'captureDate',
             label: t('label.captureDate'),
             width: 200,
             enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.captureDate}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.captureDate}
+                </span>
+            )
         },
         {
             key: 'captureDateUTC',
             label: t('label.captureDateUTC'),
             width: 150,
             enableSearch: true,
-            render: (row) => <span className="text-gray-700">{row.utcCaptureDate}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.utcCaptureDate}
+                </span>
+            )
         },
     ], [t]);
 
@@ -246,7 +280,7 @@ function UploadQueue() {
     // Handler to open popup
     const handleUpdateScheduleMode = () => {
         if (!selectedRowData) {
-            showInfoDialog("Please select a row first!", "information");
+            showInfoDialog("Please select a row !", "information");
             return;
         }
         setShowAudit(true);
@@ -346,7 +380,7 @@ function UploadQueue() {
 
     const handleViewDetails = async () => {
         if (!selectedRowData) {
-            showInfoDialog("Please select a row first!", "information");
+            showInfoDialog("Please select a row !", "information");
             return;
         }
 
@@ -446,6 +480,15 @@ function UploadQueue() {
     }, []);
 
 
+    useEffect(() => {
+        // Auto-select first row when data loads
+        if (userData.length > 0 && !selectedRowData) {
+            setSelectedRowId(userData[0].id);
+            setSelectedRowData(userData[0]);
+        }
+    }, [userData]);
+
+
     return (
         <div className="px-4 font-roboto h-[calc(100vh-150px)] flex flex-col">
             {/* Information Dialog */}
@@ -475,7 +518,7 @@ function UploadQueue() {
             <div className="flex-1 overflow-hidden">
                 <UsersPage
                     key={forceGridUpdate}
-                    data={userData} 
+                    data={userData}
                     selectedRowId={selectedRowId}
                     onRowSelect={(row) => {
                         setSelectedRowId(row.id);

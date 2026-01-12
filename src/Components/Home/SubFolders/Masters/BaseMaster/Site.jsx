@@ -30,8 +30,9 @@ const UsersPage = ({ onRowClick, userData, setUserData, selectedIndex, selectedR
             label: t('label.siteCode'),
             width: 250,
             enableSearch: true,
-            render: (row) => (
-                <span className="text-gray-700">
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
                     {row.siteCode}
                 </span>
             )
@@ -41,8 +42,9 @@ const UsersPage = ({ onRowClick, userData, setUserData, selectedIndex, selectedR
             label: t('label.siteName'),
             width: 200,
             enableSearch: true,
-            render: (row) => (
-                <span className="text-gray-700">
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
                     {row.siteName}
                 </span>
             )

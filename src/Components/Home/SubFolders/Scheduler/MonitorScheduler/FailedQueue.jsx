@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, FileText, SquarePen } from 'lucide-react';
-// import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
+import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayoutTest';
 import { useLanguage } from '../../../../../Context/LanguageContext';
 import { useTranslation } from "react-i18next";
 import { useCallback } from 'react'; // Add useCallback to existing imports
 import Errordialog from "../../../../Layout/Common/Errordialog";
 import useAxios from '../../../../../Services/servicecall';
 import { CF_sessionGet } from "../../../../Common/CF_session";
-import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
+// import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
 
 const UsersPage = ({
@@ -17,66 +17,10 @@ const UsersPage = ({
   showViewDetails,
   viewDetailsData
 }) => {
-  // const [userData, setUserData] = useState([]);
-  // const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState(null);
+
   const { currentLanguage, changeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
 
-  // const mockData = [
-  //   {
-  //     id: 1,
-  //     clientName: "DESKTOP-CU9J5T2",
-  //     instrument: "CU-Summary1 (CU-Summary1)",
-  //     storageName: "sdms-ftp"
-  //   },
-  //   {
-  //     id: 2,
-  //     clientName: "DESKTOP-CU9J5T2",
-  //     instrument: "CU-Summary1 (CU-Summary1)",
-  //     storageName: "sdms-ftp"
-  //   },
-  //   {
-  //     id: 3,
-  //     clientName: "DESKTOP-CU9J5T2",
-  //     instrument: "MU-Summary1 (MU-Summary1)",
-  //     storageName: "sdms-ftp"
-  //   },
-  //   {
-  //     id: 4,
-  //     clientName: "DESKTOP-CU9J5T2",
-  //     instrument: "AU-Summary1 (AU-Summary1)",
-  //     storageName: "sdms-ftp"
-  //   },
-  //   {
-  //     id: 5,
-  //     clientName: "DESKTOP-CU9J5T2",
-  //     instrument: "CU-Summary1 (CU-Summary1)",
-  //     storageName: "sdms-ftp"
-  //   },
-  //   {
-  //     id: 6,
-  //     clientName: "DESKTOP-CU9J5T2",
-  //     instrument: "CU-Summary1 (CU-Summary1)",
-  //     storageName: "sdms-ftp"
-  //   },
-  //   {
-  //     id: 7,
-  //     clientName: "DESKTOP-CU9J5T2",
-  //     instrument: "CU-Summary1 (CU-Summary1)",
-  //     storageName: "sdms-ftp"
-  //   }
-  // ];
-
-
-  // useEffect(() => {
-  //   setLoading(true);
-  //   setTimeout(() => {
-  //     // setUserData(mockData);
-  //     setLoading(false);
-  //   }, 300);
-
-  // }, []);
 
 
 
@@ -86,21 +30,36 @@ const UsersPage = ({
       label: t('label.clientName'),
       width: 180,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.clientName}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.clientName}
+        </span>
+      )
     },
     {
       key: 'instrument',
       label: t('label.instrument'),
       width: 250,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.instrument}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.instrument}
+        </span>
+      )
     },
     {
       key: 'storageName',
       label: t('label.storageName'),
       width: 120,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.storageName}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.storageName}
+        </span>
+      )
     }
   ], []);
 
@@ -110,56 +69,96 @@ const UsersPage = ({
       label: t('label.clientName'),
       width: 180,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.clientName}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.clientName}
+        </span>
+      )
     },
     {
       key: 'instrument',
       label: t('label.instrument'),
       width: 180,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.instrumentName}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.instrumentName}
+        </span>
+      )
     },
     {
       key: 'taskId',
       label: t('label.taskId'),
       width: 120,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.taskId}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.taskId}
+        </span>
+      )
     },
     {
       key: 'filename',
       label: t('label.fileName'),
       width: 200,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.fileName}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.fileName}
+        </span>
+      )
     },
     {
       key: 'fileType',
       label: t('label.fileType'),
       width: 120,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.fileType}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.fileType}
+        </span>
+      )
     },
     {
       key: 'captureDate',
       label: t('label.captureDate'),
       width: 200,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.captureDate}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.captureDate}
+        </span>
+      )
     },
     {
       key: 'captureDateUTC',
       label: t('label.captureDateUTC'),
       width: 150,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.utcCaptureDate}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.utcCaptureDate}
+        </span>
+      )
     },
     {
       key: 'errorDescription',
       label: t('label.errorDescription'),
       width: 250,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.errorDescription}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.errorDescription}
+        </span>
+      )
     }
   ], [t]);
 
@@ -279,7 +278,7 @@ function FailedQueue() {
 
   const handleViewDetails = async () => {
     if (!selectedRowData) {
-      showInfoDialog("Please select a row first!", "information");
+      showInfoDialog("Please select a row !", "information");
       return;
     }
 
@@ -369,6 +368,14 @@ function FailedQueue() {
     window.addEventListener('closeViewDetails', handleCloseViewDetails);
     return () => window.removeEventListener('closeViewDetails', handleCloseViewDetails);
   }, []);
+
+  useEffect(() => {
+    // Auto-select first row when data loads
+    if (userData.length > 0 && !selectedRowData) {
+      setSelectedRowId(userData[0].id);
+      setSelectedRowData(userData[0]);
+    }
+  }, [userData]);
 
   return (
     <div className="px-4 font-roboto h-[calc(100vh-150px)] flex flex-col">

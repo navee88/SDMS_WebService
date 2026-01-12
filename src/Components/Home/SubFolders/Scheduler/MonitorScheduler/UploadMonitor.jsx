@@ -315,21 +315,36 @@ const UsersPage = ({ filters, refreshKey }) => {
       label: t('label.clientName'),
       width: 180,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.clientName}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.clientName}
+        </span>
+      )
     },
     {
       key: 'instrument',
       label: t('label.instrument'),
       width: 250,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.instrument}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.instrument}
+        </span>
+      )
     },
     {
       key: 'storageName',
       label: t('label.storageName'),
       width: 120,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.storageName}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.storageName}
+        </span>
+      )
     }
   ], []);
 

@@ -15,53 +15,8 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import Errordialog from '../../../../Layout/Common/Errordialog';
 import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
-
-const ACTION_ICONS = {
-  "Open": FolderOpen,
-  "File Download": Download,
-  "Restore": RotateCcw,
-  "Folder Download": FolderDown,
-  "File Upload": Upload,
-  "Folder Upload": FolderUp,
-  "Version History": FileClock,
-  "Workflow History": History,
-  "Tag": Tag,
-  "Audit Trail History": List,
-  "Attribute": FileText,
-  "Multi-File Select": MousePointer2,
-  "Work Complete": CheckCircle
-};
-
-const ALL_ACTION_ORDER = [
-  "Open",
-  "File Download",
-  "Restore",
-  "Folder Download",
-  "File Upload",
-  "Folder Upload",
-  "Version History",
-  "Work Complete",
-  "Workflow History",
-  "Tag",
-  "Audit Trail History",
-  "Attribute",
-  "Multi-File Select"
-];
-
-const CUSTOM_FILTERS = ["Instrument", "Workflow Status", "Task Status"];
-const CUSTOM_COLUMNS = ["Parser Status"];
-
-const CheckboxItem = ({ label, checked, onChange }) => (
-  <label className="flex items-center justify-between py-2 hover:bg-slate-50 px-2 rounded cursor-pointer group transition-colors mr-2">
-    <span className="text-slate-700 font-medium text-sm select-none group-hover:text-blue-700">{label}</span>
-    <input
-      type="checkbox"
-      checked={!!checked}
-      onChange={() => onChange(label)}
-      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-    />
-  </label>
-);
+import { handleExportCommon } from '../../../../Layout/Common/exportService';
+import useAxios from '../../../../../Services/servicecall';
 
 const PrimaryButton = ({ icon: Icon, label, onClick }) => (
   <button
@@ -71,29 +26,6 @@ const PrimaryButton = ({ icon: Icon, label, onClick }) => (
     <Icon className="w-4 h-4 stroke-[3]" />
     <span>{label}</span>
   </button>
-);
-
-const ActionButton = ({ icon: Icon, label, disabled, onClick, className = "" }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`flex items-center gap-1.5 px-2 py-2 text-[11px] font-bold rounded  whitespace-nowrap hover:scale-90 transition-all
-      ${disabled
-        ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-        : "bg-[#f1f5f9] text-[#1d8cf8] hover:bg-blue-100"
-      }
-      ${className}
-    `}
-  >
-    {Icon && <Icon className="w-3.5 h-3.5" />}
-    <span>{label}</span>
-  </button>
-);
-
-const SummaryItem = ({ label, value }) => (
-  <div className="flex items-center gap-1 text-xs">
-    <span className="font-medium text-slate-800">{value}</span>
-  </div>
 );
 
 const DatePicker = ({ label, value, onChange, max }) => (
@@ -109,271 +41,29 @@ const DatePicker = ({ label, value, onChange, max }) => (
   </div>
 );
 
-
-
-const ConfigModal = ({ onClose, currentVisibility, onSave }) => {
-  const [tempVisibility, setTempVisibility] = useState({ ...currentVisibility });
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartPos = useRef({ x: 0, y: 0 });
-
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    dragStartPos.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDragging) return;
-      setPosition({ x: e.clientX - dragStartPos.current.x, y: e.clientY - dragStartPos.current.y });
-    };
-    const handleMouseUp = () => setIsDragging(false);
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging]);
-
-  const toggleVisibility = (label) => {
-    setTempVisibility(prev => ({ ...prev, [label]: !prev[label] }));
-  };
-
-  const handleSubmit = () => {
-    onSave(tempVisibility);
-    onClose();
-  };
-
-  const scrollbarStyles = {
-    scrollbarWidth: 'thin',
-    scrollbarColor: '#cbd5e1 #f1f5f9'
-  };
-
-  return (
-    <>
-      <style>
-        {`
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 3px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-          }
-        `}
-      </style>
-
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
-        <div
-          style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
-          className="bg-white w-[650px] max-w-[95%] rounded-md shadow-2xl flex flex-col max-h-[90vh] border border-slate-200"
-        >
-          <div
-            onMouseDown={handleMouseDown}
-            className="flex items-center justify-between px-6 py-3 border-b border-slate-100 cursor-move bg-slate-50/50 rounded-t-md select-none"
-          >
-            <h2 className="text-xl font-semibold text-blue-700">Configuration</h2>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="px-6 pt-[20px] overflow-hidden">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-blue-800 font-bold mb-3">Custom Filter</h3>
-                  <div className="space-y-1">
-                    {CUSTOM_FILTERS.map(item => (
-                      <CheckboxItem
-                        key={item}
-                        label={item}
-                        checked={tempVisibility[item]}
-                        onChange={toggleVisibility}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-blue-800 font-bold mb-3">Custom Column</h3>
-                  <div className="space-y-1">
-                    {CUSTOM_COLUMNS.map(item => (
-                      <CheckboxItem
-                        key={item}
-                        label={item}
-                        checked={tempVisibility[item]}
-                        onChange={toggleVisibility}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="md:border-l md:border-slate-200 md:pl-8 flex flex-col">
-                <h3 className="text-blue-800 font-bold mb-3">Custom Actions</h3>
-                <div
-                  className="space-y-1 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar"
-                  style={scrollbarStyles}
-                >
-                  {ALL_ACTION_ORDER.map(item => (
-                    <CheckboxItem
-                      key={item}
-                      label={item}
-                      checked={tempVisibility[item]}
-                      onChange={toggleVisibility}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 px-6 py-4 border-t text-[13px] border-slate-100 bg-slate-50/50 rounded-b-md mt-4">
-            <button onClick={handleSubmit} className="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 flex items-center gap-2 transition-colors shadow-sm">
-              <CheckSquare className="w-3.5 h-3.5" /> Submit
-            </button>
-            <button onClick={onClose} className="px-4 py-2 bg-white border border-slate-300 text-slate-600 font-medium rounded hover:bg-slate-50 transition-colors shadow-sm">
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-};
-
 const getCurrentDate = () => {
   const date = new Date();
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return `${day}/${month}/${year}`;
 };
 
-
-const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) => {
+const UsersPage = ({ filters, exportTrigger, onDataCountChange }) => {
   const [userData, setUserData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { currentLanguage, changeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
-
-  const mockData = [
-    {
-      id: 1,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample1",
-      taskStatus: "Completed"
-    },
-    {
-      id: 2,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample2",
-      taskStatus: "Completed"
-    },
-    {
-      id: 3,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample3",
-      taskStatus: "Completed"
-    },
-    {
-      id: 4,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample4",
-      taskStatus: "Completed"
-    },
-    {
-      id: 5,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample5",
-      taskStatus: "Completed"
-    },
-    {
-      id: 6,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample6",
-      taskStatus: "Completed"
-    },
-    {
-      id: 7,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample7",
-      taskStatus: "Completed"
-    }
-  ];
-
-
-
-  //   useEffect(() => {
-  //     const fetchUsers = async () => {
-  //       try {
-  //         setLoading(true);
-  //         const response = await axios.get('http://localhost:5173/users');
-  //         setUserData(response.data);
-  //         setLoading(false);
-  //       } catch (err) {
-  //         console.error("Error fetching data:", err);
-  //         setError(err.message || "Something went wrong");
-  //         setLoading(false);
-  //       }
-  //     };
-
-  //     fetchUsers();
-  //   }, []);
-
-  // useEffect(() => {
-  //   setLoading(true);
-  //   setTimeout(() => {
-  //     setUserData(mockData);
-  //     setLoading(false);
-  //   }, 300);
-
-  // }, []);
-
-
-  const filteredData = useMemo(() => {
-    let data = mockData;
-
-    if (filters?.fileName) {
-      data = data.filter(item =>
-        item.fileName.toLowerCase().includes(filters.fileName.toLowerCase())
-      );
-    }
-
-    if (filters?.clientName) {
-      data = data.filter(item =>
-        item.clientName === filters.clientName
-      );
-    }
-
-    return data;
-  }, [filters, refreshKey]);
+  const { currentLanguage, changeLanguage, languages } = useLanguage();
 
   useEffect(() => {
-    setLoading(true);
-
-    const timer = setTimeout(() => {
-      setUserData(filteredData);
+    if (filters?.data) {
+      setUserData(filters.data);
       if (onDataCountChange) {
-        onDataCountChange(filteredData.length);
+        onDataCountChange(filters.data.length);
       }
-      setLoading(false);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [filteredData, onDataCountChange]);
-
+    }
+  }, [filters, onDataCountChange]);
 
   const userColumns = useMemo(() => [
     {
@@ -381,24 +71,44 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
       label: t('label.clientName'),
       width: 180,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.clientName}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.clientName}
+        </span>
+      )
     },
     {
       key: 'fileName',
       label: t('label.fileName'),
       width: 250,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.fileName}</span>
+      render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.fileName}
+        </span>
+      )
     },
     {
       key: 'taskStatus',
       label: t('label.taskStatus'),
       width: 120,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.taskStatus}</span>
+      render: (row, isSelected) => {
+        const status = row.taskStatus?.toLowerCase() || '';
+        const color = status === 'done' ? 'text-green-600' : 'text-red-600';
+        return (
+          <span
+            className={`${color} ${isSelected ? 'font-semibold' : ''}`}
+            style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}
+          >
+            {row.taskStatus}
+          </span>
+        );
+      }
     }
-  ], []);
-
+  ], [t]);
 
   useEffect(() => {
     if (exportTrigger === 0) return;
@@ -428,7 +138,7 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
     worksheet['!cols'] = colWidths;
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Upload Logs");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Download Logs");
 
     const excelBuffer = XLSX.write(workbook, {
       bookType: "xlsx",
@@ -439,21 +149,18 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
       type: "application/octet-stream"
     });
 
-    saveAs(file, `DownloadMonitor_${Date.now()}.xlsx`);
+    saveAs(file, `Download_Monitor_Logs_${Date.now()}.xlsx`);
   }, [exportTrigger, userData, userColumns]);
-
-
-
 
   const renderUserDetail = (user) => (
     <div className="space-y-3 text-[12px]">
       {[
-        { label: "sourcePath", value: user.sourcePath || "D:\\SDMSFTP\\SourcePath" },
-        { label: "type", value: user.type || "TS1" },
-        { label: "downloadLocation", value: user.downloadLocation || "D:\\SDMSFTP\\Restore" },
-        { label: "errorDescription", value: user.errorDescription || "NO Error" },
+        { label: "sourcePath", value: user.sourcePath || "" },
+        { label: "type", value: user.type || "" },
+        { label: "downloadLocation", value: user.downloadLocation || "" },
+        { label: "errorDescription", value: user.errorDescription || "" },
         { label: "downloadedBy", value: user.downloadedBy || "" },
-        { label: "downloadedBy", value: user.downloadedBy || "" },
+        { label: "downloadedOn", value: user.downloadedOn || "" },
       ].map((field, index) => (
         <div key={index} className="grid grid-cols-3 gap-4">
           <div className="font-semibold text-[12px] font-['Roboto'] text-[#405F7D]">
@@ -465,18 +172,7 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
         </div>
       ))}
     </div>
-
   );
-
-
-  if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="p-8 text-center text-red-500"></div>;
-  }
-
 
   return (
     <div className="flex flex-col mt-2">
@@ -489,107 +185,114 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
   );
 };
 
-
 const DownloadMonitor = () => {
   const today = getCurrentDate();
-  // const [hideEmpty, setHideEmpty] = useState(true);
+  const { t } = useTranslation();
+  const { postData } = useAxios();
+
+  // States
   const [isOpen, setIsOpen] = useState(true);
-  const [showConfig, setShowConfig] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(9);
+  const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState([]);
+  // const [visibleCount, setVisibleCount] = useState(9);
   const [recordsDuration, setRecordsDuration] = useState("Current Date");
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
-  const [filename, setFilename] = useState("");
-  const options = ["User A", "User B"];
-  const [selectedClient, setSelectedClient] = useState(options[0]);
+  const [selectedClient, setSelectedClient] = useState("");
   const [taskId, setTaskId] = useState("");
   const [fileName, setFileName] = useState("");
   const [filters, setFilters] = useState({});
-  const [refreshKey, setRefreshKey] = useState(0);
   const [exportTrigger, setExportTrigger] = useState(0);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [dataCount, setDataCount] = useState(0);
+  const [clientList, setClientList] = useState([]);
+  const [clientMapping, setClientMapping] = useState({});
+  const [taskList, setTaskList] = useState([]);
+  const [taskMapping, setTaskMapping] = useState({});
+  const [errorDialog, setErrorDialog] = useState({ show: false, message: "", type: "" });
+  // const [isClientTouched, setIsClientTouched] = useState(false);
+  // const [isTaskTouched, setIsTaskTouched] = useState(false);
 
+  const { currentLanguage, changeLanguage, languages } = useLanguage();
 
-  const menuRef = useRef(null);
-  const actionContainerRef = useRef(null);
-  const buttonRefs = useRef([]);
+  // const menuRef = useRef(null);
+  // const actionContainerRef = useRef(null);
+  // const buttonRefs = useRef([]);
 
-  const [configState, setConfigState] = useState({
-    "Restore": true,
-    "Folder Download": true,
-    "File Upload": true,
-    "Folder Upload": true,
-    "Version History": true,
-    "Work Complete": true,
-    "Workflow History": true,
-    "Tag": true,
-    "Open": true,
-    "File Download": true,
-    "Audit Trail History": true,
-    "Attribute": true,
-    "Multi-File Select": true,
-    "Instrument": true,
-    "Workflow Status": true,
-    "Task Status": true,
-    "Parser Status": false
-  });
+  // const [configState, setConfigState] = useState({
+  //   "Restore": true,
+  //   "Folder Download": true,
+  //   "File Upload": true,
+  //   "Folder Upload": true,
+  //   "Version History": true,
+  //   "Work Complete": true,
+  //   "Workflow History": true,
+  //   "Tag": true,
+  //   "Open": true,
+  //   "File Download": true,
+  //   "Audit Trail History": true,
+  //   "Attribute": true,
+  //   "Multi-File Select": true,
+  //   "Instrument": true,
+  //   "Workflow Status": true,
+  //   "Task Status": true,
+  //   "Parser Status": false
+  // });
 
-  const enabledActions = ALL_ACTION_ORDER.filter(action => configState[action]);
+  // const enabledActions = ALL_ACTION_ORDER.filter(action => configState[action]);
 
-  useEffect(() => {
-    const calculateVisibleActions = () => {
-      if (!actionContainerRef.current) return;
+  // useEffect(() => {
+  //   const calculateVisibleActions = () => {
+  //     if (!actionContainerRef.current) return;
 
-      const containerWidth = actionContainerRef.current.offsetWidth;
-      const reservedSpace = 140;
-      const availableWidth = containerWidth - reservedSpace;
+  //     const containerWidth = actionContainerRef.current.offsetWidth;
+  //     const reservedSpace = 140;
+  //     const availableWidth = containerWidth - reservedSpace;
 
-      let accumulatedWidth = 0;
-      let count = 0;
+  //     let accumulatedWidth = 0;
+  //     let count = 0;
 
-      for (let i = 0; i < buttonRefs.current.length; i++) {
-        const button = buttonRefs.current[i];
-        if (!button) continue;
+  //     for (let i = 0; i < buttonRefs.current.length; i++) {
+  //       const button = buttonRefs.current[i];
+  //       if (!button) continue;
 
-        const buttonWidth = button.offsetWidth + 8;
+  //       const buttonWidth = button.offsetWidth + 8;
 
-        if (accumulatedWidth + buttonWidth <= availableWidth) {
-          accumulatedWidth += buttonWidth;
-          count++;
-        } else {
-          break;
-        }
-      }
+  //       if (accumulatedWidth + buttonWidth <= availableWidth) {
+  //         accumulatedWidth += buttonWidth;
+  //         count++;
+  //       } else {
+  //         break;
+  //       }
+  //     }
 
-      setVisibleCount(Math.max(1, count));
-    };
+  //     setVisibleCount(Math.max(1, count));
+  //   };
 
-    calculateVisibleActions();
+  //   calculateVisibleActions();
 
-    window.addEventListener('resize', calculateVisibleActions);
+  //   window.addEventListener('resize', calculateVisibleActions);
 
-    const timer = setTimeout(calculateVisibleActions, 100);
+  //   const timer = setTimeout(calculateVisibleActions, 100);
 
-    return () => {
-      window.removeEventListener('resize', calculateVisibleActions);
-      clearTimeout(timer);
-    };
-  }, [configState, enabledActions.length]);
+  //   return () => {
+  //     window.removeEventListener('resize', calculateVisibleActions);
+  //     clearTimeout(timer);
+  //   };
+  // }, [configState, enabledActions.length]);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  // useEffect(() => {
+  //   const handleClickOutside = (event) => {
+  //     if (menuRef.current && !menuRef.current.contains(event.target)) {
+  //       setShowMenu(false);
+  //     }
+  //   };
+  //   document.addEventListener("mousedown", handleClickOutside);
+  //   return () => document.removeEventListener("mousedown", handleClickOutside);
+  // }, []);
 
-  const visibleActions = enabledActions.slice(0, visibleCount);
-  const overflowActions = enabledActions.slice(visibleCount);
+  // const visibleActions = enabledActions.slice(0, visibleCount);
+  // const overflowActions = enabledActions.slice(visibleCount);
 
   const isCustomDate = recordsDuration === "Custom Date";
 
@@ -597,13 +300,31 @@ const DownloadMonitor = () => {
     const actualValue = value?.target?.value || value?.value || value;
     setRecordsDuration(actualValue);
   };
-  //calculate the current date minus the records duration date
+
   const formatDateDDMMYYYY = (date) => {
     const d = new Date(date);
     const day = String(d.getDate()).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
+  };
+
+  const formatDateYYYYMMDD = (ddmmyyyyDate) => {
+    if (!ddmmyyyyDate) return '';
+    const parts = ddmmyyyyDate.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return ddmmyyyyDate;
+  };
+
+  const formatDateDDMMYYYYfromInput = (yyyymmddDate) => {
+    if (!yyyymmddDate) return '';
+    const parts = yyyymmddDate.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return yyyymmddDate;
   };
 
   const getDateRange = (duration, fromDate, toDate) => {
@@ -640,8 +361,8 @@ const DownloadMonitor = () => {
       }
 
       case "Custom Date":
-        startDate = formatDateDDMMYYYY(fromDate);
-        endDate = formatDateDDMMYYYY(toDate);
+        startDate = formatDateDDMMYYYY(new Date(fromDate));
+        endDate = formatDateDDMMYYYY(new Date(toDate));
         break;
 
       default:
@@ -650,32 +371,234 @@ const DownloadMonitor = () => {
 
     return { startDate, endDate };
   };
-  const { currentLanguage, changeLanguage, languages } = useLanguage();
-  const { t } = useTranslation();
 
+  const fetchClientList = async () => {
+    try {
+      const payload = CF_activeUserdetails();
+      const result = await postData('AuditTrail/AuditTrailClientname', payload);
+      console.log("Client List Response:", result);
+
+      if (Array.isArray(result) && result.length > 0) {
+        const clientNames = result.map(item => item.L06ClientName);
+
+        const mapping = result.reduce((acc, item) => {
+          acc[item.L06ClientName] = item.L06ClientID;
+          return acc;
+        }, {});
+
+        setClientList(clientNames);
+        setClientMapping(mapping);
+
+        setSelectedClient(prev => prev ? prev : clientNames[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching client list:', error);
+    }
+  };
+
+  const fetchTaskList = async () => {
+    try {
+      const payload = {
+        sType: "D", // ← Changed from "R" to "D" for Download Monitor
+        ...CF_activeUserdetails()
+      };
+
+      const result = await postData('Scheduler/getTaskDownload', payload);
+      console.log("Task List Response:", result);
+
+      if (Array.isArray(result) && result.length > 0) {
+        const taskLabels = result.map(item => item.sTaskID);
+
+        const mapping = result.reduce((acc, item) => {
+          acc[item.sTaskID] = item.sDownloadTaskID;
+          return acc;
+        }, {});
+
+        setTaskList(taskLabels);
+        setTaskMapping(mapping);
+
+        setTaskId(prev => prev ? prev : taskLabels[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching task list:', error);
+    }
+  };
+
+  useEffect(() => {
+    const initializeComponent = async () => {
+      await Promise.all([
+        fetchClientList(),
+        fetchTaskList()
+      ]);
+      await handleInitialLoad();
+    };
+    initializeComponent();
+  }, []);
+
+  const handleInitialLoad = async () => {
+    setLoading(true);
+    try {
+      const todayDate = new Date();
+      const sFromDate = formatDateDDMMYYYY(todayDate);
+      const sToDate = formatDateDDMMYYYY(todayDate);
+
+      const payload = {
+        bStatus: true,
+        sFromDate: sFromDate,
+        sToDate: sToDate,
+        sClientID: "",
+        sFileName: "",
+        sDownloadTaskID: "",
+        ...CF_activeUserdetails()
+      };
+      console.log("Initial Load Payload:", payload);
+
+      const result = await postData('Scheduler/getDownloadMonitor', payload);
+
+      if (result && Array.isArray(result)) {
+        const mappedData = result.map((item, index) => ({
+          id: index + 1,
+          clientName: item.sClientName || "",
+          fileName: item.sFileName || "",
+          taskStatus: item.sTaskStatus || "",
+          sourcePath: item.sSourcePath || "",
+          type: item.sFileType || "",
+          downloadLocation: item.sDownloadLocation || "",
+          errorDescription: item.sErrorDescription || "",
+          downloadedBy: item.sDownloadBy || "",
+          downloadedOn: item.sTimeStamp || "",
+          downloadTskID: item.sDownloadTskID || "",
+          taskID: item.sTaskID || "",
+          utcTimeStamp: item.sUTCTimeStamp || "",
+          siteCode: item.sSiteCode || ""
+        }));
+
+        setUserData(mappedData);
+        setFilters({ ...payload, data: mappedData });
+      }
+
+      console.log("Initial Load Response:", result);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error in initial load:', error);
+      setLoading(false);
+    }
+  };
+
+  const fetchDownloadMonitor = async ({ isRefresh = false } = {}) => {
+    console.group("Download Monitor API");
+    setLoading(true);
+
+    try {
+      const { startDate, endDate } = getDateRange(recordsDuration, fromDate, toDate);
+
+      const payload = {
+        bStatus: false,
+        sFromDate: startDate,
+        sToDate: endDate,
+        sClientID: clientMapping[selectedClient] || "",
+        sFileName: fileName || "",
+        sDownloadTaskID: taskMapping[taskId] || "",
+        ...CF_activeUserdetails()
+      };
+
+      console.log("Request Payload:", payload);
+
+      const response = await postData("Scheduler/getDownloadMonitor", payload);
+
+      console.log("API Response:", response);
+
+      if (Array.isArray(response)) {
+        const mappedData = response.map((item, index) => ({
+          id: index + 1,
+          clientName: item.sClientName || "",
+          fileName: item.sFileName || "",
+          taskStatus: item.sTaskStatus || "",
+          sourcePath: item.sSourcePath || "",
+          type: item.sFileType || "",
+          downloadLocation: item.sDownloadLocation || "",
+          errorDescription: item.sErrorDescription || "",
+          downloadedBy: item.sDownloadBy || "",
+          downloadedOn: item.sTimeStamp || "",
+          downloadTskID: item.sDownloadTskID || "",
+          taskID: item.sTaskID || "",
+          utcTimeStamp: item.sUTCTimeStamp || "",
+          siteCode: item.sSiteCode || ""
+        }));
+
+        setUserData(mappedData);
+        setFilters({ data: mappedData });
+      }
+    } catch (err) {
+      console.error("Download Monitor Error:", err);
+    } finally {
+      setLoading(false);
+      console.groupEnd();
+    }
+  };
 
   const handleFilter = () => {
-    const payload = {
-      clientName: selectedClient,
-      taskId,
-      fileName,
-      recordsDuration,
-      fromDate,
-      toDate
-    };
-    setFilters(payload);
+    console.log("Filter Clicked");
+    fetchDownloadMonitor();
   };
 
   const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+    console.log("Refresh Clicked");
+    fetchDownloadMonitor({ isRefresh: true });
+  };
+
+  const buildExportRequest = () => {
+    const userDetails = CF_activeUserdetails();
+
+    return {
+      AllRows: userData.map((row, index) => ({
+        sClientName: row.clientName || "",
+        sSourcePath: row.sourcePath || "",
+        sTaskStatus: row.taskStatus || "",
+        sFileName: row.fileName || "",
+        sFileType: row.type || "",
+        sDownloadLocation: row.downloadLocation || "",
+        sErrorDescription: row.errorDescription || null,
+        sDownloadBy: row.downloadedBy || "",
+        sTimeStamp: row.downloadedOn || "",
+        sDownloadTskID: row.downloadTskID || "",
+        sTaskID: row.taskID || "",
+        sUTCTimeStamp: row.utcTimeStamp || "",
+        sSiteCode: row.siteCode || "",
+        visibleindex: index,
+        boundindex: index,
+        uid: index,
+        uniqueid: `${Date.now()}-${index}`
+      })),
+      sFileName: "DownloadMonitor",
+      sBrowserURL: window.location.origin,
+      AllowKeys: [
+        "sClientName", "sSourcePath", "sTaskStatus", "sFileName",
+        "sFileType", "sDownloadLocation", "sErrorDescription",
+        "sDownloadBy", "sTimeStamp"
+      ],
+      HeaderDetails: [
+        "Client Name", "Source Path", "Task Status", "Filename",
+        "Type", "Download Location", "Error Description",
+        "Downloaded By", "Downloaded On"
+      ],
+      ActiveUserDetails: userDetails.ActiveUserDetails,
+      ApplicationCode: userDetails.ApplicationCode
+    };
   };
 
   const handleExport = () => {
-    if (dataCount === 0) {
-      setShowErrorDialog(true);
-      return;
-    }
-    setExportTrigger(prev => prev + 1);
+    console.log("Export Clicked");
+
+    handleExportCommon({
+      rows: userData,
+      buildRequest: buildExportRequest,
+      postData,
+      setLoading,
+      setLoadingText: () => { },
+      setErrorDialog,
+      t
+    });
   };
 
   return (
@@ -688,9 +611,10 @@ const DownloadMonitor = () => {
               <AnimatedDropdown
                 label={t("label.clientName")}
                 value={selectedClient}
-                options={options}
-                onChange={(e) => setSelectedClient(e.target.value)}
-                // isSearchable={true}
+                options={clientList}
+                onChange={(val) => {
+                  setSelectedClient(val?.target?.value ?? val);
+                }}
                 allowFreeInput={true}
               />
 
@@ -699,13 +623,13 @@ const DownloadMonitor = () => {
 
             <div className="w-60">
               <AnimatedDropdown
-                label={t("label.task")}
+                label={t("label.taskId")}
                 value={taskId}
-                options={["Task-001", "Task-002", "Task-003"]}
-                onChange={(e) => setTaskId(e.target.value)}
-                // isSearchable={true}
-                allowFreeInput={true}
-              // borderColor="[border-bottom-color:#91DCF3]"
+                options={taskList}
+                onChange={(val) => {
+                  setTaskId(val?.target?.value ?? val);
+                }}
+                allowFreeInput
               />
 
             </div>
@@ -727,7 +651,6 @@ const DownloadMonitor = () => {
                 value={recordsDuration}
                 options={["Current Date", "Last 7 Days", "Last 30 Days", "Last 1 Year", "Custom Date"]}
                 onChange={handleDurationChange}
-                // isSearchable={true}
                 allowFreeInput={true}
               />
             </div>
@@ -737,23 +660,21 @@ const DownloadMonitor = () => {
                 <div className="w-52 pb-4">
                   <DatePicker
                     label="From"
-                    value={fromDate}
-                    onChange={setFromDate}
-                    max={today}
+                    value={formatDateYYYYMMDD(fromDate)}
+                    onChange={(val) => setFromDate(formatDateDDMMYYYYfromInput(val))}
+                    max={formatDateYYYYMMDD(today)}
                   />
                 </div>
                 <div className="w-52 pb-4">
                   <DatePicker
                     label="To"
-                    value={toDate}
-                    onChange={setToDate}
-                    max={today}
+                    value={formatDateYYYYMMDD(toDate)}
+                    onChange={(val) => setToDate(formatDateDDMMYYYYfromInput(val))}
+                    max={formatDateYYYYMMDD(today)}
                   />
                 </div>
               </>
             )}
-
-
 
             <div className="flex items-end gap-2 pb-2 ml-4">
               <PrimaryButton icon={Filter} label={t('button.filter')} onClick={handleFilter} />
@@ -763,7 +684,6 @@ const DownloadMonitor = () => {
           </div>
         ) : (
           <div className="grid grid-cols-4 gap-4 py-2.5">
-
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs text-slate-600">{t("label.clientName")}:</span>
               <span className="font-medium text-xs text-[#0E5BCA] text-800">{selectedClient || "---"}</span>
@@ -772,7 +692,6 @@ const DownloadMonitor = () => {
               <span className="font-bold text-xs text-slate-600">{t("label.fileName")}:</span>
               <span className="font-medium text-xs text-[#0E5BCA] text-800">{fileName || "---"}</span>
             </div>
-
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs text-slate-600">{t("label.from")}:</span>
               <span className="font-medium text-xs text-[#0E5BCA]">{getDateRange(recordsDuration, fromDate, toDate).startDate}</span>
@@ -792,23 +711,21 @@ const DownloadMonitor = () => {
         </button>
       </div>
 
-
       <div className="px-4 font-roboto h-[calc(100vh-150px)] flex flex-col">
-        {/* UsersPage takes full width & height */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden grid-custom-font">
           <UsersPage
             filters={filters}
-            refreshKey={refreshKey}
             exportTrigger={exportTrigger}
             onDataCountChange={setDataCount}
           />
         </div>
       </div>
-      {showErrorDialog && (
+
+      {errorDialog.show && (
         <Errordialog
-          message="Select an existing record."
-          type="information"
-          onClose={() => setShowErrorDialog(false)}
+          message={errorDialog.message}
+          type={errorDialog.type}
+          onClose={() => setErrorDialog({ show: false, message: "", type: "" })}
         />
       )}
     </div>
@@ -816,4 +733,3 @@ const DownloadMonitor = () => {
 }
 
 export default DownloadMonitor
-
