@@ -15,52 +15,6 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import Errordialog from '../../../../Layout/Common/Errordialog';
 
-const ACTION_ICONS = {
-  "Open": FolderOpen,
-  "File Download": Download,
-  "Restore": RotateCcw,
-  "Folder Download": FolderDown,
-  "File Upload": Upload,
-  "Folder Upload": FolderUp,
-  "Version History": FileClock,
-  "Workflow History": History,
-  "Tag": Tag,
-  "Audit Trail History": List,
-  "Attribute": FileText,
-  "Multi-File Select": MousePointer2,
-  "Work Complete": CheckCircle
-};
-
-const ALL_ACTION_ORDER = [
-  "Open",
-  "File Download",
-  "Restore",
-  "Folder Download",
-  "File Upload",
-  "Folder Upload",
-  "Version History",
-  "Work Complete",
-  "Workflow History",
-  "Tag",
-  "Audit Trail History",
-  "Attribute",
-  "Multi-File Select"
-];
-
-const CUSTOM_FILTERS = ["Instrument", "Workflow Status", "Task Status"];
-const CUSTOM_COLUMNS = ["Parser Status"];
-
-const CheckboxItem = ({ label, checked, onChange }) => (
-  <label className="flex items-center justify-between py-2 hover:bg-slate-50 px-2 rounded cursor-pointer group transition-colors mr-2">
-    <span className="text-slate-700 font-medium text-sm select-none group-hover:text-blue-700">{label}</span>
-    <input
-      type="checkbox"
-      checked={!!checked}
-      onChange={() => onChange(label)}
-      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-    />
-  </label>
-);
 
 const PrimaryButton = ({ icon: Icon, label, onClick }) => (
   <button
@@ -72,28 +26,6 @@ const PrimaryButton = ({ icon: Icon, label, onClick }) => (
   </button>
 );
 
-const ActionButton = ({ icon: Icon, label, disabled, onClick, className = "" }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`flex items-center gap-1.5 px-2 py-2 text-[11px] font-bold rounded  whitespace-nowrap hover:scale-90 transition-all
-      ${disabled
-        ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-        : "bg-[#f1f5f9] text-[#1d8cf8] hover:bg-blue-100"
-      }
-      ${className}
-    `}
-  >
-    {Icon && <Icon className="w-3.5 h-3.5" />}
-    <span>{label}</span>
-  </button>
-);
-
-const SummaryItem = ({ label, value }) => (
-  <div className="flex items-center gap-1 text-xs">
-    <span className="font-medium text-slate-800">{value}</span>
-  </div>
-);
 
 const DatePicker = ({ label, value, onChange, max }) => (
   <div className="flex flex-col w-full">
@@ -107,149 +39,6 @@ const DatePicker = ({ label, value, onChange, max }) => (
     />
   </div>
 );
-
-
-
-const ConfigModal = ({ onClose, currentVisibility, onSave }) => {
-  const [tempVisibility, setTempVisibility] = useState({ ...currentVisibility });
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartPos = useRef({ x: 0, y: 0 });
-
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    dragStartPos.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDragging) return;
-      setPosition({ x: e.clientX - dragStartPos.current.x, y: e.clientY - dragStartPos.current.y });
-    };
-    const handleMouseUp = () => setIsDragging(false);
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging]);
-
-  const toggleVisibility = (label) => {
-    setTempVisibility(prev => ({ ...prev, [label]: !prev[label] }));
-  };
-
-  const handleSubmit = () => {
-    onSave(tempVisibility);
-    onClose();
-  };
-
-  const scrollbarStyles = {
-    scrollbarWidth: 'thin',
-    scrollbarColor: '#cbd5e1 #f1f5f9'
-  };
-
-  return (
-    <>
-      <style>
-        {`
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 3px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-          }
-        `}
-      </style>
-
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
-        <div
-          style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
-          className="bg-white w-[650px] max-w-[95%] rounded-md shadow-2xl flex flex-col max-h-[90vh] border border-slate-200"
-        >
-          <div
-            onMouseDown={handleMouseDown}
-            className="flex items-center justify-between px-6 py-3 border-b border-slate-100 cursor-move bg-slate-50/50 rounded-t-md select-none"
-          >
-            <h2 className="text-xl font-semibold text-blue-700">Configuration</h2>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="px-6 pt-[20px] overflow-hidden">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-blue-800 font-bold mb-3">Custom Filter</h3>
-                  <div className="space-y-1">
-                    {CUSTOM_FILTERS.map(item => (
-                      <CheckboxItem
-                        key={item}
-                        label={item}
-                        checked={tempVisibility[item]}
-                        onChange={toggleVisibility}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-blue-800 font-bold mb-3">Custom Column</h3>
-                  <div className="space-y-1">
-                    {CUSTOM_COLUMNS.map(item => (
-                      <CheckboxItem
-                        key={item}
-                        label={item}
-                        checked={tempVisibility[item]}
-                        onChange={toggleVisibility}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="md:border-l md:border-slate-200 md:pl-8 flex flex-col">
-                <h3 className="text-blue-800 font-bold mb-3">Custom Actions</h3>
-                <div
-                  className="space-y-1 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar"
-                  style={scrollbarStyles}
-                >
-                  {ALL_ACTION_ORDER.map(item => (
-                    <CheckboxItem
-                      key={item}
-                      label={item}
-                      checked={tempVisibility[item]}
-                      onChange={toggleVisibility}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 px-6 py-4 border-t text-[13px] border-slate-100 bg-slate-50/50 rounded-b-md mt-4">
-            <button onClick={handleSubmit} className="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 flex items-center gap-2 transition-colors shadow-sm">
-              <CheckSquare className="w-3.5 h-3.5" /> Submit
-            </button>
-            <button onClick={onClose} className="px-4 py-2 bg-white border border-slate-300 text-slate-600 font-medium rounded hover:bg-slate-50 transition-colors shadow-sm">
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-};
 
 const getCurrentDate = () => {
   const date = new Date();
@@ -267,103 +56,14 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
   const { currentLanguage, changeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
 
-  const mockData = [
-    {
-      id: 1,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample1"
-    },
-    {
-      id: 2,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample2"
-    },
-    {
-      id: 3,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample3",
-    },
-    {
-      id: 4,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample4"
-    },
-    {
-      id: 5,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample5"
-    },
-    {
-      id: 6,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample6"
-    },
-    {
-      id: 7,
-      clientName: "DESKTOP-CU9J5T2",
-      fileName: "sample7"
-    }
-  ];
-
-
-
-  //   useEffect(() => {
-  //     const fetchUsers = async () => {
-  //       try {
-  //         setLoading(true);
-  //         const response = await axios.get('http://localhost:5173/users');
-  //         setUserData(response.data);
-  //         setLoading(false);
-  //       } catch (err) {
-  //         console.error("Error fetching data:", err);
-  //         setError(err.message || "Something went wrong");
-  //         setLoading(false);
-  //       }
-  //     };
-
-  //     fetchUsers();
-  //   }, []);
-
-  // useEffect(() => {
-  //   setLoading(true);
-  //   setTimeout(() => {
-  //     setUserData(mockData);
-  //     setLoading(false);
-  //   }, 300);
-
-  // }, []);
-
-  const filteredData = useMemo(() => {
-    let data = mockData;
-
-    if (filters?.fileName) {
-      data = data.filter(item =>
-        item.fileName.toLowerCase().includes(filters.fileName.toLowerCase())
-      );
-    }
-
-    if (filters?.clientName) {
-      data = data.filter(item =>
-        item.clientName === filters.clientName
-      );
-    }
-
-    return data;
-  }, [filters, refreshKey]);
-
   useEffect(() => {
-    setLoading(true);
-
-    const timer = setTimeout(() => {
-      setUserData(filteredData);
-      if (onDataCountChange) {
-        onDataCountChange(filteredData.length);
+      if (filters?.data) {
+        setUserData(filters.data);
+        if (onDataCountChange) {
+          onDataCountChange(filters.data.length);
+        }
       }
-      setLoading(false);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [filteredData, onDataCountChange]);
+    }, [filters, onDataCountChange]);
 
   const userColumns = useMemo(() => [
     {
@@ -371,14 +71,24 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
       label: t('label.clientName'),
       width: 120,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.clientName}</span>
+       render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.clientName}
+        </span>
+      )
     },
     {
       key: 'fileName',
       label: t('label.fileName'),
       width: 120,
       enableSearch: true,
-      render: (row) => <span className="text-gray-700">{row.fileName}</span>
+       render: (row, isSelected) => (
+        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+          {row.fileName}
+        </span>
+      )
     }
   ], []);
 
@@ -428,9 +138,9 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
   const renderUserDetail = (user) => (
     <div className="space-y-3 text-[12px]">
       {[
-        { label: "size", value: user.size || "450 mb" },
-        { label: "versionNo", value: user.versionNo || "2" },
-        { label: "fileMode", value: user.downloadLocation || "PDF" },
+        { label: "size", value: user.size || "" },
+        { label: "versionNo", value: user.versionNo || "" },
+        { label: "fileMode", value: user.downloadLocation || "" },
         { label: "userName", value: user.userName || "" },
         { label: "uploadOn", value: user.downloadedOn || "" },
         { label: "checksum", value: user.checksum || "" },
@@ -448,15 +158,6 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
   );
 
 
-  if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="p-8 text-center text-red-500"></div>;
-  }
-
-
   return (
     <div className="flex flex-col mt-2">
       <GridLayout
@@ -472,11 +173,9 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
 
 const UploadLogs = () => {
   const today = getCurrentDate();
-  // const [hideEmpty, setHideEmpty] = useState(true);
   const [isOpen, setIsOpen] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(9);
   const [recordsDuration, setRecordsDuration] = useState("Current Date");
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
@@ -489,86 +188,6 @@ const UploadLogs = () => {
   const [exportTrigger, setExportTrigger] = useState(0);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [dataCount, setDataCount] = useState(0);
-
-
-  const menuRef = useRef(null);
-  const actionContainerRef = useRef(null);
-  const buttonRefs = useRef([]);
-
-  const [configState, setConfigState] = useState({
-    "Restore": true,
-    "Folder Download": true,
-    "File Upload": true,
-    "Folder Upload": true,
-    "Version History": true,
-    "Work Complete": true,
-    "Workflow History": true,
-    "Tag": true,
-    "Open": true,
-    "File Download": true,
-    "Audit Trail History": true,
-    "Attribute": true,
-    "Multi-File Select": true,
-    "Instrument": true,
-    "Workflow Status": true,
-    "Task Status": true,
-    "Parser Status": false
-  });
-
-  const enabledActions = ALL_ACTION_ORDER.filter(action => configState[action]);
-
-  useEffect(() => {
-    const calculateVisibleActions = () => {
-      if (!actionContainerRef.current) return;
-
-      const containerWidth = actionContainerRef.current.offsetWidth;
-      const reservedSpace = 140;
-      const availableWidth = containerWidth - reservedSpace;
-
-      let accumulatedWidth = 0;
-      let count = 0;
-
-      for (let i = 0; i < buttonRefs.current.length; i++) {
-        const button = buttonRefs.current[i];
-        if (!button) continue;
-
-        const buttonWidth = button.offsetWidth + 8;
-
-        if (accumulatedWidth + buttonWidth <= availableWidth) {
-          accumulatedWidth += buttonWidth;
-          count++;
-        } else {
-          break;
-        }
-      }
-
-      setVisibleCount(Math.max(1, count));
-    };
-
-    calculateVisibleActions();
-
-    window.addEventListener('resize', calculateVisibleActions);
-
-    const timer = setTimeout(calculateVisibleActions, 100);
-
-    return () => {
-      window.removeEventListener('resize', calculateVisibleActions);
-      clearTimeout(timer);
-    };
-  }, [configState, enabledActions.length]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const visibleActions = enabledActions.slice(0, visibleCount);
-  const overflowActions = enabledActions.slice(visibleCount);
 
   const isCustomDate = recordsDuration === "Custom Date";
 

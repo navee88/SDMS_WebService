@@ -860,7 +860,12 @@ const AuditTrailHistory = () => {
             width: 150,
             enableSearch: true,
             resizable: true,
-            render: (row) => <span className="text-gray-700">{row.moduleName}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.moduleName}
+                </span>
+            )
         },
         {
             key: 'actions',
@@ -868,7 +873,12 @@ const AuditTrailHistory = () => {
             width: 150,
             enableSearch: true,
             resizable: true,
-            render: (row) => <span className="text-gray-700">{row.actions}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.actions}
+                </span>
+            )
         },
         {
             key: 'transactionOn',
@@ -877,7 +887,12 @@ const AuditTrailHistory = () => {
             inputType: 'date',
             enableSearch: true,
             resizable: true,
-            render: (row) => <span className="text-gray-700">{row.transactionOn}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.transactionOn}
+                </span>
+            )
         },
         {
             key: 'reviewStatus',
@@ -885,7 +900,12 @@ const AuditTrailHistory = () => {
             width: 150,
             enableSearch: true,
             resizable: true,
-            render: (row) => <span className="text-gray-700">{row.reviewStatus}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.reviewStatus}
+                </span>
+            )
         },
         {
             key: 'requestedClient',
@@ -893,7 +913,12 @@ const AuditTrailHistory = () => {
             width: 200,
             enableSearch: true,
             resizable: true,
-            render: (row) => <span className="text-gray-700">{row.requestedClient}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.requestedClient}
+                </span>
+            )
         },
         {
             key: 'affectedClient',
@@ -901,7 +926,12 @@ const AuditTrailHistory = () => {
             width: 200,
             enableSearch: true,
             resizable: true,
-            render: (row) => <span className="text-gray-700">{row.affectedClient}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.affectedClient}
+                </span>
+            )
         },
         {
             key: 'instrumentName',
@@ -909,7 +939,12 @@ const AuditTrailHistory = () => {
             width: 200,
             enableSearch: true,
             resizable: true,
-            render: (row) => <span className="text-gray-700">{row.instrumentName}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.instrumentName}
+                </span>
+            )
         },
         {
             key: 'reason',
@@ -917,7 +952,12 @@ const AuditTrailHistory = () => {
             width: 150,
             enableSearch: true,
             resizable: true,
-            render: (row) => <span className="text-gray-700">{row.reason}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.reason}
+                </span>
+            )
         }
     ], [selectedRows, t]);
 
@@ -933,52 +973,89 @@ const AuditTrailHistory = () => {
             key: 'serialNo',
             label: t('label.serialNo'),
             width: 100,
-            render: (row, index) => {
-                console.log("SerialNo Render - Row:", row, "Index:", index);
-                return <span className="text-gray-700">{row.id}</span>
-            }
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.id}
+                </span>
+            )
         },
         {
             key: 'moduleName',
             label: t('label.moduleName'),
             width: 180,
-            render: (row) => <span className="text-gray-700">{row.moduleName}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.moduleName}
+                </span>
+            )
         },
         {
             key: 'actions',
             label: t('label.actions'),
-            width: 200,
-            render: (row) => <span className="text-gray-700">{row.actions}</span>
+            width:150,
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.actions}
+                </span>
+            )
         },
         {
             key: 'comments',
             label: t('label.comments'),
-            width: 200,
-            render: (row) => <span className="text-gray-700">{row.comments}</span>
+            width: 150,
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.comments}
+                </span>
+            )
         },
         {
             key: 'reviewStatus',
             label: t('label.reviewStatus'),
             width: 180,
-            render: (row) => <span className="text-gray-700">{row.reviewStatus}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.reviewStatus}
+                </span>
+            )
         },
         {
             key: 'reviewComments',
             label: t('label.reviewComments'),
             width: 200,
-            render: (row) => <span className="text-gray-700">{row.reviewComments}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.reviewComments}
+                </span>
+            )
         },
         {
             key: 'reviewedBy',
             label: t('label.reviewedBy'),
             width: 150,
-            render: (row) => <span className="text-gray-700">{row.reviewedBy}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.reviewedBy}
+                </span>
+            )
         },
         {
             key: 'reviewedDate',
             label: t('label.reviewedDate'),
             width: 150,
-            render: (row) => <span className="text-gray-700">{row.reviewedDate}</span>
+            render: (row, isSelected) => (
+                <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+                    style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+                    {row.reviewedDate}
+                </span>
+            )
         }
     ], [t]);
 
@@ -1613,15 +1690,15 @@ const AuditTrailHistory = () => {
             setLoading,
             setLoadingText: (text) => setLoading(!!text),
             setErrorDialog: (config) => setErrorDialog({
-                show: config.show, 
+                show: config.show,
                 message: config.message,
                 type: config.type
             }),
-            t 
+            t
         });
     };
 
-    
+
 
     const fetchUserList = async () => {
         try {
