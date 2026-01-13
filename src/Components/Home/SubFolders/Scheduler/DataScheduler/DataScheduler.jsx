@@ -1,12 +1,27 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     Check, ChevronDown, RefreshCw, Calendar, Clock, Pencil, Search
 } from 'lucide-react';
+import useAxios from '../../../../../Services/servicecall';
+import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
+
 
 const SearchServerData = () => {
     // State
     const [isSchedulerMetadataEnabled, setIsSchedulerMetadataEnabled] = useState(false);
     const [activeTab, setActiveTab] = useState('File Settings');
+    const { postData } = useAxios();
+    const [clientOptions, setClientOptions] = useState([]);
+    const [domainOptions, setDomainOptions] = useState([]);
+    const [destinationOptions, setDestinationOptions] = useState([]);
+    const [templateOptions, setTemplateOptions] = useState([]);
+    const [delimiterOptions, setDelimiterOptions] = useState([]);
+    const [tagMasterData, setTagMasterData] = useState([]);
+    const [selectedTemplate, setSelectedTemplate] = useState('');
+    const [selectedClient, setSelectedClient] = useState('');
+    const [selectedDestination, setSelectedDestination] = useState('');
+    const [selectedDelimiter, setSelectedDelimiter] = useState('');
+    const [selectedDomain, setSelectedDomain] = useState('');
 
     // Ref for the scrollable container (The specific div that scrolls)
     const scrollContainerRef = useRef(null);
@@ -18,10 +33,132 @@ const SearchServerData = () => {
     const scheduleCaptureRef = useRef(null);
     const schedulerMetadataRef = useRef(null);
 
+
+
+    // Load all combos on screen load
+    const loadCombos = async () => {
+        try {
+            const requestData = CF_activeUserdetails();
+
+            // Client Combo
+            const clientResponse = await postData(
+                'Scheduler/DataSchedulerClientCombo',
+                requestData
+            );
+            setClientOptions(clientResponse || []);
+
+            // Domain Combo
+            const domainResponse = await postData(
+                'Scheduler/DataSchedulerDomainCombo',
+                requestData
+            );
+            // Set NONE as default selected
+            setDomainOptions(domainResponse || []);
+
+            if (domainResponse && domainResponse.length > 0) {
+                setSelectedDomain(domainResponse[0].L03DomainID);
+            }
+
+            // Destination Combo
+            const destinationResponse = await postData(
+                'Scheduler/DataSchedulerDestinationCombo',
+                requestData
+            );
+            setDestinationOptions(destinationResponse || []);
+
+            // Template Combo
+            const templateResponse = await postData(
+                'InstrumentLock/LockTemplateCombo',
+                requestData
+            );
+            setTemplateOptions(templateResponse || []);
+
+            // Auto-select first template
+            // if (templateResponse && templateResponse.length > 0) {
+            //     setSelectedTemplate(templateResponse[0].sTemplateID);
+            //     loadTagMaster(templateResponse[0].sTemplateID);
+            // }
+
+            // if (templateResponse && templateResponse.length > 0) {
+            //     const firstTemplateId = templateResponse[0].sTemplateID;
+            //     setSelectedTemplate(firstTemplateId);
+            //     // loadTagMaster(firstTemplateId);
+            // }
+
+            if (templateResponse && templateResponse.length > 0) {
+                const firstTemplateId = templateResponse[0].sTemplateID;
+                console.log("Auto-selected template:", firstTemplateId);
+                setSelectedTemplate(firstTemplateId);
+            }
+
+
+
+            // Delimiter Combo
+            const delimiterResponse = await postData(
+                'Scheduler/LoadDelimeter',
+                requestData
+            );
+            setDelimiterOptions(delimiterResponse || []);
+
+        } catch (error) {
+            console.error("Error loading combos:", error);
+        }
+    };
+
+    // Load Tag Master based on selected template
+    const loadTagMaster = async (templateId) => {
+        console.log("=== loadTagMaster called ===");
+        console.log("templateId:", templateId);
+        console.log("isSchedulerMetadataEnabled:", isSchedulerMetadataEnabled);
+
+        try {
+            const requestData = {
+                sTemplateID: templateId,
+                sInstrumentID: "",
+                ...CF_activeUserdetails()
+            };
+
+            console.log("Tag API Request:", requestData);
+
+            const response = await postData(
+                'Scheduler/GetTagMasterByTemplate',
+                requestData
+            );
+
+            console.log("Tag API Response:", response);
+
+            setTagMasterData(response || []);
+        } catch (error) {
+            console.error("Tag master load failed:", error);
+            setTagMasterData([]);
+        }
+    };
+
+
+    // useEffect(() => {
+    //     if (!isSchedulerMetadataEnabled) return;
+    //     if (!selectedTemplate) return;
+
+    //     console.log("Loading tags for template:", selectedTemplate);
+
+    //     loadTagMaster(selectedTemplate);
+    // }, [isSchedulerMetadataEnabled, selectedTemplate]);
+    useEffect(() => {
+        if (isSchedulerMetadataEnabled && selectedTemplate) {
+            console.log("Loading tags for template:", selectedTemplate);
+            loadTagMaster(selectedTemplate);
+        }
+    }, [isSchedulerMetadataEnabled, selectedTemplate]);
+
+
+    useEffect(() => {
+        loadCombos();
+    }, []);
+
     // Scroll Handler (Manual Calculation to prevent Header movement)
     const scrollToSection = (ref, tabName) => {
         setActiveTab(tabName);
-        
+
         if (ref.current && scrollContainerRef.current) {
             const container = scrollContainerRef.current;
             const element = ref.current;
@@ -91,8 +228,8 @@ const SearchServerData = () => {
             </header>
 
             {/* Scrollable Content Area - Attach ref here */}
-            <div 
-                ref={scrollContainerRef} 
+            <div
+                ref={scrollContainerRef}
                 className="flex-1 overflow-y-auto pt-4 relative"
             >
                 <main className="px-2">
@@ -105,9 +242,18 @@ const SearchServerData = () => {
                             <SectionHeader title="File Settings" />
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-24 gap-y-12 mb-12">
                                 <div className="space-y-10">
-                                    <UnderlineSelect label="Client Name" required />
+                                    {/* <UnderlineSelect label="Client Name" required /> */}
+                                    <UnderlineSelect
+                                        label="Client Name"
+                                        required
+                                        options={clientOptions}
+                                        displayKey="L06ClientName"
+                                        valueKey="L06ClientID"
+                                        value={selectedClient}
+                                        onChange={(value) => setSelectedClient(value)}
+                                    />
                                     <UnderlineSelect label="Instrument" required />
-                                    <UnderlineSelect label="Default Parser Method"  />
+                                    <UnderlineSelect label="Default Parser Method" />
                                 </div>
                                 <div className="space-y-10">
                                     <div className="space-y-2">
@@ -149,10 +295,27 @@ const SearchServerData = () => {
                                             <UnderlineInput label="Username" />
                                             <UnderlineInput label="Password" type="password" />
                                         </div>
-                                        <UnderlineSelect label="Domain" placeholder="NONE" />
+                                        {/* <UnderlineSelect label="Domain" placeholder="NONE" /> */}
+                                        <UnderlineSelect
+                                            label="Domain"
+                                            options={domainOptions}
+                                            displayKey="L03DomainName"
+                                            valueKey="L03DomainID"
+                                            value={selectedDomain}
+                                            onChange={(value) => setSelectedDomain(value)}
+                                        />
                                     </div>
                                     <div className="space-y-10">
-                                        <UnderlineSelect label="Destination" required />
+                                        {/* <UnderlineSelect label="Destination" required /> */}
+                                        <UnderlineSelect
+                                            label="Destination"
+                                            required
+                                            options={destinationOptions}
+                                            displayKey="L09FTPAliasName"
+                                            valueKey="L09FTPID"
+                                            value={selectedDestination}
+                                            onChange={(value) => setSelectedDestination(value)}
+                                        />
                                         <UnderlineInput label="Filter" defaultValue="*.*" />
                                     </div>
                                 </div>
@@ -305,6 +468,144 @@ const SearchServerData = () => {
 
                             {isSchedulerMetadataEnabled && (
                                 <div className="space-y-8">
+
+
+                                    <div>
+                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-6 mb-6">
+                                            {/* <UnderlineSelect label="Template Master" placeholder="QC" /> */}
+                                            <UnderlineSelect
+                                                label="Template Master"
+                                                options={templateOptions}
+                                                displayKey="sTemplateName"
+                                                valueKey="sTemplateID"
+                                                value={selectedTemplate}
+                                                // onChange={(value) => {
+                                                //     setSelectedTemplate(value);
+                                                //     loadTagMaster(value);
+                                                // }}
+                                                // onChange={(value) => {
+                                                //     setSelectedTemplate(value);
+                                                // }}
+                                                onChange={(value) => {
+                                                    console.log("Template changed to:", value);
+                                                    setSelectedTemplate(value);
+                                                    if (isSchedulerMetadataEnabled) {
+                                                        loadTagMaster(value);
+                                                    }
+                                                }}
+
+                                            />
+                                            <UnderlineInput label="Sample Filename" />
+                                            {/* <UnderlineSelect label="Delimiter" /> */}
+                                            <UnderlineSelect
+                                                label="Delimiter"
+                                                options={delimiterOptions}
+                                                displayKey="sDelimiterName"
+                                                valueKey="sDelimiterID"
+                                                value={selectedDelimiter}
+                                                onChange={(value) => setSelectedDelimiter(value)}
+                                            />
+                                        </div>
+                                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                            <table className="w-full text-sm text-left text-gray-500">
+                                                <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
+                                                    <tr>
+                                                        <th scope="col" className="px-6 py-3 w-1/4">TagName</th>
+                                                        <th scope="col" className="px-6 py-3 w-1/2">Extract From</th>
+                                                        <th scope="col" className="px-6 py-3 w-1/4">Metadata</th>
+                                                        <th scope="col" className="px-6 py-3 w-16"></th>
+                                                    </tr>
+                                                </thead>
+                                                {/* <tbody>
+                                                    <tr className="bg-blue-50/30 border-b border-gray-100">
+                                                        <td className="px-6 py-4 font-medium text-gray-900">Sample</td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-4">
+                                                                <RadioButton label="NONE" name="row1" />
+                                                                <RadioButton label="Folder" name="row1" />
+                                                                <RadioButton label="Filename" name="row1" />
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4"></td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <Pencil size={16} className="text-blue-600 cursor-pointer" />
+                                                        </td>
+                                                    </tr>
+                                                    <tr className="bg-white border-b border-gray-100">
+                                                        <td className="px-6 py-4 font-medium text-gray-900">Test</td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-4">
+                                                                <RadioButton label="NONE" name="row2" />
+                                                                <RadioButton label="Folder" name="row2" />
+                                                                <RadioButton label="Filename" name="row2" />
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4"></td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <Pencil size={16} className="text-blue-600 cursor-pointer" />
+                                                        </td>
+                                                    </tr>
+                                                </tbody> */}
+
+                                                <tbody>
+                                                    {tagMasterData && tagMasterData.length > 0 ? (
+                                                        tagMasterData.map((tag, index) => (
+                                                            <tr
+                                                                key={tag.sTagID}
+                                                                className={index % 2 === 0
+                                                                    ? "bg-blue-50/30 border-b border-gray-100"
+                                                                    : "bg-white border-b border-gray-100"}
+                                                            >
+                                                                {/* Tag Name */}
+                                                                <td className="px-6 py-4 font-medium text-gray-900">
+                                                                    {tag.sTagName}
+                                                                </td>
+
+                                                                {/* Extract From */}
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <RadioButton
+                                                                            label="NONE"
+                                                                            name={`extract_${tag.sTagID}`}
+                                                                            checked={!tag.sSourceFlag || tag.sSourceFlag === 'NONE'}
+                                                                        />
+                                                                        <RadioButton
+                                                                            label="Folder"
+                                                                            name={`extract_${tag.sTagID}`}
+                                                                            checked={tag.sSourceFlag === 'Folder'}
+                                                                        />
+                                                                        <RadioButton
+                                                                            label="Filename"
+                                                                            name={`extract_${tag.sTagID}`}
+                                                                            checked={tag.sSourceFlag === 'Filename'}
+                                                                        />
+                                                                    </div>
+                                                                </td>
+
+                                                                {/* Metadata */}
+                                                                <td className="px-6 py-4">
+                                                                    {tag.sTextData || ''}
+                                                                </td>
+
+                                                                {/* Action */}
+                                                                <td className="px-6 py-4 text-right">
+                                                                    <Pencil size={16} className="text-blue-600 cursor-pointer" />
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    ) : (
+                                                        <tr>
+                                                            <td colSpan="4" className="px-6 py-10 text-center text-gray-500">
+                                                                No tags found for selected template
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+
                                     <div>
                                         <h3 className="text-blue-600 font-bold text-sm mb-4">Rule</h3>
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-24 gap-y-6 mb-6">
@@ -335,55 +636,7 @@ const SearchServerData = () => {
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-6 mb-6">
-                                            <UnderlineSelect label="Template Master" placeholder="QC" />
-                                            <UnderlineInput label="Sample Filename" />
-                                            <UnderlineSelect label="Delimiter" />
-                                        </div>
-                                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                            <table className="w-full text-sm text-left text-gray-500">
-                                                <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
-                                                    <tr>
-                                                        <th scope="col" className="px-6 py-3 w-1/4">TagName</th>
-                                                        <th scope="col" className="px-6 py-3 w-1/2">Extract From</th>
-                                                        <th scope="col" className="px-6 py-3 w-1/4">Metadata</th>
-                                                        <th scope="col" className="px-6 py-3 w-16"></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr className="bg-blue-50/30 border-b border-gray-100">
-                                                        <td className="px-6 py-4 font-medium text-gray-900">Sample</td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-4">
-                                                                <RadioButton label="NONE" name="row1" />
-                                                                <RadioButton label="Folder" name="row1" />
-                                                                <RadioButton label="Filename" name="row1" />
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4"></td>
-                                                        <td className="px-6 py-4 text-right">
-                                                            <Pencil size={16} className="text-blue-600 cursor-pointer" />
-                                                        </td>
-                                                    </tr>
-                                                    <tr className="bg-white border-b border-gray-100">
-                                                        <td className="px-6 py-4 font-medium text-gray-900">Test</td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-4">
-                                                                <RadioButton label="NONE" name="row2" />
-                                                                <RadioButton label="Folder" name="row2" />
-                                                                <RadioButton label="Filename" name="row2" />
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4"></td>
-                                                        <td className="px-6 py-4 text-right">
-                                                            <Pencil size={16} className="text-blue-600 cursor-pointer" />
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
+
 
                                     <div>
                                         <div className="border border-gray-200 rounded-lg overflow-hidden mb-4">
@@ -461,14 +714,94 @@ const NavItem = ({ label, active, onClick }) => (
     </div>
 );
 
-const UnderlineSelect = ({ label, required, placeholder }) => (
+// const UnderlineSelect = ({ label, required, placeholder }) => (
+//     <div className="relative group w-full">
+//         <label className="block text-gray-600 text-sm font-bold mb-2">
+//             {label} {required && <span className="text-red-500">*</span>}
+//         </label>
+//         <div className="relative">
+//             <select className="w-full bg-transparent border-b-2 border-gray-200 py-2 pr-8 text-gray-700 text-sm focus:border-blue-400 focus:outline-none appearance-none cursor-pointer transition-colors">
+//                 <option>{placeholder || ""}</option>
+//             </select>
+//             <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+//                 <ChevronDown size={14} className="text-blue-500 fill-current" />
+//             </div>
+//         </div>
+//     </div>
+// );
+
+// const UnderlineSelect = ({ label, required, placeholder, options = [], value, onChange, displayKey = 'name', valueKey = 'id' }) => (
+//     <div className="relative group w-full">
+//         <label className="block text-gray-600 text-sm font-bold mb-2">
+//             {label} {required && <span className="text-red-500">*</span>}
+//         </label>
+//         <div className="relative">
+//             <select
+//                 value={value}
+//                 onChange={(e) => onChange && onChange(e.target.value)}
+//                 className="w-full bg-transparent border-b-2 border-gray-200 py-2 pr-8 text-gray-700 text-sm focus:border-blue-400 focus:outline-none appearance-none cursor-pointer transition-colors"
+//             >
+//                 {/* <option value="">{placeholder || ""}</option> */}
+//                 {options.map((option, index) => (
+//                     <option key={index} value={option[valueKey]}>
+//                         {option[displayKey]}
+//                     </option>
+//                 ))}
+//             </select>
+//             <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+//                 <ChevronDown size={14} className="text-blue-500 fill-current" />
+//             </div>
+//         </div>
+//     </div>
+// );
+
+// const UnderlineSelect = ({ label, required, placeholder, options = [], value, onChange, displayKey = 'name', valueKey = 'id' }) => (
+//     <div className="relative group w-full">
+//         <label className="block text-gray-600 text-sm font-bold mb-2">
+//             {label} {required && <span className="text-red-500">*</span>}
+//         </label>
+//         <div className="relative">
+//             <select
+//                 value={value || ""}
+//                 onChange={(e) => onChange && onChange(e.target.value)}
+//                 className="w-full bg-transparent border-b-2 border-gray-200 py-2 pr-8 text-gray-700 text-sm focus:border-blue-400 focus:outline-none appearance-none cursor-pointer transition-colors"
+//             >
+//                 {/* Placeholder option - hidden from dropdown but shows when nothing selected */}
+//                 <option value="" disabled hidden>{placeholder || ""}</option>
+
+//                 {options.map((option, index) => (
+//                     <option key={index} value={option[valueKey]}>
+//                         {option[displayKey]}
+//                     </option>
+//                 ))}
+//             </select>
+//             <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+//                 <ChevronDown size={14} className="text-blue-500 fill-current" />
+//             </div>
+//         </div>
+//     </div>
+// );
+
+
+const UnderlineSelect = ({ label, required, placeholder, options = [], value, onChange, displayKey = 'name', valueKey = 'id' }) => (
     <div className="relative group w-full">
         <label className="block text-gray-600 text-sm font-bold mb-2">
             {label} {required && <span className="text-red-500">*</span>}
         </label>
         <div className="relative">
-            <select className="w-full bg-transparent border-b-2 border-gray-200 py-2 pr-8 text-gray-700 text-sm focus:border-blue-400 focus:outline-none appearance-none cursor-pointer transition-colors">
-                <option>{placeholder || ""}</option>
+            <select
+                value={value || ""}
+                onChange={(e) => onChange && onChange(e.target.value)}
+                className="w-full bg-transparent border-b-2 border-gray-200 py-2 pr-8 text-gray-700 text-sm focus:border-blue-400 focus:outline-none appearance-none cursor-pointer transition-colors"
+            >
+                {/* Empty placeholder - shows blank but hidden from dropdown list */}
+                <option value="" disabled hidden></option>
+
+                {options.map((option, index) => (
+                    <option key={index} value={option[valueKey]}>
+                        {option[displayKey]}
+                    </option>
+                ))}
             </select>
             <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
                 <ChevronDown size={14} className="text-blue-500 fill-current" />
@@ -476,7 +809,6 @@ const UnderlineSelect = ({ label, required, placeholder }) => (
         </div>
     </div>
 );
-
 const UnderlineInput = ({ label, required, placeholder, defaultValue, type = "text" }) => (
     <div className="group w-full relative">
         <label className="block text-gray-700 text-sm font-bold mb-2">
@@ -537,11 +869,27 @@ const TimeInput = ({ value }) => (
     </div>
 );
 
-const RadioButton = ({ label, name, checked }) => (
+// const RadioButton = ({ label, name, checked }) => (
+//     <label className="flex items-center cursor-pointer group">
+//         <input type="radio" name={name} className="hidden peer" defaultChecked={checked} />
+//         <div className="w-4 h-4 border border-gray-300 rounded-full flex items-center justify-center peer-checked:border-blue-500 peer-checked:bg-white transition-colors relative">
+//             <div className="w-2 h-2 bg-blue-500 rounded-full scale-0 peer-checked:scale-100 transition-transform absolute"></div>
+//         </div>
+//         <span className="ml-2 text-sm text-gray-700 font-bold group-hover:text-blue-600">{label}</span>
+//     </label>
+// );
+
+const RadioButton = ({ label, name, checked, onChange }) => (
     <label className="flex items-center cursor-pointer group">
-        <input type="radio" name={name} className="hidden peer" defaultChecked={checked} />
+        <input
+            type="radio"
+            name={name}
+            className="hidden peer"
+            checked={checked}
+            onChange={onChange}
+        />
         <div className="w-4 h-4 border border-gray-300 rounded-full flex items-center justify-center peer-checked:border-blue-500 peer-checked:bg-white transition-colors relative">
-            <div className="w-2 h-2 bg-blue-500 rounded-full scale-0 peer-checked:scale-100 transition-transform absolute"></div>
+            <div className={`w-2 h-2 bg-blue-500 rounded-full transition-transform ${checked ? 'scale-100' : 'scale-0'}`}></div>
         </div>
         <span className="ml-2 text-sm text-gray-700 font-bold group-hover:text-blue-600">{label}</span>
     </label>

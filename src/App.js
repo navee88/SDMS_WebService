@@ -13,7 +13,9 @@ import ProtectedRoute from "./Components/Common/ProtectedRoute";
 import Loginlayout from "./Components/Layout/Login/Loginlayout";
 import { LanguageProvider } from "./Context/LanguageContext";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { LogFiltersProvider } from "./Context/LogFiltersContext"; //Added by Kirubhakaran on 13-01-2026
 const Home = lazy(() => import('./Pages/Home/Home'));
+
 
 const PageWrapper = React.memo(({ children }) => (
   <motion.div
@@ -122,9 +124,11 @@ function App() {
     <>
     <QueryClientProvider client={queryClient}> 
       <LanguageProvider>
+        <LogFiltersProvider>  {/*Added by Kirubhakaran on 13-01-2026 */}
         <Router basename="/LogilabSDMS">
           <AnimatedRoutes />
         </Router>
+        </LogFiltersProvider> {/*Added by Kirubhakaran on 13-01-2026 */}
       </LanguageProvider>
      </QueryClientProvider>
     </>

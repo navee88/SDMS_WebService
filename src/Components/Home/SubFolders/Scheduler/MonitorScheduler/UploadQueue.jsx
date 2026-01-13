@@ -45,7 +45,7 @@ const UsersPage = ({
             render: (row, isSelected) => (
                 <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
                     style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
-                    {row.storageName}
+                    {row.instrument}
                 </span>
             )
         },
