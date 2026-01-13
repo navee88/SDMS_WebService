@@ -1,10 +1,18 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
-  Filter, RotateCcw, RefreshCw, Settings, ChevronUp, ChevronDown, X, CheckSquare,
-  FolderDown, Upload, FolderUp, FileClock, History, Tag, FileText, FolderOpen, Download,
-  CheckCircle, List, MoreVertical, MousePointer2, Calendar,
+  Filter, RefreshCw, ChevronUp, ChevronDown,
   UploadIcon,
-  Search,
+  File,
+  FileImage,
+  FileVideo,
+  FileAudio,
+  FileSpreadsheet,
+  FileCode,
+  Archive,
+  FilePdf,
+  FileText,
+  FileType,
+  Folder
 } from 'lucide-react';
 import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
@@ -14,6 +22,68 @@ import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import Errordialog from '../../../../Layout/Common/Errordialog';
+import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
+import { handleExportCommon } from '../../../../Layout/Common/exportService';
+import useAxios from '../../../../../Services/servicecall';
+import { useLogFilters } from '../../../../../Context/LogFiltersContext';
+
+const FileIcon = ({ fileName, className = "w-4 h-4" }) => {
+  const getFileExtension = (filename) => {
+    if (!filename) return '';
+    const parts = filename.split('.');
+    return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : '';
+  };
+
+  const getIconByExtension = (ext) => {
+    // Document files
+    if (['doc', 'docx', 'txt', 'rtf'].includes(ext)) {
+      return <FileText className={`${className} text-blue-600`} />;
+    }
+
+    // Spreadsheet files
+    if (['xls', 'xlsx', 'csv'].includes(ext)) {
+      return <FileSpreadsheet className={`${className} text-green-600`} />;
+    }
+
+    // PDF files
+    if (ext === 'pdf') {
+      return <FileType className={`${className} text-red-600`} />;
+    }
+
+    // Image files
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].includes(ext)) {
+      return <FileImage className={`${className} text-purple-600`} />;
+    }
+
+    // Video files
+    if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv'].includes(ext)) {
+      return <FileVideo className={`${className} text-pink-600`} />;
+    }
+
+    // Audio files
+    if (['mp3', 'wav', 'flac', 'aac', 'ogg'].includes(ext)) {
+      return <FileAudio className={`${className} text-yellow-600`} />;
+    }
+
+    // Code files
+    if (['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'json', 'xml', 'sql', 'py', 'java', 'c', 'cpp'].includes(ext)) {
+      return <FileCode className={`${className} text-orange-600`} />;
+    }
+
+    // Archive files
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+      return <Archive className={`${className} text-gray-600`} />;
+    }
+
+    // Default file icon
+    return <Folder className={`${className} text-gray-500`} />;
+  };
+
+  const extension = getFileExtension(fileName);
+  return getIconByExtension(extension);
+};
+
+
 
 
 const PrimaryButton = ({ icon: Icon, label, onClick }) => (
@@ -45,7 +115,7 @@ const getCurrentDate = () => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return `${day}/${month}/${year}`;
 };
 
 
@@ -57,13 +127,13 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
   const { t } = useTranslation();
 
   useEffect(() => {
-      if (filters?.data) {
-        setUserData(filters.data);
-        if (onDataCountChange) {
-          onDataCountChange(filters.data.length);
-        }
+    if (filters?.data) {
+      setUserData(filters.data);
+      if (onDataCountChange) {
+        onDataCountChange(filters.data.length);
       }
-    }, [filters, onDataCountChange]);
+    }
+  }, [filters, onDataCountChange]);
 
   const userColumns = useMemo(() => [
     {
@@ -71,23 +141,38 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
       label: t('label.clientName'),
       width: 120,
       enableSearch: true,
-       render: (row, isSelected) => (
+      render: (row, isSelected) => (
         <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
           style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
           {row.clientName}
         </span>
       )
     },
+    // {
+    //   key: 'fileName',
+    //   label: t('label.fileName'),
+    //   width: 120,
+    //   enableSearch: true,
+    //   render: (row, isSelected) => (
+    //     <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+    //       style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+    //       {row.fileName}
+    //     </span>
+    //   )
+    // }
     {
       key: 'fileName',
       label: t('label.fileName'),
-      width: 120,
+      width: 250,
       enableSearch: true,
-       render: (row, isSelected) => (
-        <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
-          style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
-          {row.fileName}
-        </span>
+      render: (row, isSelected) => (
+        <div className="flex items-center gap-2">
+          <FileIcon fileName={row.fileName} className="w-4 h-4 flex-shrink-0" />
+          <span className={`text-[#373737] ${isSelected ? 'font-semibold' : ''}`}
+            style={{ fontFamily: 'Verdana, Arial, sans-serif', fontSize: '12px' }}>
+            {row.fileName}
+          </span>
+        </div>
       )
     }
   ], []);
@@ -140,9 +225,9 @@ const UsersPage = ({ filters, refreshKey, exportTrigger, onDataCountChange }) =>
       {[
         { label: "size", value: user.size || "" },
         { label: "versionNo", value: user.versionNo || "" },
-        { label: "fileMode", value: user.downloadLocation || "" },
+        { label: "fileMode", value: user.fileMode || "" },
         { label: "userName", value: user.userName || "" },
-        { label: "uploadOn", value: user.downloadedOn || "" },
+        { label: "uploadOn", value: user.uploadOn || "" },
         { label: "checksum", value: user.checksum || "" },
       ].map((field, index) => (
         <div key={index} className="grid grid-cols-3 gap-4">
@@ -176,25 +261,120 @@ const UploadLogs = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [recordsDuration, setRecordsDuration] = useState("Current Date");
-  const [fromDate, setFromDate] = useState(today);
-  const [toDate, setToDate] = useState(today);
-  const options = ["User A", "User B"];
-  const [selectedClient, setSelectedClient] = useState(options[0]);
-  const [task, setTask] = useState("");
+  // const [recordsDuration, setRecordsDuration] = useState("Current Date");
+  // const [fromDate, setFromDate] = useState(today);
+  // const [toDate, setToDate] = useState(today);
+  // const [selectedClient, setSelectedClient] = useState("");
+  // const [task, setTask] = useState("");
   const [fileName, setFileName] = useState("");
+
+  const COMPONENT_NAME = 'UploadLogs';
+  const { getFilters, updateFilter } = useLogFilters();
+  const contextFilters = getFilters(COMPONENT_NAME);
+  const { selectedClient, task, recordsDuration, fromDate, toDate } = contextFilters;
+
   const [filters, setFilters] = useState({});
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportTrigger, setExportTrigger] = useState(0);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [dataCount, setDataCount] = useState(0);
+  const [clientList, setClientList] = useState([]);
+  const [clientMapping, setClientMapping] = useState({});
+  const [taskList, setTaskList] = useState([]);
+  const [taskMapping, setTaskMapping] = useState({});
+  const [errorDialog, setErrorDialog] = useState({ show: false, message: "", type: "" });
+  const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    const loadDropdowns = async () => {
+      await Promise.all([
+        fetchClientList(),
+        fetchTaskList()
+      ]);
+      setIsInitialized(true);
+    };
+    loadDropdowns();
+  }, []);
+
+  // (Using the Filter when reloading from the other tabs)
+  // Separate useEffect that waits for mappings to be ready 
+  useEffect(() => {
+    if (isInitialized && Object.keys(clientMapping).length > 0 && Object.keys(taskMapping).length > 0) {
+      // If context has values, use filter; otherwise use initial load
+      if (selectedClient || task || recordsDuration !== "Current Date") {
+        handleFilter();
+      } else {
+        handleInitialLoad();
+      }
+    }
+  }, [isInitialized, clientMapping, taskMapping]);
+
+  // (Using the Initial Load when reloading from the other tabs)
+  // Separate useEffect that waits for mappings to be ready - only runs once
+  // useEffect(() => {
+  //   if (isInitialized && Object.keys(clientMapping).length > 0 && Object.keys(taskMapping).length > 0) {
+  //     // Use initial load - only runs when component mounts
+  //     handleInitialLoad();
+  //   }
+  // }, [isInitialized, clientMapping, taskMapping]);
+
+
+
+  const handleInitialLoad = async () => {
+    setLoading(true);
+    try {
+      // Wait a bit for context and mappings to be ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const { startDate, endDate } = getDateRange(recordsDuration, fromDate, toDate);
+      const payload = {
+        sFilter: "",
+        sFromDate: getCurrentDate(),
+        // sClientID: "",
+        sClientID: clientMapping[selectedClient] || "", // Use context value
+        ...CF_activeUserdetails()
+      };
+      console.log("Initial Load Payload:", payload);
+
+      const result = await postData('AuditTrail/UploadlogLoad', payload);
+
+      if (result && Array.isArray(result)) {
+        const mappedData = result.map((item, index) => ({
+          id: index + 1,
+          clientName: item.ClientName || "",
+          fileName: item.FileName || "",
+          fileType: item.FileType?.trim() || "",
+          size: item.FileSize || 0,
+          fileMode: item.FileMode?.trim() || "",
+          uploadOn: item.UpLoadTime || "",
+          utcUploadTime: item.UTCUpLoadTime || "",
+          userName: item.LoginUser || "",
+          versionNo: item.FileVersionNo || 0,
+          checksum: item.CheckSum || ""
+        }));
+
+        setUserData(mappedData);
+        setFilters({ ...payload, data: mappedData });
+      }
+
+      console.log("Initial Load Response:", result);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error in initial load:', error);
+      setLoading(false);
+    }
+  };
+
+  const { postData } = useAxios();
 
   const isCustomDate = recordsDuration === "Custom Date";
 
-  const handleDurationChange = (value) => {
-    const actualValue = value?.target?.value || value?.value || value;
-    setRecordsDuration(actualValue);
-  };
+  // const handleDurationChange = (value) => {
+  //   const actualValue = value?.target?.value || value?.value || value;
+  //   setRecordsDuration(actualValue);
+  // };
 
   //calculate the current date minus the records duration date
   const formatDateDDMMYYYY = (date) => {
@@ -253,29 +433,165 @@ const UploadLogs = () => {
   const { currentLanguage, changeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
 
-  const handleFilter = () => {
-    const payload = {
-      clientName: selectedClient,
-      task,
-      fileName,
-      recordsDuration,
-      fromDate,
-      toDate
-    };
-    setFilters(payload);
+  const handleFilter = async () => {
+    console.log("Filter Clicked");
+    setLoading(true);
+
+    try {
+      const { startDate, endDate } = getDateRange(recordsDuration, fromDate, toDate);
+
+      const payload = {
+        sFromDate: startDate,
+        sToDate: endDate,
+        sClientID: clientMapping[selectedClient] || "",
+        sFilename: fileName || "",
+        sTaskID: taskMapping[task] || "All",
+        ...CF_activeUserdetails()
+      };
+
+      console.log("Filter Payload:", payload);
+
+      const response = await postData("AuditTrail/UploadlogsFilter", payload);
+
+      console.log("API Response:", response);
+
+      if (Array.isArray(response)) {
+        const mappedData = response.map((item, index) => ({
+          id: index + 1,
+          clientName: item.ClientName || "",
+          fileName: item.FileName || "",
+          fileType: item.FileType?.trim() || "",
+          size: item.FileSize || 0,
+          fileMode: item.FileMode?.trim() || "",
+          uploadOn: item.UpLoadTime || "",
+          utcUploadTime: item.UTCUpLoadTime || "",
+          userName: item.LoginUser || "",
+          versionNo: item.FileVersionNo || 0,
+          checksum: item.CheckSum || ""
+        }));
+
+        setUserData(mappedData);
+        setFilters({ data: mappedData });
+      }
+    } catch (err) {
+      console.error("Upload Logs Filter Error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+    console.log("Refresh Clicked");
+    handleFilter();
+  };
+
+  const buildExportRequest = () => {
+    const userDetails = CF_activeUserdetails();
+
+    return {
+      AllRows: userData.map((row, index) => ({
+        ClientName: row.clientName || "",
+        FileName: row.fileName || "",
+        FileType: row.fileType || "",
+        FileSize: row.size || 0,
+        FileMode: row.fileMode || "",
+        UpLoadTime: row.uploadOn || "",
+        UTCUpLoadTime: row.utcUploadTime || "",
+        LoginUser: row.userName || "",
+        FileVersionNo: row.versionNo || 0,
+        CheckSum: row.checksum || "",
+        visibleindex: index,
+        boundindex: index,
+        uid: index,
+        uniqueid: `${Date.now()}-${index}`
+      })),
+      sFileName: "UpLoadLog",
+      sBrowserURL: window.location.origin,
+      AllowKeys: [
+        "ClientName", "FileName", "FileType", "FileSize",
+        "FileMode", "UpLoadTime"
+      ],
+      HeaderDetails: [
+        "Client Name", "Filename", "File Type", "Size",
+        "File Mode", "Upload On"
+      ],
+      ActiveUserDetails: userDetails.ActiveUserDetails,
+      ApplicationCode: userDetails.ApplicationCode
+    };
   };
 
   const handleExport = () => {
-    if (dataCount === 0) {
-      setShowErrorDialog(true);
-      return;
-    }
-    setExportTrigger(prev => prev + 1);
+    console.log("Export Clicked");
+
+    handleExportCommon({
+      rows: userData,
+      buildRequest: buildExportRequest,
+      postData,
+      setLoading,
+      setLoadingText: () => { },
+      setErrorDialog,
+      t
+    });
   };
+
+  const fetchClientList = async () => {
+    try {
+      const payload = CF_activeUserdetails();
+      const result = await postData('AuditTrail/AuditTrailClientname', payload);
+      console.log("Client List Response:", result);
+
+      if (Array.isArray(result) && result.length > 0) {
+        const clientNames = result.map(item => item.L06ClientName);
+        const mapping = result.reduce((acc, item) => {
+          acc[item.L06ClientName] = item.L06ClientID;
+          return acc;
+        }, {});
+
+        setClientList(clientNames);
+        setClientMapping(mapping);
+        // setSelectedClient(prev => prev ? prev : clientNames[0]);
+        if (!selectedClient) {
+          updateFilter(COMPONENT_NAME, 'selectedClient', clientNames[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching client list:', error);
+    }
+  };
+
+  const fetchTaskList = async () => {
+    try {
+      const payload = {
+        bStatus: false,
+        ...CF_activeUserdetails()
+      };
+
+      const result = await postData('AuditTrail/AuditTrailTaskID', payload);
+      console.log("Task List Response:", result);
+
+      if (Array.isArray(result) && result.length > 0) {
+        // Use L13ScheduleID for display (which contains the task name)
+        const taskLabels = result.map(item => item.L13ScheduleID || item.L52TaskID);
+
+        // Map L13ScheduleID (display name) to L52TaskID (actual ID)
+        const mapping = result.reduce((acc, item) => {
+          const displayName = item.L13ScheduleID || item.L52TaskID;
+          acc[displayName] = item.L52TaskID;
+          return acc;
+        }, {});
+
+        setTaskList(taskLabels);
+        setTaskMapping(mapping);
+        // setTask(prev => prev ? prev : taskLabels[0]);
+        if (!task) {
+          updateFilter(COMPONENT_NAME, 'task', taskLabels[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching task list:', error);
+    }
+  };
+
 
 
   return (
@@ -288,9 +604,13 @@ const UploadLogs = () => {
               <AnimatedDropdown
                 label={t("label.clientName")}
                 value={selectedClient}
-                options={options}
-                onChange={(e) => setSelectedClient(e.target.value)}
-                // isSearchable={true}
+                options={clientList}
+                // onChange={(val) => {
+                //   setSelectedClient(val?.target?.value ?? val);
+                // }}
+                onChange={(val) => {
+                  updateFilter(COMPONENT_NAME, 'selectedClient', val?.target?.value ?? val);
+                }}
                 allowFreeInput={true}
               />
             </div>
@@ -300,9 +620,13 @@ const UploadLogs = () => {
               <AnimatedDropdown
                 label={t("label.task")}
                 value={task}
-                options={["TS1_D:\SDMSFTP-001", "TS2_D:\SDMSFTP-002", "TS3_D:\SDMSFTP-003"]}
-                onChange={(e) => setTask(e.target.value)}
-                // isSearchable={true}
+                options={taskList}
+                // onChange={(val) => {
+                //   setTask(val?.target?.value ?? val);
+                // }}
+                onChange={(val) => {
+                  updateFilter(COMPONENT_NAME, 'task', val?.target?.value ?? val);
+                }}
                 allowFreeInput={true}
               />
 
@@ -314,6 +638,7 @@ const UploadLogs = () => {
                 name="filename"
                 value={fileName}
                 onChange={(e) => setFileName(e.target.value)}
+              // onChange={(e) => updateFilter(COMPONENT_NAME, 'fileName', e.target.value)}
               />
 
             </div>
@@ -324,7 +649,11 @@ const UploadLogs = () => {
                 label={t("label.recordsDuration")}
                 value={recordsDuration}
                 options={["Current Date", "Last 7 Days", "Last 30 Days", "Last 1 Year", "Custom Date"]}
-                onChange={handleDurationChange}
+                // onChange={handleDurationChange}
+                onChange={(value) => {
+                  const actualValue = value?.target?.value || value?.value || value;
+                  updateFilter(COMPONENT_NAME, 'recordsDuration', actualValue);
+                }}
                 // isSearchable={true}
                 allowFreeInput={true}
               />
@@ -336,7 +665,8 @@ const UploadLogs = () => {
                   <DatePicker
                     label="From"
                     value={fromDate}
-                    onChange={setFromDate}
+                    // onChange={setFromDate}
+                    onChange={(val) => updateFilter(COMPONENT_NAME, 'fromDate', val)}
                     max={today}
                   />
                 </div>
@@ -344,7 +674,8 @@ const UploadLogs = () => {
                   <DatePicker
                     label="To"
                     value={toDate}
-                    onChange={setToDate}
+                    // onChange={setToDate}
+                    onChange={(val) => updateFilter(COMPONENT_NAME, 'toDate', val)}
                     max={today}
                   />
                 </div>
@@ -399,11 +730,11 @@ const UploadLogs = () => {
         </div>
       </div>
 
-      {showErrorDialog && (
+      {errorDialog.show && (
         <Errordialog
-          message="Select an existing record."
-          type="information"
-          onClose={() => setShowErrorDialog(false)}
+          message={errorDialog.message}
+          type={errorDialog.type}
+          onClose={() => setErrorDialog({ show: false, message: "", type: "" })}
         />
       )}
     </div>
