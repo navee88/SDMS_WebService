@@ -4,10 +4,66 @@ import {
 } from 'lucide-react';
 import useAxios from '../../../../../Services/servicecall';
 import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
+import Popup from '../../../../Layout/Common/Popup';
+import Errordialog from '../../../../Layout/Common/Errordialog';
+import { t } from 'i18next';
+import { useTranslation } from 'react-i18next';
 
+const CF_pathValidation = (path) => {
+    const regex = /^[A-Za-z]:\\(?:[a-zA-Z0-9 _\-\.#&()@,=+`~!$^;{}[\]-]+\\)*[a-zA-Z0-9 _\-\.#&()@,=+%`~!$^;{}[\]-]*$/;
+    return regex.test(path);
+};
+
+const CF_UNCPathValidation = (UNCPath) => {
+    const regex = /^\\\\(?:[a-zA-Z0-9 _\-\.#&()@,=+`~!$^;{}[\]-]+\\)+[a-zA-Z0-9 _\-\.#&()@,=+%`~!$^;{}[\]-]+$/;
+    return regex.test(UNCPath);
+};
+
+const CF_textFieldValidation = (text) => {
+    const regex = /[<>()/"']/;
+    return !regex.test(text);
+};
+
+const CF_sourcePathValidation = (path) => {
+    const regex = /[*?"<>|]/g;
+    return !regex.test(path);
+};
+
+const CF_maxLengthValidation = (text, maxLength = 50) => {
+    return text.length <= maxLength;
+};
+
+const CF_numberValidation = (value, maxDigits = 5) => {
+    const regex = new RegExp(`^\\d{0,${maxDigits}}$`);
+    return regex.test(value);
+};
 
 const SearchServerData = () => {
+    const { t } = useTranslation();
+
+    const daysCombo = [
+        { Date: t("label.days"), Number: "Days" },
+        { Date: t("label.weeks"), Number: "Weeks" },
+        { Date: t("label.months"), Number: "Months" },
+        { Date: t("label.year"), Number: "Years" }
+    ];
+
+    const localDeleteCombo = [
+        { LocalDeleteName: t("label.automatic"), LocalDeleteNo: 1 },
+        { LocalDeleteName: t("label.manual"), LocalDeleteNo: 0 }
+    ];
+
+    const serverDeleteCombo = [
+        { ServerDeleteName: t("label.automatic"), ServerDeleteNo: 1 },
+        { ServerDeleteName: t("label.manual"), ServerDeleteNo: 0 }
+    ];
+
     // State
+    const [errorDialog, setErrorDialog] = useState({
+        isOpen: false,
+        message: '',
+        type: ''
+    });
     const [isSchedulerMetadataEnabled, setIsSchedulerMetadataEnabled] = useState(false);
     const [activeTab, setActiveTab] = useState('File Settings');
     const { postData } = useAxios();
@@ -22,6 +78,71 @@ const SearchServerData = () => {
     const [selectedDestination, setSelectedDestination] = useState('');
     const [selectedDelimiter, setSelectedDelimiter] = useState('');
     const [selectedDomain, setSelectedDomain] = useState('');
+    const [sourcePath, setSourcePath] = useState('');
+    const [selectedInstrument, setSelectedInstrument] = useState('');
+    const [instrumentOptions, setInstrumentOptions] = useState([]);
+    const [methodOptions, setMethodOptions] = useState([]);
+    const [selectedMethod, setSelectedMethod] = useState('');
+    const [isInstrumentDisabled, setIsInstrumentDisabled] = useState(true);
+    const [isMethodDisabled, setIsMethodDisabled] = useState(true);
+    const [isCheckPathModalOpen, setIsCheckPathModalOpen] = useState(false);
+    const [checkPathType, setCheckPathType] = useState('client'); // 'client' or 'server'
+    const [clientUsername, setClientUsername] = useState('');
+    const [clientPassword, setClientPassword] = useState('');
+    const [sourcePathError, setSourcePathError] = useState(false);
+    const [clientError, setClientError] = useState(false);
+    const [usernameError, setUsernameError] = useState(false);
+    const [passwordError, setPasswordError] = useState(false);
+
+
+    // UNC Path states
+    const [isUNCPathEnabled, setIsUNCPathEnabled] = useState(false);
+    const [uncPath, setUncPath] = useState('');
+    const [uncUsername, setUncUsername] = useState('');
+    const [uncPassword, setUncPassword] = useState('');
+
+    // Upload Policy states
+    const [includeSubfolder, setIncludeSubfolder] = useState(false);
+    const [completeTree, setCompleteTree] = useState(false);
+    const [levelEnabled, setLevelEnabled] = useState(false);
+    const [levelValue, setLevelValue] = useState('');
+    const [deleteLocalCopy, setDeleteLocalCopy] = useState(false);
+    const [filesOlderThanEnabled, setFilesOlderThanEnabled] = useState(false);
+    const [filesOlderDays, setFilesOlderDays] = useState('');
+    const [filesOlderDaysUnit, setFilesOlderDaysUnit] = useState('Days');
+    const [localDeleteMode, setLocalDeleteMode] = useState('automatic');
+    const [filesOlderThanDate, setFilesOlderThanDate] = useState(new Date().toLocaleDateString('en-GB'));
+    const [filesOlderThanDateEnabled, setFilesOlderThanDateEnabled] = useState(false);
+
+    // Trigger/Expiry states
+    const [triggerDate, setTriggerDate] = useState(new Date().toLocaleDateString('en-GB'));
+    const [triggerTime, setTriggerTime] = useState(new Date().toLocaleTimeString('en-GB'));
+    const [expiryEnabled, setExpiryEnabled] = useState(false);
+    const [expiryDate, setExpiryDate] = useState(new Date().toLocaleDateString('en-GB'));
+    const [expiryTime, setExpiryTime] = useState(new Date().toLocaleTimeString('en-GB'));
+
+    // File Delete Policy states
+    const [applyDeletePolicy, setApplyDeletePolicy] = useState(false);
+    const [serverDeleteMode, setServerDeleteMode] = useState('automatic');
+    const [enableFileLink, setEnableFileLink] = useState(false);
+
+    // Compliance Policy states
+    const [enableFileAudit, setEnableFileAudit] = useState(false);
+    const [auditFilter, setAuditFilter] = useState('*.*');
+
+    // Data Logger states
+    const [dataLogger, setDataLogger] = useState(false);
+    const [archivalDays, setArchivalDays] = useState('0');
+
+    // Schedule Capture states
+    const [liveCapture, setLiveCapture] = useState(true);
+    const [liveCaptureVersioning, setLiveCaptureVersioning] = useState(true);
+    const [oneVersionPerDay, setOneVersionPerDay] = useState(false);
+    const [withoutVersioning, setWithoutVersioning] = useState(false);
+
+    // Filter state
+    const [filter, setFilter] = useState('*.*');
+
 
     // Ref for the scrollable container (The specific div that scrolls)
     const scrollContainerRef = useRef(null);
@@ -74,17 +195,6 @@ const SearchServerData = () => {
             setTemplateOptions(templateResponse || []);
 
             // Auto-select first template
-            // if (templateResponse && templateResponse.length > 0) {
-            //     setSelectedTemplate(templateResponse[0].sTemplateID);
-            //     loadTagMaster(templateResponse[0].sTemplateID);
-            // }
-
-            // if (templateResponse && templateResponse.length > 0) {
-            //     const firstTemplateId = templateResponse[0].sTemplateID;
-            //     setSelectedTemplate(firstTemplateId);
-            //     // loadTagMaster(firstTemplateId);
-            // }
-
             if (templateResponse && templateResponse.length > 0) {
                 const firstTemplateId = templateResponse[0].sTemplateID;
                 console.log("Auto-selected template:", firstTemplateId);
@@ -102,6 +212,229 @@ const SearchServerData = () => {
 
         } catch (error) {
             console.error("Error loading combos:", error);
+        }
+    };
+
+
+    // Load instruments based on selected client
+    const loadInstruments = async (clientId) => {
+        try {
+            const requestData = {
+                sClientID: clientId,
+                ...CF_activeUserdetails()
+            };
+
+            const response = await postData(
+                'Scheduler/DataSchedulerInstrumentCombo',
+                requestData
+            );
+
+            setInstrumentOptions(response || []);
+            setIsInstrumentDisabled(false);
+
+            // Reset instrument and method selections
+            setSelectedInstrument('');
+            setSelectedMethod('');
+            setMethodOptions([]);
+            setIsMethodDisabled(true);
+        } catch (error) {
+            console.error("Error loading instruments:", error);
+            setInstrumentOptions([]);
+        }
+    };
+
+    // Check if instrument is auto-locked
+    const checkAutoLock = async (instrumentId) => {
+        try {
+            const requestData = {
+                sInstrumentID: instrumentId,
+                ...CF_activeUserdetails()
+            };
+
+            const response = await postData(
+                'Scheduler/checkAutoLockedforSchecdule',
+                requestData
+            );
+
+            if (response && response.ScheduleActivated) {
+                const message = `${response.InstrumentName} instrument has already scheduled with ${response.ScheduleTaskID} taskID by Autolock Mode. So, Retire the ${response.ScheduleTaskID} taskID, before creating a new schedule for this instrument`;
+
+                // Show error dialog
+                setErrorDialog({
+                    isOpen: true,
+                    message: message,
+                    type: 'warning'
+                });
+
+                // Reset instrument selection
+                setSelectedInstrument('');
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error("Error checking auto lock:", error);
+            return true;
+        }
+    };
+
+    // Load methods based on selected instrument
+    const loadMethods = async (instrumentData) => {
+        try {
+            const requestData = {
+                sInstrumentID: instrumentData.L12InstrumentID,
+                InstrumentMappingId: instrumentData.L12InstrumentMappingID,
+                InstInterfacerStatus: instrumentData.L11InterfaceStatus,
+                ...CF_activeUserdetails()
+            };
+
+            const response = await postData(
+                'Scheduler/DataSchedulerTestCombo',
+                requestData
+            );
+
+            if (response && response.lstWebMethod && response.lstWebMethod.length > 0) {
+                setMethodOptions(response.lstWebMethod);
+                setIsMethodDisabled(false);
+            } else {
+                setMethodOptions([]);
+                setIsMethodDisabled(true);
+            }
+        } catch (error) {
+            console.error("Error loading methods:", error);
+            setMethodOptions([]);
+            setIsMethodDisabled(true);
+        }
+    };
+
+    // Check path validation
+    const validateAndShowCheckPathModal = () => {
+        let hasError = false;
+
+        // Validate client selection
+        if (!selectedClient) {
+            setClientError(true);
+            hasError = true;
+        } else {
+            setClientError(false);
+        }
+
+        // Validate source path
+        if (!sourcePath.trim()) {
+            setSourcePathError(true);
+            hasError = true;
+        } else if (!CF_pathValidation(sourcePath)) {
+            setSourcePathError(true);
+            hasError = true;
+        } else {
+            setSourcePathError(false);
+        }
+
+        if (hasError) {
+            return;
+        }
+
+        // Open check path modal
+        setIsCheckPathModalOpen(true);
+        setCheckPathType('client');
+        setClientUsername('');
+        setClientPassword('');
+        setUsernameError(false);
+        setPasswordError(false);
+    };
+
+    const submitCheckPath = async () => {
+        if (checkPathType === 'client') {
+            // Validate BOTH username and password before showing errors
+            const hasUsernameError = !clientUsername.trim();
+            const hasPasswordError = !clientPassword.trim();
+
+            setUsernameError(hasUsernameError);
+            setPasswordError(hasPasswordError);
+
+            if (hasUsernameError || hasPasswordError) {
+                return;
+            }
+
+            try {
+                const requestData = {
+                    path: sourcePath,
+                    pathreference: 'local',
+                    sclientname: clientOptions.find(c => c.L06ClientID === selectedClient)?.L06ClientName || '',
+                    sclientusername: clientUsername,
+                    sclientpassword: clientPassword,
+                    ...CF_activeUserdetails()
+                };
+
+                const response = await postData(
+                    'Scheduler/ClientPathChecking',
+                    requestData
+                );
+
+                // Close modal first
+                setIsCheckPathModalOpen(false);
+
+                // Then show error dialog
+                if (response.Rtn?.toLowerCase() === 'success') {
+                    setErrorDialog({
+                        isOpen: true,
+                        message: response.Message || 'Path is accessible',
+                        type: 'success'
+                    });
+                } else {
+                    setErrorDialog({
+                        isOpen: true,
+                        message: response.Message || 'Failed to connect',
+                        type: 'warning'
+                    });
+                }
+            } catch (error) {
+                console.error("Error checking client path:", error);
+                setIsCheckPathModalOpen(false);
+                setErrorDialog({
+                    isOpen: true,
+                    message: 'Error checking path',
+                    type: 'error'
+                });
+            }
+        } else {
+            // Server path checking
+            try {
+                const requestData = {
+                    path: sourcePath,
+                    ...CF_activeUserdetails()
+                };
+
+                const response = await postData(
+                    'Scheduler/PathChecking',
+                    requestData
+                );
+
+                // Close modal first
+                setIsCheckPathModalOpen(false);
+
+                // Then show error dialog
+                if (response.Rtn?.toLowerCase() === 'success') {
+                    setErrorDialog({
+                        isOpen: true,
+                        message: response.OResObj || 'Path is accessible',
+                        type: 'success'
+                    });
+                } else {
+                    setErrorDialog({
+                        isOpen: true,
+                        message: response.OResObj || 'Path is not accessible',
+                        type: 'warning'
+                    });
+                }
+            } catch (error) {
+                console.error("Error checking server path:", error);
+                setIsCheckPathModalOpen(false);
+                setErrorDialog({
+                    isOpen: true,
+                    message: 'Error checking path',
+                    type: 'error'
+                });
+            }
         }
     };
 
@@ -133,16 +466,6 @@ const SearchServerData = () => {
             setTagMasterData([]);
         }
     };
-
-
-    // useEffect(() => {
-    //     if (!isSchedulerMetadataEnabled) return;
-    //     if (!selectedTemplate) return;
-
-    //     console.log("Loading tags for template:", selectedTemplate);
-
-    //     loadTagMaster(selectedTemplate);
-    // }, [isSchedulerMetadataEnabled, selectedTemplate]);
     useEffect(() => {
         if (isSchedulerMetadataEnabled && selectedTemplate) {
             console.log("Loading tags for template:", selectedTemplate);
@@ -166,10 +489,6 @@ const SearchServerData = () => {
             // Get positions relative to the viewport
             const elementRect = element.getBoundingClientRect();
             const containerRect = container.getBoundingClientRect();
-
-            // Calculate the position inside the container
-            // currentScroll + (difference between element top and container top)
-            // We subtract 20px for a little visual padding at the top
             const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
 
             container.scrollTo({
@@ -242,35 +561,166 @@ const SearchServerData = () => {
                             <SectionHeader title="File Settings" />
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-24 gap-y-12 mb-12">
                                 <div className="space-y-10">
-                                    {/* <UnderlineSelect label="Client Name" required /> */}
-                                    <UnderlineSelect
-                                        label="Client Name"
-                                        required
-                                        options={clientOptions}
-                                        displayKey="L06ClientName"
-                                        valueKey="L06ClientID"
-                                        value={selectedClient}
-                                        onChange={(value) => setSelectedClient(value)}
-                                    />
-                                    <UnderlineSelect label="Instrument" required />
-                                    <UnderlineSelect label="Default Parser Method" />
+                                    <div className="relative group w-full">
+                                        <label className="block text-gray-600 text-sm font-bold mb-2">
+                                            Client Name <span className="text-red-500">*</span>
+                                        </label>
+                                        <div className="relative">
+                                            <select
+                                                value={selectedClient || ""}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    setSelectedClient(value);
+                                                    setClientError(false);
+                                                    if (value) {
+                                                        loadInstruments(value);
+                                                    } else {
+                                                        setInstrumentOptions([]);
+                                                        setIsInstrumentDisabled(true);
+                                                        setSelectedInstrument('');
+                                                        setMethodOptions([]);
+                                                        setIsMethodDisabled(true);
+                                                        setSelectedMethod('');
+                                                    }
+                                                }}
+                                                className={`w-full bg-transparent border-b-2 py-2 pr-8 text-gray-700 text-sm focus:outline-none appearance-none cursor-pointer transition-colors ${clientError ? 'border-red-500' : 'border-gray-200 focus:border-blue-400'
+                                                    }`}
+                                            >
+                                                <option value="" disabled hidden></option>
+                                                {clientOptions.map((option, index) => (
+                                                    <option key={index} value={option.L06ClientID}>
+                                                        {option.L06ClientName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                <ChevronDown size={14} className="text-blue-500 fill-current" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative group w-full">
+                                        <label className="block text-gray-600 text-sm font-bold mb-2">
+                                            Instrument <span className="text-red-500">*</span>
+                                        </label>
+                                        <div className="relative">
+                                            <select
+                                                value={selectedInstrument || ""}
+                                                onChange={async (e) => {
+                                                    const value = e.target.value;
+                                                    const selectedInstrData = instrumentOptions.find(
+                                                        inst => inst.L12InstrumentMappingID === value
+                                                    );
+
+                                                    if (selectedInstrData) {
+                                                        const canProceed = await checkAutoLock(selectedInstrData.L12InstrumentID);
+
+                                                        if (canProceed) {
+                                                            setSelectedInstrument(value);
+                                                            await loadMethods(selectedInstrData);
+                                                        }
+                                                    } else {
+                                                        setSelectedInstrument('');
+                                                        setMethodOptions([]);
+                                                        setIsMethodDisabled(true);
+                                                    }
+                                                }}
+                                                disabled={isInstrumentDisabled}
+                                                className={`w-full bg-transparent border-b-2 py-2 pr-8 text-gray-700 text-sm focus:outline-none appearance-none transition-colors ${isInstrumentDisabled
+                                                    ? 'opacity-50 cursor-not-allowed bg-gray-50 border-[rgb(145,220,243)]'
+                                                    : 'cursor-pointer border-[#e2e2e2] focus:border-blue-400'
+                                                    }`}
+                                            >
+                                                <option value="" disabled hidden></option>
+                                                {instrumentOptions.map((option, index) => (
+                                                    <option key={index} value={option.L12InstrumentMappingID}>
+                                                        {option.L11InstrumentName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                <ChevronDown size={14} className="text-blue-500 fill-current" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="relative group w-full">
+                                        <label className="block text-gray-600 text-sm font-bold mb-2">
+                                            Default Parser Method
+                                        </label>
+                                        <div className="relative">
+                                            <select
+                                                value={selectedMethod || ""}
+                                                onChange={(e) => setSelectedMethod(e.target.value)}
+                                                disabled={isMethodDisabled}
+                                                className={`w-full bg-transparent border-b-2 py-2 pr-8 text-gray-700 text-sm focus:outline-none appearance-none transition-colors ${isMethodDisabled
+                                                    ? 'opacity-50 cursor-not-allowed bg-gray-50 border-[rgb(145,220,243)]'
+                                                    : 'cursor-pointer border-[#e2e2e2] focus:border-blue-400'
+                                                    }`}
+                                            >
+                                                <option value="" disabled hidden></option>
+                                                {methodOptions.map((option, index) => (
+                                                    <option key={index} value={option.InstMethodName}>
+                                                        {option.InstMethodName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                <ChevronDown size={14} className="text-blue-500 fill-current" />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="space-y-10">
                                     <div className="space-y-2">
                                         <label className="block text-gray-600 text-sm font-bold">Path Type</label>
                                         <div className="flex items-center gap-3 pt-1">
                                             <span className="text-gray-700 text-sm font-medium">Local Path</span>
-                                            <ToggleSwitch checked={true} />
+                                            <div
+                                                onClick={() => {
+                                                    if (isUNCPathEnabled) {
+                                                        // Can only enable Local Path if UNC is currently on
+                                                        setIsUNCPathEnabled(false);
+                                                        setUncPath('');
+                                                        setUncUsername('');
+                                                        setUncPassword('');
+                                                    }
+                                                }}
+                                                className={`w-10 h-5 flex items-center rounded-full p-0.5 ${isUNCPathEnabled ? 'cursor-pointer' : 'cursor-not-allowed'} transition-colors duration-300 ${!isUNCPathEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                            >
+                                                <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${!isUNCPathEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="relative">
-                                        <UnderlineInput label="Source Path" required />
-                                        <div className="absolute right-0 top-6">
-                                            <button className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded text-sm font-bold flex items-center gap-2 transition-colors">
+                                        <label className="block text-gray-700 text-sm font-bold mb-2">
+                                            Source Path <span className="text-red-500">*</span>
+                                        </label>
+                                        <div className="flex items-end gap-3">
+                                            <input
+                                                type="text"
+                                                value={sourcePath}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    if (CF_sourcePathValidation(value) && CF_textFieldValidation(value)) {
+                                                        setSourcePath(value);
+                                                        setSourcePathError(false);
+                                                    }
+                                                }}
+                                                disabled={isUNCPathEnabled}
+                                                className={`flex-1 bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none transition-colors ${isUNCPathEnabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''
+                                                    } ${sourcePathError ? 'border-red-500' : 'border-gray-200 focus:border-blue-400'}`}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={validateAndShowCheckPathModal}
+                                                className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded text-sm font-bold flex items-center gap-2 transition-colors"
+                                            >
                                                 <Check size={16} strokeWidth={3} /> Check
                                             </button>
                                         </div>
-                                        <p className="text-gray-400 text-xs mt-3 font-medium">NOTE:- Browse is not supported. Manually copy the path</p>
+                                        <p className="text-gray-400 text-xs mt-3 font-medium">
+                                            NOTE:- Browse is not supported. Manually copy the path
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -278,13 +728,36 @@ const SearchServerData = () => {
                                 <h3 className="text-gray-600 font-bold text-base mb-8">UNC Credentials</h3>
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-24 gap-y-10">
                                     <div className="space-y-8">
+
                                         <div className="flex items-center gap-4">
                                             <label className="text-gray-600 text-sm font-bold">UNC Path</label>
-                                            <ToggleSwitch checked={false} />
+                                            <div
+                                                onClick={() => {
+                                                    if (!isUNCPathEnabled) {
+                                                        // Can only enable if Local Path is checked (currently on)
+                                                        setIsUNCPathEnabled(true);
+                                                        setSourcePath(''); // Disable local path by clearing it
+                                                    }
+                                                }}
+                                                className={`w-10 h-5 flex items-center rounded-full p-0.5 ${!isUNCPathEnabled ? 'cursor-pointer' : 'cursor-not-allowed'} transition-colors duration-300 ${isUNCPathEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                            >
+                                                <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${isUNCPathEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                                            </div>
                                         </div>
                                         <div>
                                             <div className="flex items-end gap-3">
-                                                <div className="flex-1"><UnderlineInput label="UNC Path" /></div>
+                                                <div className="flex-1"><UnderlineInput
+                                                    label="UNC Path"
+                                                    value={uncPath}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        if (CF_UNCPathValidation(value) && CF_sourcePathValidation(value) && CF_textFieldValidation(value)) {
+                                                            setUncPath(value);
+                                                        }
+                                                    }}
+                                                    disabled={!isUNCPathEnabled}
+                                                />
+                                                </div>
                                                 <button className="bg-blue-50 text-blue-600 border-1 border-gray-500 hover:bg-blue-100 px-4 py-2 rounded text-sm font-bold flex items-center gap-2 transition-colors mb-1">
                                                     <Check size={16} strokeWidth={3} /> Check
                                                 </button>
@@ -292,8 +765,27 @@ const SearchServerData = () => {
                                             <p className="text-gray-400 text-xs mt-3 font-medium">NOTE:- Browse is not supported. Manually copy the path</p>
                                         </div>
                                         <div className="grid grid-cols-2 gap-6">
-                                            <UnderlineInput label="Username" />
-                                            <UnderlineInput label="Password" type="password" />
+                                            <UnderlineInput
+                                                label="Username"
+                                                value={uncUsername}
+                                                onChange={(e) => {
+                                                    if (CF_textFieldValidation(e.target.value)) {
+                                                        setUncUsername(e.target.value);
+                                                    }
+                                                }}
+                                                disabled={!isUNCPathEnabled}
+                                            />
+                                            <UnderlineInput
+                                                label="Password"
+                                                type="password"
+                                                value={uncPassword}
+                                                onChange={(e) => {
+                                                    if (CF_textFieldValidation(e.target.value)) {
+                                                        setUncPassword(e.target.value);
+                                                    }
+                                                }}
+                                                disabled={!isUNCPathEnabled}
+                                            />
                                         </div>
                                         {/* <UnderlineSelect label="Domain" placeholder="NONE" /> */}
                                         <UnderlineSelect
@@ -303,6 +795,7 @@ const SearchServerData = () => {
                                             valueKey="L03DomainID"
                                             value={selectedDomain}
                                             onChange={(value) => setSelectedDomain(value)}
+                                            disabled={!isUNCPathEnabled}
                                         />
                                     </div>
                                     <div className="space-y-10">
@@ -316,7 +809,17 @@ const SearchServerData = () => {
                                             value={selectedDestination}
                                             onChange={(value) => setSelectedDestination(value)}
                                         />
-                                        <UnderlineInput label="Filter" defaultValue="*.*" />
+                                        <input
+                                            type="text"
+                                            value={filter}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                if (CF_textFieldValidation(value) && CF_maxLengthValidation(value, 50)) {
+                                                    setFilter(value);
+                                                }
+                                            }}
+                                            className="w-full bg-transparent border-b border-gray-300 pb-1 text-sm text-gray-600 focus:outline-none focus:border-blue-400"
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -329,39 +832,177 @@ const SearchServerData = () => {
                         >
                             <SectionHeader title="Upload Policy" />
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-24 gap-y-12">
+                                {/* Left Column */}
                                 <div className="space-y-8">
-                                    <SquareCheckbox label="Include Subfolder" />
+                                    <SquareCheckbox
+                                        label="Include Subfolder"
+                                        checked={includeSubfolder}
+                                        onChange={() => setIncludeSubfolder(!includeSubfolder)}
+                                    />
+
                                     <div className="flex items-center gap-6">
-                                        <ToggleLabel label="Complete Tree" />
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-bold text-blue-800">Complete Tree</span>
+                                            <div
+                                                onClick={() => {
+                                                    if (includeSubfolder) {
+                                                        setCompleteTree(!completeTree);
+                                                    }
+                                                }}
+                                                className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${includeSubfolder ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                                                    } ${completeTree ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                            >
+                                                <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${completeTree ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                            </div>
+                                        </div>
+
                                         <div className="flex items-center gap-3">
-                                            <ToggleLabel label="Level" />
-                                            <div className="w-24 bg-gray-100 h-8 rounded border border-gray-200"></div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-bold text-blue-800">Level</span>
+                                                <div
+                                                    onClick={() => {
+                                                        if (includeSubfolder) {
+                                                            setLevelEnabled(!levelEnabled);
+                                                        }
+                                                    }}
+                                                    className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${includeSubfolder ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                                                        } ${levelEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                                >
+                                                    <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${levelEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                                </div>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={levelValue}
+                                                onChange={(e) => {
+                                                    if (CF_numberValidation(e.target.value, 5)) {
+                                                        setLevelValue(e.target.value);
+                                                    }
+                                                }}
+                                                disabled={!levelEnabled || !includeSubfolder}
+                                                className={`w-24 border-b-2 px-2 py-1 text-sm ${(!levelEnabled || !includeSubfolder) ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'border-gray-200 focus:border-blue-400 focus:outline-none'
+                                                    }`}
+                                            />
                                         </div>
                                     </div>
+
                                     <div className="flex items-center gap-8 pt-2">
                                         <ToggleLabel label="Copy Files" checked={true} />
                                         <ToggleLabel label="Move Files(Do not leave local copy)" />
                                     </div>
                                 </div>
+
+                                {/* Right Column */}
                                 <div className="space-y-8">
-                                    <SquareCheckbox label="Delete local copy" />
+                                    <SquareCheckbox
+                                        label="Delete local copy"
+                                        checked={deleteLocalCopy}
+                                        onChange={() => {
+                                            const newValue = !deleteLocalCopy;
+                                            setDeleteLocalCopy(newValue);
+                                            // When Delete local copy is checked, enable the first "Files older than" by default
+                                            if (newValue) {
+                                                setFilesOlderThanEnabled(true);
+                                                setFilesOlderThanDateEnabled(false);
+                                            }
+                                        }}
+                                    />
+
+                                    {/* Files older than with number input - SINGLE LINE */}
                                     <div className="flex items-end gap-4">
-                                        <ToggleLabel label="Files older than" />
-                                        <div className="w-16 border-b border-gray-300"></div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-bold text-blue-800">Files older than</span>
+                                            <div
+                                                onClick={() => {
+                                                    if (deleteLocalCopy && !filesOlderThanDateEnabled) {
+                                                        setFilesOlderThanEnabled(!filesOlderThanEnabled);
+                                                    }
+                                                }}
+                                                className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${(deleteLocalCopy && !filesOlderThanDateEnabled) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                                                    } ${filesOlderThanEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                            >
+                                                <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${filesOlderThanEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                            </div>
+                                        </div>
+
+                                        <input
+                                            type="text"
+                                            value={filesOlderDays}
+                                            onChange={(e) => {
+                                                if (CF_numberValidation(e.target.value, 5)) {
+                                                    setFilesOlderDays(e.target.value);
+                                                }
+                                            }}
+                                            disabled={!filesOlderThanEnabled || !deleteLocalCopy}
+                                            className={`w-16 border-b-2 px-1 py-1 text-sm ${(!filesOlderThanEnabled || !deleteLocalCopy) ? 'border-gray-200 bg-gray-50 cursor-not-allowed' : 'border-gray-300'
+                                                }`}
+                                        />
+
+                                        {/* Days dropdown */}
                                         <div className="w-24 relative">
-                                            <span className="text-gray-400 text-sm">Days</span>
-                                            <div className="absolute right-0 top-1"><ChevronDown size={14} className="text-gray-400" /></div>
-                                            <div className="border-b border-gray-300 w-full mt-1"></div>
+                                            <select
+                                                value={filesOlderDaysUnit}
+                                                onChange={(e) => setFilesOlderDaysUnit(e.target.value)}
+                                                disabled={!filesOlderThanEnabled || !deleteLocalCopy}
+                                                className={`w-full bg-transparent border-b-2 py-1 pr-6 text-sm appearance-none focus:outline-none ${(!filesOlderThanEnabled || !deleteLocalCopy)
+                                                    ? 'text-gray-400 border-gray-200 cursor-not-allowed'
+                                                    : 'text-gray-700 border-gray-300 focus:border-blue-400 cursor-pointer'
+                                                    }`}
+                                            >
+                                                {daysCombo.map((item) => (
+                                                    <option key={item.Number} value={item.Number}>
+                                                        {item.Date}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                <ChevronDown size={14} className={(!filesOlderThanEnabled || !deleteLocalCopy) ? 'text-gray-300' : 'text-gray-400'} />
+                                            </div>
+                                        </div>
+
+                                        {/* Automatic/Manual dropdown - SAME LINE */}
+                                        <div className="w-32 relative">
+                                            <select
+                                                value={localDeleteMode}
+                                                onChange={(e) => setLocalDeleteMode(e.target.value)}
+                                                disabled={!filesOlderThanEnabled || !deleteLocalCopy}
+                                                className={`w-full bg-transparent border-b-2 py-1 pr-6 text-sm italic appearance-none focus:outline-none ${(!filesOlderThanEnabled || !deleteLocalCopy)
+                                                    ? 'text-gray-300 border-gray-200 cursor-not-allowed'
+                                                    : 'text-gray-600 border-gray-300 focus:border-blue-400 cursor-pointer'
+                                                    }`}
+                                            >
+                                                {localDeleteCombo.map((item) => (
+                                                    <option key={item.LocalDeleteNo} value={item.LocalDeleteNo}>
+                                                        {item.LocalDeleteName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                <ChevronDown size={14} className={(!filesOlderThanEnabled || !deleteLocalCopy) ? 'text-gray-200' : 'text-gray-300'} />
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="w-48 relative -mt-4 pl-32">
-                                        <span className="text-gray-300 text-sm italic">automatic</span>
-                                        <div className="absolute right-0 top-1"><ChevronDown size={14} className="text-gray-300" /></div>
-                                        <div className="border-b border-gray-200 w-full mt-1"></div>
-                                    </div>
+
+                                    {/* Files older than with date */}
                                     <div className="flex items-center gap-4 pt-2">
-                                        <ToggleLabel label="Files older than" />
-                                        <DateInput value="05/01/2026" />
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-bold text-blue-800">Files older than</span>
+                                            <div
+                                                onClick={() => {
+                                                    if (deleteLocalCopy && !filesOlderThanEnabled) {
+                                                        setFilesOlderThanDateEnabled(!filesOlderThanDateEnabled);
+                                                    }
+                                                }}
+                                                className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${(deleteLocalCopy && !filesOlderThanEnabled) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                                                    } ${filesOlderThanDateEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                            >
+                                                <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${filesOlderThanDateEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                            </div>
+                                        </div>
+                                        <DateInput
+                                            value={filesOlderThanDate}
+                                            disabled={!filesOlderThanDateEnabled || !deleteLocalCopy}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -376,15 +1017,34 @@ const SearchServerData = () => {
                             <div className="space-y-8">
                                 <div className="flex items-center gap-4">
                                     <label className="text-gray-600 text-sm font-bold w-24">Trigger on</label>
-                                    <DateInput value="05/01/2026" />
-                                    <TimeInput value="19:00:26" />
+                                    {/* <DateInput value="14/01/2026" />
+                                    <TimeInput value="16:00:26" /> */}
+                                    <DateInput
+                                        value={expiryDate}
+                                        disabled={!expiryEnabled}
+                                    />
+                                    <TimeInput
+                                        value={expiryTime}
+                                        disabled={!expiryEnabled}
+                                    />
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <div className="w-24"></div>
                                     <div className="-ml-24 flex items-center gap-4">
-                                        <SquareCheckbox label="Expiry Date & Time" boldLabel />
-                                        <DateInput value="05/01/2026" />
-                                        <TimeInput value="19:00:26" />
+                                        <SquareCheckbox
+                                            label="Expiry Date & Time"
+                                            boldLabel
+                                            checked={expiryEnabled}
+                                            onChange={() => setExpiryEnabled(!expiryEnabled)}
+                                        />
+                                        <DateInput
+                                            value={expiryDate}
+                                            disabled={!expiryEnabled}
+                                        />
+                                        <TimeInput
+                                            value={expiryTime}
+                                            disabled={!expiryEnabled}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -396,14 +1056,34 @@ const SearchServerData = () => {
                                 <div className="space-y-6">
                                     <h3 className="text-blue-600 font-bold text-sm">File Delete Policy</h3>
                                     <div className="space-y-6">
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-3">
                                             <SquareCheckbox />
-                                            <div className="flex-1">
-                                                <label className="text-sm text-gray-800 font-medium block mb-1">Apply Delete Policy for Server Files</label>
-                                                <div className="relative w-32">
-                                                    <div className="w-full border-b border-gray-300 pb-1 text-gray-400 text-sm">automatic</div>
-                                                    <div className="absolute right-0 top-0"><ChevronDown size={14} className="text-gray-400" /></div>
-                                                </div>
+
+                                            <label className="text-sm text-gray-800 font-medium whitespace-nowrap">
+                                                Apply Delete Policy for Server Files
+                                            </label>
+
+                                            <div className="relative w-32">
+                                                <select
+                                                    value={localDeleteMode}
+                                                    onChange={(e) => setLocalDeleteMode(e.target.value)}
+                                                    disabled={!filesOlderThanEnabled || !deleteLocalCopy}
+                                                    className={`w-full bg-transparent border-b-2 py-1 pr-6 text-sm italic appearance-none focus:outline-none ${(!filesOlderThanEnabled || !deleteLocalCopy)
+                                                        ? 'text-gray-300 border-gray-200 cursor-not-allowed'
+                                                        : 'text-gray-600 border-gray-300 focus:border-blue-400 cursor-pointer'
+                                                        }`}
+                                                >
+                                                    {serverDeleteCombo.map((item) => (
+                                                        <option key={item.ServerDeleteNo} value={item.ServerDeleteNo}>
+                                                            {item.ServerDeleteName}
+                                                        </option>
+                                                    ))}
+                                                </select>
+
+                                                <ChevronDown
+                                                    size={14}
+                                                    className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                                                />
                                             </div>
                                         </div>
                                         <SquareCheckbox label="Enable file link" boldLabel />
@@ -416,7 +1096,12 @@ const SearchServerData = () => {
                                         <div className="flex items-center gap-4">
                                             <label className="text-gray-600 text-sm font-bold w-20">Audit Filter</label>
                                             <div className="flex-1">
-                                                <input type="text" defaultValue="*.*" className="w-full bg-transparent border-b border-gray-300 pb-1 text-sm text-gray-600 focus:outline-none focus:border-blue-400" />
+                                                <input
+                                                    type="text"
+                                                    value="*.*"
+                                                    disabled
+                                                    className="w-full bg-transparent border-b border-gray-200 pb-1 text-sm text-gray-400 focus:outline-none cursor-not-allowed"
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -427,7 +1112,11 @@ const SearchServerData = () => {
                                         <SquareCheckbox label="Data Logger" boldLabel />
                                         <div className="flex items-center gap-2">
                                             <label className="text-gray-600 text-sm font-bold w-16">Archival</label>
-                                            <div className="w-20 border-b border-gray-300 bg-gray-50 h-6"></div>
+                                            <input
+                                                type="number"
+                                                disabled
+                                                className="w-20 bg-gray-50 border-b border-gray-200 h-6 text-sm text-gray-400 cursor-not-allowed focus:outline-none"
+                                            />
                                             <span className="text-gray-600 text-sm font-bold">Days Older</span>
                                         </div>
                                     </div>
@@ -479,13 +1168,6 @@ const SearchServerData = () => {
                                                 displayKey="sTemplateName"
                                                 valueKey="sTemplateID"
                                                 value={selectedTemplate}
-                                                // onChange={(value) => {
-                                                //     setSelectedTemplate(value);
-                                                //     loadTagMaster(value);
-                                                // }}
-                                                // onChange={(value) => {
-                                                //     setSelectedTemplate(value);
-                                                // }}
                                                 onChange={(value) => {
                                                     console.log("Template changed to:", value);
                                                     setSelectedTemplate(value);
@@ -516,36 +1198,6 @@ const SearchServerData = () => {
                                                         <th scope="col" className="px-6 py-3 w-16"></th>
                                                     </tr>
                                                 </thead>
-                                                {/* <tbody>
-                                                    <tr className="bg-blue-50/30 border-b border-gray-100">
-                                                        <td className="px-6 py-4 font-medium text-gray-900">Sample</td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-4">
-                                                                <RadioButton label="NONE" name="row1" />
-                                                                <RadioButton label="Folder" name="row1" />
-                                                                <RadioButton label="Filename" name="row1" />
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4"></td>
-                                                        <td className="px-6 py-4 text-right">
-                                                            <Pencil size={16} className="text-blue-600 cursor-pointer" />
-                                                        </td>
-                                                    </tr>
-                                                    <tr className="bg-white border-b border-gray-100">
-                                                        <td className="px-6 py-4 font-medium text-gray-900">Test</td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-4">
-                                                                <RadioButton label="NONE" name="row2" />
-                                                                <RadioButton label="Folder" name="row2" />
-                                                                <RadioButton label="Filename" name="row2" />
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4"></td>
-                                                        <td className="px-6 py-4 text-right">
-                                                            <Pencil size={16} className="text-blue-600 cursor-pointer" />
-                                                        </td>
-                                                    </tr>
-                                                </tbody> */}
 
                                                 <tbody>
                                                     {tagMasterData && tagMasterData.length > 0 ? (
@@ -690,8 +1342,135 @@ const SearchServerData = () => {
                         </div>
                     </div>
                 </main>
-            </div>
-        </div>
+            </div >
+            <Popup
+                isOpen={isCheckPathModalOpen}
+                onClose={() => setIsCheckPathModalOpen(false)}
+                title="Check Path"
+                content={
+                    <div className="space-y-6 p-4">
+                        <div>
+                            <label className="block text-gray-600 text-sm font-bold mb-3">Source Path</label>
+                            <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-gray-700">Client</span>
+                                    <div
+                                        onClick={() => {
+                                            setCheckPathType('client');
+                                            setUsernameError(false);
+                                            setPasswordError(false);
+                                        }}
+                                        className={`w-10 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors duration-300 ${checkPathType === 'client' ? 'bg-blue-500' : 'bg-gray-300'
+                                            }`}
+                                    >
+                                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${checkPathType === 'client' ? 'translate-x-5' : 'translate-x-0'
+                                            }`}></div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-gray-700">Server</span>
+                                    <div
+                                        onClick={() => {
+                                            setCheckPathType('server');
+                                            setUsernameError(false);
+                                            setPasswordError(false);
+                                        }}
+                                        className={`w-10 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors duration-300 ${checkPathType === 'server' ? 'bg-blue-500' : 'bg-gray-300'
+                                            }`}
+                                    >
+                                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${checkPathType === 'server' ? 'translate-x-5' : 'translate-x-0'
+                                            }`}></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-gray-600 text-sm font-bold mb-2">
+                                Client Name
+                            </label>
+                            <input
+                                type="text"
+                                value={clientOptions.find(c => c.L06ClientID === selectedClient)?.L06ClientName || ''}
+                                disabled
+                                className="w-full bg-gray-50 border-b-2 border-gray-300 px-2 py-2 text-sm text-gray-600 focus:outline-none cursor-not-allowed"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-gray-600 text-sm font-bold mb-2">
+                                Client User Name
+                                {checkPathType === 'client' && <span className="text-red-500 ml-1">*</span>}
+                            </label>
+                            <input
+                                type="text"
+                                value={clientUsername}
+                                onChange={(e) => {
+                                    setClientUsername(e.target.value);
+                                    setUsernameError(false);
+                                }}
+                                disabled={checkPathType === 'server'}
+                                className={`w-full bg-transparent border-b-2 px-2 py-2 text-sm focus:outline-none transition-colors ${checkPathType === 'server'
+                                    ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                                    : usernameError
+                                        ? 'border-red-500'
+                                        : 'border-gray-300 focus:border-blue-400'
+                                    }`}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-gray-600 text-sm font-bold mb-2">
+                                Client Password
+                                {checkPathType === 'client' && <span className="text-red-500 ml-1">*</span>}
+                            </label>
+                            <input
+                                type="password"
+                                value={clientPassword}
+                                onChange={(e) => {
+                                    setClientPassword(e.target.value);
+                                    setPasswordError(false);
+                                }}
+                                disabled={checkPathType === 'server'}
+                                className={`w-full bg-transparent border-b-2 px-2 py-2 text-sm focus:outline-none transition-colors ${checkPathType === 'server'
+                                    ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                                    : passwordError
+                                        ? 'border-red-500'
+                                        : 'border-gray-300 focus:border-blue-400'
+                                    }`}
+                            />
+                        </div>
+
+                        <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
+                            <button
+                                onClick={submitCheckPath}
+                                className="bg-blue-600 text-white px-6 py-2 rounded text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2"
+                            >
+                                <Check size={16} /> Submit
+                            </button>
+                            <button
+                                onClick={() => setIsCheckPathModalOpen(false)}
+                                className="border border-gray-300 text-gray-700 px-6 py-2 rounded text-sm font-semibold hover:bg-gray-50 transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                }
+            />
+
+
+            {
+                errorDialog.isOpen && (
+                    <Errordialog
+                        message={errorDialog.message}
+                        type={errorDialog.type}
+                        onClose={() => setErrorDialog({ isOpen: false, message: '', type: '' })}
+                    />
+                )
+            }
+        </div >
     );
 };
 
@@ -714,76 +1493,17 @@ const NavItem = ({ label, active, onClick }) => (
     </div>
 );
 
-// const UnderlineSelect = ({ label, required, placeholder }) => (
-//     <div className="relative group w-full">
-//         <label className="block text-gray-600 text-sm font-bold mb-2">
-//             {label} {required && <span className="text-red-500">*</span>}
-//         </label>
-//         <div className="relative">
-//             <select className="w-full bg-transparent border-b-2 border-gray-200 py-2 pr-8 text-gray-700 text-sm focus:border-blue-400 focus:outline-none appearance-none cursor-pointer transition-colors">
-//                 <option>{placeholder || ""}</option>
-//             </select>
-//             <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
-//                 <ChevronDown size={14} className="text-blue-500 fill-current" />
-//             </div>
-//         </div>
-//     </div>
-// );
-
-// const UnderlineSelect = ({ label, required, placeholder, options = [], value, onChange, displayKey = 'name', valueKey = 'id' }) => (
-//     <div className="relative group w-full">
-//         <label className="block text-gray-600 text-sm font-bold mb-2">
-//             {label} {required && <span className="text-red-500">*</span>}
-//         </label>
-//         <div className="relative">
-//             <select
-//                 value={value}
-//                 onChange={(e) => onChange && onChange(e.target.value)}
-//                 className="w-full bg-transparent border-b-2 border-gray-200 py-2 pr-8 text-gray-700 text-sm focus:border-blue-400 focus:outline-none appearance-none cursor-pointer transition-colors"
-//             >
-//                 {/* <option value="">{placeholder || ""}</option> */}
-//                 {options.map((option, index) => (
-//                     <option key={index} value={option[valueKey]}>
-//                         {option[displayKey]}
-//                     </option>
-//                 ))}
-//             </select>
-//             <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
-//                 <ChevronDown size={14} className="text-blue-500 fill-current" />
-//             </div>
-//         </div>
-//     </div>
-// );
-
-// const UnderlineSelect = ({ label, required, placeholder, options = [], value, onChange, displayKey = 'name', valueKey = 'id' }) => (
-//     <div className="relative group w-full">
-//         <label className="block text-gray-600 text-sm font-bold mb-2">
-//             {label} {required && <span className="text-red-500">*</span>}
-//         </label>
-//         <div className="relative">
-//             <select
-//                 value={value || ""}
-//                 onChange={(e) => onChange && onChange(e.target.value)}
-//                 className="w-full bg-transparent border-b-2 border-gray-200 py-2 pr-8 text-gray-700 text-sm focus:border-blue-400 focus:outline-none appearance-none cursor-pointer transition-colors"
-//             >
-//                 {/* Placeholder option - hidden from dropdown but shows when nothing selected */}
-//                 <option value="" disabled hidden>{placeholder || ""}</option>
-
-//                 {options.map((option, index) => (
-//                     <option key={index} value={option[valueKey]}>
-//                         {option[displayKey]}
-//                     </option>
-//                 ))}
-//             </select>
-//             <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
-//                 <ChevronDown size={14} className="text-blue-500 fill-current" />
-//             </div>
-//         </div>
-//     </div>
-// );
-
-
-const UnderlineSelect = ({ label, required, placeholder, options = [], value, onChange, displayKey = 'name', valueKey = 'id' }) => (
+const UnderlineSelect = ({
+    label,
+    required,
+    placeholder,
+    options = [],
+    value,
+    onChange,
+    displayKey = 'name',
+    valueKey = 'id',
+    disabled = false
+}) => (
     <div className="relative group w-full">
         <label className="block text-gray-600 text-sm font-bold mb-2">
             {label} {required && <span className="text-red-500">*</span>}
@@ -792,11 +1512,11 @@ const UnderlineSelect = ({ label, required, placeholder, options = [], value, on
             <select
                 value={value || ""}
                 onChange={(e) => onChange && onChange(e.target.value)}
-                className="w-full bg-transparent border-b-2 border-gray-200 py-2 pr-8 text-gray-700 text-sm focus:border-blue-400 focus:outline-none appearance-none cursor-pointer transition-colors"
+                disabled={disabled}
+                className={`w-full bg-transparent border-b-2 border-gray-200 py-2 pr-8 text-gray-700 text-sm focus:border-blue-400 focus:outline-none appearance-none cursor-pointer transition-colors ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''
+                    }`}
             >
-                {/* Empty placeholder - shows blank but hidden from dropdown list */}
                 <option value="" disabled hidden></option>
-
                 {options.map((option, index) => (
                     <option key={index} value={option[valueKey]}>
                         {option[displayKey]}
@@ -809,7 +1529,8 @@ const UnderlineSelect = ({ label, required, placeholder, options = [], value, on
         </div>
     </div>
 );
-const UnderlineInput = ({ label, required, placeholder, defaultValue, type = "text" }) => (
+
+const UnderlineInput = ({ label, required, placeholder, defaultValue, type = "text", disabled = false, value, onChange }) => (
     <div className="group w-full relative">
         <label className="block text-gray-700 text-sm font-bold mb-2">
             {label} {required && <span className="text-red-500">*</span>}
@@ -817,8 +1538,12 @@ const UnderlineInput = ({ label, required, placeholder, defaultValue, type = "te
         <input
             type={type}
             placeholder={placeholder}
+            value={value}
             defaultValue={defaultValue}
-            className="w-full bg-transparent border-b-2 border-gray-200 py-2 text-gray-700 text-sm focus:border-blue-400 focus:outline-none transition-colors"
+            onChange={onChange}
+            disabled={disabled}
+            className={`w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:border-blue-400 focus:outline-none transition-colors ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''
+                }`}
         />
     </div>
 );
@@ -847,37 +1572,33 @@ const ToggleLabel = ({ label, checked }) => (
     </div>
 );
 
-const DateInput = ({ value }) => (
+
+const DateInput = ({ value, disabled = false, onChange }) => (
     <div className="relative w-40">
         <input
             type="text"
-            defaultValue={value}
-            className="w-full border border-gray-200 rounded px-3 py-1.5 text-sm text-gray-600 bg-white focus:outline-none focus:border-blue-400"
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+            className={`w-full border border-gray-200 rounded px-3 py-1.5 text-sm text-gray-600 focus:outline-none focus:border-blue-400 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'bg-white'
+                }`}
         />
         <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
     </div>
 );
 
-const TimeInput = ({ value }) => (
+const TimeInput = ({ value, disabled = false }) => (
     <div className="relative w-32">
         <input
             type="text"
-            defaultValue={value}
-            className="w-full border border-gray-200 rounded px-3 py-1.5 text-sm text-gray-600 bg-white focus:outline-none focus:border-blue-400"
+            value={value}
+            disabled={disabled}
+            className={`w-full border border-gray-200 rounded px-3 py-1.5 text-sm text-gray-600 bg-white focus:outline-none focus:border-blue-400 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''
+                }`}
         />
         <Clock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
     </div>
 );
-
-// const RadioButton = ({ label, name, checked }) => (
-//     <label className="flex items-center cursor-pointer group">
-//         <input type="radio" name={name} className="hidden peer" defaultChecked={checked} />
-//         <div className="w-4 h-4 border border-gray-300 rounded-full flex items-center justify-center peer-checked:border-blue-500 peer-checked:bg-white transition-colors relative">
-//             <div className="w-2 h-2 bg-blue-500 rounded-full scale-0 peer-checked:scale-100 transition-transform absolute"></div>
-//         </div>
-//         <span className="ml-2 text-sm text-gray-700 font-bold group-hover:text-blue-600">{label}</span>
-//     </label>
-// );
 
 const RadioButton = ({ label, name, checked, onChange }) => (
     <label className="flex items-center cursor-pointer group">
