@@ -93,18 +93,13 @@ const fetchTemplateValidation = async ({ postData }) => {
 };
 
 // Load instruments
-// Load instruments
 const fetchInstruments = async ({ postData, featureStatus }) => {
   const userDetailsData = CF_activeUserdetails();
   const reqObj = { 
     sFeature: featureStatus,
     ...userDetailsData 
   };
-  
-  console.log("Fetching instruments with:", reqObj);
-  const response = await postData("InstrumentLock/LoadInterfaceLockInstrumentNameCombo", reqObj);
-  console.log("Instruments response:", response);
-  return response;
+  return await postData("InstrumentLock/LoadInterfaceLockInstrumentNameCombo", reqObj);
 };
 
 // Load instrument tags
@@ -239,6 +234,7 @@ export default function InstrumentDataPage() {
   const [supportedExtensions, setSupportedExtensions] = useState([]);
   const [oldRawDataID, setOldRawDataID] = useState(" ");
   const [newRawDataID, setNewRawDataID] = useState("");
+  const [isLoadingInstruments, setIsLoadingInstruments] = useState(false);
   
   const refreshTimerRef = useRef(null);
   
@@ -264,6 +260,14 @@ export default function InstrumentDataPage() {
     }));
   }, []);
 
+  // Auto-select the first instrument when instruments are loaded
+  useEffect(() => {
+    if (instruments.length > 0 && !instrument) {
+      setInstrument(instruments[0].value);
+      setSelectedInstrument(instruments[0].originalItem);
+    }
+  }, [instruments, instrument]);
+
   // 1. Fetch Template Validation
   const { data: templateValidation, isLoading: loadingTemplate } = useQuery({
     queryKey: ["templateValidation"],
@@ -271,17 +275,11 @@ export default function InstrumentDataPage() {
     staleTime: 5 * 60 * 1000,
     onSuccess: (data) => {
       if (data && Array.isArray(data)) {
-        const featureStatus = data[0]?.L67Status || false;
-        const extensions = data[1]?.sFileExtensionList 
-          ? data[1].sFileExtensionList.split(",").map(ext => ext.trim().toLowerCase())
-          : ["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"];
-        setSupportedExtensions(extensions);
+        const featureStatus = data[0]?.L67Status ?? false;
         
-        // Trigger instruments fetch after template validation
-        queryClient.prefetchQuery({
-          queryKey: ["instruments", featureStatus],
-          queryFn: () => fetchInstruments({ postData, featureStatus }),
-        });
+        // Set default extensions
+        const extensions = ["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"];
+        setSupportedExtensions(extensions);
       }
     },
     onError: (error) => {
@@ -292,34 +290,39 @@ export default function InstrumentDataPage() {
 
   // Get feature status from template validation
   const featureStatus = useMemo(() => {
-    return templateValidation?.[0]?.L67Status || false;
+    return templateValidation?.[0]?.L67Status ?? false;
   }, [templateValidation]);
 
-  // 2. Fetch Instruments
-  const { data: instrumentsData, isLoading: loadingInstruments } = useQuery({
-    queryKey: ["instruments", featureStatus],
-    queryFn: () => fetchInstruments({ postData, featureStatus }),
-    enabled: !!featureStatus,
-    staleTime: 5 * 60 * 1000,
-    onSuccess: (data) => {
-      if (data && Array.isArray(data)) {
-        const formattedInstruments = data.map(inst => ({
-          value: inst.nInterInstrumentID?.toString() || "",
-          label: inst.sInstrumentAliasName || "Unknown Instrument",
-          originalItem: inst
-        }));
-        setInstruments(formattedInstruments);
-      } else {
-        setInstruments([]);
-        showInfoDialog("No instruments found", "information");
+  // Load instruments directly
+  useEffect(() => {
+    const loadInstruments = async () => {
+      if (templateValidation && instruments.length === 0 && !isLoadingInstruments) {
+        setIsLoadingInstruments(true);
+        try {
+          const featureStatus = templateValidation[0]?.L67Status ?? false;
+          const data = await fetchInstruments({ postData, featureStatus });
+          
+          if (data && Array.isArray(data) && data.length > 0) {
+            const formattedInstruments = data.map(inst => ({
+              value: inst.nInterInstrumentID?.toString() || "",
+              label: inst.sInstrumentAliasName || "Unknown Instrument",
+              originalItem: inst
+            }));
+            setInstruments(formattedInstruments);
+          } else {
+            showInfoDialog("No instruments found", "information");
+          }
+        } catch (error) {
+          console.error("Error loading instruments:", error);
+          showInfoDialog("Failed to load instruments", "information");
+        } finally {
+          setIsLoadingInstruments(false);
+        }
       }
-    },
-    onError: (error) => {
-      console.error("Error loading instruments:", error);
-      showInfoDialog("Failed to load instruments", "information");
-      setInstruments([]);
-    }
-  });
+    };
+    
+    loadInstruments();
+  }, [templateValidation, postData, instruments.length, isLoadingInstruments, showInfoDialog]);
 
   // 3. Fetch Instrument Tags
   const { data: instrumentTags, isLoading: loadingTags } = useQuery({
@@ -415,9 +418,6 @@ export default function InstrumentDataPage() {
       
       // Load parsed data
       const parsedResponse = await fetchParsedData({ postData, file });
-      
-      // Update UI with fetched data
-      // You might want to store this in state or pass to child components
       
     } catch (error) {
       console.error("Error loading file data:", error);
@@ -656,10 +656,11 @@ export default function InstrumentDataPage() {
     }));
   }, [instrumentTags]);
 
-  if (loadingTemplate || loadingInstruments) {
+  // Show loading state
+  if (loadingTemplate) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading data...</div>
+        <div className="text-gray-500">Loading template data...</div>
       </div>
     );
   }
@@ -681,15 +682,26 @@ export default function InstrumentDataPage() {
           {t("label.instrument")} <span className="text-red-500">*</span>
         </label>
         <div className="w-80">
-          <AnimatedDropdown
-            name="instrument"
-            value={instrument}
-            options={instruments}
-            displayKey="label"
-            valueKey="value"
-            onChange={(e) => handleInstrumentChange(e.target.value)}
-            loading={loadingInstruments}
-          />
+          {isLoadingInstruments ? (
+            <div className="border border-gray-300 rounded px-3 py-2 text-gray-500">
+              Loading instruments...
+            </div>
+          ) : instruments.length > 0 ? (
+            <AnimatedDropdown
+              name="instrument"
+              value={instrument}
+              options={instruments}
+              displayKey="label"
+              valueKey="value"
+              onChange={(e) => handleInstrumentChange(e.target.value)}
+              loading={isLoadingInstruments}
+              required={true}
+            />
+          ) : (
+            <div className="border border-gray-300 rounded px-3 py-2 text-gray-500">
+              No instruments available
+            </div>
+          )}
         </div>
       </div>
 
