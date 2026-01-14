@@ -654,19 +654,19 @@ const OnlineUsers = () => {
             <div className="flex justify-end gap-2.5 p-3 bg-white">
                 <ActionButton
                     icon={MessageSquare}
-                    label={t('usermanagement.chat') || "Chat"}
+                    label={t('button.chat') || "Chat"}
                     onClick={handleChatClick}
                     disabled={!selectedUser}
                 />
                 <ActionButton
                     icon={LogOut}
-                    label={t('usermanagement.logout') || "Logout"}
+                    label={t('button.logout') || "Logout"}
                     onClick={handleLogoutClick}
                     disabled={!selectedUser}
                 />
                 <ActionButton
                     icon={RefreshCw}
-                    label={t('usermanagement.refresh') || "Refresh"}
+                    label={t('button.refresh') || "Refresh"}
                     onClick={handleRefreshClick}
                 />
             </div>

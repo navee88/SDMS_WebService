@@ -162,19 +162,21 @@ function Errordialog({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
       <div className="bg-white rounded-md shadow-lg w-[550px]">
+       {/* changed font to roboto */}
         <div
-          className={`${headerColor} text-white font-semibold text-lg px-5 py-4 rounded-t-md flex items-center gap-2 transition-all duration-500`}
+          className={`${headerColor} text-white font-roboto font-semibold text-lg px-5 py-4 rounded-t-md flex items-center gap-2 transition-all duration-500`}
         >
           {title}
         </div>
 
         <div className="p-10 text-center transition-all duration-700">
-          <p className="text-gray-700 font-semibold text-[18px] leading-relaxed">
+          {/* changed font to roboto */}
+          <p className="text-gray-700 font-semibold font-roboto text-[18px] leading-relaxed">
             {displayMessage}
           </p>
         </div>
-
-        <div className="flex justify-end border-t px-5 py-3 gap-2">
+        {/* changed font to roboto */}
+        <div className="flex justify-end font-roboto border-t px-5 py-3 gap-2">
           {reverseButtons ? (
             <>
               {OkBtn}

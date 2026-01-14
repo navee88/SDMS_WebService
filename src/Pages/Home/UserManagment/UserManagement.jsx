@@ -31,7 +31,7 @@ export default function UserManagement() {
     />
   </div>
 
-  <div className="flex-1 overflow-y-scroll overflow-x-hidden pb-20">
+  <div className="flex-1 overflow-y-hidden overflow-x-hidden pb-20">
     {currentTabs[selectedTab]?.content || null}
   </div>
 
