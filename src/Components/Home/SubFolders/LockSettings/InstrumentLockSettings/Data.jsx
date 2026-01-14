@@ -763,7 +763,7 @@ export default function InstrumentDataPage() {
             <div className="flex justify-end gap-2 mb-2">
               <PrimaryButton 
                 icon={RefreshCw}
-                label={t("instrumentlocktag.refresh")}
+                label={t("button.refresh")}
                 onClick={handleRefreshLatestFiles}
               />
             </div>
@@ -786,7 +786,7 @@ export default function InstrumentDataPage() {
               />
               <PrimaryButton 
                 icon={RefreshCw}
-                label={t("instrumentlocktag.refresh")}
+                label={t("button.refresh")}
                 onClick={handleRefreshNullData}
               />
             </div>
@@ -810,7 +810,7 @@ export default function InstrumentDataPage() {
           </h3>
           <PrimaryButton 
             icon={RefreshCw}
-            label={t("instrumentlocktag.refresh")}
+            label={t("button.refresh")}
             onClick={handleRefreshFileInfo}
           />
         </div>

@@ -488,7 +488,7 @@ const RetiredTask = () => {
             }}>
                 <ActionButton
                     icon={Eye}
-                    label={t('scheduler.view')}
+                    label={t('button.view')}
                     onClick={handleViewClick}
                 />
                 <ActionButton
@@ -498,7 +498,7 @@ const RetiredTask = () => {
                 />
                 <ActionButton
                     icon={Printer}
-                    label={t('scheduler.print')}
+                    label={t('button.print')}
                     onClick={handlePrintClick}
                 />
             </div>

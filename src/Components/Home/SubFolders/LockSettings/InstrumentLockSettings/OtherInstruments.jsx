@@ -312,7 +312,7 @@ export default function OthersInstrumentsPage() {
             <PrimaryButton 
               onClick={handleRefreshInstruments}
               icon={RefreshCw}
-              label={t("instrumentlocktag.refresh") || "Refresh"}
+              label={t("button.refresh") || "Refresh"}
             />
           </div>
 
@@ -335,7 +335,7 @@ export default function OthersInstrumentsPage() {
             <PrimaryButton 
               onClick={handleRefreshFiles}
               icon={RefreshCw}
-              label={t("instrumentlocktag.refresh") || "Refresh"}
+              label={t("button.refresh") || "Refresh"}
             />
           </div>
 

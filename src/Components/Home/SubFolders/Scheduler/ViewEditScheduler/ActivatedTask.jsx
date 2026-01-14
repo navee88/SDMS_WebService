@@ -530,17 +530,17 @@ const ActivatedTask = () => {
             }}>
                 <ActionButton
                     icon={Eye}
-                    label={t('scheduler.view')}
+                    label={t('button.view')}
                     onClick={handleViewClick}
                 />
                 <ActionButton
                     icon={ThumbsDown}
-                    label={t('scheduler.deactivate')}
+                    label={t('button.deactivate')}
                     onClick={handleDeactivateClick}
                 />
                 <ActionButton
                     icon={Ban}
-                    label={t('scheduler.retire')}
+                    label={t('button.retire')}
                     onClick={handleRetireClick}
                 />
                 <ActionButton
@@ -550,12 +550,12 @@ const ActivatedTask = () => {
                 />
                 <ActionButton
                     icon={Upload}
-                    label={t('scheduler.import')}
+                    label={t('button.import')}
                     onClick={handleImportClick}
                 />
                 <ActionButton
                     icon={Printer}
-                    label={t('scheduler.print')}
+                    label={t('button.print')}
                     onClick={handlePrintClick}
                 />
             </div>

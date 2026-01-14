@@ -2899,7 +2899,7 @@ const UserMaster = () => {
                 if (row.UserStatus === 'Active') colorClass = 'text-green-600';
                 else if (row.UserStatus === 'Deactive') colorClass = 'text-yellow-600';
                 else if (row.UserStatus === 'Locked') colorClass = 'text-red-500';
-                else if (row.UserStatus === 'Retired') colorClass = 'text-purple-600';
+                else if (row.UserStatus === 'Retired') colorClass = 'text-red-600';
                 else if (row.UserStatus === 'Unapproved') colorClass = 'text-purple-600';
                 
                 return (
@@ -3111,7 +3111,7 @@ const UserMaster = () => {
                                 className="w-1/2 flex items-center justify-center gap-1.5 mb-1 px-3 py-2 text-[12px] font-bold rounded border-none cursor-pointer bg-[#f1f5f9] text-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Server className="w-3.5 h-3.5" />
-                                {adsData.connected ? t('usermanagement.connected') : t('usermanagement.connect')}
+                                {adsData.connected ? t('button.connected') : t('button.connect')}
                             </button>
                         </div>
                         
@@ -3274,13 +3274,13 @@ const UserMaster = () => {
                             className="flex items-center gap-2 px-4 py-2 text-[12px] font-semibold text-white bg-[#2883FE] border-none rounded cursor-pointer"
                         >
                             <Upload className="w-3.5 h-3.5" />
-                            {t('usermanagement.import')}
+                            {t('button.import')}
                         </button>
                         <button
                             onClick={handleCloseImportADS}
                             className="px-4 py-2 text-[12px] font-semibold text-gray-700 bg-white border border-gray-300 rounded cursor-pointer"
                         >
-                            {t('usermanagement.close')}
+                            {t('button.close')}
                         </button>
                     </div>
                 </div>
@@ -3307,15 +3307,15 @@ const UserMaster = () => {
                         {/* Action Buttons */}
                         <div className="flex flex-wrap gap-2 justify-end">
                             <ActionButton icon={UserPlus} label={t('button.add')} onClick={handleAddClick} />
-                            <ActionButton icon={Edit} label={t('usermanagement.edit')} onClick={handleEditClick} />
-                            <ActionButton icon={Ban} label={t('usermanagement.retire')} onClick={handleRetireClick} />
-                            <ActionButton icon={Power} label={t('usermanagement.resetpassword')} onClick={handleResetPasswordClick} />
-                            <ActionButton icon={Unlock} label={t('usermanagement.unlock')} onClick={handleUnlockClick} />
-                            <ActionButton icon={UserX} label={t('usermanagement.activedeactive')} onClick={handleActiveDeactiveClick} />
-                            <ActionButton icon={ThumbsUp} label={t('usermanagement.approve')} onClick={handleApproveClick} />
-                            <ActionButton icon={Server} label={t('usermanagement.importads')} onClick={handleImportADSClick} />
-                            <ActionButton icon={Download} label={t('usermanagement.export')} onClick={handleExportClick} />
-                            <ActionButton icon={Upload} label={t('usermanagement.import')} onClick={handleImportClick} />
+                            <ActionButton icon={Edit} label={t('button.edit')} onClick={handleEditClick} />
+                            <ActionButton icon={Ban} label={t('button.retire')} onClick={handleRetireClick} />
+                            <ActionButton icon={Power} label={t('button.resetpassword')} onClick={handleResetPasswordClick} />
+                            <ActionButton icon={Unlock} label={t('button.unlock')} onClick={handleUnlockClick} />
+                            <ActionButton icon={UserX} label={t('button.activedeactive')} onClick={handleActiveDeactiveClick} />
+                            <ActionButton icon={ThumbsUp} label={t('button.approve')} onClick={handleApproveClick} />
+                            <ActionButton icon={Server} label={t('button.importads')} onClick={handleImportADSClick} />
+                            <ActionButton icon={Download} label={t('button.export')} onClick={handleExportClick} />
+                            <ActionButton icon={Upload} label={t('button.import')} onClick={handleImportClick} />
                         </div>
                     </div>
 
@@ -3357,7 +3357,7 @@ const UserMaster = () => {
                 <CustomPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    title={activePopup === "adduser" ? t('button.add') : t('usermanagement.edit')}
+                    title={activePopup === "adduser" ? t('usermanagement.add') : t('usermanagement.edit')}
                     size="sm"
                     content={
                         <div className="flex flex-col gap-1">
@@ -3508,13 +3508,13 @@ const UserMaster = () => {
                                     onClick={handleSubmit}
                                     className="flex items-center gap-1 px-4 py-2 text-[12px] font-semibold text-white bg-blue-500 border-none rounded cursor-pointer hover:bg-blue-600"
                                 >
-                                    <Check className="w-3.5 h-3.5" /> {t('usermanagement.submit')}
+                                    <Check className="w-3.5 h-3.5" /> {t('button.submit')}
                                 </button>
                                 <button
                                     onClick={handlePopupClose}
                                     className="px-4 py-2 text-[12px] font-semibold text-gray-700 bg-white border border-gray-300 rounded cursor-pointer hover:bg-gray-50"
                                 >
-                                    {t('usermanagement.close')}
+                                    {t('button.close')}
                                 </button>
                             </div>
                         </div>
@@ -3588,13 +3588,13 @@ const UserMaster = () => {
                                     onClick={handleResetPasswordSubmit}
                                     className="flex items-center gap-2 px-4 py-2 text-[14px] font-semibold text-white bg-blue-500 border-none rounded cursor-pointer hover:bg-blue-600"
                                 >
-                                    <Check className="w-4 h-4" /> {t('usermanagement.reset')}
+                                    <Check className="w-4 h-4" /> {t('button.reset')}
                                 </button>
                                 <button
                                     onClick={handlePopupClose}
                                     className="px-4 py-2 text-[14px] font-semibold text-gray-700 bg-white border border-gray-300 rounded cursor-pointer hover:bg-gray-50"
                                 >
-                                    {t('usermanagement.cancel')}
+                                    {t('button.cancel')}
                                 </button>
                             </div>
                         </div>

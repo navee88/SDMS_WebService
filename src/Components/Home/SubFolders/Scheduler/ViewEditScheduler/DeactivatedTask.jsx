@@ -650,17 +650,17 @@ const DeactivedTask = () => {
             }}>
                 <ActionButton
                     icon={Eye}
-                    label={t('scheduler.view')}
+                    label={t('button.view')}
                     onClick={handleViewClick}
                 />
                 <ActionButton
                     icon={Check}
-                    label={t('scheduler.activate')}
+                    label={t('button.activate')}
                     onClick={handleActivateClick}
                 />
                 <ActionButton
                     icon={Ban}
-                    label={t('scheduler.retire')}
+                    label={t('button.retire')}
                     onClick={handleRetireClick}
                 />
                 <ActionButton
@@ -670,7 +670,7 @@ const DeactivedTask = () => {
                 />
                 <ActionButton
                     icon={Printer}
-                    label={t('scheduler.print')}
+                    label={t('button.print')}
                     onClick={handlePrintClick}
                 />
             </div>
@@ -845,11 +845,11 @@ const DeactivedTask = () => {
                                 >
                                     {activePopup === "Activate Task" ? (
                                         <>
-                                            <Check style={{ width: '16px', height: '16px' }} /> {t('scheduler.submit')}
+                                            <Check style={{ width: '16px', height: '16px' }} /> {t('button.submit')}
                                         </>
                                     ) : (
                                         <>
-                                            <Ban style={{ width: '16px', height: '16px' }} /> {t('scheduler.retire')}
+                                            <Ban style={{ width: '16px', height: '16px' }} /> {t('button.retire')}
                                         </>
                                     )}
                                 </button>
@@ -866,7 +866,7 @@ const DeactivedTask = () => {
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    {t('scheduler.close')}
+                                    {t('button.close')}
                                 </button>
                             </div>
                         </div>

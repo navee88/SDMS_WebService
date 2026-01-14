@@ -1098,23 +1098,7 @@ export default function MyInstrumentsPage({ onBack }) {
   return (
     <div className="px-3 py-2 bg-[#ffffff] min-h-screen font-roboto">
       {/* Navigation header - ADDED THIS SECTION */}
-      <div className="flex items-center gap-4 mb-4">
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 px-3 py-2 text-xs font-semibold bg-[#f1f5f9] text-[#2883FE] rounded hover:bg-[#E6F0FF] transition-all"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5"></path>
-              <path d="M12 19l-7-7 7-7"></path>
-            </svg>
-            Back to Instrument Lock
-          </button>
-        )}
-        <h2 className="text-lg font-bold text-[#405f7d]">
-          {t("instrumentlocktag.lockedinstrumentdetails") || "My Instruments"}
-        </h2>
-      </div>
+     
       
       <div className="max-w-[1400px] space-y-6">
         {/* Locked Instruments - GridLayout */}
@@ -1126,7 +1110,7 @@ export default function MyInstrumentsPage({ onBack }) {
             <PrimaryButton 
               onClick={handleRefreshInstruments}
               icon={RefreshCw}
-              label={t("instrumentlocktag.refresh") || "Refresh"}
+              label={t("button.refresh") || "Refresh"}
             />
           </div>
             <div className="w-full overflow-hidden [&>*]:!p-0 [&>*]:!m-0 rounded-none">
@@ -1160,7 +1144,7 @@ export default function MyInstrumentsPage({ onBack }) {
             <PrimaryButton 
               onClick={handleRefreshFiles}
               icon={RefreshCw}
-              label={t("instrumentlocktag.refresh") || "Refresh"}
+              label={t("button.refresh") || "Refresh"}
             />
           </div>
             <div className="w-full overflow-hidden [&>*]:!p-0 [&>*]:!m-0 rounded-none">
