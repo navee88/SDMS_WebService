@@ -277,9 +277,12 @@
     "newValue":"New Value",
     "fileType":"File Type",
     "captureDate":"Capture Date",
-    "captureDateUTC":"Capture Date (UTC Timezone)" 
- 
-    
+    "captureDateUTC":"Capture Date (UTC Timezone)",
+    "days": "Days",     "weeks": "Weeks",
+    "months": "Months",
+    "year": "Years",   
+    "automatic": "Automatic",     
+    "manual": "Manual"
   },
   "statuses": {
     "activated": "Activated",
@@ -412,7 +415,8 @@
     "instrumentunlocked": "Instrument Unlocked",
     "instrumentupdated": "Instrument Updated",
     "tagName":"Tag Name",
-    "tagValue":"Tag Value"
+    "tagValue":"Tag Value",
+    "noTagValue":"No Tag Values"
 },
 
   "scheduler": {

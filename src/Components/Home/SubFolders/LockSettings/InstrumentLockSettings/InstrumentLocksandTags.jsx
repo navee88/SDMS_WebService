@@ -560,7 +560,7 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
       sCategories: getDecryptedValue("sCategories") || "DB",
       sUserGroupID: (getDecryptedValue("sUserGroupID") || "G1").padEnd(10, ' ').substring(0, 10),
       sUserStatus: getDecryptedValue("sUserStatus") || "",
-      sTenantID: getDecryptedValue("sTenantID") || ""
+      sTenantID: getDecryptedValue("")
     };
   };
 
