@@ -11,8 +11,9 @@ const CommunicationSettingsModal = ({
   parserType,
   commData,
   onSubmit,
+  selectedRow
 }) => {
-  console.log("commData", commData);
+
 
   const getDisabledByCommType = (commType) => {
     switch (commType) {
@@ -249,15 +250,19 @@ ConversionType ?? 1), // Changed from 1 to 0
 const handleChange = (e) => {
   const { name, value } = e.target;
 
-  if (
-    name === "commType" &&
-    commData &&
-    Number(value) !== previousCommTypeRef.current
-  ) {
-    setPendingCommType(Number(value));
-    setShowCommTypeConfirm(true);
-    return;
-  }
+if (
+  name === "commType" &&
+  commData &&                  
+  selectedRow &&                
+  selectedRow.clientName &&        
+  selectedRow.clientName !== "-" &&  
+  Number(value) !== previousCommTypeRef.current
+) {
+  setPendingCommType(Number(value));
+  setShowCommTypeConfirm(true);
+  return;
+}
+
 
   if (name === "commType") {
     const newCommType = Number(value);
@@ -521,14 +526,6 @@ const handleChange = (e) => {
                       `}
                     />
                   </div>
-
-                 
-
-                  
-
-
-
-                  
                 </>
               )}
 

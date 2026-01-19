@@ -16,14 +16,14 @@ const AddInstrumentModal = ({
   onSave,
   mode = "add",
   initialData = null,
+  clientId,
   setLoading,
   setLoadingText,
-
+  selectedRow,
   selectedRowId,        // ✅ pass selected row ID
   loadInstrumentGrid,   // ✅ pass reload function
+   
 }) => {
-
-
   const { t } = useTranslation();
   const [showCommSettings, setShowCommSettings] = useState(false);
   const { postData } = useAxios();
@@ -112,7 +112,7 @@ const handleCommSubmit = async (data) => {
       "basemaster/insertInstrumentCommonSetting",
       buildInstrumentRequestPayload(form, data)
     );
-
+    console.log("instrument request for clint add",buildInstrumentRequestPayload(form, data))
     // ✅ CLOSE BOTH POPUPS
     setShowCommSettings(false);
     onSave?.();     // 🔥 notify parent to reload grid
@@ -224,7 +224,6 @@ const handleCommSubmit = async (data) => {
         label: item.InstrumentName, // what user sees
         value: item.INSTRUMENTID, // what you store
       }));
-      console.log("interfacer list",interfacerList)
 
       // ⭐ ADD mode: Show "Create New" option
       if (isAddMode) {
@@ -248,9 +247,10 @@ const handleCommSubmit = async (data) => {
 
     loadDropdowns();
   }, [isOpen]);
-  console.log("interfacer option",interfacerOptions)
+
 
   // ✅ preload data for EDIT
+// ✅ preload data for EDIT
 // ✅ preload data for EDIT
 // ✅ preload data for EDIT
 // ✅ preload data for EDIT
@@ -263,21 +263,20 @@ useEffect(() => {
   // Get the saved interfacer ID
   const savedInterfacerId = initialData.iInterfacerInstID;
   
-  // Wait for interfacerOptions to load to determine the right value
   const determineInitialValue = () => {
     if (!isMapped) return "";
     
-    if (savedInterfacerId) {
+    if (savedInterfacerId && interfacerOptions.length > 0) {
       // Check if saved value exists in options
       const existsInOptions = interfacerOptions.some(opt => opt.value === savedInterfacerId);
       if (existsInOptions) {
         return savedInterfacerId;
       }
-      // If saved value doesn't exist in options, still use it
-      return savedInterfacerId;
+      // If saved value doesn't exist in options, use first option
+      return interfacerOptions[0].value;
     }
     
-    // If no saved value, use first option
+    // If no saved value or no options, return first option or empty
     return interfacerOptions.length > 0 ? interfacerOptions[0].value : "";
   };
 
@@ -302,14 +301,6 @@ useEffect(() => {
   setSubmitted(false);
 }, [isOpen, mode, initialData, interfacerOptions]);
 
-
-  const validateLicenseRules = () => {
-    // TODO:
-    // License validation logic will be implemented later
-    // (PC based, Parsing, RS232, Active/DeActive checks)
-
-    return true; // ✅ always allow for now
-  };
 useEffect(() => {
   if (!isOpen) {
     setFieldErrors({ instrumentCode: "", instrumentAlias: "" });
@@ -326,7 +317,7 @@ useEffect(() => {
     !form.interfacerMapped;
 
   if (isParserNeedsInterfacer) return;
-  if (!validateLicenseRules()) return;
+
 
   // 🔥 ADD MODE → INSERT FIRST
   if (isAddMode) {
@@ -480,6 +471,7 @@ const buildInstrumentRequestPayload = (
     HostComputerIP: "",
     LimsTestOrder: 0,
   };
+  
 
   // If it's ICPMODBUS (commType 5), add additional fields
   const isICPModbus = commData.COMMUNICATIONTYPE === 4; // Note: 0-based, so 4 means 5-1
@@ -519,7 +511,7 @@ const buildInstrumentRequestPayload = (
           : -1,
       INSTCODE: pendingForm.instrumentCode,
     },
-
+    sClientID:clientId || "",
     Instrument: {
       sInstrumentID: "",
       sInstrumentName: pendingForm.instrumentCode,
@@ -640,7 +632,7 @@ const buildInstrumentEditRequestPayload = (
 };
 
 
-console.log("pending form ",pendingForm)
+
 
 const handleAuditAuthorized = async (auditPayload) => {
   setShowAuditTrail(false);
@@ -699,7 +691,7 @@ const checkExistingInstrument = async () => {
     "basemaster/checkingExistingInstrument",
     payload
   );
- console.log("communication settings requst",payload)
+
   return Array.isArray(res) && res.length > 0;
 };
 const getInstrumentCommSettings = async (instrumentId) => {
@@ -743,12 +735,31 @@ const getInstrumentCommSettings = async (instrumentId) => {
   };
   // Helper function to get the display value for interfacerInstrument
 // Helper function to get the display value for interfacerInstrument
+// Helper function to get the display value for interfacerInstrument
 const getInterfacerDisplayValue = () => {
   if (!form.interfacerMapped) return "";
   
-  // Simply return the current form value
-  // The dropdown will handle displaying the correct option
-  return form.interfacerInstrument;
+  // For ADD mode, just return the form value
+  if (isAddMode) {
+    return form.interfacerInstrument;
+  }
+  
+  // For EDIT mode
+  if (form.interfacerInstrument) {
+    // Check if the current value exists in options
+    const existsInOptions = interfacerOptions.some(opt => opt.value === form.interfacerInstrument);
+    
+    if (existsInOptions) {
+      // If exists, return it
+      return form.interfacerInstrument;
+    } else {
+      // If not exists, return first option's value
+      return interfacerOptions.length > 0 ? interfacerOptions[0].value : "";
+    }
+  }
+  
+  // If no value, return first option
+  return interfacerOptions.length > 0 ? interfacerOptions[0].value : "";
 };
 
   if (!isOpen) return null;
@@ -974,7 +985,7 @@ ${
 
                 {/* Checkboxes */}
                 <div className="flex gap-8">
-                 <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
+                <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
   {t("masters.interfacerMapped")}
   <input
     type="checkbox"
@@ -1001,20 +1012,14 @@ ${
             interfacerInstrument: -2,
           });
         } else {
-          // EDIT mode: If we have a saved value, use it, otherwise use first option
-          const savedInterfacerId = initialData?.iInterfacerInstID;
-          let defaultId = "";
-          
-          if (savedInterfacerId) {
-            defaultId = savedInterfacerId;
-          } else if (interfacerOptions.length > 0) {
-            defaultId = interfacerOptions[0].value;
-          }
-          
+          // EDIT mode: Use first available option
+          const firstOptionValue = interfacerOptions.length > 0 
+            ? interfacerOptions[0].value 
+            : "";
           setForm({
             ...form,
             interfacerMapped: checked,
-            interfacerInstrument: defaultId,
+            interfacerInstrument: firstOptionValue,
           });
         }
       } else {
@@ -1044,7 +1049,7 @@ ${
                   </label>
                 </div>
 
-                {form.interfacerMapped && (
+{form.interfacerMapped && (
   <div>
     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
       {t("masters.interfacerInstrument")}
@@ -1065,14 +1070,7 @@ ${
       required
       showError={submitted}
     />
-    
-    {/* Show warning if saved value is not in options (EDIT mode only) */}
-    {isEditMode && form.interfacerInstrument && 
-     !interfacerOptions.some(opt => opt.value === form.interfacerInstrument) && (
-      <div className="text-[11px] text-yellow-600 font-roboto mt-1">
-        Note: Instrument ID {form.interfacerInstrument} is not in the available list
-      </div>
-    )}
+  
   </div>
 )}
               </div>
@@ -1155,6 +1153,7 @@ ${
   instrumentData={pendingForm}
   commData={commData}       // ✅ Pass it here
   onSubmit={handleCommSubmit}
+  selectedRow={selectedRow}
   onClose={() => setShowCommSettings(false)}
 />
 

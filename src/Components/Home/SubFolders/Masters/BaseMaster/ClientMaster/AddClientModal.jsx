@@ -14,7 +14,9 @@ const AddClientModal = ({
   onClose,
   onSubmit,
   onReloadUnmapped,
+  clientId,
 }) => {
+
   const nodeRef = useRef(null);
 
   const [submitted, setSubmitted] = useState(false);
@@ -367,6 +369,7 @@ useEffect(() => {
         <AddInstrumentModal
           isOpen={showInstrumentModal}
           onClose={() => setShowInstrumentModal(false)}
+          clientId = {initialData?.id}
           onSave={async () => {
     setShowInstrumentModal(false);
 
