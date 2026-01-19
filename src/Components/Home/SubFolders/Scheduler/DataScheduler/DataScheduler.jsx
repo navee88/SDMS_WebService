@@ -8,6 +8,7 @@ import Popup from '../../../../Layout/Common/Popup';
 import Errordialog from '../../../../Layout/Common/Errordialog';
 import { t } from 'i18next';
 import { useTranslation } from 'react-i18next';
+import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
 
 const CF_pathValidation = (path) => {
     const regex = /^[A-Za-z]:\\(?:[a-zA-Z0-9 _\-\.#&()@,=+`~!$^;{}[\]-]+\\)*[a-zA-Z0-9 _\-\.#&()@,=+%`~!$^;{}[\]-]*$/;
@@ -38,6 +39,95 @@ const CF_numberValidation = (value, maxDigits = 5) => {
     return regex.test(value);
 };
 
+const SelectorDropdown = ({
+    options,
+    selectedValues,
+    onSelect,
+    searchTerm,
+    onSearchChange,
+    isOpen,
+    onClose
+}) => {
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                onClose();
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('click', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, [isOpen, onClose]);
+
+
+    if (!isOpen) return null;
+
+    const filteredOptions = options.filter(opt =>
+        opt.toString().toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div
+            ref={dropdownRef}
+            className="absolute top-0 left-full ml-2 w-64 bg-white border border-gray-300 rounded-md overflow-hidden shadow-lg z-50"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+        >
+            {/* Search Input */}
+            <div className="p-1 border-b border-gray-300 bg-white">
+                <input
+                    type="text"
+                    placeholder="Looking for"
+                    value={searchTerm}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    className="w-full px-1 py-1 text-sm text-gray-700 placeholder-gray-400 border border-gray-300 rounded focus:outline-none bg-white"
+                />
+            </div>
+
+            {/* Options List with Checkboxes */}
+            <div className="max-h-[120px] overflow-y-auto bg-white custom-scrollbar"
+                style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
+                {filteredOptions.map((option) => {
+                    const isSelected = selectedValues.includes(option);
+                    return (
+                        <div
+                            key={option}
+                            onClick={() => onSelect(option)} // Clicking anywhere toggles
+                            className={`flex items-center gap-3 px-3 py-2 cursor-pointer border-l-4 font-['Verdana'] ${isSelected
+                                ? 'bg-gray-200 border-blue-600 text-black'
+                                : 'bg-white border-transparent text-gray-900 hover:bg-gray-50'
+                                }`}
+                        >
+                            {/* Checkbox */}
+                            <div className={`w-4 h-4 border rounded flex items-center justify-center flex-shrink-0 ${isSelected
+                                ? 'bg-blue-500 border-blue-500'
+                                : 'bg-white border-gray-300'
+                                }`}>
+                                {isSelected && (
+                                    <Check size={12} className="text-white" strokeWidth={3} />
+                                )}
+                            </div>
+                            <span className="text-xs font-bold">{option}</span>
+                        </div>
+                    );
+                })}
+
+                {filteredOptions.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                        No results found
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const SearchServerData = () => {
     const { t } = useTranslation();
 
@@ -46,6 +136,39 @@ const SearchServerData = () => {
         { Date: t("label.weeks"), Number: "Weeks" },
         { Date: t("label.months"), Number: "Months" },
         { Date: t("label.year"), Number: "Years" }
+    ];
+
+    const monthOptions = [
+        { Month: t("label.january"), Number: 1 },
+        { Month: t("label.february"), Number: 2 },
+        { Month: t("label.march"), Number: 3 },
+        { Month: t("label.april"), Number: 4 },
+        { Month: t("label.may"), Number: 5 },
+        { Month: t("label.june"), Number: 6 },
+        { Month: t("label.july"), Number: 7 },
+        { Month: t("label.august"), Number: 8 },
+        { Month: t("label.september"), Number: 9 },
+        { Month: t("label.october"), Number: 10 },
+        { Month: t("label.november"), Number: 11 },
+        { Month: t("label.december"), Number: 12 }
+    ];
+
+    const weekOptions = [
+        { weeks: t("label.first"), Number: 1 },
+        { weeks: t("label.second"), Number: 2 },
+        { weeks: t("label.third"), Number: 3 },
+        { weeks: t("label.fourth"), Number: 4 },
+        { weeks: t("label.fifth"), Number: 5 }
+    ];
+
+    const weekdayOptions = [
+        { days: t("label.sunday"), Number: 1 },
+        { days: t("label.monday"), Number: 2 },
+        { days: t("label.tuesday"), Number: 3 },
+        { days: t("label.wednesday"), Number: 4 },
+        { days: t("label.thursday"), Number: 5 },
+        { days: t("label.friday"), Number: 6 },
+        { days: t("label.saturday"), Number: 7 }
     ];
 
     const localDeleteCombo = [
@@ -130,9 +253,11 @@ const SearchServerData = () => {
     const [enableFileAudit, setEnableFileAudit] = useState(false);
     const [auditFilter, setAuditFilter] = useState('*.*');
 
+    const [copyFiles, setCopyFiles] = useState(true);
+    const [moveFiles, setMoveFiles] = useState(false);
     // Data Logger states
     const [dataLogger, setDataLogger] = useState(false);
-    const [archivalDays, setArchivalDays] = useState('0');
+    const [archivalDays, setArchivalDays] = useState('');
 
     // Schedule Capture states
     const [liveCapture, setLiveCapture] = useState(true);
@@ -142,6 +267,65 @@ const SearchServerData = () => {
 
     // Filter state
     const [filter, setFilter] = useState('*.*');
+
+    // Schedule Type states (when Live Capture is OFF)
+    const [oneTime, setOneTime] = useState(true);
+    const [daily, setDaily] = useState(false);
+    const [weekly, setWeekly] = useState(false);
+    const [monthly, setMonthly] = useState(false);
+    const [scheduleWithoutVersioning, setScheduleWithoutVersioning] = useState(false);
+
+    // Daily schedule states
+    const [dailyEveryDays, setDailyEveryDays] = useState('0');
+    const [dailyRepeatTask, setDailyRepeatTask] = useState(false);
+    const [dailyEveryHours, setDailyEveryHours] = useState('0');
+    const [dailyEveryMinutes, setDailyEveryMinutes] = useState('0');
+
+    // Weekly schedule states
+    const [weeklyDays, setWeeklyDays] = useState({
+        Sunday: false,
+        Monday: false,
+        Tuesday: false,
+        Wednesday: false,
+        Thursday: false,
+        Friday: false,
+        Saturday: false
+    });
+
+    // Monthly schedule states
+    const [monthlyDayToggle, setMonthlyDayToggle] = useState(false);
+    const [monthlyOnToggle, setMonthlyOnToggle] = useState(true);
+    const [monthlySearchTerm, setMonthlySearchTerm] = useState('');
+    const [monthlySelectedDays, setMonthlySelectedDays] = useState([]);
+    const [monthlyMonth, setMonthlyMonth] = useState('');
+    const [monthlyWeek, setMonthlyWeek] = useState('');
+    const [monthlyWeekdays, setMonthlyWeekdays] = useState('');
+
+    const [tempSelectedDays, setTempSelectedDays] = useState([]);
+    const [tempSelectedWeeks, setTempSelectedWeeks] = useState([]);
+    const [tempSelectedWeekdays, setTempSelectedWeekdays] = useState([]);
+
+    // One Time schedule state
+    const [oneTimeDate, setOneTimeDate] = useState(new Date().toLocaleDateString('en-GB'));
+
+    // Add these states after your existing monthly states (around line 125)
+    const [showDaySelector, setShowDaySelector] = useState(false);
+    const [showWeekSelector, setShowWeekSelector] = useState(false);
+    const [showWeekdaysSelector, setShowWeekdaysSelector] = useState(false);
+    const [monthlySelectedWeeks, setMonthlySelectedWeeks] = useState([]);
+    const [monthlySelectedWeekdays, setMonthlySelectedWeekdays] = useState([]);
+
+    // Add these new states after existing states
+    const [uncPathError, setUncPathError] = useState(false);
+    const [uncUsernameError, setUncUsernameError] = useState(false);
+    const [uncPasswordError, setUncPasswordError] = useState(false);
+    const [showExpiryWarning, setShowExpiryWarning] = useState(false);
+
+    // Add month selection states
+    const [monthlySearchTermMonth, setMonthlySearchTermMonth] = useState('');
+    const [monthlySelectedMonths, setMonthlySelectedMonths] = useState([]);
+    const [showMonthSelector, setShowMonthSelector] = useState(false);
+    const [tempSelectedMonths, setTempSelectedMonths] = useState([]);
 
 
     // Ref for the scrollable container (The specific div that scrolls)
@@ -155,6 +339,60 @@ const SearchServerData = () => {
     const schedulerMetadataRef = useRef(null);
 
 
+    // Date validation utilities
+    const isValidDate = (dateString) => {
+        const parts = dateString.split('/');
+        if (parts.length !== 3) return false;
+
+        const day = parseInt(parts[0]);
+        const month = parseInt(parts[1]);
+        const year = parseInt(parts[2]);
+
+        if (day < 1 || day > 31) return false;
+        if (month < 1 || month > 12) return false;
+        if (year < 1900 || year > 9999) return false;
+
+        return true;
+    };
+
+    const isFutureDate = (dateString) => {
+        const parts = dateString.split('/');
+        const date = new Date(parts[2], parts[1] - 1, parts[0]);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return date > today;
+    };
+
+    const isPastDate = (dateString) => {
+        const parts = dateString.split('/');
+        const date = new Date(parts[2], parts[1] - 1, parts[0]);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return date < today;
+    };
+
+    const getCurrentDate = () => {
+        return new Date().toLocaleDateString('en-GB');
+    };
+
+    const compareDates = (date1String, date2String) => {
+        const parts1 = date1String.split('/');
+        const parts2 = date2String.split('/');
+        const date1 = new Date(parts1[2], parts1[1] - 1, parts1[0]);
+        const date2 = new Date(parts2[2], parts2[1] - 1, parts2[0]);
+        return date1 - date2;
+    };
+
+    const validateTime = (hours, minutes, seconds) => {
+        const validHours = Math.min(Math.max(parseInt(hours) || 0, 0), 23);
+        const validMinutes = Math.min(Math.max(parseInt(minutes) || 0, 0), 59);
+        const validSeconds = Math.min(Math.max(parseInt(seconds) || 0, 0), 59);
+        return {
+            hours: validHours.toString().padStart(2, '0'),
+            minutes: validMinutes.toString().padStart(2, '0'),
+            seconds: validSeconds.toString().padStart(2, '0')
+        };
+    };
 
     // Load all combos on screen load
     const loadCombos = async () => {
@@ -342,7 +580,44 @@ const SearchServerData = () => {
         setPasswordError(false);
     };
 
+    const validateAndShowUNCPathModal = () => {
+        let hasError = false;
+
+        // Validate client selection
+        if (!selectedClient) {
+            setClientError(true);
+            hasError = true;
+        } else {
+            setClientError(false);
+        }
+
+        // Validate UNC path
+        if (!uncPath.trim()) {
+            setUncPathError(true);
+            hasError = true;
+        } else if (!CF_UNCPathValidation(uncPath)) {
+            setUncPathError(true);
+            hasError = true;
+        } else {
+            setUncPathError(false);
+        }
+
+        if (hasError) {
+            return;
+        }
+
+        // Open check path modal for UNC
+        setIsCheckPathModalOpen(true);
+        setCheckPathType('client');
+        setClientUsername('');
+        setClientPassword('');
+        setUsernameError(false);
+        setPasswordError(false);
+    };
+
     const submitCheckPath = async () => {
+        const pathToCheck = isUNCPathEnabled ? uncPath : sourcePath;
+
         if (checkPathType === 'client') {
             // Validate BOTH username and password before showing errors
             const hasUsernameError = !clientUsername.trim();
@@ -357,7 +632,7 @@ const SearchServerData = () => {
 
             try {
                 const requestData = {
-                    path: sourcePath,
+                    path: pathToCheck,
                     pathreference: 'local',
                     sclientname: clientOptions.find(c => c.L06ClientID === selectedClient)?.L06ClientName || '',
                     sclientusername: clientUsername,
@@ -400,7 +675,7 @@ const SearchServerData = () => {
             // Server path checking
             try {
                 const requestData = {
-                    path: sourcePath,
+                    path: pathToCheck,
                     ...CF_activeUserdetails()
                 };
 
@@ -438,6 +713,118 @@ const SearchServerData = () => {
         }
     };
 
+    const handleReset = () => {
+        // Reset File Settings
+        setSelectedClient('');
+        setSelectedInstrument('');
+        setSelectedMethod('');
+        setIsInstrumentDisabled(true);
+        setIsMethodDisabled(true);
+        setInstrumentOptions([]);
+        setMethodOptions([]);
+        setSourcePath('');
+        setSourcePathError(false);
+        setClientError(false);
+
+        // Reset Path Type
+        setIsUNCPathEnabled(false);
+        setUncPath('');
+        setUncUsername('');
+        setUncPassword('');
+        setUncPathError(false);
+        setUncUsernameError(false);
+        setUncPasswordError(false);
+        setSelectedDomain(domainOptions.length > 0 ? domainOptions[0].L03DomainID : '');
+        setSelectedDestination('');
+        setFilter('*.*');
+
+        // Reset Upload Policy
+        setIncludeSubfolder(false);
+        setCompleteTree(false);
+        setLevelEnabled(false);
+        setLevelValue('');
+        setCopyFiles(true);
+        setMoveFiles(false);
+        setDeleteLocalCopy(false);
+        setFilesOlderThanEnabled(false);
+        setFilesOlderDays('');
+        setFilesOlderDaysUnit('Days');
+        setLocalDeleteMode('automatic');
+        setFilesOlderThanDate(new Date().toLocaleDateString('en-GB'));
+        setFilesOlderThanDateEnabled(false);
+
+        // Reset Trigger/Expiry
+        setTriggerDate(new Date().toLocaleDateString('en-GB'));
+        setTriggerTime(new Date().toLocaleTimeString('en-GB'));
+        setExpiryEnabled(false);
+        setExpiryDate(new Date().toLocaleDateString('en-GB'));
+        setExpiryTime(new Date().toLocaleTimeString('en-GB'));
+        setShowExpiryWarning(false);
+
+        // Reset Policies
+        setApplyDeletePolicy(false);
+        setServerDeleteMode('automatic');
+        setEnableFileLink(false);
+        setEnableFileAudit(false);
+        setAuditFilter('*.*');
+        setDataLogger(false);
+        setArchivalDays('');
+
+        // Reset Schedule Capture
+        setLiveCapture(true);
+        setLiveCaptureVersioning(true);
+        setOneVersionPerDay(false);
+        setWithoutVersioning(false);
+        setOneTime(true);
+        setDaily(false);
+        setWeekly(false);
+        setMonthly(false);
+        setScheduleWithoutVersioning(false);
+        setOneTimeDate(new Date().toLocaleDateString('en-GB'));
+
+        // Reset Daily
+        setDailyEveryDays('0');
+        setDailyRepeatTask(false);
+        setDailyEveryHours('0');
+        setDailyEveryMinutes('0');
+
+        // Reset Weekly
+        setWeeklyDays({
+            Sunday: false,
+            Monday: false,
+            Tuesday: false,
+            Wednesday: false,
+            Thursday: false,
+            Friday: false,
+            Saturday: false
+        });
+
+        // Reset Monthly
+        setMonthlyDayToggle(false);
+        setMonthlyOnToggle(true);
+        setMonthlySearchTerm('');
+        setMonthlySelectedDays([]);
+        setMonthlyMonth('');
+        setMonthlyWeek('');
+        setMonthlyWeekdays('');
+        setMonthlySelectedWeeks([]);
+        setMonthlySelectedWeekdays([]);
+        setMonthlySelectedMonths([]);
+        setShowDaySelector(false);
+        setShowWeekSelector(false);
+        setShowWeekdaysSelector(false);
+        setShowMonthSelector(false);
+
+        // Reset Scheduler Metadata
+        setIsSchedulerMetadataEnabled(false);
+        setSelectedTemplate(templateOptions.length > 0 ? templateOptions[0].sTemplateID : '');
+        setSelectedDelimiter('');
+        setTagMasterData([]);
+
+        // Reload combos
+        loadCombos();
+    };
+
     // Load Tag Master based on selected template
     const loadTagMaster = async (templateId) => {
         console.log("=== loadTagMaster called ===");
@@ -466,6 +853,61 @@ const SearchServerData = () => {
             setTagMasterData([]);
         }
     };
+
+    const handleTriggerDateChange = (date) => {
+        const parts = date.split('/');
+        const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (selectedDate < today) {
+            setErrorDialog({
+                isOpen: true,
+                message: 'Selected date earlier than the current date',
+                type: 'warning'
+            });
+            setTriggerDate(new Date().toLocaleDateString('en-GB'));
+        } else {
+            setTriggerDate(date);
+        }
+    };
+
+    const handleExpiryDateChange = (date) => {
+        const parts = date.split('/');
+        const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (selectedDate < today) {
+            setErrorDialog({
+                isOpen: true,
+                message: 'Selected date earlier than the current date',
+                type: 'warning'
+            });
+            setExpiryDate(new Date().toLocaleDateString('en-GB'));
+        } else {
+            setExpiryDate(date);
+        }
+    };
+
+    const handleOneTimeDateChange = (date) => {
+        const parts = date.split('/');
+        const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (selectedDate < today) {
+            setErrorDialog({
+                isOpen: true,
+                message: 'Selected date earlier than the current date',
+                type: 'warning'
+            });
+            setOneTimeDate(new Date().toLocaleDateString('en-GB'));
+        } else {
+            setOneTimeDate(date);
+        }
+    };
+
     useEffect(() => {
         if (isSchedulerMetadataEnabled && selectedTemplate) {
             console.log("Loading tags for template:", selectedTemplate);
@@ -498,8 +940,56 @@ const SearchServerData = () => {
         }
     };
 
+    const handleSubmit = () => {
+        // Reset warning first
+        setShowExpiryWarning(false);
+
+        if (expiryEnabled) {
+            const triggerParts = triggerDate.split('/');
+            const expiryParts = expiryDate.split('/');
+
+            const triggerTimeParts = triggerTime.split(':');
+            const expiryTimeParts = expiryTime.split(':');
+
+            const triggerDateTime = new Date(
+                parseInt(triggerParts[2]),
+                parseInt(triggerParts[1]) - 1,
+                parseInt(triggerParts[0]),
+                parseInt(triggerTimeParts[0]),
+                parseInt(triggerTimeParts[1]),
+                parseInt(triggerTimeParts[2])
+            );
+
+            const expiryDateTime = new Date(
+                parseInt(expiryParts[2]),
+                parseInt(expiryParts[1]) - 1,
+                parseInt(expiryParts[0]),
+                parseInt(expiryTimeParts[0]),
+                parseInt(expiryTimeParts[1]),
+                parseInt(expiryTimeParts[2])
+            );
+
+            if (expiryDateTime < triggerDateTime) {
+                setShowExpiryWarning(true);
+                return; // Don't submit
+            }
+        }
+
+        // Continue with your submission logic here
+        console.log('Form submitted successfully');
+    };
+
     return (
         <div className="flex flex-col h-screen bg-gray-50 font-sans">
+
+            <style>
+                {`
+                    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+                    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+                    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+                `}
+            </style>
             {/* Fixed Navbar - Will not move because scrolling is handled in the div below */}
             <header className="z-10 bg-white border-b border-gray-200 shadow-sm flex-none h-16 sticky top-0">
                 <div className="flex items-center justify-between px-8 h-full">
@@ -532,13 +1022,18 @@ const SearchServerData = () => {
                     </nav>
 
                     <div className="flex items-center gap-3">
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-[5px] shadow-md hover:shadow-lg flex items-center gap-2 text-sm font-medium transition-all duration-200 transform active:scale-95">
+                        <button
+                            onClick={handleSubmit}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-[5px] shadow-md hover:shadow-lg flex items-center gap-2 text-sm font-medium transition-all duration-200 transform active:scale-95">
                             <div className="w-4 h-4 border-2 border-white rounded flex items-center justify-center">
                                 <Check size={10} strokeWidth={4} />
                             </div>
                             <span>Submit</span>
                         </button>
-                        <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 border border-gray-200 px-4 py-2.5 rounded-[5px] text-sm font-medium transition-all duration-200">
+                        <button
+                            onClick={handleReset}
+                            className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 border border-gray-200 px-4 py-2.5 rounded-[5px] text-sm font-medium transition-all duration-200"
+                        >
                             <RefreshCw size={16} />
                             <span>Reset</span>
                         </button>
@@ -673,20 +1168,22 @@ const SearchServerData = () => {
                                 <div className="space-y-10">
                                     <div className="space-y-2">
                                         <label className="block text-gray-600 text-sm font-bold">Path Type</label>
-                                        <div className="flex items-center gap-3 pt-1">
+                                        <div
+                                            className="flex items-center gap-3 pt-1 cursor-pointer"
+                                            onClick={() => {
+                                                if (isUNCPathEnabled) {
+                                                    setIsUNCPathEnabled(false);
+                                                    setUncPath('');
+                                                    setUncUsername('');
+                                                    setUncPassword('');
+                                                    setUncPathError(false);
+                                                    setUncUsernameError(false);
+                                                    setUncPasswordError(false);
+                                                }
+                                            }}
+                                        >
                                             <span className="text-gray-700 text-sm font-medium">Local Path</span>
-                                            <div
-                                                onClick={() => {
-                                                    if (isUNCPathEnabled) {
-                                                        // Can only enable Local Path if UNC is currently on
-                                                        setIsUNCPathEnabled(false);
-                                                        setUncPath('');
-                                                        setUncUsername('');
-                                                        setUncPassword('');
-                                                    }
-                                                }}
-                                                className={`w-10 h-5 flex items-center rounded-full p-0.5 ${isUNCPathEnabled ? 'cursor-pointer' : 'cursor-not-allowed'} transition-colors duration-300 ${!isUNCPathEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
-                                            >
+                                            <div className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-300 ${!isUNCPathEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}>
                                                 <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${!isUNCPathEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
                                             </div>
                                         </div>
@@ -713,7 +1210,9 @@ const SearchServerData = () => {
                                             <button
                                                 type="button"
                                                 onClick={validateAndShowCheckPathModal}
-                                                className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded text-sm font-bold flex items-center gap-2 transition-colors"
+                                                disabled={isUNCPathEnabled}
+                                                className={`bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded text-sm font-bold flex items-center gap-2 transition-colors ${isUNCPathEnabled ? 'opacity-50 cursor-not-allowed' : ''
+                                                    }`}
                                             >
                                                 <Check size={16} strokeWidth={3} /> Check
                                             </button>
@@ -728,66 +1227,111 @@ const SearchServerData = () => {
                                 <h3 className="text-gray-600 font-bold text-base mb-8">UNC Credentials</h3>
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-24 gap-y-10">
                                     <div className="space-y-8">
-
-                                        <div className="flex items-center gap-4">
+                                        <div
+                                            className="flex items-center gap-4 cursor-pointer"
+                                            onClick={() => {
+                                                if (!isUNCPathEnabled) {
+                                                    setIsUNCPathEnabled(true);
+                                                    setSourcePath('');
+                                                    setSourcePathError(false);
+                                                }
+                                            }}
+                                        >
                                             <label className="text-gray-600 text-sm font-bold">UNC Path</label>
-                                            <div
-                                                onClick={() => {
-                                                    if (!isUNCPathEnabled) {
-                                                        // Can only enable if Local Path is checked (currently on)
-                                                        setIsUNCPathEnabled(true);
-                                                        setSourcePath(''); // Disable local path by clearing it
-                                                    }
-                                                }}
-                                                className={`w-10 h-5 flex items-center rounded-full p-0.5 ${!isUNCPathEnabled ? 'cursor-pointer' : 'cursor-not-allowed'} transition-colors duration-300 ${isUNCPathEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
-                                            >
+                                            <div className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-300 ${isUNCPathEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}>
                                                 <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${isUNCPathEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
                                             </div>
                                         </div>
                                         <div>
                                             <div className="flex items-end gap-3">
-                                                <div className="flex-1"><UnderlineInput
-                                                    label="UNC Path"
-                                                    value={uncPath}
-                                                    onChange={(e) => {
-                                                        const value = e.target.value;
-                                                        if (CF_UNCPathValidation(value) && CF_sourcePathValidation(value) && CF_textFieldValidation(value)) {
+                                                <div className="flex-1">
+                                                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                                                        UNC Path
+                                                    </label>
+                                                    {/* <input
+                                                        type="text"
+                                                        value={uncPath}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value;
+                                                            if (CF_UNCPathValidation(value) && CF_sourcePathValidation(value) && CF_textFieldValidation(value)) {
+                                                                setUncPath(value);
+                                                                setUncPathError(false);
+                                                            }
+                                                        }}
+                                                        disabled={!isUNCPathEnabled}
+                                                        className={`w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none transition-colors ${!isUNCPathEnabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''
+                                                            } ${uncPathError ? 'border-red-500' : 'border-gray-200 focus:border-blue-400'}`}
+                                                    /> */}
+                                                    <input
+                                                        type="text"
+                                                        value={uncPath}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value;
                                                             setUncPath(value);
-                                                        }
-                                                    }}
-                                                    disabled={!isUNCPathEnabled}
-                                                />
+
+                                                            setUncPathError(
+                                                                !CF_UNCPathValidation(value) ||
+                                                                !CF_sourcePathValidation(value) ||
+                                                                !CF_textFieldValidation(value)
+                                                            );
+                                                        }}
+                                                        disabled={!isUNCPathEnabled}
+                                                        className={`w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none transition-colors
+    ${!isUNCPathEnabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}
+    ${uncPathError ? 'border-red-500' : 'border-gray-200 focus:border-blue-400'}`}
+                                                    />
+
                                                 </div>
-                                                <button className="bg-blue-50 text-blue-600 border-1 border-gray-500 hover:bg-blue-100 px-4 py-2 rounded text-sm font-bold flex items-center gap-2 transition-colors mb-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={validateAndShowUNCPathModal}
+                                                    disabled={!isUNCPathEnabled}
+                                                    className={`bg-blue-50 text-blue-600 border-1 border-gray-500 hover:bg-blue-100 px-4 py-2 rounded text-sm font-bold flex items-center gap-2 transition-colors mb-1 ${!isUNCPathEnabled ? 'opacity-50 cursor-not-allowed' : ''
+                                                        }`}
+                                                >
                                                     <Check size={16} strokeWidth={3} /> Check
                                                 </button>
                                             </div>
                                             <p className="text-gray-400 text-xs mt-3 font-medium">NOTE:- Browse is not supported. Manually copy the path</p>
                                         </div>
                                         <div className="grid grid-cols-2 gap-6">
-                                            <UnderlineInput
-                                                label="Username"
-                                                value={uncUsername}
-                                                onChange={(e) => {
-                                                    if (CF_textFieldValidation(e.target.value)) {
-                                                        setUncUsername(e.target.value);
-                                                    }
-                                                }}
-                                                disabled={!isUNCPathEnabled}
-                                            />
-                                            <UnderlineInput
-                                                label="Password"
-                                                type="password"
-                                                value={uncPassword}
-                                                onChange={(e) => {
-                                                    if (CF_textFieldValidation(e.target.value)) {
-                                                        setUncPassword(e.target.value);
-                                                    }
-                                                }}
-                                                disabled={!isUNCPathEnabled}
-                                            />
+                                            <div className="group w-full relative">
+                                                <label className="block text-gray-700 text-sm font-bold mb-2">
+                                                    Username
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={uncUsername}
+                                                    onChange={(e) => {
+                                                        if (CF_textFieldValidation(e.target.value)) {
+                                                            setUncUsername(e.target.value);
+                                                            setUncUsernameError(false);
+                                                        }
+                                                    }}
+                                                    disabled={!isUNCPathEnabled}
+                                                    className={`w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none transition-colors ${!isUNCPathEnabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''
+                                                        } ${uncUsernameError ? 'border-red-500' : 'border-gray-200 focus:border-blue-400'}`}
+                                                />
+                                            </div>
+                                            <div className="group w-full relative">
+                                                <label className="block text-gray-700 text-sm font-bold mb-2">
+                                                    Password
+                                                </label>
+                                                <input
+                                                    type="password"
+                                                    value={uncPassword}
+                                                    onChange={(e) => {
+                                                        if (CF_textFieldValidation(e.target.value)) {
+                                                            setUncPassword(e.target.value);
+                                                            setUncPasswordError(false);
+                                                        }
+                                                    }}
+                                                    disabled={!isUNCPathEnabled}
+                                                    className={`w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none transition-colors ${!isUNCPathEnabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''
+                                                        } ${uncPasswordError ? 'border-red-500' : 'border-gray-200 focus:border-blue-400'}`}
+                                                />
+                                            </div>
                                         </div>
-                                        {/* <UnderlineSelect label="Domain" placeholder="NONE" /> */}
                                         <UnderlineSelect
                                             label="Domain"
                                             options={domainOptions}
@@ -799,7 +1343,6 @@ const SearchServerData = () => {
                                         />
                                     </div>
                                     <div className="space-y-10">
-                                        {/* <UnderlineSelect label="Destination" required /> */}
                                         <UnderlineSelect
                                             label="Destination"
                                             required
@@ -809,17 +1352,22 @@ const SearchServerData = () => {
                                             value={selectedDestination}
                                             onChange={(value) => setSelectedDestination(value)}
                                         />
-                                        <input
-                                            type="text"
-                                            value={filter}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                if (CF_textFieldValidation(value) && CF_maxLengthValidation(value, 50)) {
-                                                    setFilter(value);
-                                                }
-                                            }}
-                                            className="w-full bg-transparent border-b border-gray-300 pb-1 text-sm text-gray-600 focus:outline-none focus:border-blue-400"
-                                        />
+                                        <div className="group w-full relative">
+                                            <label className="block text-gray-700 text-sm font-bold mb-2">
+                                                Filter
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={filter}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    if (CF_textFieldValidation(value) && CF_maxLengthValidation(value, 50)) {
+                                                        setFilter(value);
+                                                    }
+                                                }}
+                                                className="w-full bg-transparent border-b-2 border-gray-200 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-400"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -837,16 +1385,32 @@ const SearchServerData = () => {
                                     <SquareCheckbox
                                         label="Include Subfolder"
                                         checked={includeSubfolder}
-                                        onChange={() => setIncludeSubfolder(!includeSubfolder)}
-                                    />
+                                        onChange={() => {
+                                            const newValue = !includeSubfolder;
+                                            setIncludeSubfolder(newValue);
 
+                                            if (newValue) {
+                                                setCompleteTree(true);  // Auto-enable Complete Tree
+                                                setLevelEnabled(false); // Level enabled but OFF
+                                            } else {
+                                                setCompleteTree(false);
+                                                setLevelEnabled(false);
+                                                setLevelValue('');
+                                            }
+                                        }}
+                                    />
                                     <div className="flex items-center gap-6">
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-bold text-blue-800">Complete Tree</span>
                                             <div
                                                 onClick={() => {
                                                     if (includeSubfolder) {
-                                                        setCompleteTree(!completeTree);
+                                                        const newCompleteTree = !completeTree;
+                                                        setCompleteTree(newCompleteTree);
+                                                        // When Complete Tree is turned ON, turn OFF Level
+                                                        if (newCompleteTree) {
+                                                            setLevelEnabled(false);
+                                                        }
                                                     }
                                                 }}
                                                 className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${includeSubfolder ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
@@ -862,7 +1426,12 @@ const SearchServerData = () => {
                                                 <div
                                                     onClick={() => {
                                                         if (includeSubfolder) {
-                                                            setLevelEnabled(!levelEnabled);
+                                                            const newLevelEnabled = !levelEnabled;
+                                                            setLevelEnabled(newLevelEnabled);
+                                                            // When Level is turned ON, turn OFF Complete Tree
+                                                            if (newLevelEnabled) {
+                                                                setCompleteTree(false);
+                                                            }
                                                         }
                                                     }}
                                                     className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${includeSubfolder ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
@@ -887,41 +1456,98 @@ const SearchServerData = () => {
                                     </div>
 
                                     <div className="flex items-center gap-8 pt-2">
-                                        <ToggleLabel label="Copy Files" checked={true} />
-                                        <ToggleLabel label="Move Files(Do not leave local copy)" />
+                                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => {
+                                            if (!copyFiles) {
+                                                setCopyFiles(true);
+                                                setMoveFiles(false);
+                                            }
+                                        }}>
+                                            <span className={`text-sm font-bold ${copyFiles ? 'text-blue-600' : 'text-blue-800'}`}>Copy Files</span>
+                                            <div className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${copyFiles ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                                                <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${copyFiles ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => {
+                                            if (!moveFiles) {
+                                                setMoveFiles(true);
+                                                setCopyFiles(false);
+                                                // When Move Files is ON, disable and uncheck Delete local copy
+                                                setDeleteLocalCopy(false);
+                                                setFilesOlderThanEnabled(false);
+                                                setFilesOlderThanDateEnabled(false);
+                                            }
+                                        }}>
+                                            <span className={`text-sm font-bold ${moveFiles ? 'text-blue-600' : 'text-blue-800'}`}>Move Files(Do not leave local copy)</span>
+                                            <div className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${moveFiles ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                                                <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${moveFiles ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* Right Column */}
                                 <div className="space-y-8">
-                                    <SquareCheckbox
-                                        label="Delete local copy"
-                                        checked={deleteLocalCopy}
-                                        onChange={() => {
-                                            const newValue = !deleteLocalCopy;
-                                            setDeleteLocalCopy(newValue);
-                                            // When Delete local copy is checked, enable the first "Files older than" by default
-                                            if (newValue) {
-                                                setFilesOlderThanEnabled(true);
-                                                setFilesOlderThanDateEnabled(false);
+                                    <div
+                                        className="flex items-center gap-3 cursor-pointer group"
+                                        onClick={() => {
+                                            if (!moveFiles) {
+                                                const newValue = !deleteLocalCopy;
+                                                setDeleteLocalCopy(newValue);
+                                                if (newValue) {
+                                                    setFilesOlderThanEnabled(true);
+                                                    setFilesOlderThanDateEnabled(false);
+                                                } else {
+                                                    setFilesOlderThanEnabled(false);
+                                                    setFilesOlderThanDateEnabled(false);
+                                                    setFilesOlderDays('');
+                                                    setFilesOlderThanDate(new Date().toLocaleDateString('en-GB'));
+                                                }
                                             }
                                         }}
-                                    />
+                                    >
+                                        <div className={`w-5 h-5 border rounded-sm flex items-center justify-center transition-colors ${moveFiles
+                                            ? 'bg-gray-100 border-gray-300 cursor-not-allowed'
+                                            : deleteLocalCopy
+                                                ? 'bg-blue-500 border-blue-500'
+                                                : 'bg-white border-gray-300 group-hover:border-blue-400'
+                                            }`}>
+                                            {deleteLocalCopy && <Check size={14} className={moveFiles ? 'text-gray-400' : 'text-white'} strokeWidth={3} />}
+                                        </div>
+                                        <span className="text-sm text-blue-800 font-bold">Delete local copy</span>
+                                    </div>
 
-                                    {/* Files older than with number input - SINGLE LINE */}
+                                    {/* First Files older than (number) */}
                                     <div className="flex items-end gap-4">
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-bold text-blue-800">Files older than</span>
+                                            {/* <div
+                                                onClick={() => {
+                                                    if (deleteLocalCopy && !moveFiles) { // Check moveFiles
+                                                        if (!filesOlderThanEnabled) {
+                                                            setFilesOlderThanEnabled(true);
+                                                            setFilesOlderThanDateEnabled(false);
+                                                        } else {
+                                                            setFilesOlderThanEnabled(false);
+                                                            setFilesOlderThanDateEnabled(true);
+                                                        }
+                                                    }
+                                                }} */}
                                             <div
                                                 onClick={() => {
-                                                    if (deleteLocalCopy && !filesOlderThanDateEnabled) {
+                                                    if (deleteLocalCopy && !moveFiles) {
                                                         setFilesOlderThanEnabled(!filesOlderThanEnabled);
+                                                        if (!filesOlderThanEnabled) {
+                                                            // If turning ON first, turn OFF second
+                                                            setFilesOlderThanDateEnabled(false);
+                                                        }
                                                     }
                                                 }}
-                                                className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${(deleteLocalCopy && !filesOlderThanDateEnabled) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                                                className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${(deleteLocalCopy && !moveFiles) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
                                                     } ${filesOlderThanEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
                                             >
-                                                <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${filesOlderThanEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                                <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${filesOlderThanEnabled ? 'translate-x-4' : 'translate-x-0'
+                                                    }`}></div>
                                             </div>
                                         </div>
 
@@ -933,8 +1559,10 @@ const SearchServerData = () => {
                                                     setFilesOlderDays(e.target.value);
                                                 }
                                             }}
-                                            disabled={!filesOlderThanEnabled || !deleteLocalCopy}
-                                            className={`w-16 border-b-2 px-1 py-1 text-sm ${(!filesOlderThanEnabled || !deleteLocalCopy) ? 'border-gray-200 bg-gray-50 cursor-not-allowed' : 'border-gray-300'
+                                            disabled={!filesOlderThanEnabled || !deleteLocalCopy || moveFiles}
+                                            className={`w-16 border-b-2 px-1 py-1 text-sm ${(!filesOlderThanEnabled || !deleteLocalCopy || moveFiles)
+                                                ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                                                : 'border-gray-300'
                                                 }`}
                                         />
 
@@ -965,48 +1593,72 @@ const SearchServerData = () => {
                                             <select
                                                 value={localDeleteMode}
                                                 onChange={(e) => setLocalDeleteMode(e.target.value)}
-                                                disabled={!filesOlderThanEnabled || !deleteLocalCopy}
-                                                className={`w-full bg-transparent border-b-2 py-1 pr-6 text-sm italic appearance-none focus:outline-none ${(!filesOlderThanEnabled || !deleteLocalCopy)
+                                                // disabled={(!filesOlderThanEnabled && !filesOlderThanDateEnabled) || !deleteLocalCopy || moveFiles}
+                                                disabled={!deleteLocalCopy || moveFiles}
+                                                className={`w-full bg-transparent border-b-2 py-1 pr-6 text-sm italic appearance-none focus:outline-none ${((!filesOlderThanEnabled && !filesOlderThanDateEnabled) || !deleteLocalCopy || moveFiles)
                                                     ? 'text-gray-300 border-gray-200 cursor-not-allowed'
                                                     : 'text-gray-600 border-gray-300 focus:border-blue-400 cursor-pointer'
                                                     }`}
                                             >
-                                                {localDeleteCombo.map((item) => (
-                                                    <option key={item.LocalDeleteNo} value={item.LocalDeleteNo}>
-                                                        {item.LocalDeleteName}
+                                                {serverDeleteCombo.map((item) => (
+                                                    <option key={item.ServerDeleteNo} value={item.ServerDeleteNo}>
+                                                        {item.ServerDeleteName}
                                                     </option>
                                                 ))}
                                             </select>
                                             <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                <ChevronDown size={14} className={(!filesOlderThanEnabled || !deleteLocalCopy) ? 'text-gray-200' : 'text-gray-300'} />
+                                                <ChevronDown size={14} className={
+                                                    ((!filesOlderThanEnabled && !filesOlderThanDateEnabled) || !deleteLocalCopy || moveFiles)
+                                                        ? 'text-gray-200'
+                                                        : 'text-gray-300'
+                                                } />
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Files older than with date */}
-                                    <div className="flex items-center gap-4 pt-2">
+                                    {/* Second Files older than (date) */}
+                                    <div className="flex items-end gap-4">
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-bold text-blue-800">Files older than</span>
                                             <div
+                                                // onClick={() => {
+                                                //     if (deleteLocalCopy && !moveFiles && filesOlderThanEnabled) {
+                                                //         // Enable BOTH first and second Files older than
+                                                //         if (!filesOlderThanDateEnabled) {
+                                                //             setFilesOlderThanDateEnabled(true);
+                                                //             // Keep first one enabled too
+                                                //         } else {
+                                                //             setFilesOlderThanDateEnabled(false);
+                                                //         }
+                                                //     }
+                                                // }}
+
                                                 onClick={() => {
-                                                    if (deleteLocalCopy && !filesOlderThanEnabled) {
+                                                    if (deleteLocalCopy && !moveFiles) {
                                                         setFilesOlderThanDateEnabled(!filesOlderThanDateEnabled);
+                                                        if (!filesOlderThanDateEnabled) {
+                                                            // If turning ON second, turn OFF first
+                                                            setFilesOlderThanEnabled(false);
+                                                        }
                                                     }
                                                 }}
-                                                className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${(deleteLocalCopy && !filesOlderThanEnabled) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
-                                                    } ${filesOlderThanDateEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                                // className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${(deleteLocalCopy && !moveFiles && filesOlderThanEnabled) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                                                className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${(deleteLocalCopy && !moveFiles) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'} ${filesOlderThanDateEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
                                             >
-                                                <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${filesOlderThanDateEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                                <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${filesOlderThanDateEnabled ? 'translate-x-4' : 'translate-x-0'
+                                                    }`}></div>
                                             </div>
                                         </div>
-                                        <DateInput
+                                        <DatePickerInput
                                             value={filesOlderThanDate}
-                                            disabled={!filesOlderThanDateEnabled || !deleteLocalCopy}
+                                            onChange={(date) => setFilesOlderThanDate(date)}
+                                            disabled={!filesOlderThanDateEnabled || !deleteLocalCopy || moveFiles}
                                         />
                                     </div>
                                 </div>
                             </div>
                         </div>
+
 
                         {/* Schedule Trigger/Expiry On Section */}
                         <div
@@ -1017,15 +1669,13 @@ const SearchServerData = () => {
                             <div className="space-y-8">
                                 <div className="flex items-center gap-4">
                                     <label className="text-gray-600 text-sm font-bold w-24">Trigger on</label>
-                                    {/* <DateInput value="14/01/2026" />
-                                    <TimeInput value="16:00:26" /> */}
-                                    <DateInput
-                                        value={expiryDate}
-                                        disabled={!expiryEnabled}
+                                    <DatePickerInput
+                                        value={triggerDate}
+                                        onChange={handleTriggerDateChange}
                                     />
-                                    <TimeInput
-                                        value={expiryTime}
-                                        disabled={!expiryEnabled}
+                                    <TimePicker
+                                        value={triggerTime}
+                                        onChange={(time) => setTriggerTime(time)}
                                     />
                                 </div>
                                 <div className="flex items-center gap-4">
@@ -1037,15 +1687,24 @@ const SearchServerData = () => {
                                             checked={expiryEnabled}
                                             onChange={() => setExpiryEnabled(!expiryEnabled)}
                                         />
-                                        <DateInput
+                                        <DatePickerInput
                                             value={expiryDate}
+                                            onChange={handleExpiryDateChange}
                                             disabled={!expiryEnabled}
                                         />
-                                        <TimeInput
+                                        <TimePicker
                                             value={expiryTime}
+                                            onChange={(time) => setExpiryTime(time)}
                                             disabled={!expiryEnabled}
                                         />
                                     </div>
+                                    {showExpiryWarning && (
+                                        <div className="flex items-center gap-4 ml-24">
+                                            <div className="bg-yellow-400 text-white px-4 py-2 rounded text-sm font-medium">
+                                                Trigger Date/time should not be less than expiry date/time
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1057,18 +1716,34 @@ const SearchServerData = () => {
                                     <h3 className="text-blue-600 font-bold text-sm">File Delete Policy</h3>
                                     <div className="space-y-6">
                                         <div className="flex items-center gap-3">
-                                            <SquareCheckbox />
-
-                                            <label className="text-sm text-gray-800 font-medium whitespace-nowrap">
-                                                Apply Delete Policy for Server Files
-                                            </label>
+                                            <div
+                                                className="flex items-center gap-3 cursor-pointer group"
+                                                onClick={() => {
+                                                    if (!moveFiles) {
+                                                        const newValue = !applyDeletePolicy;
+                                                        setApplyDeletePolicy(newValue);
+                                                    }
+                                                }}
+                                            >
+                                                <div className={`w-5 h-5 border rounded-sm flex items-center justify-center transition-colors ${moveFiles
+                                                    ? 'bg-gray-100 border-gray-300 cursor-not-allowed'
+                                                    : applyDeletePolicy
+                                                        ? 'bg-blue-500 border-blue-500'
+                                                        : 'bg-white border-gray-300 group-hover:border-blue-400'
+                                                    }`}>
+                                                    {applyDeletePolicy && <Check size={14} className={moveFiles ? 'text-gray-400' : 'text-white'} strokeWidth={3} />}
+                                                </div>
+                                                <label className="text-sm text-gray-800 font-medium whitespace-nowrap">
+                                                    Apply Delete Policy for Server Files
+                                                </label>
+                                            </div>
 
                                             <div className="relative w-32">
                                                 <select
-                                                    value={localDeleteMode}
-                                                    onChange={(e) => setLocalDeleteMode(e.target.value)}
-                                                    disabled={!filesOlderThanEnabled || !deleteLocalCopy}
-                                                    className={`w-full bg-transparent border-b-2 py-1 pr-6 text-sm italic appearance-none focus:outline-none ${(!filesOlderThanEnabled || !deleteLocalCopy)
+                                                    value={serverDeleteMode}
+                                                    onChange={(e) => setServerDeleteMode(e.target.value)}
+                                                    disabled={!applyDeletePolicy}
+                                                    className={`w-full bg-transparent border-b-2 py-1 pr-6 text-sm italic appearance-none focus:outline-none ${!applyDeletePolicy
                                                         ? 'text-gray-300 border-gray-200 cursor-not-allowed'
                                                         : 'text-gray-600 border-gray-300 focus:border-blue-400 cursor-pointer'
                                                         }`}
@@ -1086,21 +1761,39 @@ const SearchServerData = () => {
                                                 />
                                             </div>
                                         </div>
-                                        <SquareCheckbox label="Enable file link" boldLabel />
+                                        <SquareCheckbox
+                                            label="Enable file link"
+                                            boldLabel
+                                            checked={enableFileLink}
+                                            onChange={() => setEnableFileLink(!enableFileLink)}
+                                        />
                                     </div>
                                 </div>
                                 <div className="space-y-6">
                                     <h3 className="text-blue-600 font-bold text-sm">Compliance Policy</h3>
                                     <div className="space-y-6">
-                                        <SquareCheckbox label="Enable File Audit" boldLabel />
+                                        <SquareCheckbox
+                                            label="Enable File Audit"
+                                            boldLabel
+                                            checked={enableFileAudit}
+                                            onChange={() => setEnableFileAudit(!enableFileAudit)}
+                                        />
                                         <div className="flex items-center gap-4">
                                             <label className="text-gray-600 text-sm font-bold w-20">Audit Filter</label>
                                             <div className="flex-1">
                                                 <input
                                                     type="text"
-                                                    value="*.*"
-                                                    disabled
-                                                    className="w-full bg-transparent border-b border-gray-200 pb-1 text-sm text-gray-400 focus:outline-none cursor-not-allowed"
+                                                    value={auditFilter}
+                                                    onChange={(e) => {
+                                                        if (CF_textFieldValidation(e.target.value)) {
+                                                            setAuditFilter(e.target.value);
+                                                        }
+                                                    }}
+                                                    disabled={!enableFileAudit}
+                                                    className={`w-full bg-transparent border-b pb-1 text-sm focus:outline-none ${enableFileAudit
+                                                        ? 'border-gray-300 text-gray-700 focus:border-blue-400'
+                                                        : 'border-gray-200 text-gray-400 cursor-not-allowed'
+                                                        }`}
                                                 />
                                             </div>
                                         </div>
@@ -1109,13 +1802,27 @@ const SearchServerData = () => {
                                 <div className="space-y-6">
                                     <h3 className="text-blue-600 font-bold text-sm">Data Logger</h3>
                                     <div className="space-y-6">
-                                        <SquareCheckbox label="Data Logger" boldLabel />
+                                        <SquareCheckbox
+                                            label="Data Logger"
+                                            boldLabel
+                                            checked={dataLogger}
+                                            onChange={() => setDataLogger(!dataLogger)}
+                                        />
                                         <div className="flex items-center gap-2">
                                             <label className="text-gray-600 text-sm font-bold w-16">Archival</label>
                                             <input
-                                                type="number"
-                                                disabled
-                                                className="w-20 bg-gray-50 border-b border-gray-200 h-6 text-sm text-gray-400 cursor-not-allowed focus:outline-none"
+                                                type="text"
+                                                value={archivalDays}
+                                                onChange={(e) => {
+                                                    if (CF_numberValidation(e.target.value, 5)) {
+                                                        setArchivalDays(e.target.value);
+                                                    }
+                                                }}
+                                                disabled={!dataLogger}
+                                                className={`w-20 border-b h-6 text-sm focus:outline-none ${dataLogger
+                                                    ? 'bg-white border-gray-300 text-gray-700'
+                                                    : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                                                    }`}
                                             />
                                             <span className="text-gray-600 text-sm font-bold">Days Older</span>
                                         </div>
@@ -1131,12 +1838,530 @@ const SearchServerData = () => {
                         >
                             <SectionHeader title="Schedule Capture" />
                             <div className="space-y-6">
-                                <SquareCheckbox label="Live Capture" boldLabel checked={true} />
-                                <div className="flex items-center gap-8 pl-1">
-                                    <ToggleLabel label="Live Capture Versioning" checked={true} />
-                                    <ToggleLabel label="One version per Day" />
-                                    <ToggleLabel label="Without Versioning" />
-                                </div>
+                                <SquareCheckbox
+                                    label="Live Capture"
+                                    boldLabel
+                                    checked={liveCapture}
+                                    onChange={() => {
+                                        const newValue = !liveCapture;
+                                        setLiveCapture(newValue);
+
+                                        if (newValue) {
+                                            // Reset to default versioning options
+                                            setLiveCaptureVersioning(true);
+                                            setOneVersionPerDay(false);
+                                            setWithoutVersioning(false);
+                                        } else {
+                                            // Reset to schedule options
+                                            setOneTime(true);
+                                            setDaily(false);
+                                            setWeekly(false);
+                                            setMonthly(false);
+                                            setScheduleWithoutVersioning(false);
+                                        }
+                                    }}
+                                />
+
+                                {liveCapture ? (
+                                    // Live Capture Versioning Options
+                                    <div className="flex items-center gap-8 pl-1">
+                                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => {
+                                            if (!liveCaptureVersioning) {
+                                                setLiveCaptureVersioning(true);
+                                                setOneVersionPerDay(false);
+                                                setWithoutVersioning(false);
+                                            }
+                                        }}>
+                                            <span className={`text-sm font-bold ${liveCaptureVersioning ? 'text-blue-600' : 'text-blue-800'}`}>
+                                                Live Capture Versioning
+                                            </span>
+                                            <div className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${liveCaptureVersioning ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                                                <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${liveCaptureVersioning ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => {
+                                            if (!oneVersionPerDay) {
+                                                setOneVersionPerDay(true);
+                                                setLiveCaptureVersioning(false);
+                                                setWithoutVersioning(false);
+                                            }
+                                        }}>
+                                            <span className={`text-sm font-bold ${oneVersionPerDay ? 'text-blue-600' : 'text-blue-800'}`}>
+                                                One version per Day
+                                            </span>
+                                            <div className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${oneVersionPerDay ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                                                <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${oneVersionPerDay ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            className="flex items-center gap-2 cursor-pointer"
+                                            onClick={() => {
+                                                if (!withoutVersioning) {
+                                                    setWithoutVersioning(true);
+                                                    setLiveCaptureVersioning(false);
+                                                    setOneVersionPerDay(false);
+                                                }
+                                            }}
+                                        >
+                                            <span
+                                                className={`text-sm font-bold ${withoutVersioning ? 'text-blue-600' : 'text-blue-800'
+                                                    }`}
+                                            >
+                                                Without Versioning
+                                            </span>
+
+                                            <div
+                                                className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${withoutVersioning ? 'bg-blue-500' : 'bg-gray-300'
+                                                    }`}
+                                            >
+                                                <div
+                                                    className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${withoutVersioning ? 'translate-x-4' : 'translate-x-0'
+                                                        }`}
+                                                />
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                ) : (
+                                    // Schedule Options (One Time, Daily, Weekly, Monthly)
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-6">
+                                            <RadioToggle
+                                                label="One Time"
+                                                checked={oneTime}
+                                                onChange={() => {
+                                                    setOneTime(true);
+                                                    setDaily(false);
+                                                    setWeekly(false);
+                                                    setMonthly(false);
+                                                    setScheduleWithoutVersioning(false); // Uncheck when One Time is selected
+                                                }}
+                                            />
+                                            <RadioToggle
+                                                label="Daily"
+                                                checked={daily}
+                                                onChange={() => {
+                                                    setDaily(true);
+                                                    setOneTime(false);
+                                                    setWeekly(false);
+                                                    setMonthly(false);
+                                                }}
+                                            />
+                                            <RadioToggle
+                                                label="Weekly"
+                                                checked={weekly}
+                                                onChange={() => {
+                                                    setWeekly(true);
+                                                    setOneTime(false);
+                                                    setDaily(false);
+                                                    setMonthly(false);
+                                                }}
+                                            />
+                                            <RadioToggle
+                                                label="Monthly"
+                                                checked={monthly}
+                                                onChange={() => {
+                                                    setMonthly(true);
+                                                    setOneTime(false);
+                                                    setDaily(false);
+                                                    setWeekly(false);
+                                                    // Set Day toggle ON by default
+                                                    setMonthlyDayToggle(true);
+                                                    setMonthlyOnToggle(false);
+                                                }}
+                                            />
+                                            <SquareCheckbox
+                                                label={withoutVersioning ? "With Versioning" : "Without Versioning"}
+                                                boldLabel
+                                                checked={withoutVersioning}
+                                                onChange={() => setWithoutVersioning(prev => !prev)}
+                                                disabled={oneTime}
+                                            />
+
+                                        </div>
+
+                                        {/* One Time Schedule UI */}
+                                        {oneTime && (
+                                            <div className="flex items-center gap-4 pl-4">
+                                                <label className="text-gray-600 text-sm font-bold">Day</label>
+                                                <DatePickerInput
+                                                    value={oneTimeDate}
+                                                    onChange={handleOneTimeDateChange}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* Daily Schedule UI */}
+
+                                        {daily && (
+                                            <div className="flex gap-6 pl-4">
+
+                                                {/* LEFT: Repeat checkbox (center aligned) */}
+                                                <div className="flex items-center">
+                                                    <SquareCheckbox
+                                                        label="Repeat Task"
+                                                        boldLabel
+                                                        checked={dailyRepeatTask}
+                                                        onChange={() => setDailyRepeatTask(!dailyRepeatTask)}
+                                                    />
+                                                </div>
+
+                                                {/* RIGHT: Every fields */}
+                                                <div className="space-y-4">
+
+                                                    {/* Every Day */}
+                                                    <div className="flex items-center gap-4">
+                                                        <label className="text-gray-600 text-sm font-bold w-16">Every</label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            value={dailyEveryDays}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                if (/^\d*$/.test(value) && parseInt(value) >= 0) {
+                                                                    setDailyEveryDays(value);
+                                                                }
+                                                            }}
+                                                            className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+                                                        />
+                                                        <span className="text-gray-600 text-sm font-bold">Day</span>
+                                                    </div>
+
+                                                    {/* Every Hour & Minute */}
+                                                    <div className="flex items-center gap-4">
+                                                        <label className="text-gray-600 text-sm font-bold w-16">Every</label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="24"
+                                                            value={dailyEveryHours}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                const num = parseInt(value);
+                                                                if (/^\d*$/.test(value) && num >= 0 && num <= 24) {
+                                                                    setDailyEveryHours(value);
+                                                                }
+                                                            }}
+                                                            className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+                                                        />
+                                                        <span className="text-gray-600 text-sm font-bold">Hour</span>
+
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="59"
+                                                            value={dailyEveryMinutes}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                const num = parseInt(value);
+                                                                if (/^\d*$/.test(value) && num >= 0 && num <= 59) {
+                                                                    setDailyEveryMinutes(value);
+                                                                }
+                                                            }}
+                                                            className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+                                                        />
+
+                                                        <span className="text-gray-600 text-sm font-bold">Minute</span>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Weekly Schedule UI */}
+                                        {weekly && (
+                                            <div className="pl-4 space-y-3">
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    {Object.keys(weeklyDays).map((day) => (
+                                                        <SquareCheckbox
+                                                            key={day}
+                                                            label={day}
+                                                            checked={weeklyDays[day]}
+                                                            onChange={() => setWeeklyDays({
+                                                                ...weeklyDays,
+                                                                [day]: !weeklyDays[day]
+                                                            })}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Monthly Schedule UI */}
+                                        {monthly && (
+                                            <div className="space-y-4 pl-4">
+
+                                                <div className="flex items-center gap-4">
+                                                    <label className="text-gray-600 text-sm font-bold w-16">Month</label>
+                                                    <input
+                                                        type="text"
+                                                        value={showMonthSelector ? tempSelectedMonths.join(', ') : monthlySelectedMonths.join(', ')}
+                                                        readOnly
+                                                        className="w-96 border border-gray-300 rounded px-3 py-1.5 text-sm bg-gray-50 cursor-not-allowed"
+                                                    />
+                                                    <div className="relative">
+                                                        <ActionButton
+                                                            label="Month"
+                                                            className="bg-[#E6F0FF] text-[#2883FE]"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+
+                                                                if (showMonthSelector) {
+                                                                    setMonthlySelectedMonths(tempSelectedMonths);
+                                                                    setShowMonthSelector(false);
+                                                                    return;
+                                                                }
+
+                                                                setTempSelectedMonths(monthlySelectedMonths);
+                                                                setShowMonthSelector(true);
+                                                                setShowDaySelector(false);
+                                                                setShowWeekSelector(false);
+                                                                setShowWeekdaysSelector(false);
+                                                            }}
+                                                        />
+
+                                                        {showMonthSelector && (
+                                                            <SelectorDropdown
+                                                                options={monthOptions.map(m => m.Month)}
+                                                                selectedValues={tempSelectedMonths}
+                                                                onSelect={(month) => {
+                                                                    setTempSelectedMonths(prev =>
+                                                                        prev.includes(month)
+                                                                            ? prev.filter(m => m !== month)
+                                                                            : [...prev, month]
+                                                                    );
+                                                                }}
+                                                                searchTerm={monthlySearchTermMonth}
+                                                                onSearchChange={setMonthlySearchTermMonth}
+                                                                isOpen
+                                                                onClose={() => {
+                                                                    setMonthlySelectedMonths(tempSelectedMonths);
+                                                                    setShowMonthSelector(false);
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Day Toggle and Selector */}
+                                                <div className="flex flex-wrap items-start gap-4 relative">
+                                                    <label className="text-gray-600 text-sm font-bold w-16 pt-2">Day</label>
+
+                                                    <div
+                                                        onClick={() => {
+                                                            if (monthlyOnToggle) {
+                                                                setMonthlyDayToggle(true);
+                                                                setMonthlyOnToggle(false);
+                                                                setShowWeekSelector(false);
+                                                                setShowWeekdaysSelector(false);
+                                                            }
+                                                        }}
+                                                        className={`w-8 h-4 mt-2 flex items-center rounded-full p-0.5 transition-colors
+            ${monthlyOnToggle ? 'cursor-pointer' : 'pointer-events-none'}
+            ${monthlyDayToggle ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                                    >
+                                                        <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform
+            ${monthlyDayToggle ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                    </div>
+
+                                                    {/* Show temporary selections while dropdown is open, final selections when closed */}
+                                                    <input
+                                                        type="text"
+                                                        value={showDaySelector ? tempSelectedDays.join(', ') : monthlySelectedDays.join(', ')}
+                                                        readOnly
+                                                        className="w-96 border border-gray-300 rounded px-3 py-1.5 text-sm bg-gray-50 cursor-not-allowed"
+                                                    />
+
+                                                    <div className="relative">
+                                                        <ActionButton
+                                                            label="Day"
+                                                            className="bg-[#E6F0FF] text-[#2883FE]"
+                                                            disabled={!monthlyDayToggle}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (!monthlyDayToggle) return;
+
+
+                                                                if (showDaySelector) {
+                                                                    setMonthlySelectedDays(tempSelectedDays);
+                                                                    setShowDaySelector(false);
+                                                                    return;
+                                                                }
+
+
+                                                                setTempSelectedDays(monthlySelectedDays);
+                                                                setShowDaySelector(true);
+                                                                setShowWeekSelector(false);
+                                                                setShowWeekdaysSelector(false);
+                                                            }}
+                                                        />
+
+
+                                                        {showDaySelector && (
+                                                            <SelectorDropdown
+                                                                options={Array.from({ length: 31 }, (_, i) => i + 1)}
+                                                                selectedValues={tempSelectedDays} // Use temp state
+                                                                onSelect={(day) => {
+                                                                    setTempSelectedDays(prev =>
+                                                                        prev.includes(day)
+                                                                            ? prev.filter(d => d !== day)
+                                                                            : [...prev, day].sort((a, b) => a - b)
+                                                                    );
+                                                                }}
+                                                                searchTerm={monthlySearchTerm}
+                                                                onSearchChange={setMonthlySearchTerm}
+                                                                isOpen
+                                                                onClose={() => {
+                                                                    // Save selections and close
+                                                                    setMonthlySelectedDays(tempSelectedDays);
+                                                                    setShowDaySelector(false);
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {/* On / Week / Weekdays */}
+                                                <div className="space-y-4">
+                                                    {/* First Row: On Toggle + Week Input + Week Button */}
+                                                    <div className="flex flex-wrap items-start gap-4">
+                                                        <label className="text-gray-600 text-sm font-bold w-16 pt-2">On</label>
+
+                                                        <div
+                                                            onClick={() => {
+                                                                if (monthlyDayToggle) {
+                                                                    setMonthlyOnToggle(true);
+                                                                    setMonthlyDayToggle(false);
+                                                                    setShowDaySelector(false);
+                                                                }
+                                                            }}
+                                                            className={`w-8 h-4 mt-2 flex items-center rounded-full p-0.5 transition-colors
+            ${monthlyDayToggle ? 'cursor-pointer' : 'pointer-events-none'}
+            ${monthlyOnToggle ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                                        >
+                                                            <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform
+            ${monthlyOnToggle ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                        </div>
+
+                                                        {/* Week Input */}
+                                                        <input
+                                                            type="text"
+                                                            value={showWeekSelector ? tempSelectedWeeks.join(', ') : monthlySelectedWeeks.join(', ')}
+                                                            readOnly
+                                                            className="w-[28rem] border border-gray-300 rounded px-3 py-1.5 text-sm bg-gray-50 cursor-not-allowed"
+                                                        />
+
+                                                        {/* Week Button */}
+                                                        <div className="relative">
+                                                            <ActionButton
+                                                                label="Week"
+                                                                className={`${!monthlyOnToggle ? '' : 'bg-[#E6F0FF] text-[#2883FE]'}`}
+                                                                disabled={!monthlyOnToggle}
+
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!monthlyOnToggle) return;
+
+                                                                    if (showWeekSelector) {
+                                                                        setMonthlySelectedWeeks(tempSelectedWeeks);
+                                                                        setShowWeekSelector(false);
+                                                                        return;
+                                                                    }
+
+                                                                    setTempSelectedWeeks(monthlySelectedWeeks);
+                                                                    setShowWeekSelector(true);
+                                                                }}
+
+
+                                                            />
+
+                                                            {showWeekSelector && (
+                                                                <SelectorDropdown
+                                                                    options={['First', 'Second', 'Third', 'Fourth', 'Fifth']}
+                                                                    selectedValues={tempSelectedWeeks}
+                                                                    onSelect={(week) => {
+                                                                        setTempSelectedWeeks(prev =>
+                                                                            prev.includes(week)
+                                                                                ? prev.filter(w => w !== week)
+                                                                                : [...prev, week]
+                                                                        );
+                                                                    }}
+                                                                    searchTerm={monthlySearchTerm}
+                                                                    onSearchChange={setMonthlySearchTerm}
+                                                                    isOpen
+                                                                    onClose={() => {
+                                                                        setMonthlySelectedWeeks(tempSelectedWeeks);
+                                                                        setShowWeekSelector(false);
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {/* Second Row: Weekdays Input + Weekdays Button */}
+                                                    <div className="flex flex-wrap items-start gap-4 pl-20">
+                                                        {/* Weekdays Input */}
+                                                        <input
+                                                            type="text"
+                                                            value={showWeekdaysSelector ? tempSelectedWeekdays.join(', ') : monthlySelectedWeekdays.join(', ')}
+                                                            readOnly
+                                                            className="w-[28rem] border border-gray-300 rounded px-3 py-1.5 text-sm bg-gray-50 cursor-not-allowed"
+                                                        />
+
+                                                        {/* Weekdays Button */}
+                                                        <div className="relative">
+                                                            <ActionButton
+                                                                label="Weekdays"
+                                                                className={`${!monthlyOnToggle ? '' : 'bg-[#E6F0FF] text-[#2883FE]'}`}
+                                                                disabled={!monthlyOnToggle}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+
+                                                                    if (!monthlyOnToggle) return;
+
+
+                                                                    if (showWeekdaysSelector) {
+                                                                        setMonthlySelectedWeekdays(tempSelectedWeekdays);
+                                                                        setShowWeekdaysSelector(false);
+                                                                        return;
+                                                                    }
+
+                                                                    setTempSelectedWeekdays(monthlySelectedWeekdays);
+                                                                    setShowWeekdaysSelector(true);
+                                                                }}
+                                                            />
+
+
+                                                            {showWeekdaysSelector && (
+                                                                <SelectorDropdown
+                                                                    options={[
+                                                                        'Sunday', 'Monday', 'Tuesday',
+                                                                        'Wednesday', 'Thursday', 'Friday', 'Saturday'
+                                                                    ]}
+                                                                    selectedValues={tempSelectedWeekdays}
+                                                                    onSelect={(day) => {
+                                                                        setTempSelectedWeekdays(prev =>
+                                                                            prev.includes(day)
+                                                                                ? prev.filter(d => d !== day)
+                                                                                : [...prev, day]
+                                                                        );
+                                                                    }}
+                                                                    searchTerm={monthlySearchTerm}
+                                                                    onSearchChange={setMonthlySearchTerm}
+                                                                    isOpen
+                                                                    onClose={() => {
+                                                                        setMonthlySelectedWeekdays(tempSelectedWeekdays);
+                                                                        setShowWeekdaysSelector(false);
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -1286,6 +2511,16 @@ const SearchServerData = () => {
                                                 </tbody>
                                             </table>
                                         </div>
+                                        <div className="flex justify-end py-4">
+                                            <ActionButton
+                                                label="Add"
+                                                className="bg-[#E6F0FF] text-[#2883FE] text-xs"
+                                                onClick={() => {
+                                                    // Add logic here
+                                                    console.log('Add clicked');
+                                                }}
+                                            />
+                                        </div>
                                     </div>
 
 
@@ -1332,9 +2567,14 @@ const SearchServerData = () => {
                                             </table>
                                         </div>
                                         <div className="flex justify-end">
-                                            <button className="bg-gray-100 hover:bg-gray-200 text-blue-600 font-bold py-2 px-6 rounded text-sm transition-colors">
-                                                Remove
-                                            </button>
+                                            <ActionButton
+                                                label="Remove"
+                                                className="bg-[#E6F0FF] text-[#2883FE] text-xs"
+                                                onClick={() => {
+                                                    // Add logic here
+                                                    console.log('Remove clicked');
+                                                }}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -1554,10 +2794,27 @@ const ToggleSwitch = ({ checked }) => (
     </div>
 );
 
-const SquareCheckbox = ({ label, boldLabel, checked, onChange }) => (
-    <div className="flex items-center gap-3 cursor-pointer group" onClick={onChange}>
-        <div className={`w-5 h-5 border rounded-sm flex items-center justify-center transition-colors ${checked ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-300 group-hover:border-blue-400'}`}>
-            {checked && <Check size={14} className="text-white" strokeWidth={3} />}
+// const SquareCheckbox = ({ label, boldLabel, checked, onChange }) => (
+//     <div className="flex items-center gap-3 cursor-pointer group" onClick={onChange}>
+//         <div className={`w-5 h-5 border rounded-sm flex items-center justify-center transition-colors ${checked ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-300 group-hover:border-blue-400'}`}>
+//             {checked && <Check size={14} className="text-white" strokeWidth={3} />}
+//         </div>
+//         {label && <span className={`text-sm text-blue-800 ${boldLabel ? 'font-bold' : 'font-medium'}`}>{label}</span>}
+//     </div>
+// );
+
+const SquareCheckbox = ({ label, boldLabel, checked, onChange, disabled = false }) => (
+    <div
+        className={`flex items-center gap-3 group ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        onClick={disabled ? undefined : onChange}
+    >
+        <div className={`w-5 h-5 border rounded-sm flex items-center justify-center transition-colors ${disabled
+            ? 'bg-gray-100 border-gray-300'
+            : checked
+                ? 'bg-blue-500 border-blue-500'
+                : 'bg-white border-gray-300 group-hover:border-blue-400'
+            }`}>
+            {checked && <Check size={14} className={disabled ? 'text-gray-400' : 'text-white'} strokeWidth={3} />}
         </div>
         {label && <span className={`text-sm text-blue-800 ${boldLabel ? 'font-bold' : 'font-medium'}`}>{label}</span>}
     </div>
@@ -1600,6 +2857,22 @@ const TimeInput = ({ value, disabled = false }) => (
     </div>
 );
 
+const RadioToggle = ({ label, checked, onChange, disabled = false }) => (
+    <div
+        className={`flex items-center gap-2 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        onClick={disabled ? undefined : onChange}
+    >
+        <span className={`text-sm font-bold ${checked ? 'text-blue-600' : 'text-blue-800'}`}>
+            {label}
+        </span>
+        <div className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${checked ? 'bg-blue-500' : 'bg-gray-300'
+            }`}>
+            <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'
+                }`}></div>
+        </div>
+    </div>
+);
+
 const RadioButton = ({ label, name, checked, onChange }) => (
     <label className="flex items-center cursor-pointer group">
         <input
@@ -1614,6 +2887,339 @@ const RadioButton = ({ label, name, checked, onChange }) => (
         </div>
         <span className="ml-2 text-sm text-gray-700 font-bold group-hover:text-blue-600">{label}</span>
     </label>
+);
+
+
+// Time Picker Component
+const TimePicker = ({ value, onChange, disabled = false }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [hours, setHours] = useState('00');
+    const [minutes, setMinutes] = useState('00');
+    const [seconds, setSeconds] = useState('00');
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        if (value) {
+            const parts = value.split(':');
+            if (parts.length === 3) {
+                setHours(parts[0]);
+                setMinutes(parts[1]);
+                setSeconds(parts[2]);
+            }
+        }
+    }, [value]);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const validateTimeInput = (value, max) => {
+        const num = parseInt(value);
+        if (isNaN(num) || num < 0) return '00';
+        if (num > max) return max.toString().padStart(2, '0');
+        return num.toString().padStart(2, '0');
+    };
+
+    const handleTimeChange = (newHours, newMinutes, newSeconds) => {
+        const validHours = validateTimeInput(newHours, 23);
+        const validMinutes = validateTimeInput(newMinutes, 59);
+        const validSeconds = validateTimeInput(newSeconds, 59);
+
+        setHours(validHours);
+        setMinutes(validMinutes);
+        setSeconds(validSeconds);
+
+        const timeString = `${validHours}:${validMinutes}:${validSeconds}`;
+        if (onChange) {
+            onChange(timeString);
+        }
+    };
+
+    const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+    const minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+    const secondOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <div
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                className={`relative w-32 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+                <input
+                    type="text"
+                    value={value}
+                    readOnly
+                    disabled={disabled}
+                    className={`w-full border border-gray-200 rounded px-3 py-1.5 text-sm text-gray-600 focus:outline-none focus:border-blue-400 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'bg-white'
+                        }`}
+                />
+                <Clock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
+
+            {isOpen && !disabled && (
+                <div className="absolute top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 p-3">
+                    <div className="flex gap-2">
+                        {/* Hours */}
+                        <div className="flex flex-col">
+                            <label className="text-xs text-gray-600 mb-1 text-center font-semibold">Hours</label>
+                            <div className="h-32 w-16 overflow-y-auto border border-gray-200 rounded custom-scrollbar">
+                                {hourOptions.map((hour) => (
+                                    <div
+                                        key={hour}
+                                        onClick={() => {
+                                            setHours(hour);
+                                            handleTimeChange(hour, minutes, seconds);
+                                        }}
+                                        className={`px-3 py-1 text-sm text-center cursor-pointer hover:bg-blue-50 ${hours === hour ? 'bg-blue-100 font-semibold text-blue-600' : ''
+                                            }`}
+                                    >
+                                        {hour}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-center text-xl font-bold text-gray-400 pt-6">:</div>
+
+                        {/* Minutes */}
+                        <div className="flex flex-col">
+                            <label className="text-xs text-gray-600 mb-1 text-center font-semibold">Minutes</label>
+                            <div className="h-32 w-16 overflow-y-auto border border-gray-200 rounded custom-scrollbar">
+                                {minuteOptions.map((minute) => (
+                                    <div
+                                        key={minute}
+                                        onClick={() => {
+                                            setMinutes(minute);
+                                            handleTimeChange(hours, minute, seconds);
+                                        }}
+                                        className={`px-3 py-1 text-sm text-center cursor-pointer hover:bg-blue-50 ${minutes === minute ? 'bg-blue-100 font-semibold text-blue-600' : ''
+                                            }`}
+                                    >
+                                        {minute}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-center text-xl font-bold text-gray-400 pt-6">:</div>
+
+                        {/* Seconds */}
+                        <div className="flex flex-col">
+                            <label className="text-xs text-gray-600 mb-1 text-center font-semibold">Seconds</label>
+                            <div className="h-32 w-16 overflow-y-auto border border-gray-200 rounded custom-scrollbar">
+                                {secondOptions.map((second) => (
+                                    <div
+                                        key={second}
+                                        onClick={() => {
+                                            setSeconds(second);
+                                            handleTimeChange(hours, minutes, second);
+                                        }}
+                                        className={`px-3 py-1 text-sm text-center cursor-pointer hover:bg-blue-50 ${seconds === second ? 'bg-blue-100 font-semibold text-blue-600' : ''
+                                            }`}
+                                    >
+                                        {second}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="mt-2 flex justify-end">
+                        <button
+                            onClick={() => setIsOpen(false)}
+                            className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
+                        >
+                            Done
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      `}</style>
+        </div>
+    );
+};
+
+// Date Picker Component
+const DatePickerInput = ({ value, onChange, disabled = false }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        if (value) {
+            const parts = value.split('/');
+            if (parts.length === 3) {
+                const date = new Date(parts[2], parts[1] - 1, parts[0]);
+                setSelectedDate(date);
+            }
+        }
+    }, [value]);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const daysInMonth = (date) => {
+        return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    };
+
+    const firstDayOfMonth = (date) => {
+        return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    };
+
+    const handleDateClick = (day) => {
+        const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Reset to current date if future date selected for "Files older than"
+        const formattedDate = `${day.toString().padStart(2, '0')}/${(newDate.getMonth() + 1).toString().padStart(2, '0')}/${newDate.getFullYear()}`;
+
+        // Check if this is for "Files older than" date input
+        // Only allow current and past dates
+        if (newDate > today) {
+            const currentDate = new Date();
+            const resetDate = `${currentDate.getDate().toString().padStart(2, '0')}/${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getFullYear()}`;
+            if (onChange) {
+                onChange(resetDate);
+            }
+            setSelectedDate(currentDate);
+        } else {
+            setSelectedDate(newDate);
+            if (onChange) {
+                onChange(formattedDate);
+            }
+        }
+        setIsOpen(false);
+    };
+
+    const changeMonth = (delta) => {
+        const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + delta, 1);
+        setSelectedDate(newDate);
+    };
+
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    const renderCalendar = () => {
+        const days = [];
+        const totalDays = daysInMonth(selectedDate);
+        const firstDay = firstDayOfMonth(selectedDate);
+        const currentDay = value ? parseInt(value.split('/')[0]) : null;
+
+        // Empty cells before first day
+        for (let i = 0; i < firstDay; i++) {
+            days.push(<div key={`empty-${i}`} className="p-2"></div>);
+        }
+
+        // Days of month
+        for (let day = 1; day <= totalDays; day++) {
+            const isSelected = day === currentDay;
+            days.push(
+                <div
+                    key={day}
+                    onClick={() => handleDateClick(day)}
+                    className={`p-2 text-center text-sm cursor-pointer hover:bg-blue-50 rounded ${isSelected ? 'bg-blue-500 text-white font-semibold' : 'text-gray-700'
+                        }`}
+                >
+                    {day}
+                </div>
+            );
+        }
+
+        return days;
+    };
+
+    return (
+        <div className="relative w-40" ref={dropdownRef}>
+            <div
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                className={`relative ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+                <input
+                    type="text"
+                    value={value}
+                    readOnly
+                    disabled={disabled}
+                    className={`w-full border border-gray-200 rounded px-3 py-1.5 text-sm text-gray-600 focus:outline-none focus:border-blue-400 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'bg-white'
+                        }`}
+                />
+                <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
+
+            {isOpen && !disabled && (
+                <div className="absolute top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 p-3 w-64">
+                    {/* Month/Year Header */}
+                    <div className="flex items-center justify-between mb-3">
+                        <button
+                            onClick={() => changeMonth(-1)}
+                            className="p-1 hover:bg-gray-100 rounded"
+                        >
+                            <ChevronDown size={16} className="rotate-90 text-gray-600" />
+                        </button>
+                        <div className="text-sm font-semibold text-gray-700">
+                            {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+                        </div>
+                        <button
+                            onClick={() => changeMonth(1)}
+                            className="p-1 hover:bg-gray-100 rounded"
+                        >
+                            <ChevronDown size={16} className="-rotate-90 text-gray-600" />
+                        </button>
+                    </div>
+
+                    {/* Day Names */}
+                    <div className="grid grid-cols-7 gap-1 mb-2">
+                        {dayNames.map((day) => (
+                            <div key={day} className="text-xs font-semibold text-gray-500 text-center p-1">
+                                {day}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Calendar Days */}
+                    <div className="grid grid-cols-7 gap-1">
+                        {renderCalendar()}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const ActionButton = ({ icon: Icon, label, disabled, onClick, className = "" }) => (
+    <button
+        onClick={onClick}
+        disabled={disabled}
+        className={`flex items-center gap-1.5 px-2 py-2 text-[11px] font-bold rounded whitespace-nowrap
+            hover:scale-90 transition-all
+            ${disabled
+                ? "bg-[#E6F0FF] text-[#2883FE] pointer-events-none"
+                : "bg-[#E6F0FF] text-[#2883FE] hover:bg-[#d0e3ff]"
+            }
+            ${className}
+        `}
+    >
+        {Icon && <Icon className="w-3.5 h-3.5" />}
+        <span>{label}</span>
+    </button>
 );
 
 export default SearchServerData;
