@@ -255,37 +255,15 @@ const handleAuditSubmit = async (auditData) => {
       "basemaster/editClient",
       requestPayload
     );
+if (response?.Rtn === "Success") {
+  mappedInstrumentCache.current = {};
 
-    if (response?.Rtn === "Success") {
-      mappedInstrumentCache.current = {};
+  await loadClientGridData(); // ✅ THIS FIXES UI REFRESH
 
-      setRows((prevRows) => {
-        const filtered = prevRows.filter(
-          (r) => r.id !== pendingClientData.clientId
-        );
+  setSelectedRowId(pendingClientData.clientId);
+}
 
-        const updatedRow = {
-          id: pendingClientData.clientId,
-          clientName: pendingClientData.clientName,
-          clientAlias: pendingClientData.clientAlias,
-          status:
-            pendingClientData.status === "Active"
-              ? t("statuses.active")
-              : t("statuses.deactive"),
-          clientType: pendingClientData.clientTypeName,
-          ipAddress: pendingClientData.ipAddress,
-          createdBy: pendingClientData.createdBy,
-          createdOn: pendingClientData.createdOn,
-          modifiedBy: activeUserDetails.sUsername,
-          modifiedOn: new Date().toISOString(),
-          mappedInstrument: "-",
-        };
-
-        return [updatedRow, ...filtered];
-      });
-
-      setSelectedRowId(pendingClientData.clientId);
-    } else {
+ else {
       setErrorDialog({
         open: true,
         message: response?.Message?.sClientName || "Operation failed",

@@ -68,7 +68,6 @@ const [loadingText, setLoadingText] = useState("");
 const [pendingRetireRow, setPendingRetireRow] = useState(null);
 
 
-
     const [errorDialog, setErrorDialog] = useState({
       open: false,
       message: "",
@@ -183,7 +182,6 @@ const loadInstrumentForEdit = async (row) => {
   try {
     setLoading(true);
     setLoadingText("Loading instrument details...");
-    console.log("Loading request row data ", row);
 
     const response = await postData(
       "basemaster/editGetInstrument",
@@ -423,7 +421,7 @@ const buildExportRequest = () => ({
         label={t("masters.instrumentMake")}
         value={row.instrumentMake}
       />
-      <DetailRow label={t("masters.client")} value={row.clientName} />
+      <DetailRow label={t("masters.associatedtoclient")} value={row.clientName} />
       <DetailRow label={t("masters.createdBy")} value={row.createdBy} />
       <DetailRow label={t("masters.createdOn")} value={row.createdOn} />
       <DetailRow label={t("masters.modifiedBy")} value={row.modifiedBy} />
@@ -516,11 +514,13 @@ const buildExportRequest = () => ({
         onClose={() => setIsAddDialogOpen(false)}
         onSave={handleSave}
         mode={modalMode}
+        selectedRow={selectedRow}
         initialData={editInstrumentData}
           setLoading={setLoading}          // 👈 NEW
   setLoadingText={setLoadingText}  // 👈 NEW
    selectedRowId={selectedRowId}         // 🔥 pass current selection
   loadInstrumentGrid={loadInstrumentGrid}
+  
       />
       {doPrint && (
   <PrintTable

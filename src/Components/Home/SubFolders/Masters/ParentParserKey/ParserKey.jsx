@@ -3,10 +3,13 @@ import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
 import Errordialog from "../../../../Layout/Common/Errordialog";
 import { FaEdit } from "react-icons/fa";
 import EditParserKeyModal from "./EditParserKeyModal"; // Import from separate file
+import useAxios from "../../../../../Services/servicecall";
+import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
+
 
 /* ---------------- DETAIL ROW ---------------- */
 const DetailRow = ({ label, value }) => (
-  <div className="grid grid-cols-2 gap-4">
+  <div className="grid grid-cols-2 gap-4 ">
     <div className="font-bold text-[12px] text-[#405F7D] font-roboto">
       {label}
     </div>
@@ -15,7 +18,6 @@ const DetailRow = ({ label, value }) => (
     </div>
   </div>
 );
-
 /* ---------------- ACTION BUTTON ---------------- */
 const ActionButton = ({ icon: Icon, label, onClick }) => (
   <button
@@ -80,12 +82,58 @@ const mockRows = [
 ];
 
 const ParserKey = () => {
-  const [selectedRowId, setSelectedRowId] = useState(mockRows[0]?.id || null);
+const [rows, setRows] = useState([]);
+const [selectedRowId, setSelectedRowId] = useState(null);
+
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [rows, setRows] = useState(mockRows);
 
   /* ---------------- GRID COLUMNS WITH CORRECT STRUCTURE ---------------- */
+  const { postData } = useAxios();
+
+const loadParserKeyGrid = async () => {
+  try {
+    const requestPayload = {
+      sActionType: "View",
+      ...CF_activeUserdetails()
+    };
+    console.log("requst for paser key",requestPayload)
+
+    const response = await postData(
+      "basemaster/getParserMethod",
+      requestPayload
+    );
+
+    console.log("ParserKey API response:", response);
+
+    const apiRows = response?.ParserMethod || [];
+
+    const mappedRows = apiRows.map((item) => ({
+      id: item.MethodKey,                           // 🔑 unique row id
+      elninstrumentcode: item.InstName || "-",
+      elnmethodgroup: item.MethodGroup || "-",
+      elnmethodname: item.MethodName || "-",
+      parsingkey: item.ParserKey,
+      status: item.isactive === 1 ? "Active" : "Inactive",
+      createdBy: item.CreatedTimestamp || "-",
+      ipAddress: item.UTCCreatedTimestamp || "-",
+      usePdfToCsv: item.FileConvert === "CSV" ?"CSV" : ""
+    }));
+
+    setRows(mappedRows);
+
+    // ✅ auto-select first row
+    setSelectedRowId(mappedRows[0]?.id ?? null);
+
+  } catch (error) {
+    console.error("ParserKey load failed", error);
+    setShowErrorDialog(true);
+  }
+};
+useEffect(() => {
+  loadParserKeyGrid();
+}, []);
+
   const columns = useMemo(
     () => [
       {
@@ -169,39 +217,80 @@ const ParserKey = () => {
   };
 
   /* ---------------- HANDLE SAVE ---------------- */
-  const handleSave = (updatedData) => {
-    // Update the row with new data
-    const updatedRows = rows.map(row => 
-      row.id === selectedRowId 
-        ? { 
-            ...row, 
-            elnmethodname: updatedData.elnMethodName,
-            parsingkey: updatedData.parsingKey,
-            usePdfToCsv: updatedData.usePdfToCsv
-          }
-        : row
+const handleSave = async (form, setApiError, closeModal) => {
+  try {
+    const requestPayload = {
+      MethodGroup: selectedRow?.elnmethodgroup,
+      FileConvert: form.usePdfToCsv ? "CSV" : "",
+      parserkey: form.parsingKey,
+      instrumentname: selectedRow?.elninstrumentcode,
+      methodkey: selectedRow?.id,
+      methodname: selectedRow?.elnmethodname,
+      ApplicationCode: "SDMS",
+      ...CF_activeUserdetails()
+    };
+
+    console.log("Update ParserKey request:", requestPayload);
+
+    const response = await postData(
+      "basemaster/updateParserKey",
+      requestPayload
     );
-    
-    setRows(updatedRows);
-    
-    // In real implementation, you would call your API here
-    console.log("Saving data:", {
-      id: selectedRowId,
-      ...updatedData
-    });
-  };
+
+    console.log("Update ParserKey response:", response);
+
+    const ParserMethod = response?.ParserMethod;
+    const MethodName = response?.MethodName;
+    const Rtn = response?.Rtn;
+
+    // ✅ SAME LOGIC AS jQuery
+    if (ParserMethod) {
+      // map API response again (important!)
+      const mappedRows = ParserMethod.map((item) => ({
+        id: item.MethodKey,
+        elninstrumentcode: item.InstName || "-",
+        elnmethodgroup: item.MethodGroup || "-",
+        elnmethodname: item.MethodName || "-",
+        parsingkey: item.ParserKey,
+        status: item.isactive === 1 ? "Active" : "Inactive",
+        createdBy: item.CreatedTimestamp || "-",
+        ipAddress: item.UTCCreatedTimestamp || "-",
+        usePdfToCsv: item.FileConvert || ""
+      }));
+
+      setRows(mappedRows);
+      setSelectedRowId(mappedRows[0]?.id ?? null);
+      closeModal();
+    }
+    else if (Rtn === "") {
+      closeModal();
+    }
+    else {
+      if (MethodName) {
+        setApiError(`${Rtn} ${MethodName}`);
+      } else {
+        setApiError(Rtn);
+      }
+    }
+  } catch (err) {
+    console.error("Update ParserKey failed", err);
+    setApiError("Something went wrong while updating Parser Key");
+  }
+};
+
+
 
   /* ---------------- DETAIL PANEL ---------------- */
   const renderDetailPanel = (row) => (
     <div className="space-y-3 p-4">
       <DetailRow label="Created On" value={row.ipAddress} />
       <DetailRow label="Created On" value={row.createdBy} />
-      <DetailRow label="File Convert" value={row.usePdfToCsv ? "Yes" : "No"} />
+      <DetailRow label="File Convert" value={row.usePdfToCsv==="CSV" ? "CSV" : ""} />
     </div>
   );
 
   return (
-    <div className="h-full w-full p-3">
+    <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* ACTION BAR */}
       <div className="flex justify-end p-2">
         <ActionButton
@@ -216,6 +305,8 @@ const ParserKey = () => {
         <GridLayout
           columns={columns}
           data={rows}
+          height="100%"
+          detailPanelWidth="46%"
           getRowId={(row) => row.id}
           enableSelection={false}
           renderDetailPanel={renderDetailPanel}
@@ -225,7 +316,6 @@ const ParserKey = () => {
               ? "bg-blue-50 border-l-4 border-blue-600"
               : ""
           }
-          detailPanelWidth="40%"
         />
       </div>
 

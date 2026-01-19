@@ -8,6 +8,8 @@ const EditParserKeyModal = ({ isOpen, onClose, onSave, initialData = null }) => 
   const { t } = useTranslation();
   const nodeRef = useRef(null);
   const [submitted, setSubmitted] = useState(false);
+  const [apiError, setApiError] = useState("");
+
   
   const initialForm = {
     elnMethodName: "",
@@ -22,36 +24,38 @@ const EditParserKeyModal = ({ isOpen, onClose, onSave, initialData = null }) => 
       setForm({
         elnMethodName: initialData.elnmethodname || "",
         parsingKey: initialData.parsingkey || "",
-        usePdfToCsv: initialData.usePdfToCsv || false,
+        usePdfToCsv: initialData.usePdfToCsv === "CSV",
+
       });
     }
   }, [isOpen, initialData]);
 
-  const handleClose = () => {
-    setSubmitted(false);
-    setForm(initialForm);
-    onClose();
-  };
+const handleClose = () => {
+  setSubmitted(false);
+  setApiError("");
+  setForm(initialForm);
+  onClose();
+};
+
 
   const handleSubmit = () => {
-    setSubmitted(true);
-    
-    if (!form.elnMethodName.trim() || !form.parsingKey.trim()) {
-      return;
-    }
+  setSubmitted(true);
+  setApiError("");
 
-    onSave(form);
-    onClose();
-  };
+  if (!form.parsingKey.trim()) return;
+
+  onSave(form, setApiError, onClose);
+};
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 flex items-start justify-center pt-10 z-50">
+
       <Draggable nodeRef={nodeRef} handle=".modal-header" bounds="parent">
         <div
           ref={nodeRef}
-          className="bg-white w-[500px] rounded-lg shadow-lg flex flex-col animate-slideFromTop"
+          className="bg-white w-[550px] rounded-lg shadow-lg flex flex-col animate-slideFromTop"
         >
           {/* HEADER */}
           <div className="modal-header cursor-move flex justify-between px-4 py-2 bg-slate-100 border-b rounded-t-lg">
@@ -71,7 +75,7 @@ const EditParserKeyModal = ({ isOpen, onClose, onSave, initialData = null }) => 
 
           {/* BODY */}
           <div className="px-6 py-4 overflow-y-auto flex-1">
-            <div className="space-y-7">
+            <div className="space-y-7 w-80">
               {/* ELN Method Name */}
               <div>
                 <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
@@ -79,22 +83,16 @@ const EditParserKeyModal = ({ isOpen, onClose, onSave, initialData = null }) => 
                   <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text"
-                  name="elnMethodName"
-                  value={form.elnMethodName}
-                  onChange={(e) =>
-                    setForm({ ...form, elnMethodName: e.target.value })
-                  }
-                  className={`
-                    w-full bg-transparent pb-1 text-[12px] font-semibold outline-none
-                    border-b-2
-                    ${
-                      submitted && !form.elnMethodName
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }
-                  `}
-                />
+  type="text"
+  name="elnMethodName"
+  value={form.elnMethodName}
+  disabled
+  className={`
+    w-full bg-gray-100 pb-1 text-[12px] font-semibold outline-none
+    border-b-2 border-gray-300 cursor-not-allowed
+  `}
+/>
+
                 {submitted && !form.elnMethodName && (
                   <div className="text-[11px] text-red-600 font-roboto mt-1">
                     ELN Method Name is required
@@ -115,40 +113,37 @@ const EditParserKeyModal = ({ isOpen, onClose, onSave, initialData = null }) => 
                   onChange={(e) =>
                     setForm({ ...form, parsingKey: e.target.value })
                   }
-                  className={`
+                  className="
                     w-full bg-transparent pb-1 text-[12px] font-semibold outline-none
-                    border-b-2
-                    ${
-                      submitted && !form.parsingKey
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }
-                  `}
+                    border-b-2 border-gray-300"
+                    
                 />
-                {submitted && !form.parsingKey && (
-                  <div className="text-[11px] text-red-600 font-roboto mt-1">
-                    Parsing Key is required
-                  </div>
-                )}
+                {apiError && (
+  <div className="text-[11px] flex text-red-600 font-roboto mt-1">
+   The Parser Key is already active for instrument → Group → Method: {apiError}
+  </div>
+)}
+
               </div>
 
               {/* Use PDF to CSV Checkbox */}
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="usePdfToCsv"
-                  checked={form.usePdfToCsv}
-                  onChange={(e) =>
-                    setForm({ ...form, usePdfToCsv: e.target.checked })
-                  }
-                  className="w-4 h-4"
-                />
+               
                 <label
                   htmlFor="usePdfToCsv"
                   className="text-[#405f7d] text-[12px] font-bold font-roboto"
                 >
                   Use PDF to CSV
                 </label>
+                 <input
+                  type="checkbox"
+                  id="usePdfToCsv"
+                  checked={form.usePdfToCsv}
+                  onChange={(e) =>
+                    setForm({ ...form, usePdfToCsv: e.target.checked })
+                  }
+                  className="w-4 h-4 "
+                />
               </div>
             </div>
           </div>
