@@ -12,6 +12,9 @@ import {CF_decrypt} from "../../../../../Common/encryptiondecryption";
 import PrintTable from "../../../../../Layout/Common/PrintTable";
 import AuditTrail from "../../../../../Layout/Common/AuditTrail";
 import { handleExportCommon } from "../../../../../Layout/Common/exportService";
+import Errordialog from "../../../../../Layout/Common/Errordialog";
+import FullPageLoader from "../../../../../Layout/Common/FullPageLoader";
+
 
 /* ---------------- SMALL UI HELPER ---------------- */
 
@@ -116,7 +119,7 @@ const [pendingRetireRow, setPendingRetireRow] = useState(null);
         ApplicationCode: "SDMS",
       };
     };
-    const loadInstrumentGrid = async () => {
+   const loadInstrumentGrid = async (forceSelectFirst = false, defaultSelectedRowId = null) => {
   try {
     setLoading(true);
     setLoadingText(t("masters.loadinginstrumentdata"));
@@ -126,29 +129,20 @@ const [pendingRetireRow, setPendingRetireRow] = useState(null);
       buildInstrumentRequest()
     );
 
-    console.log("Instrument API Response:", response);
-
     if (Array.isArray(response)) {
       const mappedRows = response.map((item, index) => ({
-        // ✅ REQUIRED FOR GRID
         id: item.sInstrumentID || index.toString(),
-
-        // ✅ GRID COLUMNS
         instrumentcode: item.sInstrumentName,
         instrumentAlias: item.sInstrumentAliasName,
         instrumentModel: item.sInstrumentModel || "-",
         instrumentMake: item.sInstrumentMake || "-",
         clientName: item.sAssociatedToClient || "-",
-
-        // ✅ STATUS
         status:
-  item.sInstrumentStatus === "DeActive"
-    ? "Deactive"
-    : item.sInstrumentStatus === "Retired"
-    ? "Retired"
-    : "Active",
-
-        // ✅ AUDIT FIELDS
+          item.sInstrumentStatus === "DeActive"
+            ? "Deactive"
+            : item.sInstrumentStatus === "Retired"
+            ? "Retired"
+            : "Active",
         createdBy: item.sCreatedBy || "-",
         createdOn: item.dCreatedOn || "-",
         modifiedBy: item.sModifiedBy || "-",
@@ -157,12 +151,21 @@ const [pendingRetireRow, setPendingRetireRow] = useState(null);
 
       setRows(mappedRows);
 
-      // ✅ keep / auto select
-      setSelectedRowId((prev) =>
-        mappedRows.some((r) => r.id === prev)
-          ? prev
-          : mappedRows[0]?.id ?? null
-      );
+      if (forceSelectFirst) {
+        setSelectedRowId(mappedRows[0]?.id ?? null);
+      } else if (defaultSelectedRowId) {
+        setSelectedRowId(
+          mappedRows.some((r) => r.id === defaultSelectedRowId)
+            ? defaultSelectedRowId
+            : mappedRows[0]?.id ?? null
+        );
+      } else {
+        setSelectedRowId((prev) =>
+          mappedRows.some((r) => r.id === prev)
+            ? prev
+            : mappedRows[0]?.id ?? null
+        );
+      }
     } else {
       setRows([]);
       setSelectedRowId(null);
@@ -174,6 +177,8 @@ const [pendingRetireRow, setPendingRetireRow] = useState(null);
     setLoadingText("");
   }
 };
+
+
 const loadInstrumentForEdit = async (row) => {
   try {
     setLoading(true);
@@ -207,24 +212,17 @@ const loadInstrumentForEdit = async (row) => {
 useEffect(() => {
   loadInstrumentGrid();
 }, []);
-useEffect(() => {
-  if (rows.length > 0 && !selectedRowId) {
-    setSelectedRowId(rows[0].id);
-  }
-}, [rows]);
+
 
 
 
   /* ---------------- HANDLE SAVE ---------------- */
 
 const handleSave = async () => {
-  if (modalMode === "add") {
-    await loadInstrumentGrid();
-    setSelectedRowId(null); // ✅ AFTER reload
-  } else {
-    await loadInstrumentGrid();
-  }
+  await loadInstrumentGrid(true); // 👈 pass a flag
 };
+
+
 
 const buildRetireInstrumentRequest = (row, auditPayload) => ({
   sInstrumentName: row.instrumentcode,
@@ -486,15 +484,8 @@ const buildExportRequest = () => ({
           onClick={handlePrint}
         />
       </div>
-      {loading && (
- <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+      <FullPageLoader loading={loading} text={loadingText} />
 
-          <div className="  rounded-sm flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1A57A6]"></div>
-           <p className="text-sm font-medium">{loadingText}</p>
-          </div>
-        </div>
-)}
 
 
       {/* GRID CONTAINER */}
@@ -528,6 +519,8 @@ const buildExportRequest = () => ({
         initialData={editInstrumentData}
           setLoading={setLoading}          // 👈 NEW
   setLoadingText={setLoadingText}  // 👈 NEW
+   selectedRowId={selectedRowId}         // 🔥 pass current selection
+  loadInstrumentGrid={loadInstrumentGrid}
       />
       {doPrint && (
   <PrintTable
@@ -551,48 +544,28 @@ const buildExportRequest = () => ({
 />
 
 
-      {/* CONFIRMATION POPUP */}
-      {isConfirmOpen && rowToRetire && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-          <div className="bg-white rounded-md shadow-lg w-[550px]">
-            {/* Header */}
-            <div className="bg-[#d5d5d5] text-blue-900  text-[22px] px-5 py-4 rounded-t-md flex items-center gap-2 transition-all duration-500">
-              {t("Auditpopup.confirmation")}
-            </div>
+{isConfirmOpen && rowToRetire && (
+  <Errordialog
+    message="Are you sure you want to retire?"
+    type="confirmation"
+    showCancel={true}
+    onClose={() => {
+      setIsConfirmOpen(false);
+      setRowToRetire(null);
+    }}
+    onCancel={() => {
+      setIsConfirmOpen(false);
+      setRowToRetire(null);
+    }}
+    onConfirm={() => {
+      setIsConfirmOpen(false);
+      setShowAuditTrail(true);   // 🔥 open audit popup
+      setPendingRetireRow(rowToRetire);
+      setRowToRetire(null);
+    }}
+  />
+)}
 
-            {/* Message */}
-            <div className="p-10 text-center transition-all duration-700">
-              <p className="text-gray-500 font roboto  text-[20px] leading-relaxed">
-                Are you sure you want to retire ?
-              </p>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex justify-end gap-3 border-t px-5 py-3">
-              <button
-                onClick={() => {
-                  setIsConfirmOpen(false);
-                  setRowToRetire(null);
-                }}
-                className="font-roboto text-[12px]"
-              >
-                {t("button.cancel")}
-              </button>
-              <button
-                 onClick={() => {
-    setIsConfirmOpen(false);
-    setShowAuditTrail(true);      // 🔥 open audit popup
-    setPendingRetireRow(rowToRetire);
-    setRowToRetire(null);
-  }}
-                className="px-[12px] py-[6px] bg-gray-400 text-blue-900 font-roboto text-[12px] rounded"
-              >
-                {t("button.ok")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
