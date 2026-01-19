@@ -18,7 +18,12 @@ const AddInstrumentModal = ({
   initialData = null,
   setLoading,
   setLoadingText,
+
+  selectedRowId,        // ✅ pass selected row ID
+  loadInstrumentGrid,   // ✅ pass reload function
 }) => {
+
+
   const { t } = useTranslation();
   const [showCommSettings, setShowCommSettings] = useState(false);
   const { postData } = useAxios();
@@ -73,11 +78,54 @@ const [fieldErrors, setFieldErrors] = useState({
     !form.interfacerMapped;
 
   const [commData, setCommData] = useState(null);
+useEffect(() => {
+  if (!isOpen) {
+    setForm(initialForm);
+    setSubmitted(false);
 
-  const handleCommSubmit = (data) => {
-    setCommData(data);
-    setShowAuditTrail(true); // ✅ OPEN AUDIT TRAIL
-  };
+
+    setShowCommSettings(false);
+    setShowAuditTrail(false);
+        setCommData(null);
+            setPendingForm(null);
+  }
+}, [isOpen, mode]);
+
+
+
+const handleCommSubmit = async (data) => {
+  setCommData(data);
+
+  // 🔥 EDIT MODE → go to audit first
+  if (isEditMode) {
+    setPendingForm({ ...form });
+    setShowAuditTrail(true);
+    return; // ⛔ Stop here - don't call API yet
+  }
+
+  // 🔥 ADD MODE → save immediately, NO audit
+  try {
+    setLoading(true);
+    setLoadingText("Saving communication settings...");
+
+    await postData(
+      "basemaster/insertInstrumentCommonSetting",
+      buildInstrumentRequestPayload(form, data)
+    );
+
+    // ✅ CLOSE BOTH POPUPS
+    setShowCommSettings(false);
+    onSave?.();     // 🔥 notify parent to reload grid
+    onClose();      // 🔥 close AddInstrumentModal
+  } catch (err) {
+    console.error("Comm settings save failed", err);
+  } finally {
+    setLoading(false);
+    setLoadingText("");
+  }
+};
+
+
   const getSessionValue = (key) => {
       const value = sessionStorage.getItem(key);
 
@@ -118,75 +166,81 @@ const [fieldErrors, setFieldErrors] = useState({
       ApplicationCode: "SDMS",
     });
 
-    const loadDropdowns = async () => {
-      try {
-        
-        const instrumentId =
-  mode === "edit"
-    ? initialData?.Instrument?.sInstrumentID
-    : "";
+   const loadDropdowns = async () => {
+  try {
+    
+    const instrumentId =
+      mode === "edit"
+        ? initialData?.Instrument?.sInstrumentID
+        : "";
 
-const res = await postData(
-  "basemaster/getMapInstrumentBasedDataFillValues",
-  buildDropdownRequest(instrumentId)
-);
+    const res = await postData(
+      "basemaster/getMapInstrumentBasedDataFillValues",
+      buildDropdownRequest(instrumentId)
+    );
 
+    // ✅ Available license
+    setAvailableLicense(res.AvailableLicense || 0);
+    // ✅ Parser Type dropdown (from Feature)
+    if (Array.isArray(res.Feature)) {
+      const options = [
+        PARSER_ORDER_MAP[0], // 👈 NONE always
+      ];
 
-        // ✅ Available license
-        setAvailableLicense(res.AvailableLicense || 0);
-        // ✅ Parser Type dropdown (from Feature)
-        if (Array.isArray(res.Feature)) {
-          const options = [
-            PARSER_ORDER_MAP[0], // 👈 NONE always
-          ];
+      const interfacerFeature = res.Feature.find(
+        (f) => f.L67Enum === "INTERFACER_SETTINGS"
+      );
 
-          const interfacerFeature = res.Feature.find(
-            (f) => f.L67Enum === "INTERFACER_SETTINGS"
-          );
+      const webMethodFeature = res.Feature.find(
+        (f) => f.L67Enum === "WEBMETHOD_INTERFACER"
+      );
 
-          const webMethodFeature = res.Feature.find(
-            (f) => f.L67Enum === "WEBMETHOD_INTERFACER"
-          );
+      const dbType = getSessionValue("sdbtype")?.toLowerCase();
 
-          const dbType = getSessionValue("sdbtype")?.toLowerCase();
-
-          // ✅ MSSQL → allow both if enabled
-          if (dbType === "mssql") {
-            if (interfacerFeature?.L67Status === true) {
-              options.push(PARSER_ORDER_MAP[1]); // WIN_METHOD
-            }
-
-            if (webMethodFeature?.L67Status === true) {
-              options.push(PARSER_ORDER_MAP[2]); // WEB_METHOD
-            }
-          }
-
-          // ✅ POSTGRES → ONLY WIN_METHOD if enabledPOSTGRESQL
-          else if (dbType === "postgresql") {
-            if (interfacerFeature?.L67Status === true) {
-              options.push(PARSER_ORDER_MAP[1]); // WIN_METHOD only
-            }
-          }
-
-          setParserOptions(options);
+      // ✅ MSSQL → allow both if enabled
+      if (dbType === "mssql") {
+        if (interfacerFeature?.L67Status === true) {
+          options.push(PARSER_ORDER_MAP[1]); // WIN_METHOD
         }
 
-        // ✅ Interfacer Instrument dropdown
-        if (Array.isArray(res.InterfacerInstrument)) {
-          const interfacerList = res.InterfacerInstrument.map((item) => ({
-            label: item.InstrumentName, // what user sees
-            value: item.INSTRUMENTID, // what you store
-          }));
-
-          setInterfacerOptions([
-            { label: "Create New", value: -2 }, // 👈 mandatory
-            ...interfacerList,
-          ]);
+        if (webMethodFeature?.L67Status === true) {
+          options.push(PARSER_ORDER_MAP[2]); // WEB_METHOD
         }
-      } catch (err) {
-        console.error("Dropdown load failed", err);
       }
-    };
+
+      // ✅ POSTGRES → ONLY WIN_METHOD if enabledPOSTGRESQL
+      else if (dbType === "postgresql") {
+        if (interfacerFeature?.L67Status === true) {
+          options.push(PARSER_ORDER_MAP[1]); // WIN_METHOD only
+        }
+      }
+
+      setParserOptions(options);
+    }
+
+    // ✅ Interfacer Instrument dropdown
+    if (Array.isArray(res.InterfacerInstrument)) {
+      const interfacerList = res.InterfacerInstrument.map((item) => ({
+        label: item.InstrumentName, // what user sees
+        value: item.INSTRUMENTID, // what you store
+      }));
+      console.log("interfacer list",interfacerList)
+
+      // ⭐ ADD mode: Show "Create New" option
+      if (isAddMode) {
+        setInterfacerOptions([
+          { label: "Create New", value: -2 }, // 👈 Only in ADD mode
+          ...interfacerList,
+        ]);
+      } else {
+        // ⭐ EDIT mode: Do NOT show "Create New" option
+        setInterfacerOptions(interfacerList);
+      }
+    }
+  } catch (err) {
+    console.error("Dropdown load failed", err);
+  }
+};
 
   useEffect(() => {
     if (!isOpen) return;
@@ -194,13 +248,38 @@ const res = await postData(
 
     loadDropdowns();
   }, [isOpen]);
+  console.log("interfacer option",interfacerOptions)
 
   // ✅ preload data for EDIT
+// ✅ preload data for EDIT
+// ✅ preload data for EDIT
+// ✅ preload data for EDIT
 useEffect(() => {
   if (!isOpen || mode !== "edit" || !initialData?.Instrument) return;
 
   const inst = initialData.Instrument;
   const isMapped = inst.iInterfaceStatus === 1;
+  
+  // Get the saved interfacer ID
+  const savedInterfacerId = initialData.iInterfacerInstID;
+  
+  // Wait for interfacerOptions to load to determine the right value
+  const determineInitialValue = () => {
+    if (!isMapped) return "";
+    
+    if (savedInterfacerId) {
+      // Check if saved value exists in options
+      const existsInOptions = interfacerOptions.some(opt => opt.value === savedInterfacerId);
+      if (existsInOptions) {
+        return savedInterfacerId;
+      }
+      // If saved value doesn't exist in options, still use it
+      return savedInterfacerId;
+    }
+    
+    // If no saved value, use first option
+    return interfacerOptions.length > 0 ? interfacerOptions[0].value : "";
+  };
 
   setForm({
     instrumentCode: inst.sInstrumentName || "",
@@ -215,13 +294,13 @@ useEffect(() => {
         ? "WEB_METHOD"
         : "NONE",
     interfacerMapped: isMapped,
-    interfacerInstrument: initialData.iInterfacerInstID ?? -2,
+    interfacerInstrument: determineInitialValue(),
     active: Number(inst.iInstrumentStatus) === 1,
   });
 
   setOriginalInterfacerMapped(isMapped);
   setSubmitted(false);
-}, [isOpen, mode, initialData]);
+}, [isOpen, mode, initialData, interfacerOptions]);
 
 
   const validateLicenseRules = () => {
@@ -274,8 +353,11 @@ useEffect(() => {
       }
 
       // ✅ INSERT SUCCESS → now open AuditTrail
-      setPendingForm(form);
-      setShowAuditTrail(true);
+// ✅ correct
+setPendingForm({ ...form });
+onSave?.();   // 🔥 notify parent
+onClose();
+
     } catch (err) {
       console.error("Insert failed", err);
     } finally {
@@ -358,57 +440,249 @@ useEffect(() => {
       ApplicationCode: "SDMS",
     };
   };
+// Helper function to convert conversion type ID to name
+const getConversionTypeName = (conversionTypeId) => {
+  switch (conversionTypeId) {
+    case 0: return "NONE";
+    case 1: return "Temperature_Celcius";
+    case 2: return "Temperature_Farenheit";
+    default: return "NONE";
+  }
+};
 
- const handleAuditAuthorized = async (auditPayload) => {
+const buildInstrumentRequestPayload = (
+  pendingForm,
+  commData,
+) => {
+  // Base CommonSetting for all communication types
+  const baseCommonSetting = {
+    StopBits: commData.StopBits,
+    TerminationIdleSecs: commData.TerminationIdleSecs,
+    TCPPortNumber: Number(commData.TCPPortNumber) ?? 0,
+    Baudrate: Number(commData.Baudrate) ?? 0,
+    Databits: Number(commData.Databits) ?? 0,
+    COMPortNumber: Number(commData?.COMPortNumber) ?? 0,
+    IPAddress: commData.IPAddress ?? "",
+    Parity: commData.Parity,
+    Handshake: commData.Handshake,
+    InstResultSampleIDFrom: commData.ResultSampleIDFrom === "IFACER" ? 0 : 1,
+    InstrumentDLL: null,
+    AllowRetest: 0,
+    MiltiTestOrder: 0,
+    InstrumentID: 0,
+    IdleTimetoDisconnect: -1,
+    AutoReconnectInterval: -1,
+    AutoOrderInterval: -1,
+    ImportFileWatcherPath: null,
+    CheckSumCALC: 0,
+    TestBased: -1,
+    MiltiSampleResult: 0,
+    HostComputerIP: "",
+    LimsTestOrder: 0,
+  };
+
+  // If it's ICPMODBUS (commType 5), add additional fields
+  const isICPModbus = commData.COMMUNICATIONTYPE === 4; // Note: 0-based, so 4 means 5-1
+
+  if (isICPModbus) {
+    baseCommonSetting.nMinimumCurrent = commData.MIN_CURRENT || "0";
+    baseCommonSetting.nMaximumCurrent = commData.MAX_CURRENT || "0";
+    baseCommonSetting.nChannelNumber = commData.CHANNEL_NUMBER || "0";
+    baseCommonSetting.nMinimumDataPoint = commData.MIN_DATAPOINT || "0";
+    baseCommonSetting.nMaximumDataPoint = commData.MAX_DATAPOINT || "0";
+    baseCommonSetting.sConversionType = getConversionTypeName(commData.CONVERSION_TYPE);
+    
+    // Set COM port and baud to 0 for ICPMODBUS if not provided
+    if (!baseCommonSetting.COMPortNumber) baseCommonSetting.COMPortNumber = "0";
+    if (!baseCommonSetting.Baudrate) baseCommonSetting.Baudrate = "0";
+    if (!baseCommonSetting.Databits) baseCommonSetting.Databits = "0";
+  }
+
+  return {
+    InstrumentList: {
+      INSTRUMENTID: 0,
+      LABNUMBER: "1",
+      ACTIVE: pendingForm.active ? 1 : 0,
+      SERIALNUMBER: "1",
+      LIMSCOMMTYPE: -1,
+      PROTOCOLID: 1,
+      COMMUNICATIONTYPE: commData.COMMUNICATIONTYPE,
+      MODEL: pendingForm.instrumentModel,
+      MANUFACTURER: pendingForm.instrumentMake,
+      ISINSTGROUP: -1,
+      INSTGROUPID:
+        pendingForm.interfacerMapped
+          ? pendingForm.parserType === "WIN_METHOD" ||
+            pendingForm.parserType === "WEB_METHOD"
+            ? 20
+            : 19
+          : -1,
+      INSTCODE: pendingForm.instrumentCode,
+    },
+
+    Instrument: {
+      sInstrumentID: "",
+      sInstrumentName: pendingForm.instrumentCode,
+      sInstrumentAliasName: pendingForm.instrumentAlias,
+      iInstrumentStatus: pendingForm.active ? 1 : 0,
+      iL11ParserType:
+        pendingForm.parserType === "WIN_METHOD"
+          ? 1
+          : pendingForm.parserType === "WEB_METHOD"
+          ? 2
+          : 0,
+      sInstrumentModel: pendingForm.instrumentModel,
+      sInstrumentMake: pendingForm.instrumentMake,
+      iInterfaceStatus: pendingForm.interfacerMapped ? 1 : 0,
+      sLockType: pendingForm.lockType,
+    },
+
+    CommonSetting: baseCommonSetting,
+
+    ActiveUserDetails: getActiveUserDetails(),
+    ApplicationCode: "SDMS",
+  };
+};
+
+const buildInstrumentEditRequestPayload = (
+  pendingForm,
+  commData,
+  auditPayload,
+) => {
+  // Base CommonSetting for all communication types
+  const baseCommonSetting = {
+    StopBits: commData.StopBits,
+    TerminationIdleSecs: commData.TerminationIdleSecs,
+    TCPPortNumber: Number(commData.TCPPortNumber) ?? 0,
+    Baudrate: Number(commData.Baudrate) ?? 0,
+    Databits: Number(commData.Databits) ?? 0,
+    COMPortNumber: Number(commData?.COMPortNumber) ?? 0,
+    IPAddress: commData.IPAddress ?? "",
+    Parity: commData.Parity,
+    Handshake: commData.Handshake,
+    InstResultSampleIDFrom: commData.ResultSampleIDFrom === "IFACER" ? 0 : 1,
+    InstrumentDLL: null,
+    AllowRetest: 0,
+    MiltiTestOrder: 0,
+    InstrumentID: pendingForm.interfacerInstrument,
+    IdleTimetoDisconnect: -1,
+    AutoReconnectInterval: -1,
+    AutoOrderInterval: -1,
+    ImportFileWatcherPath: null,
+    CheckSumCALC: 0,
+    TestBased: -1,
+    MiltiSampleResult: 0,
+    HostComputerIP: "",
+    LimsTestOrder: 0,
+  };
+
+  // If it's ICPMODBUS (commType 5), add additional fields
+  const isICPModbus = commData.COMMUNICATIONTYPE === 4; // Note: 0-based, so 4 means 5-1
+
+  if (isICPModbus) {
+    baseCommonSetting.nMinimumCurrent = commData.MIN_CURRENT || "0";
+    baseCommonSetting.nMaximumCurrent = commData.MAX_CURRENT || "0";
+    baseCommonSetting.nChannelNumber = commData.CHANNEL_NUMBER || "0";
+    baseCommonSetting.nMinimumDataPoint = commData.MIN_DATAPOINT || "0";
+    baseCommonSetting.nMaximumDataPoint = commData.MAX_DATAPOINT || "0";
+    baseCommonSetting.sConversionType = getConversionTypeName(commData.CONVERSION_TYPE);
+    
+    // Set COM port and baud to 0 for ICPMODBUS if not provided
+    if (!baseCommonSetting.COMPortNumber) baseCommonSetting.COMPortNumber = "0";
+    if (!baseCommonSetting.Baudrate) baseCommonSetting.Baudrate = "0";
+    if (!baseCommonSetting.Databits) baseCommonSetting.Databits = "0";
+  }
+
+  return {
+    InstrumentList: {
+      INSTRUMENTID: pendingForm.interfacerInstrument,
+      LABNUMBER: "1",
+      ACTIVE: pendingForm.active ? 1 : 0,
+      SERIALNUMBER: "1",
+      LIMSCOMMTYPE: -1,
+      PROTOCOLID: 1,
+      COMMUNICATIONTYPE: commData.COMMUNICATIONTYPE,
+      MODEL: pendingForm.instrumentModel,
+      MANUFACTURER: pendingForm.instrumentMake,
+      ISINSTGROUP: -1,
+      INSTGROUPID:
+        pendingForm.interfacerMapped
+          ? pendingForm.parserType === "WIN_METHOD" ||
+            pendingForm.parserType === "WEB_METHOD"
+            ? 20
+            : 19
+          : -1,
+      INSTCODE: pendingForm.instrumentCode,
+    },
+
+    Instrument: {
+      sInstrumentID: initialData?.Instrument?.sInstrumentID || "",
+      sInstrumentName: pendingForm.instrumentCode,
+      sInstrumentAliasName: pendingForm.instrumentAlias,
+      iInstrumentStatus: pendingForm.active ? 1 : 0,
+      iL11ParserType:
+        pendingForm.parserType === "WIN_METHOD"
+          ? 1
+          : pendingForm.parserType === "WEB_METHOD"
+          ? 2
+          : 0,
+      sInstrumentModel: pendingForm.instrumentModel,
+      sInstrumentMake: pendingForm.instrumentMake,
+      iInterfaceStatus: pendingForm.interfacerMapped ? 1 : 0,
+      sLockType: pendingForm.lockType,
+    },
+
+    CommonSetting: baseCommonSetting,
+    AuditTrailValues: auditPayload?.AuditTrailValues,
+    ActiveUserDetails: getActiveUserDetails(),
+    ApplicationCode: "SDMS",
+  };
+};
+
+
+console.log("pending form ",pendingForm)
+
+const handleAuditAuthorized = async (auditPayload) => {
   setShowAuditTrail(false);
+
+  if (!pendingForm) return;
+
+  const previousRowId = selectedRowId; // 🔥 store current selection
 
   try {
     setLoading(true);
-    setLoadingText(isEditMode ? "Updating instrument..." : "Finalizing...");
+    setLoadingText("Updating instrument...");
 
-    // 🔥 EDIT → API call here
-    if (isEditMode) {
-      const response = await postData(
-        "basemaster/editInstrument",
-        buildEditInstrumentPayload(
-          pendingForm,
-          auditPayload,
-          initialData
-        )
+    // 1️⃣ EDIT instrument
+    await postData(
+      "basemaster/editInstrument",
+      buildEditInstrumentPayload(pendingForm, auditPayload, initialData)
+    );
+
+    // 2️⃣ 🔥 EDIT COMMUNICATION SETTINGS (only if interfacerMapped is true)
+    if (pendingForm.interfacerMapped && commData) {
+      await postData(
+        "basemaster/insertInstrumentCommonSetting",
+        buildInstrumentEditRequestPayload(pendingForm, commData, auditPayload)
       );
-
-      if (response?.Rtn === "Warning" && response?.Message) {
-        setFieldErrors({
-          instrumentCode: response.Message.sInstrumentName || "",
-          instrumentAlias: response.Message.sInstrumentAliasName || "",
-        });
-        return;
-      }
-
-      if (response?.Rtn !== "Success") {
-        throw new Error("Edit Instrument failed");
-      }
     }
 
-    // ✅ COMMON CLEANUP (ADD + EDIT)
-    await onSave({
-      sInstrumentID: pendingForm.instrumentCode,
-      sInstrumentName: pendingForm.instrumentAlias,
-    });
+    // ✅ reload grid but keep previous selection
+    await loadInstrumentGrid(false, previousRowId);
 
+    // ✅ CLOSE BOTH POPUPS
     setShowCommSettings(false);
-    setPendingForm(null);
-    setCommData(null);
-    setForm(initialForm);
-    setSubmitted(false);
     onClose();
   } catch (err) {
-    console.error("Save failed", err);
+    console.error("Edit save failed", err);
   } finally {
+    setCommData(null);
+    setPendingForm(null);
     setLoading(false);
     setLoadingText("");
   }
 };
+
 const checkExistingInstrument = async () => {
   const payload = {
     Instrument: {
@@ -467,6 +741,15 @@ const getInstrumentCommSettings = async (instrumentId) => {
       form.instrumentMake.trim()
     );
   };
+  // Helper function to get the display value for interfacerInstrument
+// Helper function to get the display value for interfacerInstrument
+const getInterfacerDisplayValue = () => {
+  if (!form.interfacerMapped) return "";
+  
+  // Simply return the current form value
+  // The dropdown will handle displaying the correct option
+  return form.interfacerInstrument;
+};
 
   if (!isOpen) return null;
 
@@ -490,9 +773,12 @@ const getInstrumentCommSettings = async (instrumentId) => {
               </label>
               <button
                 onClick={() => {
-                  setSubmitted(false);
-                  setForm(initialForm);
-                  onClose();
+                   setSubmitted(false);
+  setForm(initialForm);
+  setCommData(null);
+  setPendingForm(null);
+    setShowCommSettings(false);
+  onClose();
                 }}
                 className="text-gray-300 text-[20px] font-bold "
               >
@@ -688,33 +974,60 @@ ${
 
                 {/* Checkboxes */}
                 <div className="flex gap-8">
-                  <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
-                    {t("masters.interfacerMapped")}
-                    <input
-                      type="checkbox"
-                      checked={form.interfacerMapped}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
+                 <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
+  {t("masters.interfacerMapped")}
+  <input
+    type="checkbox"
+    checked={form.interfacerMapped}
+    onChange={(e) => {
+      const checked = e.target.checked;
 
-                        // ✅ EDIT MODE + was originally checked + user tries to uncheck
-                        if (
-                          isEditMode &&
-                          originalInterfacerMapped &&
-                          !checked
-                        ) {
-                          setShowInterfacerWarning(true);
-                          return;
-                        }
+      // ✅ EDIT MODE + was originally checked + user tries to uncheck
+      if (
+        isEditMode &&
+        originalInterfacerMapped &&
+        !checked
+      ) {
+        setShowInterfacerWarning(true);
+        return;
+      }
 
-                        // normal behavior
-                        setForm({
-                          ...form,
-                          interfacerMapped: checked,
-                          interfacerInstrument: checked ? -2 : "",
-                        });
-                      }}
-                    />
-                  </label>
+      if (checked) {
+        if (isAddMode) {
+          // ADD mode: Default to "Create New" (-2)
+          setForm({
+            ...form,
+            interfacerMapped: checked,
+            interfacerInstrument: -2,
+          });
+        } else {
+          // EDIT mode: If we have a saved value, use it, otherwise use first option
+          const savedInterfacerId = initialData?.iInterfacerInstID;
+          let defaultId = "";
+          
+          if (savedInterfacerId) {
+            defaultId = savedInterfacerId;
+          } else if (interfacerOptions.length > 0) {
+            defaultId = interfacerOptions[0].value;
+          }
+          
+          setForm({
+            ...form,
+            interfacerMapped: checked,
+            interfacerInstrument: defaultId,
+          });
+        }
+      } else {
+        // When unchecking
+        setForm({
+          ...form,
+          interfacerMapped: checked,
+          interfacerInstrument: "",
+        });
+      }
+    }}
+  />
+</label>
 
                   <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
                     {t("statuses.active")}
@@ -732,28 +1045,36 @@ ${
                 </div>
 
                 {form.interfacerMapped && (
-                  <div>
-                    <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      {t("masters.interfacerInstrument")}
-                      <span className="text-red-500">*</span>
-                    </label>
-                    <AnimatedDropdown
-                      name="interfacerInstrument"
-                      value={form.interfacerInstrument}
-                      options={interfacerOptions}
-                      displayKey="label"
-                      valueKey="value"
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          interfacerInstrument: e.target.value,
-                        })
-                      }
-                      required
-                      showError={submitted}
-                    />
-                  </div>
-                )}
+  <div>
+    <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
+      {t("masters.interfacerInstrument")}
+      <span className="text-red-500">*</span>
+    </label>
+    <AnimatedDropdown
+      name="interfacerInstrument"
+      value={getInterfacerDisplayValue()}
+      options={interfacerOptions}
+      displayKey="label"
+      valueKey="value"
+      onChange={(e) =>
+        setForm({
+          ...form,
+          interfacerInstrument: Number(e.target.value),
+        })
+      }
+      required
+      showError={submitted}
+    />
+    
+    {/* Show warning if saved value is not in options (EDIT mode only) */}
+    {isEditMode && form.interfacerInstrument && 
+     !interfacerOptions.some(opt => opt.value === form.interfacerInstrument) && (
+      <div className="text-[11px] text-yellow-600 font-roboto mt-1">
+        Note: Instrument ID {form.interfacerInstrument} is not in the available list
+      </div>
+    )}
+  </div>
+)}
               </div>
             </div>
 
@@ -846,12 +1167,23 @@ ${
         actionLabel={mode === "edit" ? "Update" : "Submit"}
       />
       {showInterfacerWarning && (
-        <Errordialog
-          type="warning"
-          message="Changes in interfacer instrument , AgaramInterfacer Services will restart. Do you want to continue?"
-          onClose={confirmUnmapInterfacer}
-        />
-      )}
+  <Errordialog
+    type="confirmation"
+    message="Changes in interfacer instrument , AgaramInterfacer Services will restart. Do you want to continue?"
+    showCancel={true}
+
+    // ✅ YES → unmap
+    onConfirm={() => {
+      confirmUnmapInterfacer();
+    }}
+
+    // ❌ NO → just close dialog
+    onCancel={() => {
+      setShowInterfacerWarning(false);
+    }}
+  />
+)}
+
     </>
   );
 };

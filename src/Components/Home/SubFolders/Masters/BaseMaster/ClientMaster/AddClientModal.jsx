@@ -20,6 +20,9 @@ const AddClientModal = ({
   const [submitted, setSubmitted] = useState(false);
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
   const { t } = useTranslation();
+  const [loading, setLoading] = useState(false);
+const [loadingText, setLoadingText] = useState("");
+
 
   const { postData } = useAxios();
 
@@ -372,7 +375,8 @@ useEffect(() => {
       await onReloadUnmapped();
     }
   }}
-
+  setLoading={setLoading}
+  setLoadingText={setLoadingText}
         />
       )}
     </div>

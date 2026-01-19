@@ -13,6 +13,8 @@ import AuditTrail from "../../../../../Layout/Common/AuditTrail";
 import PrintTable from "../../../../../Layout/Common/PrintTable";
 import Errordialog from "../../../../../Layout/Common/Errordialog";
 import { handleExportCommon } from "../../../../../Layout/Common/exportService";
+import FullPageLoader from "../../../../../Layout/Common/FullPageLoader";
+
 // adjust path if needed
 
 /* ================== MAIN COMPONENT ================== */
@@ -234,101 +236,73 @@ const Client = () => {
     };
   };
 
- const handleAuditSubmit = async (auditData) => {
+const handleAuditSubmit = async (auditData) => {
   setShowAuditTrail(false);
 
   try {
     setLoading(true);
     setLoadingText(t("masters.loadingclientdata"));
 
-    const isEdit = pendingClientData.mode === "EDIT";
+    // 🔒 SAFETY: this function is EDIT ONLY
+    if (pendingClientData.mode !== "EDIT") return;
 
-    const requestPayload = isEdit
-      ? buildEditClientRequest(pendingClientData, auditData)
-      : buildInsertClientRequest(pendingClientData, auditData);
+    const requestPayload = buildEditClientRequest(
+      pendingClientData,
+      auditData
+    );
 
-      console.log("Request Payload for audit trail submit:", requestPayload); 
+    const response = await postData(
+      "basemaster/editClient",
+      requestPayload
+    );
 
-    const apiUrl = isEdit
-      ? "basemaster/editClient"
-      : "basemaster/insertClient";
+    if (response?.Rtn === "Success") {
+      mappedInstrumentCache.current = {};
 
-    const response = await postData(apiUrl, requestPayload);
+      setRows((prevRows) => {
+        const filtered = prevRows.filter(
+          (r) => r.id !== pendingClientData.clientId
+        );
 
-//     if (response?.Rtn === "Success") {
+        const updatedRow = {
+          id: pendingClientData.clientId,
+          clientName: pendingClientData.clientName,
+          clientAlias: pendingClientData.clientAlias,
+          status:
+            pendingClientData.status === "Active"
+              ? t("statuses.active")
+              : t("statuses.deactive"),
+          clientType: pendingClientData.clientTypeName,
+          ipAddress: pendingClientData.ipAddress,
+          createdBy: pendingClientData.createdBy,
+          createdOn: pendingClientData.createdOn,
+          modifiedBy: activeUserDetails.sUsername,
+          modifiedOn: new Date().toISOString(),
+          mappedInstrument: "-",
+        };
 
-//   // 🔥 CLEAR MAPPED INSTRUMENT CACHE
-//   mappedInstrumentCache.current = {};
-
-//   setSelectedRowId(isEdit ? pendingClientData.clientId : null);
-
-//   await loadClientGridData();
-// }
-if (response?.Rtn === "Success") {
-
-  mappedInstrumentCache.current = {};
-
-  if (isEdit) {
-    setRows((prevRows) => {
-      // ❌ remove old row
-      const filtered = prevRows.filter(
-        (r) => r.id !== pendingClientData.clientId
-      );
-
-      // ✅ build updated row
-      const updatedRow = {
-        id: pendingClientData.clientId,
-        clientName: pendingClientData.clientName,
-        clientAlias: pendingClientData.clientAlias,
-        status:
-          pendingClientData.status === "Active"
-            ? t("statuses.active")
-            : t("statuses.deactive"),
-        clientType: pendingClientData.clientTypeName,
-        ipAddress: pendingClientData.ipAddress,
-        createdBy: pendingClientData.createdBy,
-        createdOn: pendingClientData.createdOn,
-        modifiedBy: activeUserDetails.sUsername,
-        modifiedOn: new Date().toISOString(),
-        mappedInstrument:
-          mappedInstrumentCache.current[pendingClientData.clientId] || "-",
-      };
-
-      // ➕ add updated row back
-      return [updatedRow, ...filtered];
-    });
-
-    setSelectedRowId(pendingClientData.clientId);
-  } else {
-    // ADD case → fallback to reload if needed
-    await loadClientGridData();
-     setSelectedRowId(null);
-  }
-}
-
-else if (response?.Rtn === "Warning") {
-      setErrorDialog({
-        open: true,
-        message: response.Message?.sClientName || "Warning occurred",
-        type: "warning",
+        return [updatedRow, ...filtered];
       });
+
+      setSelectedRowId(pendingClientData.clientId);
     } else {
       setErrorDialog({
         open: true,
-        message: response.Message?.sClientName || "Operation failed",
-        type: "error",
+        message: response?.Message?.sClientName || "Operation failed",
+        type: response?.Rtn === "Warning" ? "warning" : "error",
       });
     }
 
     setPendingClientData(null);
     setEditingRow(null);
   } catch (err) {
-    console.error("Client submit error:", err);
+    console.error("Edit submit error:", err);
   } finally {
     setLoading(false);
     setLoadingText("");
   }
 };
+
 
 
   const handleEdit = async (row) => {
@@ -607,15 +581,8 @@ const handleExport = () => {
   </div>
 )} */}
  
-      {loading && (
- <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="  rounded-sm flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1A57A6]"></div>
-           <p className="text-sm font-medium">{loadingText}</p>
-          </div>
-        </div>
-)}
-
+<FullPageLoader loading={loading} text={loadingText} />
+<div className="flex-1 overflow-hidden">
       <GridLayout
         key={rows.map((r) => r.id).join(",")}
         columns={columns}
@@ -628,6 +595,7 @@ const handleExport = () => {
         getRowClassName={(row) => (row.id === selectedRowId ? "font-bold" : "")}
         onRowClick={(row) => setSelectedRowId(row.id)}
       />
+      </div>
 
       {/* MODAL */}
       {showModal && (
@@ -638,16 +606,52 @@ const handleExport = () => {
           onClose={() => setShowModal(false)}
           onReloadUnmapped={loadUnmappedInstruments}  
 
-          onSubmit={(clientData) => {
-            setPendingClientData({
-              ...clientData,
-              mode: editingRow ? "EDIT" : "ADD",
-              clientId: editingRow?.id || null,
-            });
+          onSubmit={async (clientData) => {
+  // 🟢 ADD MODE → call API immediately
+  if (!editingRow) {
+    try {
+      setLoading(true);
+      setLoadingText(t("masters.loadingclientdata"));
 
-            setShowModal(false);
-            setShowAuditTrail(true);
-          }}
+      const requestPayload = buildInsertClientRequest(clientData);
+
+      const response = await postData(
+        "basemaster/insertClient",
+        requestPayload
+      );
+
+      if (response?.Rtn === "Success") {
+        mappedInstrumentCache.current = {};
+        await loadClientGridData();
+        setSelectedRowId(null);
+      } else {
+        setErrorDialog({
+          open: true,
+          message: response?.Message?.sClientName || "Insert failed",
+          type: response?.Rtn === "Warning" ? "warning" : "error",
+        });
+      }
+    } catch (err) {
+      console.error("Insert error:", err);
+    } finally {
+      setLoading(false);
+      setLoadingText("");
+    }
+
+    return; // 🔴 IMPORTANT: DO NOT open audit trail
+  }
+
+  // 🔵 EDIT MODE → go to audit
+  setPendingClientData({
+    ...clientData,
+    mode: "EDIT",
+    clientId: editingRow.id,
+  });
+
+  setShowModal(false);
+  setShowAuditTrail(true);
+}}
+
         />
       )}
       {doPrint && (
