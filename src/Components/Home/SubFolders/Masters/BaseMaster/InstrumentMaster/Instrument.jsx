@@ -358,7 +358,7 @@ const buildExportRequest = () => ({
         render: (row) => (
           <div
             onClick={() => setSelectedRowId(row.id)}
-            className={`cursor-pointer ${
+            className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
               row.id === selectedRowId ? "font-bold" : ""
             }`}
           >
@@ -374,7 +374,7 @@ const buildExportRequest = () => ({
         render: (row) => (
           <div
             onClick={() => setSelectedRowId(row.id)}
-            className={`cursor-pointer ${
+            className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
               row.id === selectedRowId ? "font-bold" : ""
             }`}
           >
@@ -395,7 +395,7 @@ const buildExportRequest = () => ({
             <div
               onClick={() => setSelectedRowId(row.id)}
               className={`
-                cursor-pointer
+                text-[12px] font-['Verdana'] truncate cursor-pointer
                 ${isSelected ? "font-bold" : ""}
                 ${isActive ? "text-green-600" : "text-red-600"}
               `}

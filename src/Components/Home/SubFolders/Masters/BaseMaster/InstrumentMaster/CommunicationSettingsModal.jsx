@@ -3,6 +3,8 @@ import Draggable from "react-draggable";
 import { FiCheckSquare } from "react-icons/fi";
 import AnimatedDropdown from "../../../../../Layout/Common/AnimatedDropdown";
 import Errordialog from "../../../../../Layout/Common/Errordialog";
+import { createPortal } from "react-dom";
+
 
 const CommunicationSettingsModal = ({
   isOpen,
@@ -332,7 +334,6 @@ if (
     return;
   }
 
-  console.log("Validation passed, submitting data...");
   
   const basePayload = {
     COMMUNICATIONTYPE: form.commType - 1,
@@ -721,6 +722,8 @@ if (
       </div>
       
       {showCommTypeConfirm && (
+<div className="fixed inset-0 z-[999]">
+
         <Errordialog
           type="confirmation"
           message="Changes in Comm. Type , AgaramInterfacer Services will restart. Do you want to continue?"
@@ -749,6 +752,7 @@ if (
             setShowCommTypeConfirm(false);
           }}
         />
+        </div>
       )}
     </>
   );

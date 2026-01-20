@@ -2,19 +2,28 @@ import React, { useMemo, useState ,useEffect} from "react";
 import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
 import { FaFilter } from "react-icons/fa";
-
 import { useTranslation } from "react-i18next";
 import { HiRefresh } from "react-icons/hi";
+import useAxios from "../../../../../Services/servicecall";
+import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
+
 
 const ClientServiceMonitor = () => {
   const { t } = useTranslation();
+  const { postData } = useAxios();
+
+const [gridData, setGridData] = useState([]);
+const [clientOptions, setClientOptions] = useState([]);
+const [serviceOptions, setServiceOptions] = useState([]);
+const [externalSelectedId, setExternalSelectedId] = useState(null);
+
+
 
   const [filters, setFilters] = useState({
     client: "All",
     service: "All"
   });
-  const [client, setClient] = useState("All");
-  const [service, setService] = useState("All");
+
   // What user selects in dropdown (temporary)
 const [draftFilters, setDraftFilters] = useState({
   client: "All",
@@ -42,71 +51,32 @@ const [appliedFilters, setAppliedFilters] = useState({
 
   /* ------------------ FILTER FUNCTION ------------------ */
 const handleFilterClick = () => {
-  setAppliedFilters(draftFilters); // 🔥 APPLY ONLY HERE
+  setAppliedFilters(draftFilters);
+  setIsFilterApplied(true);
+
+  fetchFilteredGridData(
+    draftFilters.client,
+    draftFilters.service
+  );
 };
+
 
 
   /* ------------------ REFRESH FUNCTION ------------------ */
 const handleRefreshClick = () => {
-  setDraftFilters({
-    client: "All",
-    service: "All",
-  });
+  setAppliedFilters(draftFilters);
+  setIsFilterApplied(true);
 
-  setAppliedFilters({
-    client: "All",
-    service: "All",
-  });
-
+  fetchFilteredGridData(
+    draftFilters.client,
+    draftFilters.service
+  );
 };
 
 
-  /* ------------------ ORIGINAL GRID DATA ------------------ */
-  const originalData = useMemo(
-    () => [
-      {
-        id: 1,
-        client: "AGD54",
-        serviceName: "AgaramInterFACER",
-        status: "Warning",
-        lastModified: "2024-11-21 16:29:56",
-        startTime: "2025-10-06 10:04:40",
-        runningTime: "2025-10-07 11:44:44"
-      },
-      {
-        id: 2,
-        client: "AGD54",
-        serviceName: "RoboticsServiceManager",
-        status: "Running",
-        lastModified: "2024-11-21 16:29:56",
-        startTime: "2025-10-06 10:04:40",
-        runningTime: "2025-10-07 11:44:44"
-      },
-      {
-        id: 3,
-        client: "AGD54",
-        serviceName: "RoboticsFileWatcher",
-        status: "Running"
-      },
-      {
-        id: 4,
-        client: "AGD54",
-        serviceName: "RoboticsFileDownload",
-        status: "Running"
-      },
-      {
-        id: 5,
-        client: "AGD54",
-        serviceName: "RoboticsFileShrink",
-        status: "Running"
-      }
-    ],
-    []
-  );
-
   /* ------------------ FILTERED DATA ------------------ */
  const filteredData = useMemo(() => {
-  return originalData.filter(row => {
+  return gridData.filter(row => {
     const clientMatch =
       appliedFilters.client === "All" ||
       row.client === appliedFilters.client;
@@ -117,14 +87,18 @@ const handleRefreshClick = () => {
 
     return clientMatch && serviceMatch;
   });
-}, [originalData, appliedFilters]);
-  useEffect(() => {
+}, [gridData, appliedFilters]);
+
+ useEffect(() => {
   if (filteredData.length > 0) {
-    setSelectedRow(filteredData[0]); // 🔥 select first row
+    setSelectedRow(filteredData[0]);
+    setExternalSelectedId(filteredData[0].id); // 🔥 FORCE GRID SELECTION
   } else {
     setSelectedRow(null);
+    setExternalSelectedId(null);
   }
 }, [filteredData]);
+
 
 
   /* ------------------ GRID COLUMNS ------------------ */
@@ -136,7 +110,9 @@ const handleRefreshClick = () => {
         enableSearch: true,
         width: 220,
         render: (row) => (
-          <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
+          <span className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
+              row.id === selectedRow?.id ? "font-bold" : ""
+            }`}>
             {row.client}
           </span>
         )
@@ -145,9 +121,11 @@ const handleRefreshClick = () => {
         key: "serviceName",
         label: "Service Name",
         enableSearch: true,
-        width: 300,
+        width: 280,
         render: (row) => (
-          <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
+          <span className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
+              row.id === selectedRow?.id ? "font-bold" : ""
+            }`}>
             {row.serviceName}
           </span>
         )
@@ -155,10 +133,11 @@ const handleRefreshClick = () => {
       {
         key: "status",
         label: "Status",
-        width: 150,
+        width: 140,
+        enableSearch: true,
         render: (row) => (
           <span
-            className={`
+            className={`text-[12px] font-['Verdana'] truncate cursor-pointer 
               ${row.status === "Warning" ? "text-red-600" : "text-green-600"}
               ${row.id === selectedRow?.id ? "font-bold" : "font-medium"}
             `}
@@ -170,17 +149,88 @@ const handleRefreshClick = () => {
     ],
     [selectedRow]
   );
+useEffect(() => {
+  const loadClientServiceMonitor = async () => {
+    try {
+      const response = await postData(
+        "Scheduler/clientmonitorComboAndGridLoad",
+        CF_activeUserdetails()
+      );
 
-  /* ------------------ DROPDOWN OPTIONS FROM MOCK DATA ------------------ */
-  const clientOptions = useMemo(() => {
-    const uniqueClients = [...new Set(originalData.map(item => item.client))];
-    return ["All", ...uniqueClients];
-  }, [originalData]);
+      /* ---------------- GRID DATA ---------------- */
+      const mappedGrid = (response?.list1 || []).map((item, index) => ({
+        id: index + 1,
+        client: item.L06ClientName,
+        serviceName: item.L81ServiceModule,
+        status: item.Status,
+        lastModified: item["Last Modified Date"],
+        startTime: item["Start Date"],
+        runningTime: item["Running Date"],
+      }));
 
-  const serviceOptions = useMemo(() => {
-    const uniqueServices = [...new Set(originalData.map(item => item.serviceName))];
-    return ["All", ...uniqueServices];
-  }, [originalData]);
+      setGridData(mappedGrid);
+
+      /* ---------------- CLIENT OPTIONS ---------------- */
+      setClientOptions(
+        (response?.clientlist || []).map(
+          c => c.L06ClientName
+        )
+      );
+
+      /* ---------------- SERVICE OPTIONS ---------------- */
+      setServiceOptions(
+        (response?.list || []).map(
+          s => s.L81ServiceModule
+        )
+      );
+
+    } catch (error) {
+      console.error("Client Service Monitor load failed", error);
+    }
+  };
+
+  loadClientServiceMonitor();
+}, []);
+const fetchFilteredGridData = async (client, service) => {
+  try {
+    const payload = {
+      sClientName: client,
+      sServicename: service,
+      ...CF_activeUserdetails(),
+    };
+
+    const response = await postData(
+      "Scheduler/clientmonitorfilter",
+      payload
+    );
+
+    const mappedGrid = (response || []).map((item, index) => ({
+      id: index + 1,
+      client: item.L06ClientName,
+      serviceName: item.L81ServiceModule,
+      status: item.Status,
+      lastModified: item["Last Modified Date"],
+      startTime: item["Start Date"],
+      runningTime: item["Running Date"],
+    }));
+
+    setGridData(mappedGrid);
+
+    // 🔥 Auto select first row
+    if (mappedGrid.length > 0) {
+      setSelectedRow(mappedGrid[0]);
+      setExternalSelectedId(mappedGrid[0].id);
+    } else {
+      setSelectedRow(null);
+      setExternalSelectedId(null);
+    }
+
+  } catch (error) {
+    console.error("Filter API failed", error);
+    setGridData([]);
+  }
+};
+
 
   /* ------------------ DETAIL PANEL ------------------ */
   const DetailsPanel = ({ row }) => (
@@ -201,23 +251,25 @@ const handleRefreshClick = () => {
                 </label>
         <div className="w-60">
           <AnimatedDropdown
-          
-          name="client"
-          value={draftFilters.client}
-          options={clientOptions}
-          onChange={handleDraftChange}
-        />
+  name="client"
+  value={draftFilters.client}
+  options={[...clientOptions]}
+  onChange={handleDraftChange}
+/>
+
         </div>
         <label className="mb-5 block text-[#405f7d] text-[12px] font-semibold font-roboto">
                   {t("label.serviceName")}
                 </label>
         <div className="w-60">
             <AnimatedDropdown
-              name="service"
-              value={draftFilters.service}
-              options={serviceOptions}
-              onChange={handleDraftChange}
-            />
+  name="service"
+  value={draftFilters.service}
+  options={[ ...serviceOptions]}
+  onChange={handleDraftChange}
+/>
+
+
         </div>
 
         <div className="mb-3 flex gap-2">
@@ -247,18 +299,22 @@ const handleRefreshClick = () => {
 
       {/* ---------- GRID ---------- */}
       <div className="flex-1 min-h-0">
-  <GridLayout
-    columns={columns}
-    data={filteredData}
-    height="100%"
-    detailPanelWidth="46%"
-    getRowId={(row) => row.id}
-    onRowClick={(row) => setSelectedRow(row)}
-    renderDetailPanel={(row) => <DetailsPanel row={row} />}
-  />
-</div>
+ <GridLayout
+  columns={columns}
+  data={filteredData}
+  height="100%"
+  detailPanelWidth="46%"
+  getRowId={(row) => row.id}
+  externalSelectedId={externalSelectedId}   // 🔥 IMPORTANT
+  onRowClick={(row) => {
+    setSelectedRow(row);
+    setExternalSelectedId(row.id);           // keep in sync
+  }}
+  renderDetailPanel={(row) => <DetailsPanel row={row} />}
+/>
 
-    </div>
+</div>
+</div>
   );
 };
 
