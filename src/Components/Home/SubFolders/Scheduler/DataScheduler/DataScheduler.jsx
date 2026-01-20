@@ -10,6 +10,23 @@ import { t } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
 
+const isPastDate = (dateStr) => {
+    if (!dateStr) return false;
+
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return false;
+
+    const [day, month, year] = parts.map(Number);
+    if (!day || !month || !year) return false;
+
+    const selected = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return selected < today;
+};
+
+
 const CF_pathValidation = (path) => {
     const regex = /^[A-Za-z]:\\(?:[a-zA-Z0-9 _\-\.#&()@,=+`~!$^;{}[\]-]+\\)*[a-zA-Z0-9 _\-\.#&()@,=+%`~!$^;{}[\]-]*$/;
     return regex.test(path);
@@ -320,6 +337,7 @@ const SearchServerData = () => {
     const [uncUsernameError, setUncUsernameError] = useState(false);
     const [uncPasswordError, setUncPasswordError] = useState(false);
     const [showExpiryWarning, setShowExpiryWarning] = useState(false);
+    const [showTriggerWarning, setShowTriggerWarning] = useState(false);
 
     // Add month selection states
     const [monthlySearchTermMonth, setMonthlySearchTermMonth] = useState('');
@@ -327,6 +345,17 @@ const SearchServerData = () => {
     const [showMonthSelector, setShowMonthSelector] = useState(false);
     const [tempSelectedMonths, setTempSelectedMonths] = useState([]);
 
+
+
+    const [clientPathErrorMessage, setClientPathErrorMessage] = useState('');
+    const [uncPathErrorMessage, setUncPathErrorMessage] = useState('');
+
+    const [isManualTyping, setIsManualTyping] = useState(false);
+
+    // const [hasShownTriggerError, setHasShownTriggerError] = useState(false);
+    // const [hasShownExpiryError, setHasShownExpiryError] = useState(false);
+    const [lastTriggerDateWasValid, setLastTriggerDateWasValid] = useState(true);
+    const [lastExpiryDateWasValid, setLastExpiryDateWasValid] = useState(true);
 
     // Ref for the scrollable container (The specific div that scrolls)
     const scrollContainerRef = useRef(null);
@@ -392,6 +421,36 @@ const SearchServerData = () => {
             minutes: validMinutes.toString().padStart(2, '0'),
             seconds: validSeconds.toString().padStart(2, '0')
         };
+    };
+
+    const validateAndFormatDate = (dateString) => {
+        const parts = dateString.split('/');
+        if (parts.length !== 3) return dateString;
+
+        let day = parseInt(parts[0]) || 1;
+        let month = parseInt(parts[1]) || 1;
+        let year = parseInt(parts[2]) || new Date().getFullYear();
+
+        // Force upper limit
+        if (year > 2100) {
+            return '01/01/2100';
+        }
+
+        // Validate year lower bound
+        if (year < 2000) year = 2000;
+
+        // Validate month
+        if (month < 1) month = 1;
+        if (month > 12) month = 12;
+
+        // Validate day
+        const maxDay = new Date(year, month, 0).getDate();
+        if (day < 1) day = 1;
+        if (day > maxDay) day = maxDay;
+
+        return `${day.toString().padStart(2, '0')}/${month
+            .toString()
+            .padStart(2, '0')}/${year}`;
     };
 
     // Load all combos on screen load
@@ -544,11 +603,9 @@ const SearchServerData = () => {
         }
     };
 
-    // Check path validation
     const validateAndShowCheckPathModal = () => {
         let hasError = false;
 
-        // Validate client selection
         if (!selectedClient) {
             setClientError(true);
             hasError = true;
@@ -556,7 +613,6 @@ const SearchServerData = () => {
             setClientError(false);
         }
 
-        // Validate source path
         if (!sourcePath.trim()) {
             setSourcePathError(true);
             hasError = true;
@@ -571,19 +627,117 @@ const SearchServerData = () => {
             return;
         }
 
-        // Open check path modal
-        setIsCheckPathModalOpen(true);
-        setCheckPathType('client');
+        // Clear everything first
         setClientUsername('');
         setClientPassword('');
         setUsernameError(false);
         setPasswordError(false);
+        setClientPathErrorMessage('');
+        setUncPathErrorMessage('');
+        setCheckPathType('client');
+
+        // Open modal after clearing
+        setIsCheckPathModalOpen(true);
     };
+
+    // // Check path validation
+    // const validateAndShowCheckPathModal = () => {
+    //     let hasError = false;
+
+    //     // Validate client selection
+    //     if (!selectedClient) {
+    //         setClientError(true);
+    //         hasError = true;
+    //     } else {
+    //         setClientError(false);
+    //     }
+
+    //     // Validate source path
+    //     if (!sourcePath.trim()) {
+    //         setSourcePathError(true);
+    //         hasError = true;
+    //     } else if (!CF_pathValidation(sourcePath)) {
+    //         setSourcePathError(true);
+    //         hasError = true;
+    //     } else {
+    //         setSourcePathError(false);
+    //     }
+
+    //     if (hasError) {
+    //         return;
+    //     }
+
+    //     // Open check path modal
+    //     // setIsCheckPathModalOpen(true);
+    //     // setCheckPathType('client');
+    //     // setClientUsername('');
+    //     // setClientPassword('');
+    //     // setUsernameError(false);
+    //     // setPasswordError(false);
+
+    //     // Clear first, then open modal
+    //     setClientUsername('');
+    //     setClientPassword('');
+    //     setUsernameError(false);
+    //     setPasswordError(false);
+
+    //     // Small delay to ensure state is cleared before modal opens
+    //     setTimeout(() => {
+    //         setIsCheckPathModalOpen(true);
+    //         setCheckPathType('client');
+    //     }, 10);
+    // };
+
+    // const validateAndShowUNCPathModal = () => {
+    //     let hasError = false;
+
+    //     // Validate client selection
+    //     if (!selectedClient) {
+    //         setClientError(true);
+    //         hasError = true;
+    //     } else {
+    //         setClientError(false);
+    //     }
+
+    //     // Validate UNC path
+    //     if (!uncPath.trim()) {
+    //         setUncPathError(true);
+    //         hasError = true;
+    //     } else if (!CF_UNCPathValidation(uncPath)) {
+    //         setUncPathError(true);
+    //         hasError = true;
+    //     } else {
+    //         setUncPathError(false);
+    //     }
+
+    //     if (hasError) {
+    //         return;
+    //     }
+
+    //     // // Open check path modal for UNC
+    //     // setIsCheckPathModalOpen(true);
+    //     // setCheckPathType('client');
+    //     // setClientUsername('');
+    //     // setClientPassword('');
+    //     // setUsernameError(false);
+    //     // setPasswordError(false);
+
+    //     // Clear first, then open modal
+    //     setClientUsername('');
+    //     setClientPassword('');
+    //     setUsernameError(false);
+    //     setPasswordError(false);
+
+    //     // Small delay to ensure state is cleared before modal opens
+    //     setTimeout(() => {
+    //         setIsCheckPathModalOpen(true);
+    //         setCheckPathType('client');
+    //     }, 10);
+    // };
 
     const validateAndShowUNCPathModal = () => {
         let hasError = false;
 
-        // Validate client selection
         if (!selectedClient) {
             setClientError(true);
             hasError = true;
@@ -591,7 +745,6 @@ const SearchServerData = () => {
             setClientError(false);
         }
 
-        // Validate UNC path
         if (!uncPath.trim()) {
             setUncPathError(true);
             hasError = true;
@@ -606,13 +759,17 @@ const SearchServerData = () => {
             return;
         }
 
-        // Open check path modal for UNC
-        setIsCheckPathModalOpen(true);
-        setCheckPathType('client');
+        // Clear everything first
         setClientUsername('');
         setClientPassword('');
         setUsernameError(false);
         setPasswordError(false);
+        setClientPathErrorMessage('');
+        setUncPathErrorMessage('');
+        setCheckPathType('client');
+
+        // Open modal after clearing
+        setIsCheckPathModalOpen(true);
     };
 
     const submitCheckPath = async () => {
@@ -631,36 +788,50 @@ const SearchServerData = () => {
             }
 
             try {
+                // ADD LOGGING HERE TO DEBUG
+                console.log("=== Sending to backend ===");
+                console.log("Path:", pathToCheck);
+                console.log("Is UNC Path:", isUNCPathEnabled);
+                console.log("Client Name:", clientOptions.find(c => c.L06ClientID === selectedClient)?.L06ClientName);
+
                 const requestData = {
                     path: pathToCheck,
-                    pathreference: 'local',
+                    // pathreference: 'local',
+                    pathreference: isUNCPathEnabled ? 'unc' : 'local',
                     sclientname: clientOptions.find(c => c.L06ClientID === selectedClient)?.L06ClientName || '',
                     sclientusername: clientUsername,
                     sclientpassword: clientPassword,
                     ...CF_activeUserdetails()
                 };
 
+                console.log("Request Data:", requestData);
                 const response = await postData(
                     'Scheduler/ClientPathChecking',
                     requestData
                 );
 
+                console.log("Response:", response);
                 // Close modal first
                 setIsCheckPathModalOpen(false);
 
-                // Then show error dialog
+                // For CLIENT path - show inline error or success dialog
                 if (response.Rtn?.toLowerCase() === 'success') {
+                    setClientPathErrorMessage('');
+                    setUncPathErrorMessage('');
                     setErrorDialog({
                         isOpen: true,
                         message: response.Message || 'Path is accessible',
                         type: 'success'
                     });
                 } else {
-                    setErrorDialog({
-                        isOpen: true,
-                        message: response.Message || 'Failed to connect',
-                        type: 'warning'
-                    });
+                    // Set inline error message instead of dialog for client
+                    if (isUNCPathEnabled) {
+                        setUncPathErrorMessage(response.Message || 'Failed to connect');
+                    } else {
+                        setClientPathErrorMessage(response.Message || 'Failed to connect');
+                    }
+                    // Reopen modal to show inline error
+                    setIsCheckPathModalOpen(true);
                 }
             } catch (error) {
                 console.error("Error checking client path:", error);
@@ -687,7 +858,7 @@ const SearchServerData = () => {
                 // Close modal first
                 setIsCheckPathModalOpen(false);
 
-                // Then show error dialog
+                // For SERVER path - ALWAYS show popup dialog (success or error)
                 if (response.Rtn?.toLowerCase() === 'success') {
                     setErrorDialog({
                         isOpen: true,
@@ -854,57 +1025,282 @@ const SearchServerData = () => {
         }
     };
 
+
+    // const handleTriggerDateChange = (date) => {
+    //     console.log("=== handleTriggerDateChange called ===");
+    //     console.log("Input date:", date);
+    //     console.log("lastTriggerDateWasValid:", lastTriggerDateWasValid);
+
+    //     const formattedDate = validateAndFormatDate(date);
+    //     console.log("Formatted date:", formattedDate);
+
+    //     const today = new Date();
+    //     today.setHours(0, 0, 0, 0);
+
+    //     const parts = formattedDate.split('/');
+
+    //     if (parts.length === 3) {
+    //         const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+    //         selectedDate.setHours(0, 0, 0, 0); // IMPORTANT: Set to start of day for accurate comparison
+
+    //         console.log("Selected date:", selectedDate);
+    //         console.log("Today:", today);
+    //         console.log("Is past?", selectedDate < today);
+
+    //         // CHANGED: Only treat as PAST if strictly less than today (not equal)
+    //         if (selectedDate < today) {
+    //             // Calculate yesterday
+    //             const yesterday = new Date();
+    //             yesterday.setTime(yesterday.getTime() - 86400000);
+    //             yesterday.setHours(0, 0, 0, 0);
+    //             const yesterdayFormatted = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
+
+    //             console.log("Setting to yesterday:", yesterdayFormatted);
+
+    //             // Show error ONLY if last date was valid (current or future)
+    //             if (lastTriggerDateWasValid) {
+    //                 console.log("Showing error dialog - transitioning from valid to past date");
+    //                 setErrorDialog({
+    //                     isOpen: true,
+    //                     message: 'Selected date earlier than the current date',
+    //                     type: 'warning'
+    //                 });
+    //             } else {
+    //                 console.log("No error dialog - already in past date state");
+    //             }
+
+    //             setTriggerDate(yesterdayFormatted);
+    //             setShowTriggerWarning(false);
+    //             setLastTriggerDateWasValid(false); // Mark as invalid state
+    //             return;
+    //         } else {
+    //             // Valid date (today or future) - CHANGED: includes today
+    //             console.log("Valid date (today or future), setting:", formattedDate);
+    //             setTriggerDate(formattedDate);
+    //             setShowTriggerWarning(false);
+    //             setLastTriggerDateWasValid(true); // Mark as valid state
+    //         }
+    //     } else {
+    //         setTriggerDate(formattedDate);
+    //     }
+    // };
+
+    // const handleExpiryDateChange = (date) => {
+    //     const formattedDate = validateAndFormatDate(date);
+    //     const today = new Date();
+    //     today.setHours(0, 0, 0, 0);
+
+    //     const parts = formattedDate.split('/');
+
+    //     if (parts.length === 3) {
+    //         const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+    //         selectedDate.setHours(0, 0, 0, 0); // IMPORTANT: Set to start of day
+
+    //         // CHANGED: Only treat as PAST if strictly less than today (not equal)
+    //         if (selectedDate < today) {
+    //             // Calculate yesterday
+    //             const yesterday = new Date();
+    //             yesterday.setTime(yesterday.getTime() - 86400000);
+    //             yesterday.setHours(0, 0, 0, 0);
+    //             const yesterdayFormatted = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
+
+    //             // Show error ONLY if last date was valid (current or future)
+    //             if (lastExpiryDateWasValid) {
+    //                 setErrorDialog({
+    //                     isOpen: true,
+    //                     message: 'Selected date earlier than the current date',
+    //                     type: 'warning'
+    //                 });
+    //             }
+
+    //             setExpiryDate(yesterdayFormatted);
+    //             setShowExpiryWarning(false);
+    //             setLastExpiryDateWasValid(false); // Mark as invalid state
+    //             return;
+    //         } else {
+    //             // Valid date (today or future) - CHANGED: includes today
+    //             setExpiryDate(formattedDate);
+    //             setShowExpiryWarning(false);
+    //             setLastExpiryDateWasValid(true); // Mark as valid state
+    //         }
+    //     } else {
+    //         setExpiryDate(formattedDate);
+    //     }
+    // };
+
     const handleTriggerDateChange = (date) => {
-        const parts = date.split('/');
-        const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        console.log("=== handleTriggerDateChange called ===");
+        console.log("Input date:", date);
+        console.log("Current triggerDate:", triggerDate);
+        console.log("lastTriggerDateWasValid:", lastTriggerDateWasValid);
+
+        const formattedDate = validateAndFormatDate(date);
+        console.log("Formatted date:", formattedDate);
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        if (selectedDate < today) {
-            setErrorDialog({
-                isOpen: true,
-                message: 'Selected date earlier than the current date',
-                type: 'warning'
-            });
-            setTriggerDate(new Date().toLocaleDateString('en-GB'));
+        const parts = formattedDate.split('/');
+
+        if (parts.length === 3) {
+            const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+            selectedDate.setHours(0, 0, 0, 0);
+
+            console.log("Selected date:", selectedDate);
+            console.log("Today:", today);
+            console.log("Is past?", selectedDate < today);
+
+            if (selectedDate < today) {
+                // Calculate yesterday
+                const yesterday = new Date();
+                yesterday.setTime(yesterday.getTime() - 86400000);
+                yesterday.setHours(0, 0, 0, 0);
+                const yesterdayFormatted = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
+
+                console.log("Setting to yesterday:", yesterdayFormatted);
+
+                // Show error ONLY if last date was valid (current or future)
+                if (lastTriggerDateWasValid) {
+                    console.log("Showing error dialog - transitioning from valid to past date");
+                    setErrorDialog({
+                        isOpen: true,
+                        message: 'Selected date earlier than the current date',
+                        type: 'warning'
+                    });
+                } else {
+                    console.log("No error dialog - already in past date state");
+                }
+
+                // IMPORTANT: Force update even if value is the same
+                // First clear it, then set it in next tick
+                setTriggerDate('');
+                setTimeout(() => {
+                    setTriggerDate(yesterdayFormatted);
+                }, 0);
+
+                setShowTriggerWarning(false);
+                setLastTriggerDateWasValid(false);
+                return;
+            } else {
+                // Valid date (today or future)
+                console.log("Valid date (today or future), setting:", formattedDate);
+                setTriggerDate(formattedDate);
+                setShowTriggerWarning(false);
+                setLastTriggerDateWasValid(true);
+            }
         } else {
-            setTriggerDate(date);
+            setTriggerDate(formattedDate);
         }
     };
 
     const handleExpiryDateChange = (date) => {
-        const parts = date.split('/');
-        const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        const formattedDate = validateAndFormatDate(date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        if (selectedDate < today) {
-            setErrorDialog({
-                isOpen: true,
-                message: 'Selected date earlier than the current date',
-                type: 'warning'
-            });
-            setExpiryDate(new Date().toLocaleDateString('en-GB'));
+        const parts = formattedDate.split('/');
+
+        if (parts.length === 3) {
+            const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+            selectedDate.setHours(0, 0, 0, 0);
+
+            if (selectedDate < today) {
+                // Calculate yesterday
+                const yesterday = new Date();
+                yesterday.setTime(yesterday.getTime() - 86400000);
+                yesterday.setHours(0, 0, 0, 0);
+                const yesterdayFormatted = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
+
+                // Show error ONLY if last date was valid (current or future)
+                if (lastExpiryDateWasValid) {
+                    setErrorDialog({
+                        isOpen: true,
+                        message: 'Selected date earlier than the current date',
+                        type: 'warning'
+                    });
+                }
+
+                // IMPORTANT: Force update even if value is the same
+                // First clear it, then set it in next tick
+                setExpiryDate('');
+                setTimeout(() => {
+                    setExpiryDate(yesterdayFormatted);
+                }, 0);
+
+                setShowExpiryWarning(false);
+                setLastExpiryDateWasValid(false);
+                return;
+            } else {
+                // Valid date (today or future)
+                setExpiryDate(formattedDate);
+                setShowExpiryWarning(false);
+                setLastExpiryDateWasValid(true);
+            }
         } else {
-            setExpiryDate(date);
+            setExpiryDate(formattedDate);
         }
     };
 
+    // const handleOneTimeDateChange = (date) => {
+    //     const formattedDate = validateAndFormatDate(date);
+    //     const today = new Date();
+    //     today.setHours(0, 0, 0, 0);
+
+    //     const parts = formattedDate.split('/');
+
+    //     // Check if it's a valid date
+    //     if (parts.length === 3) {
+    //         const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+
+    //         if (selectedDate < today) {
+    //             // For One Time schedule, also show error and set to yesterday
+    //             setErrorDialog({
+    //                 isOpen: true,
+    //                 message: 'Selected date earlier than the current date',
+    //                 type: 'warning'
+    //             });
+
+    //             const yesterday = new Date();
+    //             yesterday.setDate(yesterday.getDate() - 1);
+    //             const yesterdayFormatted = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
+    //             setOneTimeDate(yesterdayFormatted);
+    //         } else {
+    //             setOneTimeDate(formattedDate);
+    //         }
+    //     } else {
+    //         setOneTimeDate(formattedDate);
+    //     }
+    // };
+
+
     const handleOneTimeDateChange = (date) => {
-        const parts = date.split('/');
-        const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        const formattedDate = validateAndFormatDate(date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        if (selectedDate < today) {
-            setErrorDialog({
-                isOpen: true,
-                message: 'Selected date earlier than the current date',
-                type: 'warning'
-            });
-            setOneTimeDate(new Date().toLocaleDateString('en-GB'));
+        const parts = formattedDate.split('/');
+
+        // Check if it's a valid date
+        if (parts.length === 3) {
+            const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+
+            if (selectedDate < today) {
+                // For One Time schedule, also show error and set to yesterday
+                setErrorDialog({
+                    isOpen: true,
+                    message: 'Selected date earlier than the current date',
+                    type: 'warning'
+                });
+
+                const yesterday = new Date();
+                yesterday.setTime(yesterday.getTime() - 86400000); // CHANGED HERE
+                const yesterdayFormatted = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
+                setOneTimeDate(yesterdayFormatted);
+            } else {
+                setOneTimeDate(formattedDate);
+            }
         } else {
-            setOneTimeDate(date);
+            setOneTimeDate(formattedDate);
         }
     };
 
@@ -943,22 +1339,45 @@ const SearchServerData = () => {
     const handleSubmit = () => {
         // Reset warning first
         setShowExpiryWarning(false);
+        setShowTriggerWarning(false);
+
+        // Validate that both trigger and expiry dates are not in the past
+        const triggerParts = triggerDate.split('/');
+        const triggerDateOnly = new Date(triggerParts[2], triggerParts[1] - 1, triggerParts[0]);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (triggerDateOnly < today) {
+            setShowTriggerWarning(true);
+            // Scroll to the Trigger/Expiry section
+            if (triggerExpiryRef.current && scrollContainerRef.current) {
+                const container = scrollContainerRef.current;
+                const element = triggerExpiryRef.current;
+                const elementRect = element.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
+
+                container.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+            }
+            return;
+        }
+
+        const triggerTimeParts = triggerTime.split(':');
+        const triggerDateTime = new Date(
+            parseInt(triggerParts[2]),
+            parseInt(triggerParts[1]) - 1,
+            parseInt(triggerParts[0]),
+            parseInt(triggerTimeParts[0]),
+            parseInt(triggerTimeParts[1]),
+            parseInt(triggerTimeParts[2])
+        );
 
         if (expiryEnabled) {
-            const triggerParts = triggerDate.split('/');
             const expiryParts = expiryDate.split('/');
-
-            const triggerTimeParts = triggerTime.split(':');
             const expiryTimeParts = expiryTime.split(':');
-
-            const triggerDateTime = new Date(
-                parseInt(triggerParts[2]),
-                parseInt(triggerParts[1]) - 1,
-                parseInt(triggerParts[0]),
-                parseInt(triggerTimeParts[0]),
-                parseInt(triggerTimeParts[1]),
-                parseInt(triggerTimeParts[2])
-            );
 
             const expiryDateTime = new Date(
                 parseInt(expiryParts[2]),
@@ -969,8 +1388,53 @@ const SearchServerData = () => {
                 parseInt(expiryTimeParts[2])
             );
 
-            if (expiryDateTime < triggerDateTime) {
+            if (expiryDateTime <= triggerDateTime) {
                 setShowExpiryWarning(true);
+                // Scroll to the Trigger/Expiry section
+                if (triggerExpiryRef.current && scrollContainerRef.current) {
+                    const container = scrollContainerRef.current;
+                    const element = triggerExpiryRef.current;
+                    const elementRect = element.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+                    const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
+
+                    container.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                    });
+                }
+                return;
+            }
+        }
+
+        if (expiryEnabled) {
+            const expiryParts = expiryDate.split('/');
+            const expiryTimeParts = expiryTime.split(':');
+
+            const expiryDateTime = new Date(
+                parseInt(expiryParts[2]),
+                parseInt(expiryParts[1]) - 1,
+                parseInt(expiryParts[0]),
+                parseInt(expiryTimeParts[0]),
+                parseInt(expiryTimeParts[1]),
+                parseInt(expiryTimeParts[2])
+            );
+
+            if (expiryDateTime <= triggerDateTime) {
+                setShowExpiryWarning(true);
+                // Scroll to the Trigger/Expiry section
+                if (triggerExpiryRef.current && scrollContainerRef.current) {
+                    const container = scrollContainerRef.current;
+                    const element = triggerExpiryRef.current;
+                    const elementRect = element.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+                    const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
+
+                    container.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                    });
+                }
                 return; // Don't submit
             }
         }
@@ -1649,10 +2113,21 @@ const SearchServerData = () => {
                                                     }`}></div>
                                             </div>
                                         </div>
+                                        {/* <DatePickerInput
+                                            value={filesOlderThanDate}
+                                            onChange={(date) => setFilesOlderThanDate(date)}
+                                            disabled={!filesOlderThanDateEnabled || !deleteLocalCopy || moveFiles}
+                                            allowFuture={false}
+                                            allowPast={true}
+                                            validateAndFormatDate={validateAndFormatDate}
+                                        /> */}
                                         <DatePickerInput
                                             value={filesOlderThanDate}
                                             onChange={(date) => setFilesOlderThanDate(date)}
                                             disabled={!filesOlderThanDateEnabled || !deleteLocalCopy || moveFiles}
+                                            allowFuture={false}  // This means future dates are NOT allowed
+                                            allowPast={true}     // Past dates ARE allowed
+                                            validateAndFormatDate={validateAndFormatDate}
                                         />
                                     </div>
                                 </div>
@@ -1669,15 +2144,76 @@ const SearchServerData = () => {
                             <div className="space-y-8">
                                 <div className="flex items-center gap-4">
                                     <label className="text-gray-600 text-sm font-bold w-24">Trigger on</label>
+
+                                    {/* 
                                     <DatePickerInput
                                         value={triggerDate}
                                         onChange={handleTriggerDateChange}
+                                        onInputChange={(value) => {
+                                            setIsManualTyping(true);
+                                            handleTriggerDateChange(value);
+                                        }}
+                                        allowPast={false}
+                                        allowFuture={true}
+                                    /> */}
+
+                                    {/* <DatePickerInput
+                                        value={triggerDate}
+                                        onChange={handleTriggerDateChange}
+                                        onInputChange={(value) => {
+                                            const formattedDate = validateAndFormatDate(value);
+                                            handleTriggerDateChange(formattedDate);
+                                        }}
+                                        allowPast={false}
+                                        allowFuture={true}
+                                        validateAndFormatDate={validateAndFormatDate}
+                                    /> */}
+
+                                    {/* <DatePickerInput
+                                        value={triggerDate}
+                                        onChange={handleTriggerDateChange}
+                                        onInputChange={(value) => {
+                                            const formattedDate = validateAndFormatDate(value);
+                                            // Check if the date is past BEFORE calling handleTriggerDateChange
+                                            const parts = formattedDate.split('/');
+                                            const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                                            const today = new Date();
+                                            today.setHours(0, 0, 0, 0);
+
+                                            if (selectedDate < today) {
+                                                // Don't call handleTriggerDateChange here, let onBlur handle it
+                                                // Just update the input display
+                                                const formatted = validateAndFormatDate(value);
+                                                setTriggerDate(formatted);
+                                            } else {
+                                                handleTriggerDateChange(formattedDate);
+                                            }
+                                        }}
+                                        allowPast={false}
+                                        allowFuture={true}
+                                        validateAndFormatDate={validateAndFormatDate}
+                                    /> */}
+
+
+                                    <DatePickerInput
+                                        value={triggerDate}
+                                        onChange={handleTriggerDateChange}
+                                        allowPast={false}
+                                        allowFuture={true}
+                                        validateAndFormatDate={validateAndFormatDate}
                                     />
+
+
                                     <TimePicker
                                         value={triggerTime}
-                                        onChange={(time) => setTriggerTime(time)}
+                                        onChange={(time) => {
+                                            setTriggerTime(time);
+                                            setShowExpiryWarning(false);
+                                            setShowTriggerWarning(false); // Clear trigger warning when time changes
+                                        }}
                                     />
                                 </div>
+
                                 <div className="flex items-center gap-4">
                                     <div className="w-24"></div>
                                     <div className="-ml-24 flex items-center gap-4">
@@ -1685,27 +2221,91 @@ const SearchServerData = () => {
                                             label="Expiry Date & Time"
                                             boldLabel
                                             checked={expiryEnabled}
-                                            onChange={() => setExpiryEnabled(!expiryEnabled)}
+                                            onChange={() => {
+                                                setExpiryEnabled(!expiryEnabled);
+                                                setShowExpiryWarning(false); // Clear warning when toggling
+                                            }}
                                         />
+                                        {/* <DatePickerInput
+                                            value={expiryDate}
+                                            // onChange={handleExpiryDateChange}
+                                            onChange={(value) => {
+                                                // setIsManualTyping(true);
+                                                handleExpiryDateChange(value);
+                                            }}
+                                            disabled={!expiryEnabled}
+                                            allowPast={false}
+                                            // allowPast={true}
+                                            allowFuture={true}
+                                        /> */}
+                                        {/* <DatePickerInput
+                                            value={expiryDate}
+                                            onChange={handleExpiryDateChange}
+                                            onInputChange={(value) => {
+                                                const formattedDate = validateAndFormatDate(value);
+                                                handleExpiryDateChange(formattedDate);
+                                            }}
+                                            disabled={!expiryEnabled}
+                                            allowPast={false}
+                                            allowFuture={true}
+                                            validateAndFormatDate={validateAndFormatDate}
+                                        /> */}
+
+                                        {/* <DatePickerInput
+                                            value={expiryDate}
+                                            onChange={handleExpiryDateChange}
+                                            onInputChange={(value) => {
+                                                const formattedDate = validateAndFormatDate(value);
+                                                // Check if the date is past BEFORE calling handleExpiryDateChange
+                                                const parts = formattedDate.split('/');
+                                                const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                                                const today = new Date();
+                                                today.setHours(0, 0, 0, 0);
+
+                                                if (selectedDate < today) {
+                                                    // Don't call handleExpiryDateChange here, let onBlur handle it
+                                                    // Just update the input display
+                                                    const formatted = validateAndFormatDate(value);
+                                                    setExpiryDate(formatted);
+                                                } else {
+                                                    handleExpiryDateChange(formattedDate);
+                                                }
+                                            }}
+                                            disabled={!expiryEnabled}
+                                            allowPast={false}
+                                            allowFuture={true}
+                                            validateAndFormatDate={validateAndFormatDate}
+                                        /> */}
+
                                         <DatePickerInput
                                             value={expiryDate}
                                             onChange={handleExpiryDateChange}
                                             disabled={!expiryEnabled}
+                                            allowPast={false}
+                                            allowFuture={true}
+                                            validateAndFormatDate={validateAndFormatDate}
                                         />
+
                                         <TimePicker
                                             value={expiryTime}
-                                            onChange={(time) => setExpiryTime(time)}
+                                            onChange={(time) => {
+                                                setExpiryTime(time);
+                                                setShowExpiryWarning(false); // Clear warning when time changes
+                                            }}
                                             disabled={!expiryEnabled}
                                         />
                                     </div>
-                                    {showExpiryWarning && (
-                                        <div className="flex items-center gap-4 ml-24">
-                                            <div className="bg-yellow-400 text-white px-4 py-2 rounded text-sm font-medium">
+                                </div>
+                                {showTriggerWarning && (
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-24"></div>
+                                        <div className="-ml-24 mt-2">
+                                            <div className="bg-yellow-400 text-white px-4 py-2 rounded text-sm font-medium inline-block">
                                                 Trigger Date/time should not be less than expiry date/time
                                             </div>
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -1989,16 +2589,20 @@ const SearchServerData = () => {
                                                 <DatePickerInput
                                                     value={oneTimeDate}
                                                     onChange={handleOneTimeDateChange}
+                                                    allowPast={false}
+                                                    allowFuture={true}
+                                                    validateAndFormatDate={validateAndFormatDate}
                                                 />
                                             </div>
                                         )}
 
                                         {/* Daily Schedule UI */}
 
+                                        {/* Daily Schedule UI */}
+
                                         {daily && (
                                             <div className="flex gap-6 pl-4">
-
-                                                {/* LEFT: Repeat checkbox (center aligned) */}
+                                                {/* LEFT: Repeat checkbox */}
                                                 <div className="flex items-center">
                                                     <SquareCheckbox
                                                         label="Repeat Task"
@@ -2010,7 +2614,6 @@ const SearchServerData = () => {
 
                                                 {/* RIGHT: Every fields */}
                                                 <div className="space-y-4">
-
                                                     {/* Every Day */}
                                                     <div className="flex items-center gap-4">
                                                         <label className="text-gray-600 text-sm font-bold w-16">Every</label>
@@ -2020,8 +2623,21 @@ const SearchServerData = () => {
                                                             value={dailyEveryDays}
                                                             onChange={(e) => {
                                                                 const value = e.target.value;
-                                                                if (/^\d*$/.test(value) && parseInt(value) >= 0) {
+                                                                // Allow empty or valid positive numbers
+                                                                if (value === '' || /^[0-9]+$/.test(value)) {
                                                                     setDailyEveryDays(value);
+                                                                }
+                                                            }}
+                                                            onBlur={(e) => {
+                                                                const value = e.target.value;
+                                                                if (value === '' || value === '0') {
+                                                                    setDailyEveryDays('0');
+                                                                }
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                // Prevent minus, plus, 'e', and decimal point
+                                                                if (['-', '+', 'e', 'E', '.'].includes(e.key)) {
+                                                                    e.preventDefault();
                                                                 }
                                                             }}
                                                             className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
@@ -2032,40 +2648,92 @@ const SearchServerData = () => {
                                                     {/* Every Hour & Minute */}
                                                     <div className="flex items-center gap-4">
                                                         <label className="text-gray-600 text-sm font-bold w-16">Every</label>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            max="24"
-                                                            value={dailyEveryHours}
-                                                            onChange={(e) => {
-                                                                const value = e.target.value;
-                                                                const num = parseInt(value);
-                                                                if (/^\d*$/.test(value) && num >= 0 && num <= 24) {
-                                                                    setDailyEveryHours(value);
-                                                                }
-                                                            }}
-                                                            className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
-                                                        />
+                                                        <div className="relative group">
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max="24"
+                                                                value={dailyEveryHours}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    if (value === '') {
+                                                                        setDailyEveryHours('');
+                                                                        return;
+                                                                    }
+                                                                    const num = parseInt(value);
+                                                                    if (!isNaN(num) && num >= 0) {
+                                                                        setDailyEveryHours(value);
+                                                                    }
+                                                                }}
+                                                                onBlur={(e) => {
+                                                                    const value = e.target.value;
+                                                                    if (value === '') {
+                                                                        setDailyEveryHours('0');
+                                                                    } else {
+                                                                        const num = parseInt(value);
+                                                                        if (num > 24) {
+                                                                            setDailyEveryHours('24');
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (['-', '+', 'e', 'E', '.'].includes(e.key)) {
+                                                                        e.preventDefault();
+                                                                    }
+                                                                }}
+                                                                className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+                                                            />
+                                                            {dailyEveryHours !== '' && parseInt(dailyEveryHours) > 24 && (
+                                                                <div className="absolute left-0 -bottom-6 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                                    Value must be less than or equal to 24
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         <span className="text-gray-600 text-sm font-bold">Hour</span>
 
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            max="59"
-                                                            value={dailyEveryMinutes}
-                                                            onChange={(e) => {
-                                                                const value = e.target.value;
-                                                                const num = parseInt(value);
-                                                                if (/^\d*$/.test(value) && num >= 0 && num <= 59) {
-                                                                    setDailyEveryMinutes(value);
-                                                                }
-                                                            }}
-                                                            className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
-                                                        />
-
+                                                        <div className="relative group">
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max="59"
+                                                                value={dailyEveryMinutes}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    if (value === '') {
+                                                                        setDailyEveryMinutes('');
+                                                                        return;
+                                                                    }
+                                                                    const num = parseInt(value);
+                                                                    if (!isNaN(num) && num >= 0) {
+                                                                        setDailyEveryMinutes(value);
+                                                                    }
+                                                                }}
+                                                                onBlur={(e) => {
+                                                                    const value = e.target.value;
+                                                                    if (value === '') {
+                                                                        setDailyEveryMinutes('0');
+                                                                    } else {
+                                                                        const num = parseInt(value);
+                                                                        if (num > 59) {
+                                                                            setDailyEveryMinutes('59');
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (['-', '+', 'e', 'E', '.'].includes(e.key)) {
+                                                                        e.preventDefault();
+                                                                    }
+                                                                }}
+                                                                className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+                                                            />
+                                                            {dailyEveryMinutes !== '' && parseInt(dailyEveryMinutes) > 59 && (
+                                                                <div className="absolute left-0 -bottom-6 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                                    Value must be less than or equal to 59
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         <span className="text-gray-600 text-sm font-bold">Minute</span>
                                                     </div>
-
                                                 </div>
                                             </div>
                                         )}
@@ -2278,7 +2946,8 @@ const SearchServerData = () => {
 
                                                             {showWeekSelector && (
                                                                 <SelectorDropdown
-                                                                    options={['First', 'Second', 'Third', 'Fourth', 'Fifth']}
+                                                                    // options={['First', 'Second', 'Third', 'Fourth', 'Fifth']}
+                                                                    options={weekOptions.map(w => w.weeks)}
                                                                     selectedValues={tempSelectedWeeks}
                                                                     onSelect={(week) => {
                                                                         setTempSelectedWeeks(prev =>
@@ -2334,10 +3003,11 @@ const SearchServerData = () => {
 
                                                             {showWeekdaysSelector && (
                                                                 <SelectorDropdown
-                                                                    options={[
-                                                                        'Sunday', 'Monday', 'Tuesday',
-                                                                        'Wednesday', 'Thursday', 'Friday', 'Saturday'
-                                                                    ]}
+                                                                    // options={[
+                                                                    //     'Sunday', 'Monday', 'Tuesday',
+                                                                    //     'Wednesday', 'Thursday', 'Friday', 'Saturday'
+                                                                    // ]}
+                                                                    options={weekdayOptions.map(d => d.days)}
                                                                     selectedValues={tempSelectedWeekdays}
                                                                     onSelect={(day) => {
                                                                         setTempSelectedWeekdays(prev =>
@@ -2583,9 +3253,16 @@ const SearchServerData = () => {
                     </div>
                 </main>
             </div >
+            {/* <Popup
+                isOpen={isCheckPathModalOpen}
+                onClose={() => setIsCheckPathModalOpen(false)} */}
             <Popup
                 isOpen={isCheckPathModalOpen}
-                onClose={() => setIsCheckPathModalOpen(false)}
+                onClose={() => {
+                    setIsCheckPathModalOpen(false);
+                    setClientPathErrorMessage('');
+                    setUncPathErrorMessage('');
+                }}
                 title="Check Path"
                 content={
                     <div className="space-y-6 p-4">
@@ -2638,7 +3315,7 @@ const SearchServerData = () => {
                             />
                         </div>
 
-                        <div>
+                        {/* <div>
                             <label className="block text-gray-600 text-sm font-bold mb-2">
                                 Client User Name
                                 {checkPathType === 'client' && <span className="text-red-500 ml-1">*</span>}
@@ -2680,6 +3357,76 @@ const SearchServerData = () => {
                                         : 'border-gray-300 focus:border-blue-400'
                                     }`}
                             />
+
+
+                        </div> */}
+
+
+                        <div>
+                            <label className="block text-gray-600 text-sm font-bold mb-2">
+                                Client User Name
+                                {checkPathType === 'client' && <span className="text-red-500 ml-1">*</span>}
+                            </label>
+                            <input
+                                type="text"
+                                value={clientUsername}
+                                onChange={(e) => {
+                                    setClientUsername(e.target.value);
+                                    setUsernameError(false);
+                                    setClientPathErrorMessage('');
+                                    setUncPathErrorMessage('');
+                                }}
+                                disabled={checkPathType === 'server'}
+                                autoComplete="off"
+                                autoCorrect="off"
+                                autoCapitalize="off"
+                                spellCheck="false"
+                                className={`w-full bg-transparent border-b-2 px-2 py-2 text-sm focus:outline-none transition-colors ${checkPathType === 'server'
+                                    ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                                    : usernameError
+                                        ? 'border-red-500'
+                                        : 'border-gray-300 focus:border-blue-400'
+                                    }`}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-gray-600 text-sm font-bold mb-2">
+                                Client Password
+                                {checkPathType === 'client' && <span className="text-red-500 ml-1">*</span>}
+                            </label>
+                            <input
+                                type="password"
+                                value={clientPassword}
+                                onChange={(e) => {
+                                    setClientPassword(e.target.value);
+                                    setPasswordError(false);
+                                    setClientPathErrorMessage('');
+                                    setUncPathErrorMessage('');
+                                }}
+                                disabled={checkPathType === 'server'}
+                                autoComplete="new-password"
+                                className={`w-full bg-transparent border-b-2 px-2 py-2 text-sm focus:outline-none transition-colors ${checkPathType === 'server'
+                                    ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                                    : passwordError
+                                        ? 'border-red-500'
+                                        : 'border-gray-300 focus:border-blue-400'
+                                    }`}
+                            />
+                        </div>
+                        {clientPathErrorMessage && checkPathType === 'client' && !isUNCPathEnabled && (
+                            <div className="bg-red-500 text-white px-3 py-2 rounded text-sm mt-2">
+                                {clientPathErrorMessage}
+                            </div>
+                        )}
+
+                        {uncPathErrorMessage && checkPathType === 'client' && isUNCPathEnabled && (
+                            <div className="bg-red-500 text-white px-3 py-2 rounded text-sm mt-2">
+                                {uncPathErrorMessage}
+                            </div>
+                        )}
+
+                        <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
                         </div>
 
                         <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
@@ -2890,16 +3637,266 @@ const RadioButton = ({ label, name, checked, onChange }) => (
 );
 
 
-// Time Picker Component
+// const TimePicker = ({ value, onChange, disabled = false }) => {
+//     const [isOpen, setIsOpen] = useState(false);
+//     const [hours, setHours] = useState('00');
+//     const [minutes, setMinutes] = useState('00');
+//     const [seconds, setSeconds] = useState('00');
+//     const [inputValue, setInputValue] = useState(value || '00:00:00');
+//     const dropdownRef = useRef(null);
+
+//     useEffect(() => {
+//         if (value) {
+//             setInputValue(value);
+//             const parts = value.split(':');
+//             if (parts.length === 3) {
+//                 setHours(parts[0]);
+//                 setMinutes(parts[1]);
+//                 setSeconds(parts[2]);
+//             }
+//         }
+//     }, [value]);
+
+
+//     useEffect(() => {
+//         if (isOpen) {
+//             // Small delay to ensure DOM is rendered
+//             setTimeout(() => {
+//                 const hourElement = document.querySelector(`[data-hour="${hours}"]`);
+//                 const minuteElement = document.querySelector(`[data-minute="${minutes}"]`);
+//                 const secondElement = document.querySelector(`[data-second="${seconds}"]`);
+
+//                 if (hourElement) {
+//                     hourElement.scrollIntoView({ block: 'center', behavior: 'auto' });
+//                 }
+//                 if (minuteElement) {
+//                     minuteElement.scrollIntoView({ block: 'center', behavior: 'auto' });
+//                 }
+//                 if (secondElement) {
+//                     secondElement.scrollIntoView({ block: 'center', behavior: 'auto' });
+//                 }
+//             }, 50);
+//         }
+//     }, [isOpen, hours, minutes, seconds]);
+
+//     useEffect(() => {
+//         const handleClickOutside = (e) => {
+//             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+//                 setIsOpen(false);
+//             }
+//         };
+//         document.addEventListener('mousedown', handleClickOutside);
+//         return () => document.removeEventListener('mousedown', handleClickOutside);
+//     }, []);
+
+//     const validateTimeInput = (value, max) => {
+//         const num = parseInt(value);
+//         if (isNaN(num) || num < 0) return '00';
+//         if (num > max) return max.toString().padStart(2, '0');
+//         return num.toString().padStart(2, '0');
+//     };
+
+//     const validateAndFormatTime = (timeString) => {
+//         const parts = timeString.split(':');
+//         if (parts.length !== 3) return value || '00:00:00';
+
+//         let h = parseInt(parts[0]) || 0;
+//         let m = parseInt(parts[1]) || 0;
+//         let s = parseInt(parts[2]) || 0;
+
+//         // Validate hours (0-23)
+//         if (h < 0) h = 0;
+//         if (h > 23) h = 23;
+
+//         // Validate minutes (0-59)
+//         if (m < 0) m = 0;
+//         if (m > 59) m = 59;
+
+//         // Validate seconds (0-59)
+//         if (s < 0) s = 0;
+//         if (s > 59) s = 59;
+
+//         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+//     };
+
+//     const handleInputChange = (e) => {
+//         const newValue = e.target.value;
+//         setInputValue(newValue);
+//     };
+
+//     const handleInputBlur = () => {
+//         const formatted = validateAndFormatDate(inputValue);
+//         const parts = formatted.split('/');
+//         const formattedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+//         const today = new Date();
+//         today.setHours(0, 0, 0, 0);
+
+//         // Check if date is allowed based on allowPast/allowFuture
+//         if (!allowFuture && formattedDate > today) {
+//             // For past-only dates (Files older than) - set to yesterday
+//             const yesterday = new Date();
+//             yesterday.setDate(yesterday.getDate() - 1);
+//             const yesterdayFormatted = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
+//             setInputValue(yesterdayFormatted);
+//             if (onChange) {
+//                 onChange(yesterdayFormatted);
+//             }
+//         } else if (!allowPast && formattedDate < today) {
+//             // For future-only dates (Trigger, Expiry, One Time)
+//             // Keep the typed date and let parent component handle the error
+//             setInputValue(formatted);
+//             if (onChange) {
+//                 onChange(formatted);
+//             }
+//         } else {
+//             setInputValue(formatted);
+//             if (onChange) {
+//                 onChange(formatted);
+//             }
+//         }
+//     };
+
+//     const handleTimeChange = (newHours, newMinutes, newSeconds) => {
+//         const validHours = validateTimeInput(newHours, 23);
+//         const validMinutes = validateTimeInput(newMinutes, 59);
+//         const validSeconds = validateTimeInput(newSeconds, 59);
+
+//         setHours(validHours);
+//         setMinutes(validMinutes);
+//         setSeconds(validSeconds);
+
+//         const timeString = `${validHours}:${validMinutes}:${validSeconds}`;
+//         setInputValue(timeString);
+
+//         if (onChange) {
+//             onChange(timeString);
+//         }
+//     };
+
+//     const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+//     const minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+//     const secondOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+
+//     return (
+//         <div className="relative" ref={dropdownRef}>
+//             <div className={`relative w-32 ${disabled ? 'cursor-not-allowed' : ''}`}>
+//                 <input
+//                     type="text"
+//                     value={inputValue}
+//                     onChange={handleInputChange}
+//                     onBlur={handleInputBlur}
+//                     onFocus={() => !disabled && setIsOpen(true)}
+//                     disabled={disabled}
+//                     placeholder="HH:MM:SS"
+//                     className={`w-full border border-gray-200 rounded px-3 py-1.5 text-sm text-gray-600 focus:outline-none focus:border-blue-400 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'bg-white'
+//                         }`}
+//                 />
+//                 <Clock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+//             </div>
+
+//             {isOpen && !disabled && (
+//                 <div className="absolute top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 p-3">
+//                     <div className="flex gap-2">
+//                         {/* Hours */}
+//                         <div className="flex flex-col">
+//                             <label className="text-xs text-gray-600 mb-1 text-center font-semibold">Hours</label>
+//                             <div className="h-32 w-16 overflow-y-auto border border-gray-200 rounded custom-scrollbar">
+//                                 {hourOptions.map((hour) => (
+//                                     <div
+//                                         key={hour}
+//                                         data-hour={hour}
+//                                         onClick={() => {
+//                                             setHours(hour);
+//                                             handleTimeChange(hour, minutes, seconds);
+//                                         }}
+//                                         className={`px-3 py-1 text-sm text-center cursor-pointer hover:bg-blue-50 ${hours === hour ? 'bg-blue-100 font-semibold text-blue-600' : ''
+//                                             }`}
+//                                     >
+//                                         {hour}
+//                                     </div>
+//                                 ))}
+//                             </div>
+//                         </div>
+
+//                         <div className="flex items-center justify-center text-xl font-bold text-gray-400 pt-6">:</div>
+
+//                         {/* Minutes */}
+//                         <div className="flex flex-col">
+//                             <label className="text-xs text-gray-600 mb-1 text-center font-semibold">Minutes</label>
+//                             <div className="h-32 w-16 overflow-y-auto border border-gray-200 rounded custom-scrollbar">
+//                                 {minuteOptions.map((minute) => (
+//                                     <div
+//                                         key={minute}
+//                                         data-minute={minute}
+//                                         onClick={() => {
+//                                             setMinutes(minute);
+//                                             handleTimeChange(hours, minute, seconds);
+//                                         }}
+//                                         className={`px-3 py-1 text-sm text-center cursor-pointer hover:bg-blue-50 ${minutes === minute ? 'bg-blue-100 font-semibold text-blue-600' : ''
+//                                             }`}
+//                                     >
+//                                         {minute}
+//                                     </div>
+//                                 ))}
+//                             </div>
+//                         </div>
+
+//                         <div className="flex items-center justify-center text-xl font-bold text-gray-400 pt-6">:</div>
+
+//                         {/* Seconds */}
+//                         <div className="flex flex-col">
+//                             <label className="text-xs text-gray-600 mb-1 text-center font-semibold">Seconds</label>
+//                             <div className="h-32 w-16 overflow-y-auto border border-gray-200 rounded custom-scrollbar">
+//                                 {secondOptions.map((second) => (
+//                                     <div
+//                                         key={second}
+//                                         data-second={second}
+//                                         onClick={() => {
+//                                             setSeconds(second);
+//                                             handleTimeChange(hours, minutes, second);
+//                                         }}
+//                                         className={`px-3 py-1 text-sm text-center cursor-pointer hover:bg-blue-50 ${seconds === second ? 'bg-blue-100 font-semibold text-blue-600' : ''
+//                                             }`}
+//                                     >
+//                                         {second}
+//                                     </div>
+//                                 ))}
+//                             </div>
+//                         </div>
+//                     </div>
+//                     <div className="mt-2 flex justify-end">
+//                         <button
+//                             onClick={() => setIsOpen(false)}
+//                             className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
+//                         >
+//                             Done
+//                         </button>
+//                     </div>
+//                 </div>
+//             )}
+
+//             <style jsx>{`
+//                 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+//                 .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+//                 .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+//                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+//             `}</style>
+//         </div>
+//     );
+// };
+
+
 const TimePicker = ({ value, onChange, disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [hours, setHours] = useState('00');
     const [minutes, setMinutes] = useState('00');
     const [seconds, setSeconds] = useState('00');
+    const [inputValue, setInputValue] = useState(value || '00:00:00');
     const dropdownRef = useRef(null);
 
     useEffect(() => {
         if (value) {
+            setInputValue(value);
             const parts = value.split(':');
             if (parts.length === 3) {
                 setHours(parts[0]);
@@ -2908,6 +3905,27 @@ const TimePicker = ({ value, onChange, disabled = false }) => {
             }
         }
     }, [value]);
+
+    useEffect(() => {
+        if (isOpen) {
+            // Small delay to ensure DOM is rendered
+            setTimeout(() => {
+                const hourElement = document.querySelector(`[data-hour="${hours}"]`);
+                const minuteElement = document.querySelector(`[data-minute="${minutes}"]`);
+                const secondElement = document.querySelector(`[data-second="${seconds}"]`);
+
+                if (hourElement) {
+                    hourElement.scrollIntoView({ block: 'center', behavior: 'auto' });
+                }
+                if (minuteElement) {
+                    minuteElement.scrollIntoView({ block: 'center', behavior: 'auto' });
+                }
+                if (secondElement) {
+                    secondElement.scrollIntoView({ block: 'center', behavior: 'auto' });
+                }
+            }, 50);
+        }
+    }, [isOpen, hours, minutes, seconds]);
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -2926,6 +3944,44 @@ const TimePicker = ({ value, onChange, disabled = false }) => {
         return num.toString().padStart(2, '0');
     };
 
+    const validateAndFormatTime = (timeString) => {
+        const parts = timeString.split(':');
+        if (parts.length !== 3) return value || '00:00:00';
+
+        let h = parseInt(parts[0]) || 0;
+        let m = parseInt(parts[1]) || 0;
+        let s = parseInt(parts[2]) || 0;
+
+        // Validate hours (0-23)
+        if (h < 0) h = 0;
+        if (h > 23) h = 23;
+
+        // Validate minutes (0-59)
+        if (m < 0) m = 0;
+        if (m > 59) m = 59;
+
+        // Validate seconds (0-59)
+        if (s < 0) s = 0;
+        if (s > 59) s = 59;
+
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const handleInputChange = (e) => {
+        const newValue = e.target.value;
+        setInputValue(newValue);
+    };
+
+    const handleInputBlur = () => {
+        // REMOVE THE DATE VALIDATION LOGIC FROM TIME PICKER
+        // Just validate and format the time
+        const formatted = validateAndFormatTime(inputValue);
+        setInputValue(formatted);
+        if (onChange) {
+            onChange(formatted);
+        }
+    };
+
     const handleTimeChange = (newHours, newMinutes, newSeconds) => {
         const validHours = validateTimeInput(newHours, 23);
         const validMinutes = validateTimeInput(newMinutes, 59);
@@ -2936,6 +3992,8 @@ const TimePicker = ({ value, onChange, disabled = false }) => {
         setSeconds(validSeconds);
 
         const timeString = `${validHours}:${validMinutes}:${validSeconds}`;
+        setInputValue(timeString);
+
         if (onChange) {
             onChange(timeString);
         }
@@ -2947,15 +4005,15 @@ const TimePicker = ({ value, onChange, disabled = false }) => {
 
     return (
         <div className="relative" ref={dropdownRef}>
-            <div
-                onClick={() => !disabled && setIsOpen(!isOpen)}
-                className={`relative w-32 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-            >
+            <div className={`relative w-32 ${disabled ? 'cursor-not-allowed' : ''}`}>
                 <input
                     type="text"
-                    value={value}
-                    readOnly
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    onBlur={handleInputBlur}
+                    onFocus={() => !disabled && setIsOpen(true)}
                     disabled={disabled}
+                    placeholder="HH:MM:SS"
                     className={`w-full border border-gray-200 rounded px-3 py-1.5 text-sm text-gray-600 focus:outline-none focus:border-blue-400 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'bg-white'
                         }`}
                 />
@@ -2972,6 +4030,7 @@ const TimePicker = ({ value, onChange, disabled = false }) => {
                                 {hourOptions.map((hour) => (
                                     <div
                                         key={hour}
+                                        data-hour={hour}
                                         onClick={() => {
                                             setHours(hour);
                                             handleTimeChange(hour, minutes, seconds);
@@ -2994,6 +4053,7 @@ const TimePicker = ({ value, onChange, disabled = false }) => {
                                 {minuteOptions.map((minute) => (
                                     <div
                                         key={minute}
+                                        data-minute={minute}
                                         onClick={() => {
                                             setMinutes(minute);
                                             handleTimeChange(hours, minute, seconds);
@@ -3016,6 +4076,7 @@ const TimePicker = ({ value, onChange, disabled = false }) => {
                                 {secondOptions.map((second) => (
                                     <div
                                         key={second}
+                                        data-second={second}
                                         onClick={() => {
                                             setSeconds(second);
                                             handleTimeChange(hours, minutes, second);
@@ -3041,28 +4102,131 @@ const TimePicker = ({ value, onChange, disabled = false }) => {
             )}
 
             <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-      `}</style>
+                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+            `}</style>
         </div>
     );
 };
 
-// Date Picker Component
-const DatePickerInput = ({ value, onChange, disabled = false }) => {
+// const DatePickerInput = ({ value, onChange, disabled = false, allowPast = true, allowFuture = true, validateAndFormatDate }) => {
+//     const [isOpen, setIsOpen] = useState(false);
+//     const [selectedDate, setSelectedDate] = useState(new Date());
+//     const [inputValue, setInputValue] = useState(value || '');
+//     const dropdownRef = useRef(null);
+
+//     useEffect(() => {
+//         if (value) {
+//             setInputValue(value);
+//             const parts = value.split('/');
+//             if (parts.length === 3) {
+//                 const date = new Date(parts[2], parts[1] - 1, parts[0]);
+//                 setSelectedDate(date);
+//             }
+//         }
+//     }, [value]);
+
+//     useEffect(() => {
+//         const handleClickOutside = (e) => {
+//             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+//                 setIsOpen(false);
+//             }
+//         };
+//         document.addEventListener('mousedown', handleClickOutside);
+//         return () => document.removeEventListener('mousedown', handleClickOutside);
+//     }, []);
+
+//     const handleInputChange = (e) => {
+//         const newValue = e.target.value;
+//         setInputValue(newValue);
+//     };
+
+//     const handleInputBlur = () => {
+//         const formatted = validateAndFormatDate(inputValue);
+//         const parts = formatted.split('/');
+//         const formattedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+//         const today = new Date();
+//         today.setHours(0, 0, 0, 0);
+
+//         // Check if date is allowed based on allowPast/allowFuture
+//         if (!allowFuture && formattedDate > today) {
+//             // For past-only dates (Files older than)
+//             const current = new Date();
+//             const currentFormatted = `${current.getDate().toString().padStart(2, '0')}/${(current.getMonth() + 1).toString().padStart(2, '0')}/${current.getFullYear()}`;
+//             setInputValue(currentFormatted);
+//             if (onChange) {
+//                 onChange(currentFormatted);
+//             }
+//         } else if (!allowPast && formattedDate < today) {
+//             // For future-only dates (Trigger, Expiry, One Time)
+//             // Keep the typed date and let parent component handle the error
+//             setInputValue(formatted);
+//             if (onChange) {
+//                 onChange(formatted);
+//             }
+//         } else {
+//             setInputValue(formatted);
+//             if (onChange) {
+//                 onChange(formatted);
+//             }
+//         }
+//     };
+
+const DatePickerInput = ({
+    value,
+    onChange,
+    disabled = false,
+    allowPast = true,
+    allowFuture = true,
+    validateAndFormatDate
+}) => {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [inputValue, setInputValue] = useState(value || '');
+    const [isFocused, setIsFocused] = useState(false);
     const dropdownRef = useRef(null);
 
+    // useEffect(() => {
+    //     if (value) {
+    //         setInputValue(value);
+    //         const parts = value.split('/');
+    //         if (parts.length === 3) {
+    //             const date = new Date(parts[2], parts[1] - 1, parts[0]);
+    //             setSelectedDate(date);
+    //         }
+    //     }
+    // }, [value]);
+
     useEffect(() => {
-        if (value) {
+        // Always sync with parent value when not focused
+        // This ensures corrected values from parent show up
+        if (!isFocused && value !== undefined && value !== null) {
+            console.log("DatePickerInput syncing with parent value:", value);
+            setInputValue(value);
+
+            // Also update selectedDate for calendar
             const parts = value.split('/');
             if (parts.length === 3) {
                 const date = new Date(parts[2], parts[1] - 1, parts[0]);
                 setSelectedDate(date);
             }
+        }
+    }, [value, isFocused]);
+
+    // Add this useEffect instead
+    // useEffect(() => {
+    //     // Only update if not focused (user isn't typing)
+    //     if (!isFocused) {
+    //         setInputValue(value || '');
+    //     }
+    // }, [value, isFocused]);
+
+    // Add this NEW useEffect to handle immediate sync after onChange
+    useEffect(() => {
+        if (value && !isFocused) {
+            setInputValue(value);
         }
     }, [value]);
 
@@ -3076,6 +4240,94 @@ const DatePickerInput = ({ value, onChange, disabled = false }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // const handleInputChange = (e) => {
+    //     const newValue = e.target.value;
+    //     setInputValue(newValue);
+    // };
+
+    const handleInputChange = (e) => {
+        const newValue = e.target.value;
+        setInputValue(newValue);
+    };
+
+    // const handleInputBlur = () => {
+    //     console.log("=== handleInputBlur called ===");
+    //     console.log("Input value:", inputValue);
+
+    //     const formatted = validateAndFormatDate(inputValue);
+    //     console.log("Formatted value:", formatted);
+
+    //     // ALWAYS call onChange - let parent handle validation
+    //     if (onChange) {
+    //         console.log("Calling onChange with:", formatted);
+    //         onChange(formatted);
+    //     }
+
+    //     setIsFocused(false);
+    // };
+
+    // const handleInputBlur = () => {
+    //     console.log("=== handleInputBlur called ===");
+    //     console.log("Input value:", inputValue);
+
+    //     setIsFocused(false); // SET focused to false on blur
+
+    //     const formatted = validateAndFormatDate(inputValue);
+    //     console.log("Formatted value:", formatted);
+
+    //     // ALWAYS call onChange - let parent handle validation
+    //     if (onChange) {
+    //         console.log("Calling onChange with:", formatted);
+    //         onChange(formatted);
+    //     }
+
+    //     // Force sync with parent value after a short delay
+    //     // This ensures the corrected value from parent shows in the input
+    //     setTimeout(() => {
+    //         console.log("Force syncing to parent value:", value);
+    //         if (value) {
+    //             setInputValue(value);
+    //         }
+    //     }, 10);
+    // };
+
+    // const handleInputBlur = () => {
+    //     console.log("=== handleInputBlur called ===");
+    //     console.log("Input value:", inputValue);
+
+    //     setIsFocused(false);
+
+    //     const formatted = validateAndFormatDate(inputValue);
+    //     console.log("Formatted value:", formatted);
+
+    //     // Call onChange immediately - parent will handle validation and corrections
+    //     if (onChange) {
+    //         console.log("Calling onChange with:", formatted);
+    //         onChange(formatted);
+    //     }
+
+    //     // REMOVED: The setTimeout that was forcing sync
+    //     // This was causing the input to show current date after correction
+    // };
+
+    const handleInputBlur = () => {
+        console.log("=== DatePickerInput handleInputBlur called ===");
+        console.log("Input value:", inputValue);
+
+        setIsFocused(false);
+
+        const formatted = validateAndFormatDate(inputValue);
+        console.log("Formatted value:", formatted);
+
+        // Call onChange immediately - parent will handle validation and corrections
+        if (onChange) {
+            console.log("Calling onChange with:", formatted);
+            onChange(formatted);
+        }
+
+        // DON'T set inputValue here - let it sync from parent via useEffect
+        // This allows parent to correct invalid dates
+    };
     const daysInMonth = (date) => {
         return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
     };
@@ -3084,32 +4336,76 @@ const DatePickerInput = ({ value, onChange, disabled = false }) => {
         return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
     };
 
+
+
+    // const handleDateClick = (day) => {
+    //     const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
+    //     const today = new Date();
+    //     today.setHours(0, 0, 0, 0);
+
+    //     // Check if date is allowed
+    //     if (!allowFuture && newDate > today) {
+    //         // For past-only dates (Files older than) - set to yesterday
+    //         const yesterday = new Date();
+    //         yesterday.setDate(yesterday.getDate() - 1);
+    //         yesterday.setHours(0, 0, 0, 0);
+
+    //         const formattedDate = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
+
+    //         setSelectedDate(yesterday);
+    //         setInputValue(formattedDate);
+    //         if (onChange) {
+    //             onChange(formattedDate);
+    //         }
+    //         setIsOpen(false);
+    //         return;
+    //     }
+
+    //     if (!allowPast && newDate < today) {
+    //         // For future-only fields (Trigger, Expiry) - set to yesterday
+    //         const yesterday = new Date();
+    //         yesterday.setDate(yesterday.getDate() - 1);
+    //         yesterday.setHours(0, 0, 0, 0);
+
+    //         const formattedDate = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
+
+    //         setSelectedDate(yesterday);
+    //         setInputValue(formattedDate);
+    //         if (onChange) {
+    //             onChange(formattedDate);  // This will trigger your handler!
+    //         }
+    //         setIsOpen(false);
+    //         return;
+    //     }
+
+    //     const formattedDate = `${day.toString().padStart(2, '0')}/${(newDate.getMonth() + 1).toString().padStart(2, '0')}/${newDate.getFullYear()}`;
+
+    //     setSelectedDate(newDate);
+    //     setInputValue(formattedDate);
+    //     if (onChange) {
+    //         onChange(formattedDate);
+    //     }
+    //     setIsOpen(false);
+    // };
+
+
     const handleDateClick = (day) => {
         const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Reset to current date if future date selected for "Files older than"
         const formattedDate = `${day.toString().padStart(2, '0')}/${(newDate.getMonth() + 1).toString().padStart(2, '0')}/${newDate.getFullYear()}`;
 
-        // Check if this is for "Files older than" date input
-        // Only allow current and past dates
-        if (newDate > today) {
-            const currentDate = new Date();
-            const resetDate = `${currentDate.getDate().toString().padStart(2, '0')}/${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getFullYear()}`;
-            if (onChange) {
-                onChange(resetDate);
-            }
-            setSelectedDate(currentDate);
-        } else {
-            setSelectedDate(newDate);
-            if (onChange) {
-                onChange(formattedDate);
-            }
+        setSelectedDate(newDate);
+        setInputValue(formattedDate);
+
+        // ALWAYS call onChange, even for past dates
+        // Let the parent component decide what to do with it
+        if (onChange) {
+            onChange(formattedDate);
         }
         setIsOpen(false);
     };
-
     const changeMonth = (delta) => {
         const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + delta, 1);
         setSelectedDate(newDate);
@@ -3118,11 +4414,60 @@ const DatePickerInput = ({ value, onChange, disabled = false }) => {
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+    // const renderCalendar = () => {
+    //     const days = [];
+    //     const totalDays = daysInMonth(selectedDate);
+    //     const firstDay = firstDayOfMonth(selectedDate);
+    //     const currentDay = inputValue ? parseInt(inputValue.split('/')[0]) : null;
+    //     const today = new Date();
+    //     today.setHours(0, 0, 0, 0);
+
+    //     // Empty cells before first day
+    //     for (let i = 0; i < firstDay; i++) {
+    //         days.push(<div key={`empty-${i}`} className="p-2"></div>);
+    //     }
+
+    //     // Days of month
+    //     for (let day = 1; day <= totalDays; day++) {
+    //         const dayDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
+    //         const isSelected = day === currentDay;
+    //         const isPast = dayDate < today;
+    //         const isFuture = dayDate > today;
+    //         const isToday = dayDate.getTime() === today.getTime();
+
+    //         const isDisabled = (!allowPast && isPast) || (!allowFuture && isFuture);
+
+    //         days.push(
+    //             <div
+    //                 key={day}
+    //                 onClick={() => !isDisabled && handleDateClick(day)}
+    //                 className={`p-2 text-center text-sm rounded transition-colors ${isDisabled
+    //                     ? 'text-gray-300 opacity-40 cursor-not-allowed'
+    //                     : 'cursor-pointer hover:bg-blue-50'
+    //                     } ${isSelected
+    //                         ? 'bg-blue-500 text-white font-bold'
+    //                         : isToday && !isDisabled
+    //                             ? 'bg-blue-100 text-blue-600 font-bold'
+    //                             : !isDisabled
+    //                                 ? 'text-gray-900 font-bold'
+    //                                 : 'text-gray-300'
+    //                     }`}
+    //             >
+    //                 {day}
+    //             </div>
+    //         );
+    //     }
+
+    //     return days;
+    // };
+
     const renderCalendar = () => {
         const days = [];
         const totalDays = daysInMonth(selectedDate);
         const firstDay = firstDayOfMonth(selectedDate);
-        const currentDay = value ? parseInt(value.split('/')[0]) : null;
+        const currentDay = inputValue ? parseInt(inputValue.split('/')[0]) : null;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
         // Empty cells before first day
         for (let i = 0; i < firstDay; i++) {
@@ -3131,12 +4476,28 @@ const DatePickerInput = ({ value, onChange, disabled = false }) => {
 
         // Days of month
         for (let day = 1; day <= totalDays; day++) {
+            const dayDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
             const isSelected = day === currentDay;
+            const isPast = dayDate < today;
+            const isFuture = dayDate > today;
+            const isToday = dayDate.getTime() === today.getTime();
+
+            const isDisabled = (!allowPast && isPast) || (!allowFuture && isFuture);
+
             days.push(
                 <div
                     key={day}
-                    onClick={() => handleDateClick(day)}
-                    className={`p-2 text-center text-sm cursor-pointer hover:bg-blue-50 rounded ${isSelected ? 'bg-blue-500 text-white font-semibold' : 'text-gray-700'
+                    onClick={() => !isDisabled && handleDateClick(day)}
+                    className={`p-2 text-center text-sm rounded transition-colors ${isDisabled
+                        ? 'text-gray-300 opacity-40 cursor-not-allowed'
+                        : 'cursor-pointer hover:bg-blue-50'
+                        } ${isSelected
+                            ? 'bg-blue-500 text-white font-bold'
+                            : isToday && !isDisabled
+                                ? 'bg-blue-100 text-blue-600 font-bold'
+                                : !isDisabled
+                                    ? 'text-gray-900 font-bold'
+                                    : 'text-gray-300'
                         }`}
                 >
                     {day}
@@ -3146,7 +4507,6 @@ const DatePickerInput = ({ value, onChange, disabled = false }) => {
 
         return days;
     };
-
     return (
         <div className="relative w-40" ref={dropdownRef}>
             <div
@@ -3155,9 +4515,11 @@ const DatePickerInput = ({ value, onChange, disabled = false }) => {
             >
                 <input
                     type="text"
-                    value={value}
-                    readOnly
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    onBlur={handleInputBlur}
                     disabled={disabled}
+                    placeholder="DD/MM/YYYY"
                     className={`w-full border border-gray-200 rounded px-3 py-1.5 text-sm text-gray-600 focus:outline-none focus:border-blue-400 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'bg-white'
                         }`}
                 />
