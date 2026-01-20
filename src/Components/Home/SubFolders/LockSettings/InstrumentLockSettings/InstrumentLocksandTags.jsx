@@ -335,7 +335,7 @@ const TagGrid = React.memo(({ tags, onTagValueClick, isLoadingTags, isLocked, lo
                             ...prev,
                             inputValue: e.target.value
                           }))}
-                          className="w-full h-9 px-0.5 text-xs border border-gray-300 focus:outline-none focus:ring-1 focus:ring-white focus:border-white"
+                          className="w-full h-9 px-0.5 text-xs font-bold border border-gray-300 focus:outline-none focus:ring-1 focus:ring-white focus:border-white"
                           autoFocus
                           onBlur={handleInlineEditSubmit}
                           onKeyDown={(e) => {
@@ -619,18 +619,42 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
         throw new Error(response.Message || response.ErrorMessage || `${t('instrumentlocktag.apicallfailed')} ${url}`);
       }
       
+      // Handle InterfaceConnectionChecking response
+      if (process === "InterfaceConnectionChecking") {
+        let formattedResponse;
+        
+        if (response.AuditTrailLogin !== undefined) {
+          return [response];
+        }
+        
+        if (Array.isArray(response)) {
+          formattedResponse = response;
+        } else if (response && typeof response === 'object') {
+          if (response.AccessStatus !== undefined) {
+            formattedResponse = [response];
+          } else if (response[0] && response[0].AccessStatus !== undefined) {
+            formattedResponse = Object.values(response);
+          } else {
+            formattedResponse = [response];
+          }
+        } else {
+          formattedResponse = [];
+        }
+        
+        return formattedResponse;
+      }
+      
+      // Handle Lock/Unlock responses
       if (process === "LockInstrument" || process === "UnLockInstrument") {
         return response;
       }
       
+      // Handle SelectPathFileUSerTemplate
       if (process === "SelectPathFileUSerTemplate") {
         return response.oResInstChange || response;
       }
       
-      if (process === "InterfaceConnectionChecking") {
-        return Array.isArray(response) ? response : [response];
-      }
-      
+      // Check for common response structures
       if (response.oResObj !== undefined) {
         return response.oResObj;
       }
@@ -650,7 +674,7 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
       return response;
       
     } catch (error) {
-      console.error(`${t('instrumentlocktag.ajaxcallfailed')} ${url}:`, error);
+      console.error(`[ERROR] ${t('instrumentlocktag.ajaxcallfailed')} ${url}:`, error);
       throw error;
     }
   };
@@ -1022,6 +1046,20 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
           updates.currentFileCount = '0';
         }
         
+        if (response.nMergeFileCount > 0) {
+          updates.mergeFileCount = String(response.nMergeFileCount);
+          setSessionValue("LockedMergeCount", String(response.nMergeFileCount));
+        } else if (response.sTaskID != null) {
+          const lockedMergeCount = getSessionValue("LockedMergeCount");
+          if (lockedMergeCount) {
+            updates.mergeFileCount = lockedMergeCount;
+          } else {
+            updates.mergeFileCount = getSessionValue("MergeCount") || '1';
+          }
+        } else {
+          updates.mergeFileCount = getSessionValue("MergeCount") || '1';
+        }
+        
         if (response.nAutoUnlock) {
           updates.unlockAfterCapture = true;
         } else {
@@ -1354,7 +1392,15 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
   }, [loadInstruments]);
 
   const handleInstrumentChange = useCallback(async (value) => {
-    setFormData(prev => ({ ...prev, instrument: value, path: '', fileName: '', limsOrder: '' }));
+    setFormData(prev => ({ 
+      ...prev, 
+      instrument: value, 
+      path: '', 
+      fileName: '', 
+      limsOrder: '',
+      mergeFileCount: getSessionValue("MergeCount") || '1',
+      currentFileCount: '0'
+    }));
     setErrors(prev => ({ ...prev, instrument: false }));
     
     setPathOptions([]);
@@ -1378,14 +1424,55 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
         setFormData(prev => ({ ...prev, limsOrder: '' }));
       }
       
-      await onChangeInstrumentCombo(value);
+      const instrumentData = await onChangeInstrumentCombo(value);
+      
+      if (instrumentData) {
+        const updates = {};
+        
+        if (instrumentData.nCurMergeFileNo > 0) {
+          updates.currentFileCount = String(instrumentData.nCurMergeFileNo);
+        } else {
+          updates.currentFileCount = '0';
+        }
+        
+        const lockedMergeCount = getSessionValue("LockedMergeCount");
+        if (isLocked && lockedMergeCount) {
+          updates.mergeFileCount = lockedMergeCount;
+        } else {
+          updates.mergeFileCount = getSessionValue("MergeCount") || '1';
+        }
+        
+        setFormData(prev => ({ ...prev, ...updates }));
+      }
+      
       await loadPaths(value);
       
       if (formData.template) {
         fetchTags(formData.template, value);
       }
     }
-  }, [loadPaths, formData.template, fetchTags, loadProtocol, loadLimsOrder, onChangeInstrumentCombo, isInterfaceInstrument]);
+  }, [loadPaths, formData.template, fetchTags, loadProtocol, loadLimsOrder, onChangeInstrumentCombo, isInterfaceInstrument, isLocked]);
+
+  useEffect(() => {
+    if (formData.instrument) {
+      const refreshData = async () => {
+        try {
+          const response = await onChangeInstrumentCombo(formData.instrument);
+          if (response) {
+            setFormData(prev => ({
+              ...prev,
+              currentFileCount: response.nCurMergeFileNo > 0 ? String(response.nCurMergeFileNo) : '0',
+              mergeFileCount: response.nMergeFileCount > 0 ? String(response.nMergeFileCount) : getSessionValue("MergeCount") || '1'
+            }));
+          }
+        } catch (error) {
+          console.error('Error refreshing merge count:', error);
+        }
+      };
+      
+      refreshData();
+    }
+  }, [isLocked, formData.instrument]);
 
   const handlePathChange = useCallback((value) => {
     setFormData(prev => ({ ...prev, path: value }));
@@ -1599,6 +1686,11 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
     try {
       const lockData = prepareLockData(auditData, validationType);
       
+      const isInterface = isInterfaceInstrument(formData.instrument);
+      if (isInterface && auditData) {
+        lockData.lockinstdetails.audittrailforinterfaceinstrument = false;
+      }
+      
       await performLockActionWithData(lockData);
     } catch (error) {
       console.error(t('instrumentlocktag.errorlockinginstrument'), error);
@@ -1617,8 +1709,18 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
         setIsAutoLocked(false);
         setLockedByOtherUser(false);
         
-        if (formData.mergeFileCount) {
-          setSessionValue("LockedMergeCount", formData.mergeFileCount);
+        if (result.oResObj.nMergeFileCount) {
+          setFormData(prev => ({ 
+            ...prev, 
+            mergeFileCount: String(result.oResObj.nMergeFileCount) 
+          }));
+          setSessionValue("LockedMergeCount", String(result.oResObj.nMergeFileCount));
+        } else if (result.oResObj.mergeFileCount) {
+          setFormData(prev => ({ 
+            ...prev, 
+            mergeFileCount: String(result.oResObj.mergeFileCount) 
+          }));
+          setSessionValue("LockedMergeCount", String(result.oResObj.mergeFileCount));
         }
         
         showErrorDialogMessage(
@@ -1641,21 +1743,9 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
       } else {
         const errorInfo = result?.oResObj?.sInformation;
         
-        if (errorInfo === "Entering Duplicate Tag Values") {
-          showErrorDialogMessage(
-            t('instrumentlocktag.confirmationtagsalreadyexist'),
-            'confirmation',
-            async () => {
-              lockData.sValidation = "Insert";
-              lockData.lockinstdetails.sValidation = "Insert";
-              await performLockActionWithData(lockData);
-            }
-          );
-          return;
-        }
-        
-        if (errorInfo === "Tags has already been used. Do you want to re-use same tags for New Data Capture?" && 
-            result?.oResObj?.sValidation === "CheckAndInsert") {
+        if (errorInfo === "Entering Duplicate Tag Values" || 
+            (errorInfo === "Tags has already been used. Do you want to re-use same tags for New Data Capture?" && 
+             result?.oResObj?.sValidation === "CheckAndInsert")) {
           showErrorDialogMessage(
             t('instrumentlocktag.confirmationtagsalreadyexist'),
             'confirmation',
@@ -1775,6 +1865,40 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
       showErrorDialogMessage(`${t('instrumentlocktag.error')}: ${error.message || t('instrumentlocktag.unknownerror')}`, 'error');
     }
   }, [formData, prepareUnlockData, t]);
+  
+  const checkInterfaceConnection = useCallback(async (instrumentId) => {
+    const isInterface = isInterfaceInstrument(instrumentId);
+    
+    if (!isInterface) {
+      return { needsCheck: false, isConnected: true };
+    }
+    
+    const interfaceInstId = instrumentId.includes(':') ? 
+      parseInt(instrumentId.split(':')[1].trim()) : 0;
+    
+    if (interfaceInstId <= 0) {
+      return { needsCheck: false, isConnected: true };
+    }
+    
+    try {
+      const connectionResult = await makeAjaxCall(endpoints.interfaceConnectionChecking, {
+        InterfaceInstID: interfaceInstId
+      }, "InterfaceConnectionChecking");
+      
+      if (connectionResult && Array.isArray(connectionResult) && connectionResult[0]) {
+        const accessStatus = connectionResult[0].AccessStatus;
+        return { 
+          needsCheck: true, 
+          isConnected: accessStatus === 1,
+          data: connectionResult[0]
+        };
+      }
+    } catch (error) {
+      console.error(t('instrumentlocktag.errorcheckinginterfaceconnection'), error);
+    }
+    
+    return { needsCheck: false, isConnected: true };
+  }, [isInterfaceInstrument, t]);
 
   const handleUnlockSuccess = useCallback(async (result) => {
     const successMessage = result?.oResObj?.sInformation || t('instrumentlocktag.instrumentunlockedsuccessfully');
@@ -1892,13 +2016,40 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
           }, "InterfaceConnectionChecking");
           
           if (connectionResult && Array.isArray(connectionResult) && connectionResult[0]) {
-            const accessStatus = connectionResult[0].AccessStatus;
+            const connectionData = connectionResult[0];
             
-            if (accessStatus === 0) {
+            if (connectionData.AuditTrailLogin === false) {
               showErrorDialogMessage(
-                t('instrumentlocktag.interfacenotconnected'),
+                connectionData.LoginFailedMsg || t('instrumentlocktag.audittrailloginfailed'),
+                'error'
+              );
+              return;
+            }
+            
+            const accessStatus = connectionData.AccessStatus;
+            
+            if (accessStatus == 1 || accessStatus === "1") {
+              // Interface is connected - continue with normal flow
+            } else {
+              // Interface not connected or status unknown - show confirmation
+              showErrorDialogMessage(
+                t('instrumentlocktag.interfacerinstrumentisnotconnected'),
                 'confirmation',
                 async () => {
+                  const scheduleData = getDeactiveScheduleDataRef.current;
+                  if (scheduleData && scheduleData.TaskType !== "ScheduleCreation") {
+                    const hasAuditTrailRights = true;
+                    
+                    if (hasAuditTrailRights) {
+                      setAuditAction('lock');
+                      setAuditCallback(() => async (auditData) => {
+                        await performLockAction(auditData);
+                      });
+                      setShowAuditTrail(true);
+                      return;
+                    }
+                  }
+                  
                   await performLockAction();
                 }
               );
@@ -1906,8 +2057,24 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
             }
           }
         } catch (error) {
-          console.error(t('instrumentlocktag.errorcheckinginterfaceconnection'), error);
+          console.error('Error checking interface connection:', error);
+          // Continue with lock even if check fails
         }
+      }
+    }
+    
+    // Non-interface instrument or check failed - proceed normally
+    const scheduleData = getDeactiveScheduleDataRef.current;
+    if (scheduleData && scheduleData.TaskType !== "ScheduleCreation") {
+      const hasAuditTrailRights = true;
+      
+      if (hasAuditTrailRights) {
+        setAuditAction('lock');
+        setAuditCallback(() => async (auditData) => {
+          await performLockAction(auditData);
+        });
+        setShowAuditTrail(true);
+        return;
       }
     }
     
@@ -1954,7 +2121,7 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
         client: false,
         instrument: false,
         path: true,
-        limsOrder: false,
+        limsOrder: true,
         fileName: false,
         template: true,
         mergeCount: false,
