@@ -12,6 +12,9 @@ import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
 import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import Errordialog from "../../../../Layout/Common/Errordialog";
 import { useTranslation } from "react-i18next";
+import useAxios from "../../../../../Services/servicecall";
+import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
+
 
 /* ------------------ MOCK DATA ------------------ */
 const gridData = [
@@ -45,9 +48,13 @@ const todayStr = formatDate(new Date());
 
 export default function LocalFileDeleteScheduler() {
   const { t } = useTranslation();
+  const { postData } = useAxios();
+
+const [clientOptions, setClientOptions] = useState([]);
+const [client, setClient] = useState("");
+
 
   const [isOpen, setIsOpen] = useState(true);
-  const [client, setClient] = useState("AGD54");
   const [duration, setDuration] = useState("Current Date");
   const [selectedRow, setSelectedRow] = useState(gridData[0]);
 
@@ -58,6 +65,36 @@ export default function LocalFileDeleteScheduler() {
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("");
   const [showDialog, setShowDialog] = useState(false);
+useEffect(() => {
+  const loadClientOptions = async () => {
+    try {
+      const response = await postData(
+        "Scheduler/LocalFileDeleteClientComboAndGridLoad",
+        {
+          ...CF_activeUserdetails(),
+          bFlag: true,
+          sFromDate: getCurrentDate(),
+        }
+      );
+console.log("requst for local", CF_activeUserdetails())
+      const clients =
+        (response?.oResObj || []).map(
+          (item) => item.L06ClientName.trim()
+        );
+
+      setClientOptions(clients);
+
+      // 🔥 Auto select first client
+      if (clients.length > 0) {
+        setClient(clients[0]);
+      }
+    } catch (error) {
+      console.error("Failed to load client options", error);
+    }
+  };
+
+  loadClientOptions();
+}, []);
 
   /* ------------------ GRID COLUMNS ------------------ */
   const columns = useMemo(() => [
@@ -106,6 +143,15 @@ export default function LocalFileDeleteScheduler() {
   };
 
   /* ------------------ EXPORT TO EXCEL ------------------ */
+  const getCurrentDate = () => {
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2, "0");
+  const mm = String(today.getMonth() + 1).padStart(2, "0"); // Jan = 0
+  const yyyy = today.getFullYear();
+
+  return `${dd}/${mm}/${yyyy}`;
+};
+
   const handleExport = () => {
     try {
       if (!filteredData || filteredData.length === 0) {
@@ -538,10 +584,11 @@ export default function LocalFileDeleteScheduler() {
               </label>
               <div className="mt-2">
               <AnimatedDropdown
-                value={client}
-                options={["AGD54", "AGD55"]}
-                onChange={(e) => setClient(e.target.value)}
-              />
+  value={client}
+  options={clientOptions}
+  onChange={(e) => setClient(e.target.value)}
+/>
+
               </div>
             </div>
 
@@ -654,7 +701,7 @@ export default function LocalFileDeleteScheduler() {
 
 /* ------------------ SMALL COMPONENTS ------------------ */
 const CalendarInput = ({ label, value, onChange, min, max }) => (
-  <div className="w-55">
+  <div className="w-[150px]">
     <label className="block text-[#405f7d] text-[12px] font-semibold font-roboto">
       {label}
     </label>
@@ -665,7 +712,9 @@ const CalendarInput = ({ label, value, onChange, min, max }) => (
       min={min}
       max={max}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full border-b-2 border-gray-300 bg-transparent pb-1 text-sm font-semibold text-slate-700 focus:border-blue-500 focus:outline-none"
+      className="w-full border-b-2 bg-transparent pb-1 text-[12px] font-semibold outline-none font-['Verdana'] text-[#555]
+            border-gray-300 cursor-pointer
+          "
     />
     </div>
   </div>

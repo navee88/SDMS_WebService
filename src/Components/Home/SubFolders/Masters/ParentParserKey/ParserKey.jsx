@@ -30,56 +30,6 @@ const ActionButton = ({ icon: Icon, label, onClick }) => (
 );
 
 /* ---------------- MOCK DATA WITH CORRECT COLUMNS ---------------- */
-const mockRows = [
-  {
-    id: "1",
-    elninstrumentcode: "ELN-001",
-    elnmethodgroup: "Chromatography",
-    elnmethodname: "Dâne Method",
-    parsingkey: "PARSER001",
-    status: "Active",
-    clientType: "Hospital",
-    ipAddress: "192.168.1.100",
-    createdBy: "Admin User",
-    usePdfToCsv: true,
-  },
-  {
-    id: "2",
-    elninstrumentcode: "ELN-002",
-    elnmethodgroup: "Spectroscopy",
-    elnmethodname: "BioAnalyzer Method",
-    parsingkey: "PARSER002",
-    status: "Inactive",
-    clientType: "Research Lab",
-    ipAddress: "192.168.1.101",
-    createdBy: "Lab Technician",
-    usePdfToCsv: false,
-  },
-  {
-    id: "3",
-    elninstrumentcode: "ELN-003",
-    elnmethodgroup: "Mass Spec",
-    elnmethodname: "Chromatography Method",
-    parsingkey: "PARSER003",
-    status: "Active",
-    clientType: "Pharmaceutical",
-    ipAddress: "192.168.1.102",
-    createdBy: "System Admin",
-    usePdfToCsv: true,
-  },
-  {
-    id: "4",
-    elninstrumentcode: "ELN-004",
-    elnmethodgroup: "HPLC",
-    elnmethodname: "Quantitative Analysis",
-    parsingkey: "PARSER004",
-    status: "Active",
-    clientType: "Diagnostic Lab",
-    ipAddress: "192.168.1.103",
-    createdBy: "Lab Manager",
-    usePdfToCsv: false,
-  },
-];
 
 const ParserKey = () => {
 const [rows, setRows] = useState([]);
@@ -87,6 +37,8 @@ const [selectedRowId, setSelectedRowId] = useState(null);
 
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isMethodSetupContext, setIsMethodSetupContext] = useState(false);
+
 
   /* ---------------- GRID COLUMNS WITH CORRECT STRUCTURE ---------------- */
   const { postData } = useAxios();
@@ -97,32 +49,34 @@ const loadParserKeyGrid = async () => {
       sActionType: "View",
       ...CF_activeUserdetails()
     };
-    console.log("requst for paser key",requestPayload)
-
+    console.log("loading the grid data in paser key", requestPayload)
     const response = await postData(
       "basemaster/getParserMethod",
       requestPayload
     );
 
-    console.log("ParserKey API response:", response);
+    // 👇 READ URL FROM RESPONSE
+    const baseUrl = response?.sWebMethodBaseURL || "";
+
+    setIsMethodSetupContext(
+      baseUrl.toLowerCase().endsWith("methodsetup")
+    );
 
     const apiRows = response?.ParserMethod || [];
 
     const mappedRows = apiRows.map((item) => ({
-      id: item.MethodKey,                           // 🔑 unique row id
+      id: item.MethodKey,
       elninstrumentcode: item.InstName || "-",
       elnmethodgroup: item.MethodGroup || "-",
       elnmethodname: item.MethodName || "-",
       parsingkey: item.ParserKey,
       status: item.isactive === 1 ? "Active" : "Inactive",
-      createdBy: item.CreatedTimestamp || "-",
-      ipAddress: item.UTCCreatedTimestamp || "-",
-      usePdfToCsv: item.FileConvert === "CSV" ?"CSV" : ""
+        createdOn: item.CreatedTimestamp ||  "-",
+  modifiedOn: item.ModifiedTimestamp ||  "-",
+      usePdfToCsv: item.FileConvert === "CSV" ? "CSV" : ""
     }));
 
     setRows(mappedRows);
-
-    // ✅ auto-select first row
     setSelectedRowId(mappedRows[0]?.id ?? null);
 
   } catch (error) {
@@ -130,6 +84,7 @@ const loadParserKeyGrid = async () => {
     setShowErrorDialog(true);
   }
 };
+
 useEffect(() => {
   loadParserKeyGrid();
 }, []);
@@ -139,12 +94,12 @@ useEffect(() => {
       {
         key: "elninstrumentcode",
         label: "ELN Instrument Code",
-        width: 180,
+        width: 140,
         enableSearch: true,
         render: (row) => (
           <div
             onClick={() => setSelectedRowId(row.id)}
-            className={`cursor-pointer ${
+            className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
               row.id === selectedRowId ? "font-bold " : ""
             }`}
           >
@@ -155,12 +110,12 @@ useEffect(() => {
       {
         key: "elnmethodgroup",
         label: "ELN Method Group",
-        width: 180,
+        width: 140,
         enableSearch: true,
         render: (row) => (
           <div
             onClick={() => setSelectedRowId(row.id)}
-            className={`cursor-pointer ${
+            className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
               row.id === selectedRowId ? "font-bold " : ""
             }`}
           >
@@ -171,12 +126,12 @@ useEffect(() => {
       {
         key: "elnmethodname",
         label: "ELN Method Name",
-        width: 200,
+        width: 140,
         enableSearch: true,
         render: (row) => (
           <div
             onClick={() => setSelectedRowId(row.id)}
-            className={`cursor-pointer ${
+            className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
               row.id === selectedRowId ? "font-bold " : ""
             }`}
           >
@@ -187,12 +142,12 @@ useEffect(() => {
       {
         key: "parsingkey",
         label: "Parsing Key",
-        width: 160,
+        width: 140,
         enableSearch: true,
         render: (row) => (
           <div
             onClick={() => setSelectedRowId(row.id)}
-            className={`cursor-pointer ${
+            className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
               row.id === selectedRowId ? "font-bold " : ""
             }`}
           >
@@ -253,8 +208,8 @@ const handleSave = async (form, setApiError, closeModal) => {
         elnmethodname: item.MethodName || "-",
         parsingkey: item.ParserKey,
         status: item.isactive === 1 ? "Active" : "Inactive",
-        createdBy: item.CreatedTimestamp || "-",
-        ipAddress: item.UTCCreatedTimestamp || "-",
+          createdOn: item.CreatedTimestamp || "-",
+  modifiedOn: item.ModifiedTimestamp || "-",
         usePdfToCsv: item.FileConvert || ""
       }));
 
@@ -281,13 +236,14 @@ const handleSave = async (form, setApiError, closeModal) => {
 
 
   /* ---------------- DETAIL PANEL ---------------- */
-  const renderDetailPanel = (row) => (
-    <div className="space-y-3 p-4">
-      <DetailRow label="Created On" value={row.ipAddress} />
-      <DetailRow label="Created On" value={row.createdBy} />
-      <DetailRow label="File Convert" value={row.usePdfToCsv==="CSV" ? "CSV" : ""} />
-    </div>
-  );
+const renderDetailPanel = (row) => (
+  <div className="space-y-3 p-4">
+    <DetailRow label="Created On" value={row.createdOn} />
+    <DetailRow label="Modified On" value={row.modifiedOn} />
+    <DetailRow label="File Convert" value={row.usePdfToCsv || "-"} />
+  </div>
+);
+
 
   return (
     <div className="h-full flex flex-col bg-white overflow-hidden">
@@ -321,17 +277,19 @@ const handleSave = async (form, setApiError, closeModal) => {
 
       {/* EDIT MODAL */}
       <EditParserKeyModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onSave={handleSave}
-        initialData={selectedRow}
-      />
+  isOpen={showEditModal}
+  onClose={() => setShowEditModal(false)}
+  onSave={handleSave}
+  initialData={selectedRow}
+  isMethodSetupContext={isMethodSetupContext}
+/>
+
 
       {/* ERROR DIALOG */}
       {showErrorDialog && (
         <Errordialog
-          type="error"
-          message="No row selected. Please select a row to edit."
+          type="information"
+          message="Select an existing record."
           onClose={() => setShowErrorDialog(false)}
         />
       )}

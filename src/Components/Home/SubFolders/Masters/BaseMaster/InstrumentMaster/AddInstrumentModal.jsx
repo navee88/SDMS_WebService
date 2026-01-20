@@ -112,7 +112,6 @@ const handleCommSubmit = async (data) => {
       "basemaster/insertInstrumentCommonSetting",
       buildInstrumentRequestPayload(form, data)
     );
-    console.log("instrument request for clint add",buildInstrumentRequestPayload(form, data))
     // ✅ CLOSE BOTH POPUPS
     setShowCommSettings(false);
     onSave?.();     // 🔥 notify parent to reload grid
@@ -1151,7 +1150,7 @@ ${
   interfacerInstrument={form.interfacerInstrument}
   parserType={form.parserType}
   instrumentData={pendingForm}
-  commData={commData}       // ✅ Pass it here
+  commData={commData}      
   onSubmit={handleCommSubmit}
   selectedRow={selectedRow}
   onClose={() => setShowCommSettings(false)}
@@ -1170,13 +1169,9 @@ ${
     type="confirmation"
     message="Changes in interfacer instrument , AgaramInterfacer Services will restart. Do you want to continue?"
     showCancel={true}
-
-    // ✅ YES → unmap
     onConfirm={() => {
       confirmUnmapInterfacer();
     }}
-
-    // ❌ NO → just close dialog
     onCancel={() => {
       setShowInterfacerWarning(false);
     }}

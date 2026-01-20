@@ -158,7 +158,6 @@ const Client = () => {
     }
   }, [postData, buildClientRequest]);
 
-  console.log("Client Rows:", rows);
   const loadUnmappedInstruments = useCallback(async () => {
   try {
     const response = await postData(
@@ -210,11 +209,7 @@ const Client = () => {
     };
   };
   const buildEditClientRequest = (clientData, auditData) => {
-    console.log(
-      "Building Edit Client Request with data:",
-      clientData,
-      auditData
-    );
+
     return {
       InstrumentUnMappingByClient: buildInstrumentUnMappingByClient(
         clientData.selectedInstruments
@@ -429,11 +424,11 @@ const handleExport = () => {
         render: (row) => (
           <div
             onClick={() => setSelectedRowId(row.id)}
-            className={
+            className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
               row.id === selectedRowId
                 ? "font-bold cursor-pointer"
-                : "cursor-pointer"
-            }
+                : ""
+            }`}
           >
             {row.clientName}
           </div>
@@ -447,11 +442,11 @@ const handleExport = () => {
         render: (row) => (
           <div
             onClick={() => setSelectedRowId(row.id)}
-            className={
+            className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
               row.id === selectedRowId
                 ? "font-bold cursor-pointer"
-                : "cursor-pointer"
-            }
+                : ""
+            }`}
           >
             {row.clientAlias}
           </div>
@@ -470,7 +465,7 @@ const handleExport = () => {
             <div
               onClick={() => setSelectedRowId(row.id)}
               className={`
-          cursor-pointer
+          text-[12px] font-['Verdana'] truncate cursor-pointer 
           ${isSelected ? "font-bold" : ""}
           ${isActive ? "text-green-600" : "text-red-600"}
         `}

@@ -1,10 +1,16 @@
 import { FiCheckSquare } from "react-icons/fi";
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import Draggable from "react-draggable";
-import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import { useTranslation } from "react-i18next";
 
-const EditParserKeyModal = ({ isOpen, onClose, onSave, initialData = null }) => {
+const EditParserKeyModal = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialData = null,
+  isMethodSetupContext
+}) => {
+
   const { t } = useTranslation();
   const nodeRef = useRef(null);
   const [submitted, setSubmitted] = useState(false);
@@ -38,14 +44,21 @@ const handleClose = () => {
 };
 
 
-  const handleSubmit = () => {
+const handleSubmit = () => {
   setSubmitted(true);
   setApiError("");
 
-  if (!form.parsingKey.trim()) return;
-
-  onSave(form, setApiError, onClose);
+  onSave(
+    {
+      ...form,
+      parsingKey: form.parsingKey?.trim() || ""
+    },
+    setApiError,
+    onClose
+  );
 };
+
+
 
   if (!isOpen) return null;
 
@@ -92,12 +105,6 @@ const handleClose = () => {
     border-b-2 border-gray-300 cursor-not-allowed
   `}
 />
-
-                {submitted && !form.elnMethodName && (
-                  <div className="text-[11px] text-red-600 font-roboto mt-1">
-                    ELN Method Name is required
-                  </div>
-                )}
               </div>
 
               {/* Parsing Key */}
@@ -135,15 +142,21 @@ const handleClose = () => {
                 >
                   Use PDF to CSV
                 </label>
-                 <input
-                  type="checkbox"
-                  id="usePdfToCsv"
-                  checked={form.usePdfToCsv}
-                  onChange={(e) =>
-                    setForm({ ...form, usePdfToCsv: e.target.checked })
-                  }
-                  className="w-4 h-4 "
-                />
+                <input
+  type="checkbox"
+  id="usePdfToCsv"
+  checked={form.usePdfToCsv}
+  disabled={!isMethodSetupContext}
+  onChange={(e) =>
+    setForm({ ...form, usePdfToCsv: e.target.checked })
+  }
+  className={`w-4 h-4 cursor-not-allowed  ${
+    !isMethodSetupContext
+      ? "cursor-not-allowed  opacity-100"
+      : "cursor-pointer"
+  }`}
+/>
+
               </div>
             </div>
           </div>
