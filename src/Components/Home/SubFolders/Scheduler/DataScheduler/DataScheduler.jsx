@@ -63,7 +63,8 @@ const SelectorDropdown = ({
     searchTerm,
     onSearchChange,
     isOpen,
-    onClose
+    onClose,
+    disabledOptions = []
 }) => {
     const dropdownRef = useRef(null);
 
@@ -83,7 +84,6 @@ const SelectorDropdown = ({
         };
     }, [isOpen, onClose]);
 
-
     if (!isOpen) return null;
 
     const filteredOptions = options.filter(opt =>
@@ -93,40 +93,100 @@ const SelectorDropdown = ({
     return (
         <div
             ref={dropdownRef}
-            className="absolute top-0 left-full ml-2 w-64 bg-white border border-gray-300 rounded-md overflow-hidden shadow-lg z-50"
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+            className="w-64 bg-white border border-gray-300 rounded-md overflow-hidden shadow-lg z-50"
+            onClick={(e) => e.stopPropagation()}
         >
             {/* Search Input */}
-            <div className="p-1 border-b border-gray-300 bg-white">
-                <input
-                    type="text"
-                    placeholder="Looking for"
-                    value={searchTerm}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                    className="w-full px-1 py-1 text-sm text-gray-700 placeholder-gray-400 border border-gray-300 rounded focus:outline-none bg-white"
-                />
+            <div className="p-2 border-b border-gray-300 bg-white">
+                <div className="flex items-center gap-2">
+                    <Search size={14} className="text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Looking for"
+                        value={searchTerm}
+                        onChange={(e) => onSearchChange(e.target.value)}
+                        className="w-full text-sm text-gray-700 placeholder-gray-400 border-none focus:outline-none bg-white"
+                        autoFocus
+                    />
+                </div>
             </div>
 
-            {/* Options List with Checkboxes */}
-            <div className="max-h-[120px] overflow-y-auto bg-white custom-scrollbar"
-                style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
+            {/* Options List */}
+            <div className="max-h-48 overflow-y-auto bg-white custom-scrollbar">
+                {/* {// In the SelectorDropdown component, update the option rendering:
+                    filteredOptions.map((option) => {
+                        const isSelected = selectedValues.includes(option);
+                        const isDisabled = disabledOptions.includes(option);
+                        const isNone = option.toUpperCase() === 'NONE';
+
+                        return (
+                            <div
+                                key={option}
+                                onClick={() => !isDisabled && onSelect(option)}
+                                className={`flex items-center gap-3 px-3 py-2 border-l-4 font-['Verdana'] ${isDisabled
+                                        ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50 blur-[0.3px]'
+                                        : isSelected
+                                            ? 'bg-blue-50 border-blue-500 text-black cursor-pointer'
+                                            : 'bg-white border-transparent text-gray-900 hover:bg-gray-50 cursor-pointer'
+                                    } ${isNone && isSelected ? 'border-l-4 border-blue-500' : ''
+                                    }`}
+                            >
+                                <div
+                                    className={`w-4 h-4 border rounded flex items-center justify-center flex-shrink-0 ${isDisabled
+                                            ? 'bg-gray-100 border-gray-300'
+                                            : isSelected
+                                                ? 'bg-blue-500 border-blue-500'
+                                                : 'bg-white border-gray-300'
+                                        } ${isNone && isSelected ? 'bg-blue-500 border-blue-500' : ''}`}
+                                >
+                                    {isSelected && !isDisabled && (
+                                        <Check size={12} className="text-white" strokeWidth={3} />
+                                    )}
+                                </div>
+                                <span className="text-xs font-bold">{option}</span>
+                            </div>
+                        );
+                    })} */}
                 {filteredOptions.map((option) => {
                     const isSelected = selectedValues.includes(option);
+                    const isDisabled = disabledOptions.includes(option);
+                    const isNone = option.toUpperCase() === 'NONE';
+
                     return (
                         <div
                             key={option}
-                            onClick={() => onSelect(option)} // Clicking anywhere toggles
-                            className={`flex items-center gap-3 px-3 py-2 cursor-pointer border-l-4 font-['Verdana'] ${isSelected
-                                ? 'bg-gray-200 border-blue-600 text-black'
-                                : 'bg-white border-transparent text-gray-900 hover:bg-gray-50'
+                            onClick={() => !isDisabled && onSelect(option)}
+                            className={`flex items-center gap-3 px-3 py-2 border-l-4 font-['Verdana'] ${isDisabled
+                                ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50 blur-[0.3px]'
+                                : isSelected
+                                    ? 'bg-blue-50 border-blue-500 text-black cursor-pointer'
+                                    : 'bg-white border-transparent text-gray-900 hover:bg-gray-50 cursor-pointer'
+                                } ${isNone && isSelected ? 'border-l-4 border-blue-500' : ''
                                 }`}
                         >
-                            {/* Checkbox */}
-                            <div className={`w-4 h-4 border rounded flex items-center justify-center flex-shrink-0 ${isSelected
-                                ? 'bg-blue-500 border-blue-500'
-                                : 'bg-white border-gray-300'
-                                }`}>
-                                {isSelected && (
+                            {/* <div
+                                className={`w-4 h-4 border rounded flex items-center justify-center flex-shrink-0 ${isDisabled
+                                    ? 'bg-gray-100 border-gray-300'
+                                    : isSelected
+                                        ? 'bg-blue-500 border-blue-500'
+                                        : 'bg-white border-gray-300'
+                                    } ${isNone && isSelected ? 'bg-blue-500 border-blue-500' : ''
+                                    }`}
+                            >
+                                {isSelected && !isDisabled && (
+                                    <Check size={12} className="text-white" strokeWidth={3} />
+                                )}
+                            </div> */}
+                            <div
+                                className={`w-4 h-4 border rounded flex items-center justify-center flex-shrink-0 ${isDisabled && !isNone // Allow NONE even if it's in disabledOptions
+                                    ? 'bg-gray-100 border-gray-300'
+                                    : isSelected
+                                        ? 'bg-blue-500 border-blue-500'
+                                        : 'bg-white border-gray-300'
+                                    } ${isNone && isSelected ? 'bg-blue-500 border-blue-500' : ''}`}
+                            >
+                                {/* Always show check for NONE when selected, even if disabled */}
+                                {isSelected && (!isDisabled || isNone) && (
                                     <Check size={12} className="text-white" strokeWidth={3} />
                                 )}
                             </div>
@@ -134,15 +194,642 @@ const SelectorDropdown = ({
                         </div>
                     );
                 })}
-
-                {filteredOptions.length === 0 && (
-                    <div className="px-3 py-2 text-sm text-gray-500 text-center">
-                        No results found
-                    </div>
-                )}
             </div>
         </div>
     );
+};
+
+const TagMasterRow = ({
+    tag,
+    index,
+    parsedMetadata,
+    showMetadataTooltip,
+    setShowMetadataTooltip,
+    setParsedMetadata,
+    sampleFilename,
+    selectedDelimiters,
+    sampleFilenameError,
+    setSampleFilenameError,
+    delimiterError,
+    setDelimiterError,
+    delimiterOptions
+}) => {
+    const [rowSourceFlag, setRowSourceFlag] = useState(tag.sSourceFlag || 'NONE');
+    const [rowMetadata, setRowMetadata] = useState(tag.sTextData || '');
+    const [rowError, setRowError] = useState(false);
+
+    const [selectedParsedItem, setSelectedParsedItem] = useState(null);
+
+    const handleRadioChange = (newValue) => {
+        setRowSourceFlag(newValue);
+        setRowMetadata('');
+        setRowError(false);
+    };
+
+    // const handlePencilClick = (e) => {
+    //     e.stopPropagation(); // Prevent event bubbling
+
+    //     let hasError = false;
+
+    //     if (rowSourceFlag === 'Filename') {
+    //         if (!sampleFilename.trim()) {
+    //             setSampleFilenameError(true);
+    //             hasError = true;
+    //         } else {
+    //             const hasExtension = sampleFilename.includes('.') &&
+    //                 sampleFilename.lastIndexOf('.') < sampleFilename.length - 1;
+    //             if (!hasExtension) {
+    //                 setSampleFilenameError(true);
+    //                 hasError = true;
+    //             } else {
+    //                 setSampleFilenameError(false);
+    //             }
+    //         }
+
+    //         if (!selectedDelimiters.length) {
+    //             setDelimiterError(true);
+    //             hasError = true;
+    //         } else {
+    //             setDelimiterError(false);
+    //         }
+
+    //         if (hasError) {
+    //             setRowError(true);
+    //             return;
+    //         }
+    //     }
+
+    //     const concatenatedDelimiter = ConcatenateDelimeterfromlist(selectedDelimiters, delimiterOptions);
+    //     const result = SplitFilenamewithExt(sampleFilename, concatenatedDelimiter);
+
+    //     let parsedData = [...result.splitpath];
+    //     if (result.lastDot > -1 && result.extension) {
+    //         parsedData.push(result.extension);
+    //     }
+
+    //     setParsedMetadata(parsedData);
+    //     setShowMetadataTooltip(index);
+    //     setRowError(false);
+    // };
+
+
+    const handlePencilClick = (e) => {
+        e.stopPropagation();
+
+        let hasError = false;
+
+        if (rowSourceFlag === 'Filename') {
+            if (!sampleFilename.trim()) {
+                setSampleFilenameError(true);
+                hasError = true;
+            } else {
+                const hasExtension = sampleFilename.includes('.') &&
+                    sampleFilename.lastIndexOf('.') < sampleFilename.length - 1;
+                if (!hasExtension) {
+                    setSampleFilenameError(true);
+                    hasError = true;
+                } else {
+                    setSampleFilenameError(false);
+                }
+            }
+
+            if (!selectedDelimiters.length) {
+                setDelimiterError(true);
+                hasError = true;
+            } else {
+                setDelimiterError(false);
+            }
+
+            if (hasError) {
+                setRowError(true);
+                return;
+            }
+        }
+
+        const concatenatedDelimiter = ConcatenateDelimeterfromlist(selectedDelimiters, delimiterOptions);
+
+        // NEW: Check if delimiters exist in filename (except for NONE)
+        if (concatenatedDelimiter !== "None") {
+            const delimiterChars = concatenatedDelimiter.split('');
+            const hasDelimiterInFilename = delimiterChars.some(char => sampleFilename.includes(char));
+
+            if (!hasDelimiterInFilename) {
+                // No delimiter found in filename, show empty parsed data
+                setParsedMetadata([]);
+                setShowMetadataTooltip(index);
+                setRowError(false);
+                return;
+            }
+        }
+
+        const result = SplitFilenamewithExt(sampleFilename, concatenatedDelimiter);
+
+        let parsedData = [...result.splitpath];
+        if (result.lastDot > -1 && result.extension) {
+            parsedData.push(result.extension);
+        }
+
+        setParsedMetadata(parsedData);
+        setShowMetadataTooltip(index);
+        setRowError(false);
+    };
+
+    // const handleParsedItemClick = (item) => {
+    //     setRowMetadata(item);
+    //     setShowMetadataTooltip(null);
+    // };
+
+    const handleParsedItemClick = (item) => {
+        setSelectedParsedItem(item);
+        // Don't update rowMetadata yet - only on double click or submit
+    };
+
+    const handleSubmitParsedData = () => {
+        if (selectedParsedItem) {
+            setRowMetadata(selectedParsedItem);
+        }
+        setShowMetadataTooltip(null);
+        setSelectedParsedItem(null);
+    };
+
+    const handleDoubleClick = (item) => {
+        setRowMetadata(item);
+        setShowMetadataTooltip(null);
+        setSelectedParsedItem(null);
+    };
+
+    return (
+        <tr key={tag.sTagID} className={index % 2 === 0 ? "bg-blue-50/30 border-b border-gray-100" : "bg-white border-b border-gray-100"}>
+            {/* Tag Name */}
+            <td className="px-6 py-4 font-medium text-gray-900">
+                {tag.sTagName}
+            </td>
+
+            {/* Extract From */}
+            <td className="px-6 py-4">
+                <div className="flex items-center gap-4">
+                    <label className="flex items-center cursor-pointer group">
+                        <input
+                            type="radio"
+                            name={`extract_${tag.sTagID}`}
+                            className="hidden peer"
+                            checked={rowSourceFlag === 'NONE'}
+                            onChange={() => handleRadioChange('NONE')}
+                        />
+                        <div className="w-4 h-4 border border-gray-300 rounded-full flex items-center justify-center peer-checked:border-blue-500 peer-checked:bg-white transition-colors">
+                            <div className={`w-2 h-2 bg-blue-500 rounded-full transition-transform ${rowSourceFlag === 'NONE' ? 'scale-100' : 'scale-0'}`}></div>
+                        </div>
+                        <span className="ml-2 text-sm text-gray-700 font-bold group-hover:text-blue-600 select-none">NONE</span>
+                    </label>
+
+                    <label className="flex items-center cursor-pointer group">
+                        <input
+                            type="radio"
+                            name={`extract_${tag.sTagID}`}
+                            className="hidden peer"
+                            checked={rowSourceFlag === 'Folder'}
+                            onChange={() => handleRadioChange('Folder')}
+                        />
+                        <div className="w-4 h-4 border border-gray-300 rounded-full flex items-center justify-center peer-checked:border-blue-500 peer-checked:bg-white transition-colors">
+                            <div className={`w-2 h-2 bg-blue-500 rounded-full transition-transform ${rowSourceFlag === 'Folder' ? 'scale-100' : 'scale-0'}`}></div>
+                        </div>
+                        <span className="ml-2 text-sm text-gray-700 font-bold group-hover:text-blue-600 select-none">Folder</span>
+                    </label>
+
+                    <label className="flex items-center cursor-pointer group">
+                        <input
+                            type="radio"
+                            name={`extract_${tag.sTagID}`}
+                            className="hidden peer"
+                            checked={rowSourceFlag === 'Filename'}
+                            onChange={() => handleRadioChange('Filename')}
+                        />
+                        <div className="w-4 h-4 border border-gray-300 rounded-full flex items-center justify-center peer-checked:border-blue-500 peer-checked:bg-white transition-colors">
+                            <div className={`w-2 h-2 bg-blue-500 rounded-full transition-transform ${rowSourceFlag === 'Filename' ? 'scale-100' : 'scale-0'}`}></div>
+                        </div>
+                        <span className="ml-2 text-sm text-gray-700 font-bold group-hover:text-blue-600 select-none">Filename</span>
+                    </label>
+                </div>
+            </td>
+
+            {/* Metadata */}
+            {/* <td className="px-6 py-4 relative">
+                <div className="flex items-center gap-2"> */}
+            {/* <input
+                        type="text"
+                        value={rowMetadata}
+                        onChange={(e) => setRowMetadata(e.target.value)}
+                        disabled={rowSourceFlag === 'NONE'}
+                        className={`flex-1 py-1 text-sm focus:outline-none ${rowSourceFlag === 'NONE'
+                            ? 'bg-transparent cursor-not-allowed'
+                            : 'bg-white border-b-2 focus:border-blue-400'
+                            } ${rowError ? 'border-red-500' : 'border-gray-200'}`} */}
+            {/* <input
+                        type="text"
+                        value={rowMetadata}
+                        onChange={(e) => setRowMetadata(e.target.value)}
+                        className={`flex-1 py-1 text-sm focus:outline-none ${rowSourceFlag === 'NONE'
+                            ? 'bg-transparent'
+                            : 'bg-white border-b-2 focus:border-blue-400 border-gray-200'
+                            }`}
+                        // placeholder={rowSourceFlag === 'Filename' ? "Select from parsed data" : rowSourceFlag === 'Folder' ? "Enter folder level" : ""}
+                    /> */}
+
+            {/* Info icon for Folder */}
+            {/* {rowSourceFlag === 'Folder' && (
+                        <div className="relative group z-[99999]">
+                            <svg
+                                className="w-4 h-4 text-gray-400 cursor-help"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                            >
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            <div className="absolute right-full mr-2 hidden group-hover:block z-[99999]"> top-1/2 -translate-y-1/2 */}
+            {/* <div className="bg-white border border-gray-300 text-black text-xs px-3 py-2 rounded shadow-lg whitespace-nowrap">
+                                    For parent folder enter 0, Grand parent enter -1 and so on...
+                                </div>
+                            </div>
+                        </div>
+                    )} */}
+
+
+
+            {/* Pencil icon for Filename */}
+            {/* {rowSourceFlag === 'Filename' && (
+                        <button
+                            data-pencil-id={index}
+                            onClick={handlePencilClick}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="View parsed metadata"
+                        >
+                            <Pencil size={16} />
+                        </button>
+                    )} */}
+            {/* </div> */}
+
+
+            {/* Metadata */}
+            <td className="px-6 py-4 relative">
+                {rowSourceFlag === 'Filename' ? (
+                    <div className="flex items-center justify-between">
+                        {/* Show selected value or placeholder */}
+                        <div className={`text-sm ${rowMetadata ? 'text-gray-900' : 'text-gray-500 italic'}`}>
+                            {rowMetadata || "Click pencil to select"}
+                        </div>
+                        <button
+                            data-pencil-id={index}
+                            onClick={handlePencilClick}
+                            className="text-blue-600 hover:text-blue-800 ml-2"
+                            title="Select from parsed data"
+                        >
+                            <Pencil size={16} />
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="text"
+                            value={rowMetadata}
+                            onChange={(e) => setRowMetadata(e.target.value)}
+                            disabled={rowSourceFlag === 'NONE'}
+                            className={`flex-1 py-1 text-sm focus:outline-none ${rowSourceFlag === 'NONE'
+                                ? 'bg-transparent cursor-not-allowed'
+                                : 'bg-white border-b-2 focus:border-blue-400 border-gray-200'
+                                }`}
+                        />
+                        {/* Info icon for Folder */}
+                        {rowSourceFlag === 'Folder' && (
+                            <div className="relative group z-[99999]">
+                                <svg className="w-4 h-4 text-gray-400 cursor-help" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                </svg>
+                                <div className="absolute right-full mr-2 hidden group-hover:block z-[99999]">
+                                    <div className="bg-white border border-gray-300 text-black text-xs px-3 py-2 rounded shadow-lg whitespace-nowrap">
+                                        For parent folder enter 0, Grand parent enter -1 and so on...
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* {showMetadataTooltip === index && rowSourceFlag === 'Filename' && (
+                    <div
+                        className="fixed z-[99999] bg-white border border-gray-300 rounded-md shadow-lg"
+                        style={{
+                            position: 'fixed',
+                            width: '256px',
+                            zIndex: 99999
+                        }}
+                        ref={(el) => {
+                            if (el) {
+                                const pencilButton = document.querySelector(`[data-pencil-id="${index}"]`);
+                                if (pencilButton) {
+                                    const rect = pencilButton.getBoundingClientRect();
+                                    // Position to the left and above the pencil icon
+                                    el.style.left = `${rect.left - 264}px`; // 256px width + 8px gap
+                                    el.style.top = `${rect.top - el.offsetHeight - 8}px`;
+
+                                    // If it goes off screen on the left, position to the right instead
+                                    if (rect.left - 264 < 0) {
+                                        el.style.left = `${rect.right + 8}px`;
+                                    }
+
+                                    // If it goes off screen on top, position below instead
+                                    if (rect.top - el.offsetHeight - 8 < 0) {
+                                        el.style.top = `${rect.bottom + 8}px`;
+                                    }
+                                }
+                            }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-2 border-b border-gray-300">
+                            <label className="text-xs text-gray-600 font-semibold">Parsed Metadata:</label>
+                        </div>
+
+                        
+
+                        <div className="max-h-40 overflow-y-auto custom-scrollbar">
+                            {parsedMetadata.length === 0 ? (
+                                <div className="px-3 py-6 text-center text-sm text-gray-500">
+                                    No delimiter found in filename
+                                </div>
+                            ) : (
+                                parsedMetadata.map((item, i) => (
+                                    <div
+                                        key={i}
+                                        onClick={() => handleParsedItemClick(item)}
+                                        onDoubleClick={() => handleDoubleClick(item)}
+                                        className={`px-3 py-2 text-sm cursor-pointer border-b last:border-b-0 transition-colors ${selectedParsedItem === item
+                                            ? 'bg-blue-100 text-blue-700 font-semibold border-l-4 border-blue-500'
+                                            : 'hover:bg-blue-50'
+                                            }`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span>{item}</span>
+                                            {selectedParsedItem === item && (
+                                                <Check size={14} className="text-blue-500" />
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+
+                        <div className="border-t border-gray-300">
+                            <p className="text-xs text-gray-500 italic px-3 pt-2">
+                                Single click to select, double-click to apply, or click Submit
+                            </p>
+                            
+                            <div className="flex justify-end gap-2 p-2 border-t border-gray-300">
+                                <button
+                                    onClick={handleSubmitParsedData}
+                                    className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
+                                    disabled={!selectedParsedItem}
+                                >
+                                    Submit
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowMetadataTooltip(null);
+                                        setSelectedParsedItem(null);
+                                    }}
+                                    className="border border-gray-300 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-50"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )} */}
+
+
+                {showMetadataTooltip === index && rowSourceFlag === 'Filename' && (
+                    <div
+                        className="fixed z-[99999] bg-white border border-gray-300 rounded-md shadow-lg"
+                        style={{
+                            position: 'fixed',
+                            width: '256px',
+                            zIndex: 99999,
+                            borderTopLeftRadius: '8px',
+                            borderTopRightRadius: '8px',
+                            overflow: 'visible'
+                        }}
+                        ref={(el) => {
+                            if (el) {
+                                const pencilButton = document.querySelector(`[data-pencil-id="${index}"]`);
+                                if (pencilButton) {
+                                    const rect = pencilButton.getBoundingClientRect();
+                                    el.style.left = `${rect.left - 264}px`;
+                                    el.style.top = `${rect.top}px`;
+                                }
+                            }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header with "Looking for" */}
+                        <div className="p-2 border-b border-gray-300 bg-gray-50">
+                            <div className="flex items-center gap-2">
+                                <Search size={14} className="text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Looking for"
+                                    className="w-full text-sm text-gray-700 placeholder-gray-400 border-none focus:outline-none bg-transparent"
+                                />
+                            </div>
+                        </div>
+
+                        {/* List of parsed data */}
+                        <div className="max-h-40 overflow-y-auto custom-scrollbar">
+                            {parsedMetadata.length === 0 ? (
+                                <div className="px-3 py-6 text-center text-sm text-gray-500">
+                                    No delimiter found in filename
+                                </div>
+                            ) : (
+                                parsedMetadata.map((item, i) => (
+                                    <div
+                                        key={i}
+                                        onClick={() => handleParsedItemClick(item)}
+                                        onDoubleClick={() => handleDoubleClick(item)}
+                                        className={`px-3 py-2 text-sm cursor-pointer border-b last:border-b-0 transition-colors ${selectedParsedItem === item
+                                            ? 'bg-blue-100 text-blue-700 font-semibold border-l-4 border-blue-500'
+                                            : 'hover:bg-blue-50'
+                                            }`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span>{item}</span>
+                                            {selectedParsedItem === item && (
+                                                <Check size={14} className="text-blue-500" />
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Footer with buttons */}
+                        <div className="border-t border-gray-300">
+                            <div className="flex justify-end gap-2 p-2">
+                                <button
+                                    onClick={handleSubmitParsedData}
+                                    className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
+                                    disabled={!selectedParsedItem}
+                                >
+                                    Submit
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowMetadataTooltip(null);
+                                        setSelectedParsedItem(null);
+                                    }}
+                                    className="border border-gray-300 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </td>
+        </tr >
+    );
+};
+
+// Helper Functions - Add at the top of your file, before the component
+const CF_HOURTOMINCONVERTION = (hour, min) => {
+    return hour * 60 + min;
+};
+
+const GetActiveMonths = (selectedMonths, monthOptions) => {
+    console.log("GetActiveMonths called with:", selectedMonths);
+    let result = "";
+    monthOptions.forEach(month => {
+        result += selectedMonths.includes(month.Month) ? "1" : "0";
+    });
+    console.log("GetActiveMonths result:", result);
+    return result;
+};
+
+const GetActiveMonthlyDays = (selectedDays) => {
+    console.log("GetActiveMonthlyDays called with:", selectedDays);
+    let result = "";
+    for (let i = 1; i <= 31; i++) {
+        result += selectedDays.includes(i) ? "1" : "0";
+    }
+    console.log("GetActiveMonthlyDays result:", result);
+    return result;
+};
+
+const GetActiveWeekNO = (selectedWeeks, weekOptions) => {
+    console.log("GetActiveWeekNO called with:", selectedWeeks);
+    let result = "";
+    weekOptions.forEach(week => {
+        result += selectedWeeks.includes(week.weeks) ? "1" : "0";
+    });
+    console.log("GetActiveWeekNO result:", result);
+    return result;
+};
+
+const GetActiveWeekDays = (selectedWeekdays, weekdayOptions) => {
+    console.log("GetActiveWeekDays called with:", selectedWeekdays);
+    let result = "";
+    weekdayOptions.forEach(day => {
+        result += selectedWeekdays.includes(day.days) ? "1" : "0";
+    });
+    console.log("GetActiveWeekDays result:", result);
+    return result;
+};
+
+
+
+// Scroll to section helper
+const scrollToSection = (ref, scrollContainerRef) => {
+    if (ref.current && scrollContainerRef.current) {
+        const container = scrollContainerRef.current;
+        const element = ref.current;
+        const elementRect = element.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
+
+        container.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+        });
+    }
+};
+
+const ConcatenateDelimeterfromlist = (Delimeterlst, delimiterOptions) => {
+    let concatdelimeter = "";
+    for (let i = 0; i < Delimeterlst.length; i++) {
+        // For "NONE", just return "None"
+        if (Delimeterlst[i].toUpperCase() === 'NONE') {
+            return "None";
+        }
+
+        const delimiterObj = delimiterOptions.find(opt => opt.sDelimiter === Delimeterlst[i]);
+        if (delimiterObj) {
+            concatdelimeter += delimiterObj.sDelimiter;
+        }
+    }
+    return concatdelimeter || "None";
+};
+
+// const SplitFilenamewithExt = (samplefilename, Delimeter) => {
+//     console.log("Splitting filename:", samplefilename, "with delimiter:", Delimeter);
+
+//     let lastDot = samplefilename.lastIndexOf('.');
+//     let filename = "", extension = "";
+
+//     if (lastDot > -1) {
+//         filename = samplefilename.slice(0, lastDot);
+//         extension = samplefilename.slice(lastDot + 1);
+//         var splitpath = splitfilenamewithdelimeter(filename, Delimeter);
+//     } else {
+//         var splitpath = splitfilenamewithdelimeter(samplefilename, Delimeter);
+//     }
+
+//     return { "lastDot": lastDot, "splitpath": splitpath, "extension": extension };
+// };
+
+const SplitFilenamewithExt = (samplefilename, Delimeter) => {
+    console.log("Splitting filename:", samplefilename, "with delimiter:", Delimeter);
+
+    let lastDot = samplefilename.lastIndexOf('.');
+    let filename = "", extension = "";
+
+    if (lastDot > -1) {
+        filename = samplefilename.slice(0, lastDot);
+        extension = samplefilename.slice(lastDot + 1);
+    } else {
+        filename = samplefilename;
+    }
+
+    // Split the filename part
+    var splitpath = splitfilenamewithdelimeter(filename, Delimeter);
+
+    // If delimiter is "None" or no delimiter found, splitpath will be [filename]
+    // Only add extension if we have a valid split
+    if (splitpath.length === 0) {
+        splitpath = [filename];
+    }
+
+    return { "lastDot": lastDot, "splitpath": splitpath, "extension": extension };
+};
+
+const splitfilenamewithdelimeter = (filename, Delimeter) => {
+    if (Delimeter === "None" || !Delimeter || Delimeter === "") {
+        return [filename];
+    }
+
+    // Escape special regex characters
+    const escapedDelimiter = Delimeter.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+    let regex = new RegExp('[' + escapedDelimiter + ']');
+    let splitfilename = filename.split(regex).filter(Boolean);
+
+    return splitfilename;
 };
 
 const SearchServerData = () => {
@@ -186,6 +873,14 @@ const SearchServerData = () => {
         { days: t("label.thursday"), Number: 5 },
         { days: t("label.friday"), Number: 6 },
         { days: t("label.saturday"), Number: 7 }
+    ];
+    const relationalOperatorOptions = [
+        { label: '=', value: '=' },
+        // { label: '!=', value: '!=' },
+        // { label: '>', value: '>' },
+        // { label: '<', value: '<' },
+        // { label: '>=', value: '>=' },
+        // { label: '<=', value: '<=' }
     ];
 
     const localDeleteCombo = [
@@ -357,6 +1052,39 @@ const SearchServerData = () => {
     const [lastTriggerDateWasValid, setLastTriggerDateWasValid] = useState(true);
     const [lastExpiryDateWasValid, setLastExpiryDateWasValid] = useState(true);
 
+    const [lastFilesOlderDateWasValid, setLastFilesOlderDateWasValid] = useState(true);
+
+
+    const [delimiterSearchTerm, setDelimiterSearchTerm] = useState('');
+    const [selectedDelimiters, setSelectedDelimiters] = useState([]);
+    const [showDelimiterSelector, setShowDelimiterSelector] = useState(false);
+    const [tempSelectedDelimiters, setTempSelectedDelimiters] = useState([]);
+    const [isNoneSelected, setIsNoneSelected] = useState(false);
+
+
+    const [sampleFilename, setSampleFilename] = useState('');
+    const [sampleFilenameError, setSampleFilenameError] = useState(false);
+    const [delimiterError, setDelimiterError] = useState(false);
+    const [showMetadataTooltip, setShowMetadataTooltip] = useState(null); // null or row index
+    const [parsedMetadata, setParsedMetadata] = useState([]);
+    const [ruleNameOptions, setRuleNameOptions] = useState([]);
+
+    const [selectedRuleName, setSelectedRuleName] = useState('');
+
+    // Add these states
+    const [ruleGridData, setRuleGridData] = useState([]);
+    const [newRuleMetadata, setNewRuleMetadata] = useState('');
+    const [newRuleTagName, setNewRuleTagName] = useState('');
+    const [newRuleFieldValue, setNewRuleFieldValue] = useState('');
+    const [showTagNameSelector, setShowTagNameSelector] = useState(false);
+    const [showRelOpSelector, setShowRelOpSelector] = useState(false);
+    const [ruleGridError, setRuleGridError] = useState(false);
+
+    const [tagNameSearchTerm, setTagNameSearchTerm] = useState('');
+    const [selectedRowId, setSelectedRowId] = useState(null);
+    const [newRuleRelationalOp, setNewRuleRelationalOp] = useState('');
+    const [relOpSearchTerm, setRelOpSearchTerm] = useState('');
+
     // Ref for the scrollable container (The specific div that scrolls)
     const scrollContainerRef = useRef(null);
 
@@ -366,7 +1094,6 @@ const SearchServerData = () => {
     const triggerExpiryRef = useRef(null);
     const scheduleCaptureRef = useRef(null);
     const schedulerMetadataRef = useRef(null);
-
 
     // Date validation utilities
     const isValidDate = (dateString) => {
@@ -453,6 +1180,287 @@ const SearchServerData = () => {
             .padStart(2, '0')}/${year}`;
     };
 
+    // const handleAddRule = () => {
+    //     // Check if all fields are empty
+    //     const isEmpty = !newRuleMetadata.trim() && !newRuleTagName && !newRuleFieldValue.trim();
+
+    //     if (isEmpty) {
+    //         setRuleGridError(true);
+
+    //         // Show error dialog
+    //         // setErrorDialog({
+    //         //     isOpen: true,
+    //         //     message: 'Please fill at least one column in the rule grid',
+    //         //     type: 'warning'
+    //         // });
+    //         return;
+    //     }
+
+    //     // Clear error if validation passes
+    //     setRuleGridError(false);
+
+    //     // Create new rule object
+    //     const newRule = {
+    //         id: Date.now(), // Unique ID
+    //         ruleName: selectedRuleName,
+    //         metadata: newRuleMetadata,
+    //         tagName: newRuleTagName,
+    //         relationalOp: newRuleRelationalOp,
+    //         fieldValue: newRuleFieldValue
+    //     };
+
+    //     // Add to grid data
+    //     setRuleGridData(prev => [...prev, newRule]);
+
+    //     // Clear form fields
+    //     setNewRuleMetadata('');
+    //     setNewRuleTagName('');
+    //     setNewRuleRelationalOp('=');
+    //     setNewRuleFieldValue('');
+    // };
+
+    // const handleAddRule = () => {
+    //     let hasError = false;
+
+    //     // Validate that at least one field has data
+    //     if (!newRuleMetadata.trim() && !newRuleTagName && !newRuleFieldValue.trim()) {
+    //         hasError = true;
+    //         // Show red border to whole grid
+    //         setRuleGridError(true);
+    //     }
+
+    //     // Individual field validation - show error for each empty field
+    //     const metadataError = !newRuleMetadata.trim();
+    //     const tagNameError = !newRuleTagName;
+    //     const fieldValueError = !newRuleFieldValue.trim();
+
+    //     if (hasError) {
+    //         setErrorDialog({
+    //             isOpen: true,
+    //             message: 'Please fill at least one column in the rule grid',
+    //             type: 'warning'
+    //         });
+    //         return;
+    //     }
+
+    //     // If metadata is empty, don't add to grid and show error
+    //     if (metadataError) {
+    //         setErrorDialog({
+    //             isOpen: true,
+    //             message: 'Metadata is required. Please enter metadata value.',
+    //             type: 'warning'
+    //         });
+    //         // Show red border only for metadata input
+    //         setRuleGridError(true);
+    //         return;
+    //     }
+
+    //     // Clear error if validation passes
+    //     setRuleGridError(false);
+
+    //     // Create new rule object
+    //     const newRule = {
+    //         id: Date.now(), // Unique ID
+    //         ruleName: selectedRuleName,
+    //         metadata: newRuleMetadata,
+    //         tagName: newRuleTagName,
+    //         relationalOp: newRuleRelationalOp,
+    //         fieldValue: newRuleFieldValue
+    //     };
+
+    //     // Add to grid data
+    //     setRuleGridData(prev => [...prev, newRule]);
+
+    //     // Clear form fields
+    //     setNewRuleMetadata('');
+    //     setNewRuleTagName('');
+    //     setNewRuleRelationalOp(''); // Reset to empty
+    //     setNewRuleFieldValue('');
+    // };
+
+    const handleAddRule = () => {
+        // Check if ALL fields are filled
+        const allFieldsFilled =
+            newRuleMetadata.trim() &&
+            newRuleTagName &&
+            newRuleFieldValue.trim() &&
+            newRuleRelationalOp;
+
+        if (!allFieldsFilled) {
+            // Show red border to the whole grid
+            setRuleGridError(true);
+            // DON'T show error dialog box
+            return;
+        }
+
+        // Clear error if validation passes
+        setRuleGridError(false);
+
+        // Create new rule object
+        const newRule = {
+            id: Date.now(),
+            ruleName: selectedRuleName,
+            metadata: newRuleMetadata,
+            tagName: newRuleTagName,
+            relationalOp: newRuleRelationalOp,
+            fieldValue: newRuleFieldValue
+        };
+
+        // Add to grid data
+        setRuleGridData(prev => [...prev, newRule]);
+
+        // Clear form fields
+        setNewRuleMetadata('');
+        setNewRuleTagName('');
+        setNewRuleRelationalOp('');
+        setNewRuleFieldValue('');
+        setRelOpSearchTerm('');
+        setTagNameSearchTerm('');
+    };
+
+    const handleRemoveRule = () => {
+        if (ruleGridData.length === 0) {
+            setErrorDialog({
+                isOpen: true,
+                message: 'No records to remove',
+                type: 'warning'
+            });
+            return;
+        }
+
+        // If no row is selected, select the first one and show error
+        if (selectedRowId === null) {
+            if (ruleGridData.length > 0) {
+                setSelectedRowId(ruleGridData[0].id);
+                setErrorDialog({
+                    isOpen: true,
+                    message: 'Select an existing record.',
+                    type: 'warning'
+                });
+            }
+            return;
+        }
+
+        // Remove the selected row
+        setRuleGridData(prev => prev.filter(rule => rule.id !== selectedRowId));
+        setSelectedRowId(null); // Clear selection after removal
+    };
+
+    const TagNameSelector = ({
+        isOpen,
+        onClose,
+        tagOptions,
+        selectedTag,
+        onSelect,
+        searchTerm,
+        onSearchChange
+    }) => {
+        const dropdownRef = useRef(null);
+
+        useEffect(() => {
+            const handleClickOutside = (e) => {
+                if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                    onClose();
+                }
+            };
+
+            if (isOpen) {
+                document.addEventListener('click', handleClickOutside);
+            }
+
+            return () => {
+                document.removeEventListener('click', handleClickOutside);
+            };
+        }, [isOpen, onClose]);
+
+        if (!isOpen) return null;
+
+        const filteredOptions = tagOptions.filter(opt =>
+            opt.sTagName.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        return (
+            <div
+                ref={dropdownRef}
+                className="fixed z-[99999] bg-white border border-gray-300 rounded-md shadow-lg"
+                style={{
+                    position: 'fixed',
+                    width: '256px',
+                    zIndex: 99999,
+                    borderTopLeftRadius: '8px',
+                    borderTopRightRadius: '8px',
+                    overflow: 'visible'
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Search Input */}
+                <div className="p-2 border-b border-gray-300 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                        <Search size={14} className="text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Looking for"
+                            value={searchTerm}
+                            onChange={(e) => onSearchChange(e.target.value)}
+                            className="w-full text-sm text-gray-700 placeholder-gray-400 border-none focus:outline-none bg-transparent"
+                            autoFocus
+                        />
+                    </div>
+                </div>
+
+                {/* Options List */}
+                <div className="max-h-40 overflow-y-auto custom-scrollbar">
+                    {filteredOptions.length === 0 ? (
+                        <div className="px-3 py-6 text-center text-sm text-gray-500">
+                            No tags found
+                        </div>
+                    ) : (
+                        filteredOptions.map((tag) => (
+                            <div
+                                key={tag.sTagID}
+                                onClick={() => onSelect(tag.sTagName)}
+                                className={`px-3 py-2 text-sm cursor-pointer border-b last:border-b-0 transition-colors ${selectedTag === tag.sTagName
+                                    ? 'bg-blue-100 text-blue-700 font-semibold border-l-4 border-blue-500'
+                                    : 'hover:bg-blue-50'
+                                    }`}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span>{tag.sTagName}</span>
+                                    {selectedTag === tag.sTagName && (
+                                        <Check size={14} className="text-blue-500" />
+                                    )}
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* Footer with buttons */}
+                <div className="border-t border-gray-300">
+                    <div className="flex justify-end gap-2 p-2">
+                        <button
+                            onClick={() => {
+                                if (selectedTag) {
+                                    onSelect(selectedTag);
+                                }
+                                onClose();
+                            }}
+                            className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
+                            disabled={!selectedTag}
+                        >
+                            Submit
+                        </button>
+                        <button
+                            onClick={onClose}
+                            className="border border-gray-300 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-50"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
     // Load all combos on screen load
     const loadCombos = async () => {
         try {
@@ -638,6 +1646,42 @@ const SearchServerData = () => {
 
         // Open modal after clearing
         setIsCheckPathModalOpen(true);
+    };
+
+    const parseMetadataFromFilename = (filename, delimiters, delimiterOptions) => {
+        if (!filename || !delimiters || delimiters.length === 0) return [];
+
+        // Validate filename has extension
+        const extensionMatch = filename.match(/\.[^.]+$/);
+        if (!extensionMatch) {
+            setSampleFilenameError(true);
+            return [];
+        }
+
+        const extension = extensionMatch[0];
+        const nameWithoutExt = filename.substring(0, filename.lastIndexOf('.'));
+
+        // If NONE selected, split by extension only
+        if (delimiters.includes('NONE') || delimiters.length === 0) {
+            return [nameWithoutExt, extension.substring(1)]; // Remove dot from extension
+        }
+
+        // Get delimiter characters from backend data
+        const delimiterChars = delimiters.map(d => {
+            const delimiterObj = delimiterOptions.find(opt => opt.sDelimiterName === d);
+            return delimiterObj?.sDelimiterValue || d;
+        });
+
+        // Create regex pattern from delimiters
+        const pattern = new RegExp(`[${delimiterChars.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('')}]`);
+
+        // Split by delimiters
+        const parts = nameWithoutExt.split(pattern).filter(p => p.trim());
+
+        // Add extension as last part
+        parts.push(extension.substring(1));
+
+        return parts;
     };
 
     // // Check path validation
@@ -1019,6 +2063,21 @@ const SearchServerData = () => {
             console.log("Tag API Response:", response);
 
             setTagMasterData(response || []);
+            // Auto-select first tag for Rule Name
+            if (response && response.length > 0) {
+                const firstTagId = response[0].sTagID;
+                setSelectedRuleName(firstTagId);
+
+                // Populate dropdown options
+                const tagNames = response.map(tag => ({
+                    RuleName: tag.sTagName,
+                    RuleID: tag.sTagID
+                }));
+                setRuleNameOptions(tagNames);
+            } else {
+                setSelectedRuleName('');
+                setRuleNameOptions([]);
+            }
         } catch (error) {
             console.error("Tag master load failed:", error);
             setTagMasterData([]);
@@ -1304,17 +2363,128 @@ const SearchServerData = () => {
         }
     };
 
+    const handleFilesOlderDateChange = (date) => {
+        const formattedDate = validateAndFormatDate(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const parts = formattedDate.split('/');
+
+        if (parts.length === 3) {
+            const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+            selectedDate.setHours(0, 0, 0, 0);
+
+            // For "Files older than" - only PAST dates are allowed
+            if (selectedDate > today) {
+                // Calculate yesterday
+                const yesterday = new Date();
+                yesterday.setTime(yesterday.getTime() - 86400000);
+                yesterday.setHours(0, 0, 0, 0);
+                const yesterdayFormatted = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
+
+                // Force update
+                setFilesOlderThanDate('');
+                setTimeout(() => {
+                    setFilesOlderThanDate(yesterdayFormatted);
+                }, 0);
+
+                setLastFilesOlderDateWasValid(false);
+                return;
+            } else {
+                // Valid date (today or past)
+                setFilesOlderThanDate(formattedDate);
+                setLastFilesOlderDateWasValid(true);
+            }
+        } else {
+            setFilesOlderThanDate(formattedDate);
+        }
+    };
+    // useEffect(() => {
+    //     if (tagMasterData && tagMasterData.length > 0) {
+    //         // Extract tag names for rule name dropdown
+    //         const tagNames = tagMasterData.map(tag => ({
+    //             RuleName: tag.sTagName,
+    //             RuleID: tag.sTagID
+    //         }));
+    //         // Update your rule name combo options
+    //         // You'll need to create a state for this
+    //         setRuleNameOptions(tagNames);
+    //     }
+    // }, [tagMasterData]);
+    // In the useEffect that loads tagMasterData, or create a new one:
+    useEffect(() => {
+        if (tagMasterData && tagMasterData.length > 0) {
+            // Extract tag names for rule name dropdown
+            const tagNames = tagMasterData.map(tag => ({
+                RuleName: tag.sTagName,
+                RuleID: tag.sTagID
+            }));
+            setRuleNameOptions(tagNames);
+        } else {
+            setRuleNameOptions([]);
+        }
+    }, [tagMasterData]);
+
+    useEffect(() => {
+        const handleGlobalClick = () => {
+            if (showDelimiterSelector) {
+                setShowDelimiterSelector(false);
+            }
+            if (showMetadataTooltip !== null) {
+                setShowMetadataTooltip(null);
+            }
+        };
+
+        document.addEventListener('click', handleGlobalClick);
+
+        return () => {
+            document.removeEventListener('click', handleGlobalClick);
+        };
+    }, [showDelimiterSelector, showMetadataTooltip]);
+
     useEffect(() => {
         if (isSchedulerMetadataEnabled && selectedTemplate) {
             console.log("Loading tags for template:", selectedTemplate);
             loadTagMaster(selectedTemplate);
+
+            // Also set the first tag as default selection if needed
+            if (tagMasterData.length > 0 && !selectedRuleName) {
+                setSelectedRuleName(tagMasterData[0].sTagID);
+            }
         }
     }, [isSchedulerMetadataEnabled, selectedTemplate]);
 
+    useEffect(() => {
+        // Validate when sample filename or delimiter changes
+        if (tagMasterData.some(tag => tag.sSourceFlag === 'Filename')) {
+            const hasFilenameError = !sampleFilename.trim() ||
+                !sampleFilename.includes('.') ||
+                sampleFilename.lastIndexOf('.') >= sampleFilename.length - 1;
+
+            const hasDelimiterError = !selectedDelimiters.length;
+
+            setSampleFilenameError(hasFilenameError);
+            setDelimiterError(hasDelimiterError);
+        }
+    }, [sampleFilename, selectedDelimiters, tagMasterData]);
 
     useEffect(() => {
         loadCombos();
     }, []);
+
+    // Track if NONE is selected
+    useEffect(() => {
+        setIsNoneSelected(selectedDelimiters.includes('NONE'));
+    }, [selectedDelimiters]);
+
+    // Auto-select first row when data is added
+    useEffect(() => {
+        if (ruleGridData.length > 0 && selectedRowId === null) {
+            setSelectedRowId(ruleGridData[0].id);
+        } else if (ruleGridData.length === 0) {
+            setSelectedRowId(null);
+        }
+    }, [ruleGridData]);
 
     // Scroll Handler (Manual Calculation to prevent Header movement)
     const scrollToSection = (ref, tabName) => {
@@ -1336,49 +2506,629 @@ const SearchServerData = () => {
         }
     };
 
-    const handleSubmit = () => {
-        // Reset warning first
+    // const handleSubmit = () => {
+    //     // Reset warning first
+    //     setShowExpiryWarning(false);
+    //     setShowTriggerWarning(false);
+
+    //     // Validate that both trigger and expiry dates are not in the past
+    //     const triggerParts = triggerDate.split('/');
+    //     const triggerDateOnly = new Date(triggerParts[2], triggerParts[1] - 1, triggerParts[0]);
+    //     const today = new Date();
+    //     today.setHours(0, 0, 0, 0);
+
+    //     if (triggerDateOnly < today) {
+    //         setShowTriggerWarning(true);
+    //         // Scroll to the Trigger/Expiry section
+    //         if (triggerExpiryRef.current && scrollContainerRef.current) {
+    //             const container = scrollContainerRef.current;
+    //             const element = triggerExpiryRef.current;
+    //             const elementRect = element.getBoundingClientRect();
+    //             const containerRect = container.getBoundingClientRect();
+    //             const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
+
+    //             container.scrollTo({
+    //                 top: offsetPosition,
+    //                 behavior: 'smooth'
+    //             });
+    //         }
+    //         return;
+    //     }
+
+    //     const triggerTimeParts = triggerTime.split(':');
+    //     const triggerDateTime = new Date(
+    //         parseInt(triggerParts[2]),
+    //         parseInt(triggerParts[1]) - 1,
+    //         parseInt(triggerParts[0]),
+    //         parseInt(triggerTimeParts[0]),
+    //         parseInt(triggerTimeParts[1]),
+    //         parseInt(triggerTimeParts[2])
+    //     );
+
+    //     if (expiryEnabled) {
+    //         const expiryParts = expiryDate.split('/');
+    //         const expiryTimeParts = expiryTime.split(':');
+
+    //         const expiryDateTime = new Date(
+    //             parseInt(expiryParts[2]),
+    //             parseInt(expiryParts[1]) - 1,
+    //             parseInt(expiryParts[0]),
+    //             parseInt(expiryTimeParts[0]),
+    //             parseInt(expiryTimeParts[1]),
+    //             parseInt(expiryTimeParts[2])
+    //         );
+
+    //         if (expiryDateTime <= triggerDateTime) {
+    //             setShowExpiryWarning(true);
+    //             // Scroll to the Trigger/Expiry section
+    //             if (triggerExpiryRef.current && scrollContainerRef.current) {
+    //                 const container = scrollContainerRef.current;
+    //                 const element = triggerExpiryRef.current;
+    //                 const elementRect = element.getBoundingClientRect();
+    //                 const containerRect = container.getBoundingClientRect();
+    //                 const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
+
+    //                 container.scrollTo({
+    //                     top: offsetPosition,
+    //                     behavior: 'smooth'
+    //                 });
+    //             }
+    //             return;
+    //         }
+    //     }
+
+    //     if (expiryEnabled) {
+    //         const expiryParts = expiryDate.split('/');
+    //         const expiryTimeParts = expiryTime.split(':');
+
+    //         const expiryDateTime = new Date(
+    //             parseInt(expiryParts[2]),
+    //             parseInt(expiryParts[1]) - 1,
+    //             parseInt(expiryParts[0]),
+    //             parseInt(expiryTimeParts[0]),
+    //             parseInt(expiryTimeParts[1]),
+    //             parseInt(expiryTimeParts[2])
+    //         );
+
+    //         if (expiryDateTime <= triggerDateTime) {
+    //             setShowExpiryWarning(true);
+    //             // Scroll to the Trigger/Expiry section
+    //             if (triggerExpiryRef.current && scrollContainerRef.current) {
+    //                 const container = scrollContainerRef.current;
+    //                 const element = triggerExpiryRef.current;
+    //                 const elementRect = element.getBoundingClientRect();
+    //                 const containerRect = container.getBoundingClientRect();
+    //                 const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
+
+    //                 container.scrollTo({
+    //                     top: offsetPosition,
+    //                     behavior: 'smooth'
+    //                 });
+    //             }
+    //             return; // Don't submit
+    //         }
+    //     }
+
+    //     // Continue with your submission logic here
+    //     console.log('Form submitted successfully');
+    // };
+
+    const handleSubmit = async () => {
+        console.log("=== SUBMIT STARTED ===");
+
+        // Initialize validation object
+        let passObjDet = {};
+        let IsEmpty = false;
+
+        // ========== VALIDATION SECTION ==========
+        console.log("--- Starting Validation ---");
+
+        // 1. Client Validation
+        if (!selectedClient) {
+            console.log("Client validation failed");
+            setClientError(true);
+            IsEmpty = true;
+            scrollToSection(fileSettingsRef, scrollContainerRef);
+        } else {
+            setClientError(false);
+        }
+
+        // 2. Instrument Validation
+        if (!selectedInstrument) {
+            console.log("Instrument validation failed");
+            IsEmpty = true;
+            scrollToSection(fileSettingsRef, scrollContainerRef);
+        }
+
+        // 3. Method Validation (only if not disabled)
+        if (!isMethodDisabled) {
+            const selectedMethodIndex = methodOptions.findIndex(m => m.InstMethodName === selectedMethod);
+
+            if (selectedMethodIndex === -1 || !selectedMethod) {
+                console.log("Method validation failed");
+                IsEmpty = true;
+                scrollToSection(fileSettingsRef, scrollContainerRef);
+            } else {
+                const selectedMethodItem = methodOptions[selectedMethodIndex];
+                passObjDet["L13MethodName"] = selectedMethodItem.MethodName;
+                passObjDet["L13ParserInstCode"] = selectedMethodItem.InstName;
+                passObjDet["L13ParserMethodGroup"] = selectedMethodItem.MethodGroup;
+            }
+        } else {
+            passObjDet["L13MethodName"] = "DEFAULT";
+        }
+
+        // 4. Path Validation (Local or UNC)
+        const radLocalPath = !isUNCPathEnabled;
+        const radUNCPath = isUNCPathEnabled;
+
+        if (radLocalPath) {
+            console.log("Validating Local Path:", sourcePath);
+
+            if (!sourcePath.trim()) {
+                console.log("Source path is empty");
+                setSourcePathError(true);
+                IsEmpty = true;
+                scrollToSection(fileSettingsRef, scrollContainerRef);
+            } else {
+                const pathValidation = CF_pathValidation(sourcePath);
+                const sourcepathParts = sourcePath.split("\\");
+
+                console.log("Path validation result:", pathValidation);
+                console.log("Source path parts:", sourcepathParts);
+
+                if (pathValidation) {
+                    if (sourcepathParts[1] === "") {
+                        console.log("Source path invalid - second part is empty");
+                        setSourcePathError(true);
+                        IsEmpty = true;
+                        scrollToSection(fileSettingsRef, scrollContainerRef);
+                    } else {
+                        setSourcePathError(false);
+                        passObjDet["L13SourcePath"] = sourcePath;
+                        passObjDet["L13UNCStatus"] = 0;
+                    }
+                } else {
+                    console.log("Source path validation failed");
+                    setSourcePathError(true);
+                    IsEmpty = true;
+                    scrollToSection(fileSettingsRef, scrollContainerRef);
+                }
+            }
+        }
+
+        if (radUNCPath) {
+            console.log("Validating UNC Path");
+            IsEmpty = false;
+
+            const UNCPathValidation = CF_UNCPathValidation(uncPath.trim());
+            console.log("UNC Path validation result:", UNCPathValidation);
+
+            if (!UNCPathValidation) {
+                console.log("UNC Path validation failed");
+                setUncPathError(true);
+                IsEmpty = true;
+                scrollToSection(fileSettingsRef, scrollContainerRef);
+            } else {
+                setUncPathError(false);
+            }
+
+            if (!uncUsername.trim()) {
+                console.log("UNC Username is empty");
+                setUncUsernameError(true);
+                IsEmpty = true;
+                scrollToSection(fileSettingsRef, scrollContainerRef);
+            } else {
+                setUncUsernameError(false);
+            }
+
+            if (!uncPassword.trim()) {
+                console.log("UNC Password is empty");
+                setUncPasswordError(true);
+                IsEmpty = true;
+                scrollToSection(fileSettingsRef, scrollContainerRef);
+            } else {
+                setUncPasswordError(false);
+            }
+
+            if (!selectedDomain) {
+                console.log("Domain not selected");
+                IsEmpty = true;
+                scrollToSection(fileSettingsRef, scrollContainerRef);
+            }
+
+            if (!IsEmpty) {
+                passObjDet["L13SourcePath"] = uncPath.trim();
+                passObjDet["L13UNCStatus"] = 1;
+            }
+        }
+
+        // 5. Filter Validation
+        if (!filter.trim()) {
+            console.log("Filter is empty");
+            IsEmpty = true;
+            scrollToSection(fileSettingsRef, scrollContainerRef);
+        }
+
+        // 6. Destination Validation
+        if (!selectedDestination) {
+            console.log("Destination not selected");
+            IsEmpty = true;
+            scrollToSection(fileSettingsRef, scrollContainerRef);
+        } else {
+            const destinationItem = destinationOptions.find(d => d.L09FTPID === selectedDestination);
+            if (destinationItem) {
+                passObjDet["L13FTPText"] = destinationItem.L09FTPAliasName;
+            }
+        }
+
+        // 7. Delete Local Copy Validation
+        if (deleteLocalCopy) {
+            console.log("Validating Delete Local Copy");
+
+            if (filesOlderThanEnabled) {
+                if (!filesOlderDays.trim()) {
+                    console.log("Files older days is empty");
+                    IsEmpty = true;
+                    scrollToSection(uploadPolicyRef, scrollContainerRef);
+                }
+            }
+        }
+
+        // 8. Subfolder Level Validation
+        if (includeSubfolder) {
+            console.log("Validating Subfolder Level");
+
+            if (levelEnabled) {
+                if (!levelValue.trim()) {
+                    console.log("Level value is empty");
+                    IsEmpty = true;
+                    scrollToSection(uploadPolicyRef, scrollContainerRef);
+                }
+            }
+        }
+
+        // 9. File Audit Validation
+        if (enableFileAudit) {
+            console.log("Validating File Audit");
+
+            if (!auditFilter.trim()) {
+                console.log("Audit filter is empty");
+                IsEmpty = true;
+            } else {
+                passObjDet["L52EnableVerAudit"] = true;
+                passObjDet["L52AuditFilter"] = auditFilter;
+            }
+        } else {
+            passObjDet["L52EnableVerAudit"] = false;
+            passObjDet["L52AuditFilter"] = "";
+        }
+
+        // ========== LIVE BACKUP / SCHEDULE MODE ==========
+        console.log("--- Processing Schedule Mode ---");
+
+        passObjDet["L13LiveArchive"] = 0;
+        passObjDet["L13VersionPolicy"] = 0;
+
+        if (liveCapture) {
+            console.log("Live Capture is enabled");
+
+            passObjDet["L13ScheduleMode"] = "";
+            passObjDet["L13LiveArchive"] = 1;
+
+            if (liveCaptureVersioning) {
+                passObjDet["L13VersionPolicy"] = 0;
+            } else if (oneVersionPerDay) {
+                passObjDet["L13VersionPolicy"] = 1;
+            } else {
+                passObjDet["L13VersionPolicy"] = 2;
+            }
+        }
+
+        if (!liveCapture) {
+            console.log("Schedule Mode is enabled");
+
+            passObjDet["L13LiveArchive"] = 0;
+
+            if (oneTime) {
+                passObjDet["L13ScheduleMode"] = "O";
+            } else if (daily) {
+                passObjDet["L13ScheduleMode"] = "D";
+            } else if (weekly) {
+                passObjDet["L13ScheduleMode"] = "W";
+            } else if (monthly) {
+                passObjDet["L13ScheduleMode"] = "M";
+            }
+
+            if (oneTime) {
+                passObjDet["L13VersionPolicy"] = 2;
+            } else if (scheduleWithoutVersioning) {
+                passObjDet["L13VersionPolicy"] = 0;
+            } else {
+                passObjDet["L13VersionPolicy"] = 2;
+            }
+        }
+
+        // ========== TRIGGER TIME VALIDATION ==========
+        console.log("--- Validating Trigger Time ---");
+
+        const starttriggertime = triggerTime.split(' ');
+        console.log("Start trigger time:", starttriggertime);
+
+        if (starttriggertime[0] === "00:00:00") {
+            console.log("Trigger time is 00:00:00 - showing error");
+            setErrorDialog({
+                isOpen: true,
+                message: 'Must choose trigger time',
+                type: 'warning'
+            });
+            scrollToSection(triggerExpiryRef, scrollContainerRef);
+            return;
+        } else {
+            const startdate = `${triggerDate} ${starttriggertime[0]}`;
+            passObjDet["L13StartDate"] = startdate;
+            console.log("L13StartDate set to:", startdate);
+        }
+
+        // ========== EXPIRY DATE/TIME VALIDATION ==========
+        console.log("--- Validating Expiry Date/Time ---");
+
+        if (expiryEnabled) {
+            const expirytime = expiryTime.split(' ');
+            console.log("Expiry time:", expirytime);
+
+            if (expirytime[0] === "00:00:00") {
+                console.log("Expiry time is 00:00:00 - showing error");
+                setErrorDialog({
+                    isOpen: true,
+                    message: 'Must choose end time',
+                    type: 'warning'
+                });
+                scrollToSection(triggerExpiryRef, scrollContainerRef);
+                return;
+            } else {
+                const enddate = `${expiryDate} ${expirytime[0]}`;
+                passObjDet["L13EndDate"] = enddate;
+                console.log("L13EndDate set to:", enddate);
+            }
+        } else {
+            passObjDet["L13EndDate"] = "";
+        }
+
+        // Set Trigger Time
+        const timeinput = triggerTime.split(' ');
+        const triggertime = `${triggerDate} ${timeinput[0]}`;
+        passObjDet["L13TriggerTime"] = triggertime;
+        console.log("L13TriggerTime set to:", triggertime);
+
+        // ========== ONE TIME DATE ==========
+        if (passObjDet["L13ScheduleMode"] === "O") {
+            console.log("Setting One Time Date:", oneTimeDate);
+            passObjDet["L13OneTimeDate"] = oneTimeDate;
+            passObjDet["L13TriggerTime"] = `${oneTimeDate} ${starttriggertime[0]}`;
+        } else {
+            passObjDet["L13OneTimeDate"] = null;
+        }
+
+        // ========== DAILY SCHEDULE ==========
+        if (passObjDet["L13ScheduleMode"] === "D") {
+            console.log("Processing Daily Schedule");
+
+            passObjDet["L13DayRepeatStatus"] = dailyRepeatTask ? 1 : 0;
+            passObjDet["L13DateInterval"] = parseInt(dailyEveryDays);
+
+            const hourtominconvert = CF_HOURTOMINCONVERTION(
+                parseInt(dailyEveryHours),
+                parseInt(dailyEveryMinutes)
+            );
+            passObjDet["L13TimeInterval"] = hourtominconvert;
+
+            console.log("Daily Schedule Data:", {
+                DayRepeatStatus: passObjDet["L13DayRepeatStatus"],
+                DateInterval: passObjDet["L13DateInterval"],
+                TimeInterval: passObjDet["L13TimeInterval"]
+            });
+        } else {
+            passObjDet["L13DayRepeatStatus"] = 0;
+            passObjDet["L13DateInterval"] = 0;
+            passObjDet["L13TimeInterval"] = 0;
+        }
+
+        // ========== WEEKLY SCHEDULE ==========
+        if (passObjDet["L13ScheduleMode"] === "W") {
+            console.log("Processing Weekly Schedule");
+
+            let weekdays = "";
+            weekdays += weeklyDays.Sunday ? "1" : "0";
+            weekdays += weeklyDays.Monday ? "1" : "0";
+            weekdays += weeklyDays.Tuesday ? "1" : "0";
+            weekdays += weeklyDays.Wednesday ? "1" : "0";
+            weekdays += weeklyDays.Thursday ? "1" : "0";
+            weekdays += weeklyDays.Friday ? "1" : "0";
+            weekdays += weeklyDays.Saturday ? "1" : "0";
+
+            passObjDet["L13ActiveDaysWeekly"] = weekdays;
+            console.log("L13ActiveDaysWeekly:", weekdays);
+        } else {
+            passObjDet["L13ActiveDaysWeekly"] = "0000000";
+        }
+
+        // ========== MONTHLY SCHEDULE ==========
+        if (passObjDet["L13ScheduleMode"] === "M") {
+            console.log("Processing Monthly Schedule");
+
+            passObjDet["L13ActiveMonth"] = GetActiveMonths(monthlySelectedMonths, monthOptions);
+
+            if (monthlyDayToggle) {
+                passObjDet["L13StatusMonthDaysOrWeek"] = "Days";
+                passObjDet["L13ActiveMonthlydays"] = GetActiveMonthlyDays(monthlySelectedDays);
+                console.log("Monthly Days:", passObjDet["L13ActiveMonthlydays"]);
+            } else {
+                passObjDet["L13ActiveMonthlydays"] = "";
+            }
+
+            if (monthlyOnToggle) {
+                passObjDet["L13StatusMonthDaysOrWeek"] = "Week";
+                passObjDet["L13ActiveWeekNoMonthly"] = GetActiveWeekNO(monthlySelectedWeeks, weekOptions);
+                passObjDet["L13ActiveDayOfWeekMonthly"] = GetActiveWeekDays(monthlySelectedWeekdays, weekdayOptions);
+                console.log("Monthly Week Data:", {
+                    WeekNo: passObjDet["L13ActiveWeekNoMonthly"],
+                    DayOfWeek: passObjDet["L13ActiveDayOfWeekMonthly"]
+                });
+            } else {
+                passObjDet["L13StatusMonthDaysOrWeek"] = "Week";
+                passObjDet["L13ActiveWeekNoMonthly"] = "";
+                passObjDet["L13ActiveDayOfWeekMonthly"] = "";
+            }
+        } else {
+            passObjDet["L13ActiveMonth"] = "000000000000";
+            passObjDet["L13StatusMonthDaysOrWeek"] = "Week";
+            passObjDet["L13ActiveMonthlydays"] = "";
+            passObjDet["L13ActiveWeekNoMonthly"] = "00000";
+            passObjDet["L13ActiveDayOfWeekMonthly"] = "0000000";
+        }
+
+        // ========== COPY/MOVE FILES ==========
+        console.log("--- Processing Copy/Move Files ---");
+        passObjDet["L13CopyFiles"] = copyFiles ? 1 : 0;
+        passObjDet["L13MovePermenently"] = moveFiles ? 1 : 0;
+
+        // ========== DELETE LOCAL COPY ==========
+        console.log("--- Processing Delete Local Copy ---");
+
+        if (deleteLocalCopy) {
+            passObjDet["L13DeleteLocalCopy"] = 1;
+
+            if (filesOlderThanEnabled) {
+                passObjDet["L13OlderFileType"] = 0;
+                passObjDet["L13OlderFileNO"] = parseInt(filesOlderDays);
+                passObjDet["L13OlderFileNoType"] = filesOlderDaysUnit;
+                passObjDet["L13OlderFileDate"] = null;
+                passObjDet["L13AutoLocalDeleteStatus"] = localDeleteMode;
+            }
+
+            if (filesOlderThanDateEnabled) {
+                passObjDet["L13OlderFileNO"] = 0;
+                passObjDet["L13OlderFileNoType"] = "";
+                passObjDet["L13OlderFileType"] = 1;
+                passObjDet["L13OlderFileDate"] = filesOlderThanDate;
+                passObjDet["L13AutoLocalDeleteStatus"] = localDeleteMode;
+            }
+        } else {
+            passObjDet["L13DeleteLocalCopy"] = 0;
+            passObjDet["L13OlderFileType"] = 0;
+            passObjDet["L13OlderFileNO"] = 0;
+            passObjDet["L13OlderFileNoType"] = "";
+            passObjDet["L13OlderFileDate"] = null;
+            passObjDet["L13AutoLocalDeleteStatus"] = localDeleteMode;
+        }
+
+        // ========== FILE DELETE VERSION POLICY ==========
+        console.log("--- Processing File Delete Policy ---");
+
+        if (applyDeletePolicy) {
+            passObjDet["L13FileDeleteVersionPolicy"] = 1;
+            passObjDet["L52DBMaintenanceDelType"] = true;
+            passObjDet["L52FileVersionDeleteType"] = false;
+            passObjDet["L13AutoServerDeleteStatus"] = serverDeleteMode;
+        } else {
+            passObjDet["L13FileDeleteVersionPolicy"] = 0;
+            passObjDet["L52DBMaintenanceDelType"] = false;
+            passObjDet["L52FileVersionDeleteType"] = false;
+            passObjDet["L13AutoServerDeleteStatus"] = 1;
+        }
+
+        // ========== FILE LINK STATUS ==========
+        passObjDet["L13FileLinkStatus"] = enableFileLink ? 1 : 0;
+
+        // ========== SUBFOLDER SETTINGS ==========
+        console.log("--- Processing Subfolder Settings ---");
+
+        if (includeSubfolder) {
+            passObjDet["L13SubDirectory"] = 1;
+
+            if (completeTree) {
+                passObjDet["L13DataArchiveMode"] = 0;
+                passObjDet["L13Level"] = 0;
+            }
+
+            if (levelEnabled) {
+                passObjDet["L13DataArchiveMode"] = 1;
+                if (levelValue.trim() !== "") {
+                    passObjDet["L13Level"] = parseInt(levelValue);
+                }
+            } else {
+                passObjDet["L13Level"] = 0;
+                passObjDet["L13DataArchiveMode"] = 0;
+            }
+        } else {
+            passObjDet["L13SubDirectory"] = 0;
+            passObjDet["L13Level"] = 0;
+            passObjDet["L13DataArchiveMode"] = 0;
+        }
+
+        // ========== INSTRUMENT & UNC DATA ==========
+        console.log("--- Processing Instrument & UNC Data ---");
+
+        passObjDet["L13EmpowerStatus"] = 0;
+        passObjDet["L13InstrumentMappingID"] = selectedInstrument.trim();
+
+        const Instrumentitem = instrumentOptions.find(inst => inst.L12InstrumentMappingID === selectedInstrument);
+        if (Instrumentitem) {
+            passObjDet["L13InstrumentID"] = Instrumentitem.L12InstrumentID;
+            passObjDet["sInstrumentName"] = Instrumentitem.L11InstrumentName;
+            console.log("Instrument Data:", {
+                InstrumentID: passObjDet["L13InstrumentID"],
+                InstrumentName: passObjDet["sInstrumentName"]
+            });
+        }
+
+        passObjDet["L13FTPID"] = selectedDestination.trim();
+        passObjDet["L13FileFilter"] = filter;
+        passObjDet["L13UNCUserName"] = uncUsername.trim();
+        passObjDet["L13UNCPassword"] = uncPassword.trim();
+
+        const domainItem = domainOptions.find(d => d.L03DomainID === selectedDomain);
+        if (domainItem) {
+            passObjDet["L13UNCDomain"] = domainItem.L03DomainName;
+        } else {
+            passObjDet["L13UNCDomain"] = "";
+        }
+
+        // ========== TASK SETTINGS ==========
+        console.log("--- Setting Task Settings ---");
+        const userDetails = CF_activeUserdetails();
+
+        passObjDet["L13TaskStatus"] = "D";
+        passObjDet["L13DayStatus"] = 1;
+        passObjDet["L13TimeStatus"] = 1;
+        passObjDet["L13CreatedBy"] = userDetails.sUserID;
+        passObjDet["L13TaskName"] = "Scheduler";
+        passObjDet["L13WatcherFlag"] = 0;
+        passObjDet["L13TaskCompleted"] = 0;
+        passObjDet["bExist"] = false;
+        passObjDet["process"] = "";
+
+        // ========== EXPIRY DATE/TIME COMPARISON ==========
+        console.log("--- Comparing Trigger and Expiry Times ---");
+
         setShowExpiryWarning(false);
         setShowTriggerWarning(false);
 
-        // Validate that both trigger and expiry dates are not in the past
-        const triggerParts = triggerDate.split('/');
-        const triggerDateOnly = new Date(triggerParts[2], triggerParts[1] - 1, triggerParts[0]);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (triggerDateOnly < today) {
-            setShowTriggerWarning(true);
-            // Scroll to the Trigger/Expiry section
-            if (triggerExpiryRef.current && scrollContainerRef.current) {
-                const container = scrollContainerRef.current;
-                const element = triggerExpiryRef.current;
-                const elementRect = element.getBoundingClientRect();
-                const containerRect = container.getBoundingClientRect();
-                const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
-
-                container.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                });
-            }
-            return;
-        }
-
-        const triggerTimeParts = triggerTime.split(':');
-        const triggerDateTime = new Date(
-            parseInt(triggerParts[2]),
-            parseInt(triggerParts[1]) - 1,
-            parseInt(triggerParts[0]),
-            parseInt(triggerTimeParts[0]),
-            parseInt(triggerTimeParts[1]),
-            parseInt(triggerTimeParts[2])
-        );
-
         if (expiryEnabled) {
+            const triggerParts = triggerDate.split('/');
+            const triggerTimeParts = triggerTime.split(':');
+            const triggerDateTime = new Date(
+                parseInt(triggerParts[2]),
+                parseInt(triggerParts[1]) - 1,
+                parseInt(triggerParts[0]),
+                parseInt(triggerTimeParts[0]),
+                parseInt(triggerTimeParts[1]),
+                parseInt(triggerTimeParts[2])
+            );
+
             const expiryParts = expiryDate.split('/');
             const expiryTimeParts = expiryTime.split(':');
-
             const expiryDateTime = new Date(
                 parseInt(expiryParts[2]),
                 parseInt(expiryParts[1]) - 1,
@@ -1388,59 +3138,377 @@ const SearchServerData = () => {
                 parseInt(expiryTimeParts[2])
             );
 
-            if (expiryDateTime <= triggerDateTime) {
-                setShowExpiryWarning(true);
-                // Scroll to the Trigger/Expiry section
-                if (triggerExpiryRef.current && scrollContainerRef.current) {
-                    const container = scrollContainerRef.current;
-                    const element = triggerExpiryRef.current;
-                    const elementRect = element.getBoundingClientRect();
-                    const containerRect = container.getBoundingClientRect();
-                    const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
+            console.log("Trigger DateTime:", triggerDateTime);
+            console.log("Expiry DateTime:", expiryDateTime);
 
-                    container.scrollTo({
-                        top: offsetPosition,
-                        behavior: 'smooth'
-                    });
-                }
+            if (expiryDateTime <= triggerDateTime) {
+                console.log("Expiry time is less than or equal to trigger time - showing error");
+                setShowExpiryWarning(true);
+                setErrorDialog({
+                    isOpen: true,
+                    message: 'Trigger Date/time should not be less than expiry date/time',
+                    type: 'warning'
+                });
+                scrollToSection(triggerExpiryRef, scrollContainerRef);
                 return;
             }
         }
 
-        if (expiryEnabled) {
-            const expiryParts = expiryDate.split('/');
-            const expiryTimeParts = expiryTime.split(':');
+        // ========== DATA LOGGER ==========
+        console.log("--- Processing Data Logger ---");
 
-            const expiryDateTime = new Date(
-                parseInt(expiryParts[2]),
-                parseInt(expiryParts[1]) - 1,
-                parseInt(expiryParts[0]),
-                parseInt(expiryTimeParts[0]),
-                parseInt(expiryTimeParts[1]),
-                parseInt(expiryTimeParts[2])
-            );
-
-            if (expiryDateTime <= triggerDateTime) {
-                setShowExpiryWarning(true);
-                // Scroll to the Trigger/Expiry section
-                if (triggerExpiryRef.current && scrollContainerRef.current) {
-                    const container = scrollContainerRef.current;
-                    const element = triggerExpiryRef.current;
-                    const elementRect = element.getBoundingClientRect();
-                    const containerRect = container.getBoundingClientRect();
-                    const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
-
-                    container.scrollTo({
-                        top: offsetPosition,
-                        behavior: 'smooth'
-                    });
-                }
-                return; // Don't submit
-            }
+        if (dataLogger) {
+            passObjDet["nDataLoggerStatus"] = 1;
+        } else {
+            passObjDet["nDataLoggerStatus"] = 0;
         }
 
-        // Continue with your submission logic here
-        console.log('Form submitted successfully');
+        const daysVal = archivalDays;
+        passObjDet["nDataLoggerArchivalDays"] = daysVal ? parseInt(daysVal) : 0;
+
+        // ========== SCHEDULER METADATA ==========
+        console.log("--- Processing Scheduler Metadata ---");
+
+        passObjDet["L13Active"] = isSchedulerMetadataEnabled ? 1 : 0;
+
+        if (isSchedulerMetadataEnabled) {
+            console.log("Scheduler Metadata is enabled - validating");
+
+            // Template validation
+            if (!selectedTemplate) {
+                console.log("Template not selected");
+                IsEmpty = true;
+                scrollToSection(schedulerMetadataRef, scrollContainerRef);
+            } else {
+                passObjDet["L13TemplateID"] = selectedTemplate;
+            }
+
+            const samplefilename = sampleFilename;
+            const Delimeter = selectedDelimiters.length > 0
+                ? ConcatenateDelimeterfromlist(selectedDelimiters, delimiterOptions)
+                : "";
+
+            console.log("Sample Filename:", samplefilename);
+            console.log("Delimiter:", Delimeter);
+
+            let tagmetadatagridlst = [...tagMasterData];
+
+            // Validate tags
+            for (let i = 0; i < tagmetadatagridlst.length; i++) {
+                const sValue = (tagmetadatagridlst[i]["sValue"] || "").trim();
+                const sValueID = (tagmetadatagridlst[i]["sValueID"] || "").trim();
+                const sSourceFlag = tagmetadatagridlst[i]["sSourceFlag"] || "NONE";
+
+                console.log(`Validating tag ${i}:`, {
+                    TagName: tagmetadatagridlst[i]["sTagName"],
+                    SourceFlag: sSourceFlag,
+                    Value: sValue,
+                    ValueID: sValueID
+                });
+
+                if ((sValue === "" || sValueID === "") && sSourceFlag !== "NONE") {
+                    console.log(`Tag ${i} validation failed - missing value or valueID`);
+                    IsEmpty = true;
+                    scrollToSection(schedulerMetadataRef, scrollContainerRef);
+                }
+
+                if (sSourceFlag === "Filename") {
+                    if (Delimeter === "") {
+                        console.log("Delimiter is empty for Filename source");
+                        setDelimiterError(true);
+                        IsEmpty = true;
+                        scrollToSection(schedulerMetadataRef, scrollContainerRef);
+                    } else {
+                        setDelimiterError(false);
+                    }
+
+                    if (samplefilename === "") {
+                        console.log("Sample filename is empty");
+                        setSampleFilenameError(true);
+                        IsEmpty = true;
+                        scrollToSection(schedulerMetadataRef, scrollContainerRef);
+                    }
+
+                    const { splitpath } = SplitFilenamewithExt(samplefilename, Delimeter);
+                    console.log("Split path result:", splitpath);
+
+                    if (splitpath.length <= 1 && Delimeter !== "None") {
+                        console.log("Split path validation failed");
+                        IsEmpty = true;
+                        setDelimiterError(true);
+                        setSampleFilenameError(true);
+                        scrollToSection(schedulerMetadataRef, scrollContainerRef);
+                    }
+
+                    if (parseInt(sValue) > splitpath.length) {
+                        console.log("Value index exceeds split path length");
+                        IsEmpty = true;
+                        setDelimiterError(true);
+                        setSampleFilenameError(true);
+                        scrollToSection(schedulerMetadataRef, scrollContainerRef);
+                    }
+
+                    if (!IsEmpty) {
+                        setSampleFilenameError(false);
+                    }
+                }
+
+                // Transform data
+                tagmetadatagridlst[i]["sTextData"] = "";
+                if (sSourceFlag === "NONE") {
+                    tagmetadatagridlst[i]["sTextData"] = sValueID;
+                    tagmetadatagridlst[i]["sValue"] = "";
+                    tagmetadatagridlst[i]["sValueID"] = "";
+                }
+            }
+
+            const subfolderlevel = 0;
+
+            if (Instrumentitem) {
+                passObjDet["L13InstrumentID"] = Instrumentitem.L12InstrumentID;
+            }
+
+            passObjDet["L13FileDelimiter"] = Delimeter;
+            passObjDet["L13Examplefilename"] = samplefilename;
+            passObjDet["L13SubfolderLevel"] = subfolderlevel;
+            passObjDet["SchedulerExtractionlst"] = tagmetadatagridlst;
+
+            console.log("Scheduler Metadata Data:", {
+                FileDelimiter: passObjDet["L13FileDelimiter"],
+                Examplefilename: passObjDet["L13Examplefilename"],
+                ExtractionList: passObjDet["SchedulerExtractionlst"]
+            });
+        }
+
+        // // ========== SCHEDULER METADATA ==========
+        // console.log("--- Processing Scheduler Metadata ---");
+
+        // passObjDet["L13Active"] = isSchedulerMetadataEnabled ? 1 : 0;
+
+        // if (isSchedulerMetadataEnabled) {
+        //     console.log("Scheduler Metadata is enabled - validating");
+
+        //     // Template validation
+        //     if (!selectedTemplate) {
+        //         console.log("Template not selected");
+        //         IsEmpty = true;
+        //         scrollToSection(schedulerMetadataRef, scrollContainerRef);
+        //     } else {
+        //         passObjDet["L13TemplateID"] = selectedTemplate;
+        //     }
+
+        //     const samplefilename = sampleFilename;
+        //     const Delimeter = selectedDelimiters.length > 0
+        //         ? ConcatenateDelimeterfromlist(selectedDelimiters, delimiterOptions)
+        //         : "";
+
+        //     console.log("Sample Filename:", samplefilename);
+        //     console.log("Delimiter:", Delimeter);
+
+        //     let tagmetadatagridlst = [...tagMasterData];
+
+        //     // Validate tags
+        //     for (let i = 0; i < tagmetadatagridlst.length; i++) {
+        //         const sValue = (tagmetadatagridlst[i]["sValue"] || "").trim();
+        //         const sValueID = (tagmetadatagridlst[i]["sValueID"] || "").trim();
+        //         const sSourceFlag = tagmetadatagridlst[i]["sSourceFlag"] || "NONE";
+
+        //         console.log(`Validating tag ${i}:`, {
+        //             TagName: tagmetadatagridlst[i]["sTagName"],
+        //             SourceFlag: sSourceFlag,
+        //             Value: sValue,
+        //             ValueID: sValueID
+        //         });
+
+        //         if ((sValue === "" || sValueID === "") && sSourceFlag !== "NONE") {
+        //             console.log(`Tag ${i} validation failed - missing value or valueID`);
+        //             IsEmpty = true;
+        //             scrollToSection(schedulerMetadataRef, scrollContainerRef);
+        //         }
+
+        //         if (sSourceFlag === "Filename") {
+        //             if (Delimeter === "") {
+        //                 console.log("Delimiter is empty for Filename source");
+        //                 setDelimiterError(true);
+        //                 IsEmpty = true;
+        //                 scrollToSection(schedulerMetadataRef, scrollContainerRef);
+        //             } else {
+        //                 setDelimiterError(false);
+        //             }
+
+        //             if (samplefilename === "") {
+        //                 console.log("Sample filename is empty");
+        //                 setSampleFilenameError(true);
+        //                 IsEmpty = true;
+        //                 scrollToSection(schedulerMetadataRef, scrollContainerRef
+        //                 );
+        //             }
+        //             const { splitpath } = SplitFilenamewithExt(samplefilename, selectedDelimiters, delimiterOptions);
+        //             console.log("Split path result:", splitpath);
+
+        //             if (splitpath.length <= 1 && Delimeter !== "None") {
+        //                 console.log("Split path validation failed");
+        //                 IsEmpty = true;
+        //                 setDelimiterError(true);
+        //                 setSampleFilenameError(true);
+        //                 scrollToSection(schedulerMetadataRef, scrollContainerRef);
+        //             }
+
+        //             if (parseInt(sValue) > splitpath.length) {
+        //                 console.log("Value index exceeds split path length");
+        //                 IsEmpty = true;
+        //                 setDelimiterError(true);
+        //                 setSampleFilenameError(true);
+        //                 scrollToSection(schedulerMetadataRef, scrollContainerRef);
+        //             }
+
+        //             if (!IsEmpty) {
+        //                 setSampleFilenameError(false);
+        //             }
+        //         }
+
+        //         // Transform data
+        //         tagmetadatagridlst[i]["sTextData"] = "";
+        //         if (sSourceFlag === "NONE") {
+        //             tagmetadatagridlst[i]["sTextData"] = sValueID;
+        //             tagmetadatagridlst[i]["sValue"] = "";
+        //             tagmetadatagridlst[i]["sValueID"] = "";
+        //         }
+        //     }
+
+        //     const subfolderlevel = 0;
+
+        //     if (Instrumentitem) {
+        //         passObjDet["L13InstrumentID"] = Instrumentitem.L12InstrumentID;
+        //     }
+
+        //     passObjDet["L13FileDelimiter"] = Delimeter;
+        //     passObjDet["L13Examplefilename"] = samplefilename;
+        //     passObjDet["L13SubfolderLevel"] = subfolderlevel;
+        //     passObjDet["SchedulerExtractionlst"] = tagmetadatagridlst;
+
+        //     console.log("Scheduler Metadata Data:", {
+        //         FileDelimiter: passObjDet["L13FileDelimiter"],
+        //         Examplefilename: passObjDet["L13Examplefilename"],
+        //         ExtractionList: passObjDet["SchedulerExtractionlst"]
+        //     });
+
+        //     // Path Extraction Rules (if needed)
+        //     let pathextractionrule = [];
+        //     // Add your path extraction rule logic here if you have a grid for it
+        //     passObjDet["PathExtractionRule"] = pathextractionrule;
+        // }
+
+        // ========== FINAL VALIDATION CHECK ==========
+        console.log("--- Final Validation Check ---");
+        console.log("IsEmpty:", IsEmpty);
+
+        if (IsEmpty) {
+            console.log("Validation failed - showing error dialog");
+            setErrorDialog({
+                isOpen: true,
+                message: 'Please fill in all required fields',
+                type: 'warning'
+            });
+            return;
+        }
+
+        // ========== API SUBMISSION ==========
+        console.log("--- Starting API Submission ---");
+        console.log("Final passObjDet:", passObjDet);
+
+        try {
+            // Check if instrument needs parsing order validation
+            const InstrumentOriginalItem = Instrumentitem;
+
+            if (
+                InstrumentOriginalItem &&
+                InstrumentOriginalItem.L11InterfaceStatus === 1 &&
+                InstrumentOriginalItem.L11ParserType > 0 &&
+                InstrumentOriginalItem.L11LockType === "M"
+            ) {
+                console.log("Checking instrument parsing order");
+
+                passObjDet["sInstrumentMappingID"] = InstrumentOriginalItem.L12InstrumentMappingID;
+
+                const checkParsingOrderData = {
+                    ...CF_activeUserdetails(),
+                    passObjDet: passObjDet
+                };
+
+                const parsingOrderResponse = await postData(
+                    'Scheduler/CheckInstrumentExistwithParsingOrder',
+                    checkParsingOrderData
+                );
+
+                console.log("Parsing order response:", parsingOrderResponse);
+
+                // Handle parsing order response
+                if (parsingOrderResponse && parsingOrderResponse.success) {
+                    // Proceed with final submission
+                    await submitScheduler(passObjDet);
+                } else {
+                    // Show error if parsing order check failed
+                    setErrorDialog({
+                        isOpen: true,
+                        message: parsingOrderResponse.message || 'Failed to validate instrument parsing order',
+                        type: 'error'
+                    });
+                }
+            } else {
+                // No parsing order check needed - proceed directly
+                await submitScheduler(passObjDet);
+            }
+        } catch (error) {
+            console.error("API submission error:", error);
+            setErrorDialog({
+                isOpen: true,
+                message: error.message || 'An error occurred while submitting the form',
+                type: 'error'
+            });
+        }
+    };
+    // Helper function for final scheduler submission
+    const submitScheduler = async (passObjDet) => {
+        console.log("=== Submitting Scheduler ===");
+        try {
+            const finalData = {
+                ...CF_activeUserdetails(),
+                passObjDet: passObjDet
+            };
+
+            console.log("Final submission data:", finalData);
+
+            const response = await postData(
+                'Scheduler/CreateScheduler', // Replace with your actual API endpoint
+                finalData
+            );
+
+            console.log("Scheduler creation response:", response);
+
+            if (response && response.success) {
+                setErrorDialog({
+                    isOpen: true,
+                    message: 'Scheduler created successfully',
+                    type: 'success'
+                });
+                // Optionally reset form or navigate
+                // handleReset();
+            } else {
+                setErrorDialog({
+                    isOpen: true,
+                    message: response.message || 'Failed to create scheduler',
+                    type: 'error'
+                });
+            }
+        } catch (error) {
+            console.error("Scheduler submission error:", error);
+            setErrorDialog({
+                isOpen: true,
+                message: error.message || 'An error occurred while creating the scheduler',
+                type: 'error'
+            });
+        }
     };
 
     return (
@@ -1448,12 +3516,46 @@ const SearchServerData = () => {
 
             <style>
                 {`
-                    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-                    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
-                    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-                    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-                `}
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Disabled delimiter items */
+        .disabled-delimiter {
+            opacity: 0.6;
+            filter: blur(0.3px);
+            cursor: not-allowed !important;
+        }
+        
+        /* High z-index for tooltips */
+        .high-z-index {
+            z-index: 99999 !important;
+        }
+        
+        /* Metadata input styles */
+        .metadata-input-disabled {
+            background-color: transparent !important;
+            border: none !important;
+            cursor: not-allowed !important;
+        }
+            /* Add to your existing style tag */
+.red-border-error {
+  border-color: #ef4444 !important;
+  border-width: 2px !important;
+}
+
+/* Add to your existing style tag */
+.input-error {
+  border-color: #ef4444 !important;
+}
+
+.text-error {
+  color: #ef4444 !important;
+}
+    `}
             </style>
+
             {/* Fixed Navbar - Will not move because scrolling is handled in the div below */}
             <header className="z-10 bg-white border-b border-gray-200 shadow-sm flex-none h-16 sticky top-0">
                 <div className="flex items-center justify-between px-8 h-full">
@@ -2113,20 +4215,22 @@ const SearchServerData = () => {
                                                     }`}></div>
                                             </div>
                                         </div>
+
                                         {/* <DatePickerInput
-                                            value={filesOlderThanDate}
-                                            onChange={(date) => setFilesOlderThanDate(date)}
-                                            disabled={!filesOlderThanDateEnabled || !deleteLocalCopy || moveFiles}
-                                            allowFuture={false}
-                                            allowPast={true}
-                                            validateAndFormatDate={validateAndFormatDate}
-                                        /> */}
-                                        <DatePickerInput
                                             value={filesOlderThanDate}
                                             onChange={(date) => setFilesOlderThanDate(date)}
                                             disabled={!filesOlderThanDateEnabled || !deleteLocalCopy || moveFiles}
                                             allowFuture={false}  // This means future dates are NOT allowed
                                             allowPast={true}     // Past dates ARE allowed
+                                            validateAndFormatDate={validateAndFormatDate}
+                                        /> */}
+
+                                        <DatePickerInput
+                                            value={filesOlderThanDate}
+                                            onChange={handleFilesOlderDateChange}
+                                            disabled={!filesOlderThanDateEnabled || !deleteLocalCopy || moveFiles}
+                                            allowFuture={false}
+                                            allowPast={true}
                                             validateAndFormatDate={validateAndFormatDate}
                                         />
                                     </div>
@@ -3055,8 +5159,8 @@ const SearchServerData = () => {
 
 
                                     <div>
-                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-6 mb-6">
-                                            {/* <UnderlineSelect label="Template Master" placeholder="QC" /> */}
+                                        {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-6 mb-6">
+                                            
                                             <UnderlineSelect
                                                 label="Template Master"
                                                 options={templateOptions}
@@ -3073,7 +5177,7 @@ const SearchServerData = () => {
 
                                             />
                                             <UnderlineInput label="Sample Filename" />
-                                            {/* <UnderlineSelect label="Delimiter" /> */}
+                                            
                                             <UnderlineSelect
                                                 label="Delimiter"
                                                 options={delimiterOptions}
@@ -3082,8 +5186,163 @@ const SearchServerData = () => {
                                                 value={selectedDelimiter}
                                                 onChange={(value) => setSelectedDelimiter(value)}
                                             />
+                                        </div> */}
+
+
+                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-6 mb-6">
+                                            <UnderlineSelect
+                                                label="Template Master"
+                                                options={templateOptions}
+                                                displayKey="sTemplateName"
+                                                valueKey="sTemplateID"
+                                                value={selectedTemplate}
+                                                onChange={(value) => {
+                                                    setSelectedTemplate(value);
+                                                    if (isSchedulerMetadataEnabled) {
+                                                        loadTagMaster(value);
+                                                    }
+                                                }}
+                                            />
+
+                                            {/* Sample Filename Input - UPDATED */}
+                                            <div className="group w-full relative">
+                                                <label className="block text-gray-700 text-sm font-bold mb-2">
+                                                    Sample Filename <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={sampleFilename}
+                                                    onChange={(e) => {
+                                                        setSampleFilename(e.target.value);
+                                                        if (e.target.value.trim()) {
+                                                            const hasExtension = e.target.value.includes('.') &&
+                                                                e.target.value.lastIndexOf('.') < e.target.value.length - 1;
+                                                            if (hasExtension) {
+                                                                setSampleFilenameError(false);
+                                                            }
+                                                        }
+                                                    }}
+                                                    onBlur={() => {
+                                                        // Only validate if Filename radio is selected in any row
+                                                        const hasFilenameRadio = tagMasterData.some(tag => tag.sSourceFlag === 'Filename');
+                                                        if (hasFilenameRadio) {
+                                                            const hasExtension = sampleFilename.includes('.') &&
+                                                                sampleFilename.lastIndexOf('.') < sampleFilename.length - 1;
+                                                            if (!sampleFilename.trim() || !hasExtension) {
+                                                                setSampleFilenameError(true);
+                                                            }
+                                                        }
+                                                    }}
+                                                    className={`w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none transition-colors ${sampleFilenameError ? 'border-red-500' : 'border-gray-200 focus:border-blue-400'
+                                                        }`}
+                                                    placeholder="e.g., sample~data.pdf"
+                                                />
+                                                {sampleFilenameError && (
+                                                    <p className="text-red-500 text-xs mt-1">
+                                                        Please enter a valid filename with extension (e.g., file.pdf)
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            {/* Delimiter Multi-Select */}
+                                            <div className="group w-full relative">
+                                                <label className="block text-gray-700 text-sm font-bold mb-2">
+                                                    Delimiter <span className="text-red-500">*</span>
+                                                </label>
+                                                <div className="relative">
+                                                    <input
+                                                        type="text"
+                                                        value={selectedDelimiters.map(d => {
+                                                            const delimiterObj = delimiterOptions.find(opt => opt.sDelimiter === d);
+                                                            return delimiterObj ? delimiterObj.sDelimiterName : d;
+                                                        }).join(', ')}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation(); // Add this line
+                                                            setTempSelectedDelimiters(selectedDelimiters);
+                                                            setShowDelimiterSelector(true);
+                                                        }}
+                                                        readOnly
+                                                        className={`w-full bg-white border-b-2 py-2 pr-8 text-gray-700 text-sm cursor-pointer ${delimiterError ? 'border-red-500' : 'border-gray-200 focus:border-blue-400'
+                                                            }`}
+                                                        placeholder="Click to select delimiters..."
+                                                    />
+                                                    <ChevronDown
+                                                        size={14}
+                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                                                    />
+                                                </div>
+
+                                                {/* Dropdown - RESTORED */}
+                                                {/* {showDelimiterSelector && (
+                                                    <div
+                                                        className="absolute left-0"
+                                                        style={{
+                                                            position: 'fixed',
+                                                            top: '50%',
+                                                            left: '50%',
+                                                            transform: 'translate(-50%, -50%)',
+                                                            zIndex: 99999
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    > */}
+                                                {showDelimiterSelector && (
+                                                    <div
+                                                        className="absolute left-0 top-full mt-1"
+                                                        style={{
+                                                            zIndex: 99999
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <SelectorDropdown
+                                                            options={delimiterOptions.map(d => d.sDelimiterName)}
+                                                            selectedValues={tempSelectedDelimiters.map(d => {
+                                                                const delimiterObj = delimiterOptions.find(opt => opt.sDelimiter === d);
+                                                                return delimiterObj ? delimiterObj.sDelimiterName : d;
+                                                            })}
+                                                            onSelect={(delimiterName) => {
+                                                                const delimiterObj = delimiterOptions.find(opt => opt.sDelimiterName === delimiterName);
+                                                                if (!delimiterObj) return;
+
+                                                                const delimiterChar = delimiterObj.sDelimiter;
+                                                                let newSelections;
+
+                                                                if (delimiterChar.toUpperCase() === 'NONE') {
+                                                                    if (tempSelectedDelimiters.includes('NONE')) {
+                                                                        newSelections = [];
+                                                                    } else {
+                                                                        newSelections = ['NONE'];
+                                                                    }
+                                                                } else {
+                                                                    const filtered = tempSelectedDelimiters.filter(d => d.toUpperCase() !== 'NONE');
+                                                                    if (filtered.includes(delimiterChar)) {
+                                                                        newSelections = filtered.filter(d => d !== delimiterChar);
+                                                                    } else {
+                                                                        newSelections = [...filtered, delimiterChar];
+                                                                    }
+                                                                }
+
+                                                                setTempSelectedDelimiters(newSelections);
+                                                                setSelectedDelimiters(newSelections);
+                                                                setDelimiterError(false);
+
+                                                                if (delimiterChar.toUpperCase() === 'NONE' && newSelections.includes('NONE')) {
+                                                                    setShowDelimiterSelector(false);
+                                                                }
+                                                            }}
+                                                            searchTerm={delimiterSearchTerm}
+                                                            onSearchChange={setDelimiterSearchTerm}
+                                                            isOpen={true}
+                                                            onClose={() => {
+                                                                setSelectedDelimiters(tempSelectedDelimiters);
+                                                                setShowDelimiterSelector(false);
+                                                            }}
+                                                            disabledOptions={isNoneSelected ? delimiterOptions.filter(d => d.sDelimiter.toUpperCase() !== 'NONE').map(d => d.sDelimiterName) : []}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                        <div className="border border-gray-200 rounded-lg overflow-visible relative">
                                             <table className="w-full text-sm text-left text-gray-500">
                                                 <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
                                                     <tr>
@@ -3093,8 +5352,36 @@ const SearchServerData = () => {
                                                         <th scope="col" className="px-6 py-3 w-16"></th>
                                                     </tr>
                                                 </thead>
-
                                                 <tbody>
+                                                    {tagMasterData && tagMasterData.length > 0 ? (
+                                                        tagMasterData.map((tag, index) => (
+                                                            <TagMasterRow
+                                                                key={tag.sTagID}
+                                                                tag={tag}
+                                                                index={index}
+                                                                parsedMetadata={parsedMetadata}
+                                                                showMetadataTooltip={showMetadataTooltip}
+                                                                setShowMetadataTooltip={setShowMetadataTooltip}
+                                                                setParsedMetadata={setParsedMetadata}
+                                                                parseMetadataFromFilename={parseMetadataFromFilename}
+                                                                sampleFilename={sampleFilename}
+                                                                selectedDelimiters={selectedDelimiters}
+                                                                sampleFilenameError={sampleFilenameError}
+                                                                setSampleFilenameError={setSampleFilenameError}
+                                                                delimiterError={delimiterError}
+                                                                setDelimiterError={setDelimiterError}
+                                                                delimiterOptions={delimiterOptions}
+                                                            />
+                                                        ))
+                                                    ) : (
+                                                        <tr>
+                                                            <td colSpan="4" className="px-6 py-10 text-center text-gray-500">
+                                                                No tags found for selected template
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                                {/* <tbody>
                                                     {tagMasterData && tagMasterData.length > 0 ? (
                                                         tagMasterData.map((tag, index) => (
                                                             <tr
@@ -3103,12 +5390,12 @@ const SearchServerData = () => {
                                                                     ? "bg-blue-50/30 border-b border-gray-100"
                                                                     : "bg-white border-b border-gray-100"}
                                                             >
-                                                                {/* Tag Name */}
+                                                                
                                                                 <td className="px-6 py-4 font-medium text-gray-900">
                                                                     {tag.sTagName}
                                                                 </td>
 
-                                                                {/* Extract From */}
+                                                                
                                                                 <td className="px-6 py-4">
                                                                     <div className="flex items-center gap-4">
                                                                         <RadioButton
@@ -3129,12 +5416,12 @@ const SearchServerData = () => {
                                                                     </div>
                                                                 </td>
 
-                                                                {/* Metadata */}
+                                                               
                                                                 <td className="px-6 py-4">
                                                                     {tag.sTextData || ''}
                                                                 </td>
 
-                                                                {/* Action */}
+                                                                
                                                                 <td className="px-6 py-4 text-right">
                                                                     <Pencil size={16} className="text-blue-600 cursor-pointer" />
                                                                 </td>
@@ -3147,16 +5434,24 @@ const SearchServerData = () => {
                                                             </td>
                                                         </tr>
                                                     )}
-                                                </tbody>
+                                                </tbody> */}
                                             </table>
                                         </div>
                                     </div>
 
 
-                                    <div>
+                                    {/* <div>
                                         <h3 className="text-blue-600 font-bold text-sm mb-4">Rule</h3>
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-24 gap-y-6 mb-6">
-                                            <UnderlineSelect label="Rule Name" placeholder="Sample" />
+                                            <UnderlineSelect
+                                                label="Rule Name"
+                                                placeholder="Select Tag"
+                                                options={ruleNameOptions.length > 0 ? ruleNameOptions : []}
+                                                displayKey="RuleName"
+                                                valueKey="RuleID"
+                                                value={selectedRuleName}
+                                                onChange={(value) => setSelectedRuleName(value)}
+                                            />
                                             <UnderlineInput label="Metadata" />
                                         </div>
                                         <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -3191,11 +5486,301 @@ const SearchServerData = () => {
                                                 }}
                                             />
                                         </div>
+                                    </div> */}
+
+                                    <div className="mb-12">
+                                        <h3 className="text-blue-600 font-bold text-sm mb-4">Rule</h3>
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-24 gap-y-6 mb-6">
+                                            <UnderlineSelect
+                                                label="Rule Name"
+                                                placeholder="Select Tag"
+                                                options={ruleNameOptions}
+                                                displayKey="RuleName"
+                                                valueKey="RuleID"
+                                                value={selectedRuleName}
+                                                onChange={(value) => setSelectedRuleName(value)}
+                                            />
+
+
+
+                                            {/* Metadata Input with error styling */}
+                                            {/* <div className="group w-full relative">
+                                                <label className="block text-gray-700 text-sm font-bold mb-2">
+                                                    Metadata
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={newRuleMetadata}
+                                                    onChange={(e) => {
+                                                        setNewRuleMetadata(e.target.value);
+                                                        setRuleGridError(false);
+                                                    }}
+                                                    className={`w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none ${ruleGridError && !newRuleMetadata.trim()
+                                                        ? 'border-red-500'
+                                                        : 'border-gray-200 focus:border-blue-400'
+                                                        }`}
+                                                    placeholder="Enter metadata"
+                                                />
+                                            </div> */}
+                                            <div className="group w-full relative">
+                                                <label className="block text-gray-700 text-sm font-bold mb-2">
+                                                    Metadata <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={newRuleMetadata}
+                                                    onChange={(e) => {
+                                                        setNewRuleMetadata(e.target.value);
+                                                        setRuleGridError(false); // Clear error when user types
+                                                    }}
+                                                    className="w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none border-gray-200 focus:border-blue-400"
+                                                    placeholder="Enter metadata"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Rule Grid Input Table */}
+                                        {/* <div className={`border border-gray-200 rounded-lg overflow-hidden mb-4 ${ruleGridError ? 'border-red-500 border-2' : ''}`}> */}
+                                        {/* Rule Grid Input Table - ALWAYS show red border if any field is empty */}
+                                        <div className={`border rounded-lg overflow-hidden mb-4 transition-colors ${ruleGridError
+                                            ? 'border-red-500 border-2'
+                                            : 'border-gray-200'
+                                            }`}>
+                                            <table className="w-full text-sm text-left text-gray-500">
+                                                <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
+                                                    <tr>
+                                                        <th scope="col" className="px-6 py-3">TagName</th>
+                                                        <th scope="col" className="px-6 py-3">Relational Operator</th>
+                                                        <th scope="col" className="px-6 py-3">Field Value</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr className="bg-blue-50/30 border-b border-gray-100">
+                                                        {/* Tag Name Column */}
+                                                        <td className="px-6 py-4 relative">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className={`text-sm ${newRuleTagName ? 'text-gray-900' : 'text-gray-500 italic'}`}>
+                                                                    {newRuleTagName || "Click pencil to select"}
+                                                                </div>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setShowTagNameSelector(true);
+                                                                        setShowRelOpSelector(false);
+                                                                        setRuleGridError(false); // Clear error when clicking pencil
+                                                                    }}
+                                                                    className="text-blue-600 hover:text-blue-800 ml-2"
+                                                                    title="Select tag name"
+                                                                >
+                                                                    <Pencil size={16} />
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Tag Name Selector Dropdown */}
+                                                            {showTagNameSelector && (
+                                                                <div
+                                                                    ref={(el) => {
+                                                                        if (el) {
+                                                                            const pencilButton = document.querySelector('[title="Select tag name"]');
+                                                                            if (pencilButton) {
+                                                                                const rect = pencilButton.getBoundingClientRect();
+
+                                                                                // Position the dropdown
+                                                                                el.style.position = 'fixed';
+                                                                                el.style.left = `${rect.left}px`;
+                                                                                el.style.top = `${rect.top - el.offsetHeight - 8}px`;
+
+                                                                                // Adjust if goes off screen
+                                                                                if (rect.top - el.offsetHeight - 8 < 0) {
+                                                                                    el.style.top = `${rect.bottom + 8}px`;
+                                                                                }
+                                                                                if (rect.left + el.offsetWidth > window.innerWidth) {
+                                                                                    el.style.left = `${window.innerWidth - el.offsetWidth - 16}px`;
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    className="fixed z-[99999]"
+                                                                >
+                                                                    <div className="w-64 bg-white border border-gray-300 rounded-md shadow-lg">
+                                                                        {/* Search Input */}
+                                                                        <div className="p-2 border-b border-gray-300 bg-gray-50">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Search size={14} className="text-gray-400" />
+                                                                                <input
+                                                                                    type="text"
+                                                                                    placeholder="Looking for"
+                                                                                    value={tagNameSearchTerm}
+                                                                                    onChange={(e) => setTagNameSearchTerm(e.target.value)}
+                                                                                    className="w-full text-sm text-gray-700 placeholder-gray-400 border-none focus:outline-none bg-transparent"
+                                                                                    autoFocus
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Options List */}
+                                                                        <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                                                                            {tagMasterData
+                                                                                .filter(tag =>
+                                                                                    tag.sTagName.toLowerCase().includes(tagNameSearchTerm.toLowerCase())
+                                                                                )
+                                                                                .map((tag) => (
+                                                                                    <div
+                                                                                        key={tag.sTagID}
+                                                                                        onClick={() => {
+                                                                                            setNewRuleTagName(tag.sTagName);
+                                                                                            setShowTagNameSelector(false);
+                                                                                            setTagNameSearchTerm('');
+                                                                                            setRuleGridError(false); // Clear error when selecting
+                                                                                        }}
+                                                                                        className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-blue-50 ${newRuleTagName === tag.sTagName ? 'bg-blue-100 border-l-4 border-blue-500' : ''
+                                                                                            }`}
+                                                                                    >
+                                                                                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${newRuleTagName === tag.sTagName
+                                                                                                ? 'bg-blue-500 border-blue-500'
+                                                                                                : 'bg-white border-gray-300'
+                                                                                            }`}>
+                                                                                            {newRuleTagName === tag.sTagName && (
+                                                                                                <Check size={12} className="text-white" strokeWidth={3} />
+                                                                                            )}
+                                                                                        </div>
+                                                                                        <span className="text-xs font-bold">{tag.sTagName}</span>
+                                                                                    </div>
+                                                                                ))
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                        {/* Relational Operator Column */}
+                                                        <td className="px-6 py-4 relative">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className={`text-sm ${newRuleRelationalOp ? 'text-gray-900' : 'text-gray-500 italic'}`}>
+                                                                    {newRuleRelationalOp || "Click pencil to select"}
+                                                                </div>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setShowRelOpSelector(true);
+                                                                        setShowTagNameSelector(false);
+                                                                        setRuleGridError(false); // Clear error when clicking pencil
+                                                                    }}
+                                                                    className="text-blue-600 hover:text-blue-800 ml-2"
+                                                                    title="Select relational operator"
+                                                                >
+                                                                    <Pencil size={16} />
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Relational Operator Selector Dropdown */}
+                                                            {showRelOpSelector && (
+                                                                <div
+                                                                    ref={(el) => {
+                                                                        if (el) {
+                                                                            const pencilButton = document.querySelector('[title="Select relational operator"]');
+                                                                            if (pencilButton) {
+                                                                                const rect = pencilButton.getBoundingClientRect();
+
+                                                                                // Position above the grid
+                                                                                el.style.position = 'fixed';
+                                                                                el.style.left = `${rect.left}px`;
+                                                                                el.style.top = `${rect.top - el.offsetHeight - 8}px`;
+
+                                                                                // Ensure it doesn't go off screen
+                                                                                if (rect.top - el.offsetHeight - 8 < 0) {
+                                                                                    el.style.top = `${rect.bottom + 8}px`;
+                                                                                }
+                                                                                if (rect.left + el.offsetWidth > window.innerWidth) {
+                                                                                    el.style.left = `${window.innerWidth - el.offsetWidth - 16}px`;
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    className="fixed z-[99999]"
+                                                                >
+                                                                    <div className="w-64 bg-white border border-gray-300 rounded-md shadow-lg">
+                                                                        {/* Search Input */}
+                                                                        <div className="p-2 border-b border-gray-300 bg-gray-50">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Search size={14} className="text-gray-400" />
+                                                                                <input
+                                                                                    type="text"
+                                                                                    placeholder="Looking for"
+                                                                                    value={relOpSearchTerm}
+                                                                                    onChange={(e) => setRelOpSearchTerm(e.target.value)}
+                                                                                    className="w-full text-sm text-gray-700 placeholder-gray-400 border-none focus:outline-none bg-transparent"
+                                                                                    autoFocus
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Options List */}
+                                                                        <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                                                                            {relationalOperatorOptions
+                                                                                .filter(op =>
+                                                                                    op.label.toLowerCase().includes(relOpSearchTerm.toLowerCase())
+                                                                                )
+                                                                                .map((op) => (
+                                                                                    <div
+                                                                                        key={op.value}
+                                                                                        onClick={() => {
+                                                                                            setNewRuleRelationalOp(op.value);
+                                                                                            setShowRelOpSelector(false);
+                                                                                            setRelOpSearchTerm('');
+                                                                                            setRuleGridError(false); // Clear error when selecting
+                                                                                        }}
+                                                                                        className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-blue-50 ${newRuleRelationalOp === op.value ? 'bg-blue-100 border-l-4 border-blue-500' : ''
+                                                                                            }`}
+                                                                                    >
+                                                                                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${newRuleRelationalOp === op.value
+                                                                                                ? 'bg-blue-500 border-blue-500'
+                                                                                                : 'bg-white border-gray-300'
+                                                                                            }`}>
+                                                                                            {newRuleRelationalOp === op.value && (
+                                                                                                <Check size={12} className="text-white" strokeWidth={3} />
+                                                                                            )}
+                                                                                        </div>
+                                                                                        <span className="text-xs font-bold">{op.label}</span>
+                                                                                    </div>
+                                                                                ))
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+
+                                                        <td className="px-6 py-4">
+                                                            <input
+                                                                type="text"
+                                                                value={newRuleFieldValue}
+                                                                onChange={(e) => {
+                                                                    setNewRuleFieldValue(e.target.value);
+                                                                    setRuleGridError(false); // Clear error when user types
+                                                                }}
+                                                                className="w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none border-gray-200 focus:border-blue-400"
+                                                                placeholder="Enter field value"
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Add Button */}
+                                        <div className="flex justify-end py-4">
+                                            <ActionButton
+                                                label="Add"
+                                                className="bg-[#E6F0FF] text-[#2883FE] text-xs"
+                                                onClick={handleAddRule}
+                                            />
+                                        </div>
                                     </div>
 
-
-
-                                    <div>
+                                    {/* <div>
                                         <div className="border border-gray-200 rounded-lg overflow-hidden mb-4">
                                             <table className="w-full text-sm text-left text-gray-500">
                                                 <thead className="text-xs text-gray-700 uppercase bg-white border-b border-gray-200">
@@ -3244,6 +5829,161 @@ const SearchServerData = () => {
                                                     // Add logic here
                                                     console.log('Remove clicked');
                                                 }}
+                                            />
+                                        </div>
+                                    </div> */}
+
+                                    <div>
+                                        {/* <div className="border border-gray-200 rounded-lg overflow-hidden mb-4">
+                                            <table className="w-full text-sm text-left text-gray-500">
+                                                <thead className="text-xs text-gray-700 uppercase bg-white border-b border-gray-200">
+                                                    <tr>
+                                                        <th scope="col" className="px-6 py-3">
+                                                            <div className="flex items-center justify-between">
+                                                                Rule Name <Search size={14} className="text-gray-400" />
+                                                            </div>
+                                                        </th>
+                                                        <th scope="col" className="px-6 py-3">
+                                                            <div className="flex items-center justify-between">
+                                                                Metadata <Search size={14} className="text-gray-400" />
+                                                            </div>
+                                                        </th>
+                                                        <th scope="col" className="px-6 py-3">
+                                                            <div className="flex items-center justify-between">
+                                                                TagName <Search size={14} className="text-gray-400" />
+                                                            </div>
+                                                        </th>
+                                                        <th scope="col" className="px-6 py-3">
+                                                            <div className="flex items-center justify-between">
+                                                                Relational Operator <Search size={14} className="text-gray-400" />
+                                                            </div>
+                                                        </th>
+                                                        <th scope="col" className="px-6 py-3">
+                                                            <div className="flex items-center justify-between">
+                                                                Field Value <Search size={14} className="text-gray-400" />
+                                                            </div>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {ruleGridData.length === 0 ? (
+                                                        <tr className="bg-white">
+                                                            <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                                                                No data to display
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        ruleGridData.map((rule) => (
+                                                            <tr key={rule.id} className="bg-white border-b border-gray-100">
+                                                                <td className="px-6 py-4 text-sm text-gray-900">
+                                                                    {ruleNameOptions.find(r => r.RuleID === rule.ruleName)?.RuleName || rule.ruleName}
+                                                                </td>
+                                                                <td className="px-6 py-4 text-sm text-gray-900">{rule.metadata}</td>
+                                                                <td className="px-6 py-4 text-sm text-gray-900">{rule.tagName}</td>
+                                                                <td className="px-6 py-4 text-sm text-gray-900">{rule.relationalOp}</td>
+                                                                <td className="px-6 py-4 text-sm text-gray-900">{rule.fieldValue}</td>
+                                                            </tr>
+                                                        ))
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div> */}
+
+                                        <div className="border border-gray-200 rounded-lg overflow-hidden mb-4">
+                                            <table className="w-full text-sm text-left text-gray-500">
+                                                <thead className="text-xs text-gray-700 uppercase bg-white border-b border-gray-200">
+                                                    <tr>
+                                                        <th scope="col" className="px-6 py-3 w-16">
+                                                            Select
+                                                        </th>
+                                                        <th scope="col" className="px-6 py-3">
+                                                            <div className="flex items-center justify-between">
+                                                                Rule Name <Search size={14} className="text-gray-400" />
+                                                            </div>
+                                                        </th>
+                                                        <th scope="col" className="px-6 py-3">
+                                                            <div className="flex items-center justify-between">
+                                                                Metadata <Search size={14} className="text-gray-400" />
+                                                            </div>
+                                                        </th>
+                                                        <th scope="col" className="px-6 py-3">
+                                                            <div className="flex items-center justify-between">
+                                                                TagName <Search size={14} className="text-gray-400" />
+                                                            </div>
+                                                        </th>
+                                                        <th scope="col" className="px-6 py-3">
+                                                            <div className="flex items-center justify-between">
+                                                                Relational Operator <Search size={14} className="text-gray-400" />
+                                                            </div>
+                                                        </th>
+                                                        <th scope="col" className="px-6 py-3">
+                                                            <div className="flex items-center justify-between">
+                                                                Field Value <Search size={14} className="text-gray-400" />
+                                                            </div>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {ruleGridData.length === 0 ? (
+                                                        <tr className="bg-white">
+                                                            <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                                                                No data to display
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        ruleGridData.map((rule) => (
+                                                            <tr
+                                                                key={rule.id}
+                                                                className={`bg-white border-b border-gray-100 cursor-pointer ${selectedRowId === rule.id ? 'bg-blue-50' : ''
+                                                                    }`}
+                                                                onClick={() => setSelectedRowId(rule.id)}
+                                                            >
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-center justify-center">
+                                                                        <div
+                                                                            className={`w-5 h-5 border rounded-full flex items-center justify-center ${selectedRowId === rule.id
+                                                                                ? 'border-blue-500 bg-blue-500'
+                                                                                : 'border-gray-300'
+                                                                                }`}
+                                                                        >
+                                                                            {selectedRowId === rule.id && (
+                                                                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-sm text-gray-900">
+                                                                    {ruleNameOptions.find(r => r.RuleID === rule.ruleName)?.RuleName || rule.ruleName}
+                                                                </td>
+                                                                <td className="px-6 py-4 text-sm text-gray-900">{rule.metadata}</td>
+                                                                <td className="px-6 py-4 text-sm text-gray-900">{rule.tagName}</td>
+                                                                <td className="px-6 py-4 text-sm text-gray-900">{rule.relationalOp}</td>
+                                                                <td className="px-6 py-4 text-sm text-gray-900">{rule.fieldValue}</td>
+                                                            </tr>
+                                                        ))
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Remove Button */}
+                                        {/* <div className="flex justify-end">
+                                            <ActionButton
+                                                label="Remove"
+                                                className="bg-[#E6F0FF] text-[#2883FE] text-xs"
+                                                onClick={() => {
+                                                    // Implement remove functionality - remove last or selected
+                                                    if (ruleGridData.length > 0) {
+                                                        setRuleGridData(prev => prev.slice(0, -1));
+                                                    }
+                                                }}
+                                            />
+                                        </div> */}
+                                        <div className="flex justify-end">
+                                            <ActionButton
+                                                label="Remove"
+                                                className="bg-[#E6F0FF] text-[#2883FE] text-xs"
+                                                onClick={handleRemoveRule}
                                             />
                                         </div>
                                     </div>
