@@ -82,7 +82,9 @@ export default function ServerFileDeleteScheduler() {
       width: 270,
       enableSearch: true,
       render: (row) => (
-        <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
+        <span className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
+              row.id === selectedRow?.id ? "font-bold" : ""
+            }`}>
           {row.fileName}
         </span>
       ),
@@ -93,7 +95,10 @@ export default function ServerFileDeleteScheduler() {
       width: 200,
       enableSearch: true,
       render: (row) => (
-        <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
+        <span 
+        className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
+              row.id === selectedRow?.id ? "font-bold" : ""
+            }`}>
           {row.clientName}
         </span>
       ),
@@ -438,6 +443,9 @@ export default function ServerFileDeleteScheduler() {
       case "Last 30 Days":
         fromDate.setDate(today.getDate() - 30);
         break;
+        case "Last 1 Year":
+        fromDate.setFullYear(today.getFullYear() - 1);
+        break;
       default:
         fromDate = today;
     }
@@ -531,7 +539,7 @@ export default function ServerFileDeleteScheduler() {
   return (
     <div className=" h-full overflow-hidden flex flex-col gap-3">
       {/* ---------------- FILTER BAR ---------------- */}
-      <div className="relative bg-[#f4f6f8] p-5 rounded">
+      <div className="relative bg-[#f4f6f8] px-5 py-2 pb-2rounded">
         {isOpen ? (
           <div className="flex flex-wrap items-start gap-8">
             <div className="w-55">
@@ -559,6 +567,7 @@ export default function ServerFileDeleteScheduler() {
                   "Current Date",
                   "Last 7 Days",
                   "Last 30 Days",
+                  "Last 1 Year",
                   "Custom Date",
                 ]}
                 onChange={(e) => {
@@ -595,7 +604,7 @@ export default function ServerFileDeleteScheduler() {
               </>
             )}
 
-            <div className="flex gap-2 pt-5">
+            <div className="flex gap-2 pt-6">
               <PrimaryButton
                 icon={FaFilter}
                 label={t("button.filter")}

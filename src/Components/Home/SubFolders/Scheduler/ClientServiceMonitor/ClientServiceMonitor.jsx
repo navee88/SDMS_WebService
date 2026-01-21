@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next";
 import { HiRefresh } from "react-icons/hi";
 import useAxios from "../../../../../Services/servicecall";
 import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
+import FullPageLoader from "../../../../Layout/Common/FullPageLoader";
+
 
 
 const ClientServiceMonitor = () => {
@@ -16,6 +18,9 @@ const [gridData, setGridData] = useState([]);
 const [clientOptions, setClientOptions] = useState([]);
 const [serviceOptions, setServiceOptions] = useState([]);
 const [externalSelectedId, setExternalSelectedId] = useState(null);
+const [loading, setLoading] = useState(false);
+const [loadingText, setLoadingText] = useState("");
+
 
 
 
@@ -151,13 +156,15 @@ const handleRefreshClick = () => {
   );
 useEffect(() => {
   const loadClientServiceMonitor = async () => {
+    setLoading(true);
+    setLoadingText("Loading client services...");
+
     try {
       const response = await postData(
         "Scheduler/clientmonitorComboAndGridLoad",
         CF_activeUserdetails()
       );
 
-      /* ---------------- GRID DATA ---------------- */
       const mappedGrid = (response?.list1 || []).map((item, index) => ({
         id: index + 1,
         client: item.L06ClientName,
@@ -170,28 +177,29 @@ useEffect(() => {
 
       setGridData(mappedGrid);
 
-      /* ---------------- CLIENT OPTIONS ---------------- */
       setClientOptions(
-        (response?.clientlist || []).map(
-          c => c.L06ClientName
-        )
+        (response?.clientlist || []).map(c => c.L06ClientName)
       );
 
-      /* ---------------- SERVICE OPTIONS ---------------- */
       setServiceOptions(
-        (response?.list || []).map(
-          s => s.L81ServiceModule
-        )
+        (response?.list || []).map(s => s.L81ServiceModule)
       );
 
     } catch (error) {
       console.error("Client Service Monitor load failed", error);
+    } finally {
+      setLoading(false);
+      setLoadingText("");
     }
   };
 
   loadClientServiceMonitor();
 }, []);
+
 const fetchFilteredGridData = async (client, service) => {
+  setLoading(true);
+  setLoadingText("Applying filter...");
+
   try {
     const payload = {
       sClientName: client,
@@ -216,7 +224,6 @@ const fetchFilteredGridData = async (client, service) => {
 
     setGridData(mappedGrid);
 
-    // 🔥 Auto select first row
     if (mappedGrid.length > 0) {
       setSelectedRow(mappedGrid[0]);
       setExternalSelectedId(mappedGrid[0].id);
@@ -228,6 +235,9 @@ const fetchFilteredGridData = async (client, service) => {
   } catch (error) {
     console.error("Filter API failed", error);
     setGridData([]);
+  } finally {
+    setLoading(false);
+    setLoadingText("");
   }
 };
 
@@ -296,6 +306,7 @@ const fetchFilteredGridData = async (client, service) => {
           </span>
         </div>
       )}
+<FullPageLoader loading={loading} text={loadingText} />
 
       {/* ---------- GRID ---------- */}
       <div className="flex-1 min-h-0">
