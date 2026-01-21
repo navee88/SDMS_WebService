@@ -1,36 +1,1295 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+// import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+// import { useTranslation } from "react-i18next";
+// import { RefreshCw, FileText } from "lucide-react";
+// import * as XLSX from "xlsx";
+
+// // Components
+// import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
+// import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
+// import Errordialog from "../../../../Layout/Common/Errordialog";
+
+// // Services
+// import servicecall from '../../../../../Services/servicecall';
+// import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
+// import { CF_decrypt } from "../../../../Common/encryptiondecryption";
+
+// /* ------------------ HELPER COMPONENTS ------------------ */
+
+// const InfoBox = ({ data, className = "", fixedHeight = false }) => (
+//   <div className={`border border-gray-300 bg-white p-1 ${fixedHeight ? 'min-h-[200px] max-h-[200px] overflow-auto' : 'min-h-[100px]'} ${className}`}>
+//     {data.length > 0 && (
+//       <div className="p-0">
+//         {data.map((d, i) => (
+//           <div key={i} className="flex">
+//             <label className="w-[45%] text-xs font-bold font-roboto text-[#070707] truncate">
+//               {d.Category || d.label}:
+//             </label>
+//             <span className="w-[55%] text-sm font-bold font-['helvetica'] text-[#162ddc] truncate">
+//               {d.Value || d.value}
+//             </span>
+//           </div>
+//         ))}
+//       </div>
+//     )}
+//   </div>
+// );
+
+// const FileViewer = ({ src }) => {
+//   const [blobUrl, setBlobUrl] = useState(null);
+//   const [ext, setExt] = useState("");
+//   const [data, setData] = useState(null);
+//   const [error, setError] = useState(false);
+
+//   useEffect(() => {
+//     if (!src) return;
+
+//     setError(false);
+//     setData(null);
+//     setBlobUrl(null);
+
+//     const loadFile = async () => {
+//       try {
+//         const cleanSrc = src.split("#")[0].split("?")[0];
+//         let decryptedUrl;
+        
+//         try {
+//           decryptedUrl = CF_decrypt(cleanSrc);
+//           if (!decryptedUrl || decryptedUrl === cleanSrc) {
+//             decryptedUrl = cleanSrc;
+//           }
+//         } catch {
+//           decryptedUrl = cleanSrc;
+//         }
+
+//         const finalUrl = decryptedUrl
+//           .replace(/\\/g, "/")
+//           .replace("localhost:3000", "localhost:9091");
+
+//         const extension = finalUrl.split(".").pop()?.toLowerCase() || "";
+//         setExt(extension);
+
+//         const response = await fetch(finalUrl);
+//         if (!response.ok) throw new Error();
+        
+//         const blob = await response.blob();
+//         const url = URL.createObjectURL(blob);
+//         setBlobUrl(url);
+
+//         if (extension === "csv") await parseCSV(blob);
+//         if (["xls", "xlsx"].includes(extension)) await parseExcel(blob);
+//         if (["txt", "xml", "json"].includes(extension)) await parseText(blob);
+
+//       } catch {
+//         setError(true);
+//       }
+//     };
+
+//     loadFile();
+
+//     return () => {
+//       if (blobUrl) URL.revokeObjectURL(blobUrl);
+//     };
+//   }, [src]);
+
+//   const parseCSV = async (blob) => {
+//     const text = await blob.text();
+//     const rows = text.split("\n").map(row => row.split(","));
+//     setData(rows);
+//   };
+
+//   const parseExcel = async (blob) => {
+//     const buffer = await blob.arrayBuffer();
+//     const workbook = XLSX.read(buffer, { type: "array" });
+//     const sheet = workbook.Sheets[workbook.SheetNames[0]];
+//     const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+//     setData(json);
+//   };
+
+//   const parseText = async (blob) => {
+//     const text = await blob.text();
+//     setData(text);
+//   };
+
+//   if (!src) return <EmptyState message="No file selected" />;
+//   if (error) return <EmptyState message="Unable to load file" />;
+//   if (!blobUrl) return <EmptyState message="Loading file..." />;
+
+//   // PDF - hide toolbar using embed tag
+//   if (ext === "pdf") {
+//     return (
+//       <embed 
+//         src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+//         type="application/pdf" 
+//         className="w-full h-[200px]" 
+//       />
+//     );
+//   }
+
+//   // Images
+//   if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) {
+//     return <img src={blobUrl} className="max-h-[200px] mx-auto object-contain" alt="preview" />;
+//   }
+
+//   // CSV / Excel Table
+//   if (["csv", "xls", "xlsx"].includes(ext) && data) {
+//     return <TablePreview data={data} />;
+//   }
+
+//   // Text / XML / JSON
+//   if (["txt", "xml", "json"].includes(ext)) {
+//     return <TextPreview content={data} />;
+//   }
+
+//   // Video
+//   if (["mp4", "webm", "ogg"].includes(ext)) {
+//     return <video controls className="w-full h-[200px]" src={blobUrl} />;
+//   }
+
+//   // Audio
+//   if (["mp3", "wav", "ogg"].includes(ext)) {
+//     return <audio controls src={blobUrl} className="w-full" />;
+//   }
+
+//   // Fallback → Download ANY file
+//   return (
+//     <div className="flex items-center justify-center h-[200px]">
+//       <a href={blobUrl} download className="text-blue-600 underline">
+//         Download File
+//       </a>
+//     </div>
+//   );
+// };
+
+// const TextPreview = ({ content }) => (
+//   <pre className="p-2 max-h-[200px] overflow-auto bg-white text-[13px] font-mono break-words">
+//     {content}
+//   </pre>
+// );
+
+// const TablePreview = ({ data }) => (
+//   <div className="overflow-auto max-h-[200px] border border-gray-300">
+//     <table className="w-full text-sm border-collapse">
+//       <tbody>
+//         {data.map((row, i) => (
+//           <tr key={i}>
+//             {row.map((cell, j) => (
+//               <td key={j} className="border border-gray-200 px-2 py-1">
+//                 {cell}
+//               </td>
+//             ))}
+//           </tr>
+//         ))}
+//       </tbody>
+//     </table>
+//   </div>
+// );
+
+// const EmptyState = ({ message }) => (
+//   <div className="flex flex-col items-center justify-center h-[200px] text-gray-400 bg-white">
+//   </div>
+// );
+
+// const PrimaryButton = ({ icon: Icon, label, disabled, onClick, className = "", variant = "primary", loading = false }) => {
+//   const baseStyles = "flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed";
+//   const variants = {
+//     primary: "bg-[#f0f2f5] text-[#2883fe] ",
+//   };
+  
+//   return (
+//     <button
+//       onClick={onClick}
+//       disabled={disabled || loading}
+//       className={`${baseStyles} ${variants[variant]} ${className}`}
+//     >
+//       {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : Icon && <Icon className="w-4 h-4" />}
+//       <span>{label}</span>
+//     </button>
+//   );
+// };
+
+// /* ------------------ MAIN COMPONENT ------------------ */
+
+// export default function InstrumentDataPage() {
+//   const { t } = useTranslation();
+//   const { postData } = servicecall();
+
+//   // State management
+//   const [instrument, setInstrument] = useState("");
+//   const [tab, setTab] = useState("merge");
+//   const [instruments, setInstruments] = useState([]);
+//   const [selectedInstrument, setSelectedInstrument] = useState(null);
+//   const [selectedFile, setSelectedFile] = useState(null);
+//   const [selectedMergeRow, setSelectedMergeRow] = useState(null);
+//   const [selectedNullRow, setSelectedNullRow] = useState(null);
+//   const [fileViewerSrc, setFileViewerSrc] = useState("");
+//   const [supportedExtensions, setSupportedExtensions] = useState([]);
+//   const [oldRawDataID, setOldRawDataID] = useState(" ");
+//   const [mergeDataContent, setMergeDataContent] = useState("");
+//   const [parsedData, setParsedData] = useState([]);
+//   const [fileTags, setFileTags] = useState([]);
+//   const [instrumentTags, setInstrumentTags] = useState([]);
+//   const [mergedFiles, setMergedFiles] = useState([]);
+//   const [fileInformation, setFileInformation] = useState([]);
+//   const [nullData, setNullData] = useState([]);
+  
+//   const [isLoading, setIsLoading] = useState({
+//     template: false,
+//     instruments: false,
+//     instrumentTags: false,
+//     mergedFiles: false,
+//     fileInformation: false,
+//     nullData: false,
+//     mergeData: false,
+//     fileViewer: false,
+//     fileTags: false,
+//     parsedData: false
+//   });
+  
+//   const [featureStatus, setFeatureStatus] = useState(false);
+//   const [showInstrumentTags, setShowInstrumentTags] = useState(true);
+  
+//   const [infoDialog, setInfoDialog] = useState({
+//     open: false,
+//     message: "",
+//     type: "information"
+//   });
+
+//   // Auto-loaded data
+//   const [autoSelectedFile, setAutoSelectedFile] = useState(null);
+//   const [autoSelectedMergeRow, setAutoSelectedMergeRow] = useState(null);
+//   const [autoLoadedMergeData, setAutoLoadedMergeData] = useState("");
+//   const [autoLoadedFileTags, setAutoLoadedFileTags] = useState([]);
+//   const [autoLoadedParsedData, setAutoLoadedParsedData] = useState([]);
+
+//   // Ref for auto-refresh timer
+//   const autoRefreshTimerRef = useRef(null);
+
+//   // Dialog functions
+//   const showInfoDialog = useCallback((message, type = "information") => {
+//     setInfoDialog({ open: true, message, type });
+//   }, []);
+
+//   const closeInfoDialog = useCallback(() => {
+//     setInfoDialog(prev => ({ ...prev, open: false }));
+//   }, []);
+
+//   // Function to make API call
+//   const makeAPICall = useCallback(async (url, passObjDet) => {
+//     const userDetailsData = CF_activeUserdetails();
+//     const reqObj = { ...passObjDet, ...userDetailsData };
+//     return await postData(url, reqObj);
+//   }, [postData]);
+
+//   // Auto-refresh for merge files
+//   const setupAutoRefreshTimer = useCallback((mergeCount) => {
+//     if (autoRefreshTimerRef.current) {
+//       clearInterval(autoRefreshTimerRef.current);
+//     }
+    
+//     if (mergeCount > 1) {
+//       autoRefreshTimerRef.current = setInterval(async () => {
+//         if (selectedInstrument && instrument) {
+//           try {
+//             const passObjDet = {
+//               sInstrumentID: parseInt(instrument),
+//               sLockID: selectedInstrument.sLockID
+//             };
+            
+//             const mergedFilesData = await makeAPICall("InstrumentLock/LoadMergeFileDetails", passObjDet);
+            
+//             if (mergedFilesData && Array.isArray(mergedFilesData)) {
+//               setMergedFiles(mergedFilesData);
+              
+//               if (mergedFilesData.length > 0 && !selectedMergeRow && !autoSelectedMergeRow) {
+//                 const firstMergeRow = mergedFilesData[0];
+//                 setAutoSelectedMergeRow(firstMergeRow);
+//                 setSelectedMergeRow(firstMergeRow);
+//                 await loadMergeFileData(firstMergeRow, true);
+//               }
+//             }
+//           } catch (error) {
+//             console.error("Auto-refresh error:", error);
+//           }
+//         }
+//       }, 1000);
+//     }
+//   }, [selectedInstrument, instrument, selectedMergeRow, autoSelectedMergeRow, makeAPICall]);
+
+//   // Cleanup timer on unmount
+//   useEffect(() => {
+//     return () => {
+//       if (autoRefreshTimerRef.current) {
+//         clearInterval(autoRefreshTimerRef.current);
+//       }
+//     };
+//   }, []);
+
+//   // 1. Fetch Template Validation on component mount
+//   useEffect(() => {
+//     const loadTemplateValidation = async () => {
+//       setIsLoading(prev => ({ ...prev, template: true }));
+//       try {
+//         const data = await makeAPICall("InstrumentLock/ValidatingTemplateTobeLoad", {});
+        
+//         if (data && Array.isArray(data) && data.length > 0) {
+//           const status = data[0]?.L67Status ?? false;
+//           setFeatureStatus(status);
+//           setShowInstrumentTags(!status);
+          
+//           let extensions = [];
+//           if (data[1] && data[1].sFileExtensionList) {
+//             extensions = data[1].sFileExtensionList.split(",").map(ext => ext.trim().toLowerCase());
+//           }
+          
+//           if (extensions.length > 0) {
+//             setSupportedExtensions(extensions);
+//           } else {
+//             setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
+//           }
+          
+//           await loadInstruments(status);
+//         } else {
+//           setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
+//           showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
+//         }
+//       } catch (error) {
+//         setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
+//         showInfoDialog("Failed to load template validation", "information");
+//       } finally {
+//         setIsLoading(prev => ({ ...prev, template: false }));
+//       }
+//     };
+    
+//     loadTemplateValidation();
+//   }, [makeAPICall, showInfoDialog, t]);
+
+//   // Load instruments
+//   const loadInstruments = async (featureStatus) => {
+//     setIsLoading(prev => ({ ...prev, instruments: true }));
+//     try {
+//       const userDetailsData = CF_activeUserdetails();
+//       const reqObj = { sFeature: featureStatus, ...userDetailsData };
+      
+//       const instrumentsData = await postData("InstrumentLock/LoadInterfaceLockInstrumentNameCombo", reqObj);
+      
+//       if (instrumentsData && Array.isArray(instrumentsData)) {
+//         const formattedInstruments = instrumentsData.map(inst => ({
+//           value: inst.nInterInstrumentID?.toString() || "",
+//           label: inst.sInstrumentAliasName || "Unknown Instrument",
+//           originalItem: inst
+//         }));
+        
+//         setInstruments(formattedInstruments);
+        
+//         if (formattedInstruments.length > 0) {
+//           const firstInstrument = formattedInstruments[0];
+//           setInstrument(firstInstrument.value);
+//           setSelectedInstrument(firstInstrument.originalItem);
+//           await loadInstrumentData({
+//             value: firstInstrument.value,
+//             originalItem: firstInstrument.originalItem
+//           });
+//         } else {
+//           setInstrument("");
+//           setSelectedInstrument(null);
+//           setInstruments([]);
+//         }
+//       } else {
+//         setInstruments([]);
+//         setInstrument("");
+//         setSelectedInstrument(null);
+//       }
+//     } catch (error) {
+//       setInstruments([]);
+//       setInstrument("");
+//       setSelectedInstrument(null);
+//       showInfoDialog("Failed to load instruments", "information");
+//     } finally {
+//       setIsLoading(prev => ({ ...prev, instruments: false }));
+//     }
+//   };
+
+//   const loadInstrumentData = useCallback(async (instrumentData) => {
+//     if (!instrumentData || !instrumentData.originalItem) return;
+    
+//     try {
+//       // Load instrument tags
+//       if (showInstrumentTags && instrumentData.originalItem?.sInstrumentID) {
+//         setIsLoading(prev => ({ ...prev, instrumentTags: true }));
+//         try {
+//           const passObjDet = {
+//             passObjDet: {
+//               sSiteCode: CF_activeUserdetails().sSiteCode,
+//               sInstrumentID: instrumentData.originalItem.sInstrumentID
+//             }
+//           };
+          
+//           const tags = await makeAPICall("InstrumentLock/CurrentLockInstrumentTagInfo", passObjDet);
+//           if (tags && Array.isArray(tags)) setInstrumentTags(tags);
+//         } finally {
+//           setIsLoading(prev => ({ ...prev, instrumentTags: false }));
+//         }
+//       }
+
+//       // Load merged files
+//       if (instrumentData.value && instrumentData.originalItem?.sLockID) {
+//         setIsLoading(prev => ({ ...prev, mergedFiles: true }));
+//         try {
+//           const instrumentId = parseInt(instrumentData.value);
+//           const passObjDet = { sInstrumentID: instrumentId, sLockID: instrumentData.originalItem.sLockID };
+          
+//           const mergedFilesData = await makeAPICall("InstrumentLock/LoadMergeFileDetails", passObjDet);
+          
+//           if (mergedFilesData && Array.isArray(mergedFilesData)) {
+//             setMergedFiles(mergedFilesData);
+            
+//             const mergeCount = mergedFilesData.reduce((count, item) => count + (parseInt(item.nMergeFileCount) || 0), 0);
+//             setupAutoRefreshTimer(mergeCount);
+            
+//             if (mergedFilesData.length > 0) {
+//               const firstMergeRow = mergedFilesData[0];
+//               setAutoSelectedMergeRow(firstMergeRow);
+//               setSelectedMergeRow(firstMergeRow);
+//               await loadMergeFileData(firstMergeRow, true);
+//             } else {
+//               setAutoSelectedMergeRow(null);
+//               setSelectedMergeRow(null);
+//               setAutoLoadedMergeData("");
+//             }
+//           } else {
+//             setMergedFiles([]);
+//             setAutoSelectedMergeRow(null);
+//             setSelectedMergeRow(null);
+//             setAutoLoadedMergeData("");
+//           }
+//         } catch (error) {
+//           showInfoDialog("Failed to load merged files", "information");
+//           setMergedFiles([]);
+//           setAutoSelectedMergeRow(null);
+//           setSelectedMergeRow(null);
+//           setAutoLoadedMergeData("");
+//         } finally {
+//           setIsLoading(prev => ({ ...prev, mergedFiles: false }));
+//         }
+//       }
+
+//       // Load file information
+//       if (instrumentData.originalItem?.sInstrumentID && instrumentData.originalItem?.sTaskID) {
+//         setIsLoading(prev => ({ ...prev, fileInformation: true }));
+//         try {
+//           const passObjDet = {
+//             sInstrumentID: instrumentData.originalItem.sInstrumentID,
+//             sTaskID: instrumentData.originalItem.sTaskID
+//           };
+          
+//           const fileInfoData = await makeAPICall("InstrumentLock/InstrumentCaptureTagData", passObjDet);
+          
+//           if (fileInfoData && Array.isArray(fileInfoData)) {
+//             setFileInformation(fileInfoData);
+            
+//             if (fileInfoData.length > 0) {
+//               const firstFile = fileInfoData[0];
+//               setAutoSelectedFile(firstFile);
+//               setSelectedFile(firstFile);
+//               await loadFileData(firstFile, true);
+//             } else {
+//               setAutoSelectedFile(null);
+//               setSelectedFile(null);
+//               setAutoLoadedFileTags([]);
+//               setAutoLoadedParsedData([]);
+//             }
+//           } else {
+//             setFileInformation([]);
+//             setAutoSelectedFile(null);
+//             setSelectedFile(null);
+//             setAutoLoadedFileTags([]);
+//             setAutoLoadedParsedData([]);
+//           }
+//         } catch (error) {
+//           setFileInformation([]);
+//           setAutoSelectedFile(null);
+//           setSelectedFile(null);
+//           setAutoLoadedFileTags([]);
+//           setAutoLoadedParsedData([]);
+//         } finally {
+//           setIsLoading(prev => ({ ...prev, fileInformation: false }));
+//         }
+//       }
+
+//     } catch (error) {
+//       showInfoDialog("Failed to load instrument data", "information");
+//     }
+//   }, [makeAPICall, showInstrumentTags, showInfoDialog, setupAutoRefreshTimer]);
+
+//   // Function to load merge file data
+//   const loadMergeFileData = async (row, isAutoLoad = false) => {
+//     setIsLoading(prev => ({ ...prev, mergeData: true }));
+    
+//     try {
+//       const passObjDet = {
+//         nRawData: row.sRawDataID,
+//         LockID: row.sLockID,
+//         nSequenceNo: row.nSequenceNo,
+//         nMergeFileCount: row.nMergeFileCount,
+//         nInstrumentID: row.nInstrumentID
+//       };
+      
+//       const response = await makeAPICall("InstrumentLock/MergeFileDatas", passObjDet);
+      
+//       if (response) {
+//         if (response.NullDataStatus === "Created") {
+//           showInfoDialog((response.CreatedList || "") + " " + (response.Message || ""), "warning");
+//         } else {
+//           let mergeContent = "";
+//           if (response.MergeData) {
+//             try {
+//               mergeContent = atob(response.MergeData);
+//             } catch {
+//               mergeContent = response.MergeData;
+//             }
+//           } else if (response.InstData && Array.isArray(response.InstData)) {
+//             const decodedData = response.InstData.map(item => 
+//               item.sInstrumentData ? (() => { try { return atob(item.sInstrumentData); } catch { return item.sInstrumentData; } })() : item
+//             );
+//             mergeContent = decodedData.join('\n');
+//           }
+          
+//           if (oldRawDataID === row.sRawDataID || oldRawDataID === " ") {
+//             setOldRawDataID(row.sRawDataID);
+//             if (isAutoLoad) {
+//               if (!autoLoadedMergeData) setAutoLoadedMergeData(mergeContent);
+//             } else {
+//               if (!mergeDataContent) setMergeDataContent(mergeContent);
+//             }
+//           } else {
+//             setOldRawDataID(row.sRawDataID);
+//             if (isAutoLoad) setAutoLoadedMergeData(mergeContent);
+//             else setMergeDataContent(mergeContent);
+//           }
+//         }
+//       }
+//     } catch (error) {
+//       showInfoDialog("Failed to load merge file data", "information");
+//     } finally {
+//       setIsLoading(prev => ({ ...prev, mergeData: false }));
+//     }
+//   };
+
+//   // Function to load file data
+//   const loadFileData = async (file, isAutoLoad = false) => {
+//     setFileViewerSrc("");
+    
+//     try {
+//       // Load file viewer
+//       setIsLoading(prev => ({ ...prev, fileViewer: true }));
+//       const passObjDet = {
+//         sRecordNo: file.Reference,
+//         sTaskID: file["Task ID"],
+//         sUploadStatus: file["Upload Status"]?.trim(),
+//         sBrowserURL: window.location.origin
+//       };
+      
+//       const viewerResponse = await makeAPICall("InstrumentLock/InterFaceInstrumentFileDownLoad", passObjDet);
+      
+//       if (viewerResponse) {
+//         if (viewerResponse.Rtn?.toLowerCase() === "failed") {
+//           showInfoDialog(viewerResponse.Message || "Failed to load file", "warning");
+//         } else if (viewerResponse.Rtn?.toLowerCase() === "success" && viewerResponse.ServerDataViewURL) {
+//           let urlPath = viewerResponse.ServerDataViewURL;
+//           if (!urlPath.includes('#')) urlPath += '#toolbar=0&navpanes=0';
+//           setFileViewerSrc(urlPath);
+//         }
+//       }
+//     } catch (error) {
+//       showInfoDialog("Failed to load file", "information");
+//     } finally {
+//       setIsLoading(prev => ({ ...prev, fileViewer: false }));
+//     }
+    
+//     // Load file tags
+//     setIsLoading(prev => ({ ...prev, fileTags: true }));
+//     try {
+//       const passObjDet = {
+//         sRecordNo: file.Reference,
+//         sTaskID: file["Task ID"],
+//         sFileName: file["File Name"]
+//       };
+      
+//       const tagsResponse = await makeAPICall("InstrumentLock/LoadCategoryValueForFiles", passObjDet);
+      
+//       if (tagsResponse && Array.isArray(tagsResponse)) {
+//         if (isAutoLoad) setAutoLoadedFileTags(tagsResponse);
+//         else setFileTags(tagsResponse);
+//       } else {
+//         if (isAutoLoad) setAutoLoadedFileTags([]);
+//         else setFileTags([]);
+//       }
+//     } catch (error) {
+//       if (isAutoLoad) setAutoLoadedFileTags([]);
+//       else setFileTags([]);
+//     } finally {
+//       setIsLoading(prev => ({ ...prev, fileTags: false }));
+//     }
+    
+//     // Load parsed data
+//     setIsLoading(prev => ({ ...prev, parsedData: true }));
+//     try {
+//       const passObjDet = {
+//         sRecordNo: file.Reference,
+//         sTaskID: file["Task ID"],
+//         sFileName: file["File Name"]
+//       };
+      
+//       const parsedResponse = await makeAPICall("InstrumentLock/getParsedDataDetails", passObjDet);
+      
+//       if (parsedResponse && Array.isArray(parsedResponse)) {
+//         if (isAutoLoad) setAutoLoadedParsedData(parsedResponse);
+//         else setParsedData(parsedResponse);
+//       } else {
+//         if (isAutoLoad) setAutoLoadedParsedData([]);
+//         else setParsedData([]);
+//       }
+//     } catch (error) {
+//       if (isAutoLoad) setAutoLoadedParsedData([]);
+//       else setParsedData([]);
+//     } finally {
+//       setIsLoading(prev => ({ ...prev, parsedData: false }));
+//     }
+//   };
+
+//   const handleRefreshMergedFiles = useCallback(async () => {
+//     if (!selectedInstrument || !instrument) {
+//       showInfoDialog("Please select an instrument first", "information");
+//       return;
+//     }
+    
+//     setIsLoading(prev => ({ ...prev, mergedFiles: true }));
+//     try {
+//       const passObjDet = {
+//         sInstrumentID: parseInt(instrument),
+//         sLockID: selectedInstrument.sLockID
+//       };
+      
+//       const mergedFilesData = await makeAPICall("InstrumentLock/LoadMergeFileDetails", passObjDet);
+      
+//       if (mergedFilesData && Array.isArray(mergedFilesData)) {
+//         setMergedFiles(mergedFilesData);
+        
+//         const mergeCount = mergedFilesData.reduce((count, item) => count + (parseInt(item.nMergeFileCount) || 0), 0);
+//         setupAutoRefreshTimer(mergeCount);
+        
+//         if (mergedFilesData.length > 0) {
+//           const firstMergeRow = mergedFilesData[0];
+//           setAutoSelectedMergeRow(firstMergeRow);
+//           setSelectedMergeRow(firstMergeRow);
+//           await loadMergeFileData(firstMergeRow, true);
+//         } else {
+//           setAutoSelectedMergeRow(null);
+//           setSelectedMergeRow(null);
+//           setAutoLoadedMergeData("");
+//         }
+//       } else {
+//         setMergedFiles([]);
+//         setAutoSelectedMergeRow(null);
+//         setSelectedMergeRow(null);
+//         setAutoLoadedMergeData("");
+//       }
+//     } catch (error) {
+//       showInfoDialog("Failed to refresh data", "information");
+//       setMergedFiles([]);
+//       setAutoSelectedMergeRow(null);
+//       setSelectedMergeRow(null);
+//       setAutoLoadedMergeData("");
+//     } finally {
+//       setIsLoading(prev => ({ ...prev, mergedFiles: false }));
+//     }
+//   }, [selectedInstrument, instrument, makeAPICall, showInfoDialog, loadMergeFileData, setupAutoRefreshTimer]);
+
+//   const handleInstrumentChange = useCallback(async (value) => {
+//     if (autoRefreshTimerRef.current) {
+//       clearInterval(autoRefreshTimerRef.current);
+//       autoRefreshTimerRef.current = null;
+//     }
+    
+//     setInstrument(value);
+//     const selectedInst = instruments.find(inst => inst.value === value);
+//     setSelectedInstrument(selectedInst?.originalItem || null);
+//     setSelectedFile(null);
+//     setSelectedMergeRow(null);
+//     setSelectedNullRow(null);
+//     setFileViewerSrc("");
+//     setMergeDataContent("");
+//     setParsedData([]);
+//     setFileTags([]);
+//     setInstrumentTags([]);
+//     setMergedFiles([]);
+//     setFileInformation([]);
+//     setNullData([]);
+    
+//     setAutoSelectedFile(null);
+//     setAutoSelectedMergeRow(null);
+//     setAutoLoadedMergeData("");
+//     setAutoLoadedFileTags([]);
+//     setAutoLoadedParsedData([]);
+    
+//     if (selectedInst) {
+//       await loadInstrumentData({
+//         value: selectedInst.value,
+//         originalItem: selectedInst.originalItem
+//       });
+//     }
+//   }, [instruments, loadInstrumentData]);
+
+//   // Load null data when tab changes to "null"
+//   useEffect(() => {
+//     const loadNullData = async () => {
+//       if (tab === "null") {
+//         if (!selectedInstrument) {
+//           showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
+//           return;
+//         }
+        
+//         if (selectedInstrument?.nInterInstrumentID && selectedInstrument?.sLockID) {
+//           setIsLoading(prev => ({ ...prev, nullData: true }));
+//           try {
+//             const passObjDet = {
+//               nInterfaceInstID: selectedInstrument.nInterInstrumentID,
+//               sLockID: selectedInstrument.sLockID
+//             };
+            
+//             const nullDataResponse = await makeAPICall("InstrumentLock/FetchNullDataBasedOnInstrument", passObjDet);
+//             if (nullDataResponse && Array.isArray(nullDataResponse)) setNullData(nullDataResponse);
+//           } catch (error) {
+//             showInfoDialog("Failed to load null data", "information");
+//           } finally {
+//             setIsLoading(prev => ({ ...prev, nullData: false }));
+//           }
+//         }
+//       }
+//     };
+
+//     loadNullData();
+//   }, [tab, selectedInstrument, makeAPICall, showInfoDialog, t]);
+
+//   // Handle file selection
+//   const handleFileSelect = useCallback(async (file) => {
+//     setSelectedFile(file);
+//     await loadFileData(file, false);
+//   }, [makeAPICall, showInfoDialog]);
+
+//   // Handle merge row selection
+//   const handleMergeRowSelect = useCallback(async (row) => {
+//     setSelectedMergeRow(row);
+//     await loadMergeFileData(row, false);
+//   }, [makeAPICall, oldRawDataID, mergeDataContent, showInfoDialog]);
+
+//   // Handle null data row selection
+//   const handleNullRowSelect = useCallback((row) => {
+//     setSelectedNullRow(row);
+//   }, []);
+
+//   const handleRefreshFileInfo = useCallback(async () => {
+//     if (!selectedInstrument) {
+//       showInfoDialog("Please select an instrument first", "information");
+//       return;
+//     }
+    
+//     setIsLoading(prev => ({ ...prev, fileInformation: true }));
+//     try {
+//       const passObjDet = {
+//         sInstrumentID: selectedInstrument.sInstrumentID,
+//         sTaskID: selectedInstrument.sTaskID
+//       };
+      
+//       const fileInfoData = await makeAPICall("InstrumentLock/InstrumentCaptureTagData", passObjDet);
+      
+//       if (fileInfoData && Array.isArray(fileInfoData)) {
+//         setFileInformation(fileInfoData);
+        
+//         if (fileInfoData.length > 0) {
+//           const firstFile = fileInfoData[0];
+//           setAutoSelectedFile(firstFile);
+//           setSelectedFile(firstFile);
+//           await loadFileData(firstFile, true);
+//         } else {
+//           setAutoSelectedFile(null);
+//           setSelectedFile(null);
+//           setAutoLoadedFileTags([]);
+//           setAutoLoadedParsedData([]);
+//         }
+//       } else {
+//         setFileInformation([]);
+//         setAutoSelectedFile(null);
+//         setSelectedFile(null);
+//         setAutoLoadedFileTags([]);
+//         setAutoLoadedParsedData([]);
+//       }
+//     } catch (error) {
+//       showInfoDialog("Failed to refresh data", "information");
+//       setFileInformation([]);
+//       setAutoSelectedFile(null);
+//       setSelectedFile(null);
+//       setAutoLoadedFileTags([]);
+//       setAutoLoadedParsedData([]);
+//     } finally {
+//       setIsLoading(prev => ({ ...prev, fileInformation: false }));
+//     }
+//   }, [selectedInstrument, makeAPICall, showInfoDialog, loadFileData]);
+
+//   const handleRefreshNullData = useCallback(async () => {
+//     if (!selectedInstrument) {
+//       showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
+//       return;
+//     }
+    
+//     setIsLoading(prev => ({ ...prev, nullData: true }));
+//     try {
+//       const passObjDet = {
+//         nInterfaceInstID: selectedInstrument.nInterInstrumentID,
+//         sLockID: selectedInstrument.sLockID
+//       };
+      
+//       const nullDataResponse = await makeAPICall("InstrumentLock/FetchNullDataBasedOnInstrument", passObjDet);
+//       if (nullDataResponse && Array.isArray(nullDataResponse)) setNullData(nullDataResponse);
+//     } catch (error) {
+//       showInfoDialog("Failed to refresh data", "information");
+//     } finally {
+//       setIsLoading(prev => ({ ...prev, nullData: false }));
+//     }
+//   }, [selectedInstrument, makeAPICall, showInfoDialog, t]);
+
+//   // Handle null data acknowledgement
+//   const handleNullDataAcknowledgement = useCallback(async () => {
+//     if (!selectedNullRow) {
+//       showInfoDialog(t("instrumentlocktag.norecordsfound") || "No Records Found", "information");
+//       return;
+//     }
+    
+//     try {
+//       const passObjDet = {
+//         nInterfaceInstID: selectedNullRow.nInstrumentID,
+//         sRawData: selectedNullRow.sRawDataID,
+//         sLockID: selectedNullRow.sLockID
+//       };
+      
+//       const response = await makeAPICall("InstrumentLock/NullDataAcknowledgement", passObjDet);
+      
+//       if (response?.AuditTrailLogin === false) {
+//         showInfoDialog(response.LoginFailedMsg || "Login failed", "information");
+//       } else {
+//         showInfoDialog("Null data acknowledged successfully", "success");
+//         handleRefreshNullData();
+//       }
+      
+//     } catch (error) {
+//       showInfoDialog("Failed to acknowledge null data", "information");
+//     }
+//   }, [makeAPICall, selectedNullRow, showInfoDialog, t, handleRefreshNullData]);
+
+//   // Handle tab change
+//   const handleTabChange = useCallback((newTab) => {
+//     setTab(newTab);
+//     setSelectedNullRow(null);
+    
+//     if (newTab === "null" && !selectedInstrument) {
+//       showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
+//     }
+//   }, [selectedInstrument, showInfoDialog, t]);
+
+//   // Format parsed data for InfoBox
+//   const formattedParsedData = useMemo(() => {
+//     const dataToUse = parsedData.length > 0 ? parsedData : autoLoadedParsedData;
+//     return (dataToUse || []).map(item => {
+//       let fieldName = item.FieldName || "";
+//       const lastBracketIndex = fieldName.lastIndexOf(']');
+//       if (lastBracketIndex !== -1) {
+//         fieldName = fieldName.substring(lastBracketIndex + 1).trim();
+//       }
+      
+//       if (!fieldName || /^\d+$/.test(fieldName)) {
+//         const original = item.FieldName || '';
+//         if (original.includes('IF0001')) fieldName = 'Parsed Time';
+//         else if (original.includes('IF0002')) fieldName = 'Instrument Code';
+//         else if (original.includes('IF0003')) fieldName = 'Instrument Name';
+//         else fieldName = `Field ${original.replace(/[\[\]]/g, '')}`;
+//       }
+      
+//       return { Category: fieldName, Value: item.FieldValue || "" };
+//     });
+//   }, [parsedData, autoLoadedParsedData]);
+
+//   // Format file tags for InfoBox
+//   const formattedFileTags = useMemo(() => {
+//     const tagsToUse = fileTags.length > 0 ? fileTags : autoLoadedFileTags;
+//     return (tagsToUse || []).map(tag => ({ Category: tag.Category || "", Value: tag.Value || "" }));
+//   }, [fileTags, autoLoadedFileTags]);
+
+//   // Format instrument tags for InfoBox
+//   const formattedInstrumentTags = useMemo(() => {
+//     return (instrumentTags || []).map(tag => ({ Category: tag.Category || "", Value: tag.Value || "" }));
+//   }, [instrumentTags]);
+
+//   // Determine which merge data to display
+//   const displayedMergeData = useMemo(() => mergeDataContent || autoLoadedMergeData, [mergeDataContent, autoLoadedMergeData]);
+
+//   // Column definitions
+//   const mergeColumns = useMemo(() => [
+//     {
+//       key: 'sRawDataID',
+//       label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.rawdataid") || 'Raw Data ID'}</span>,
+//       width: "40%",
+//       enableSearch: true,
+//       render: (row, isSelected) => {
+//         const isAutoSelected = autoSelectedMergeRow && autoSelectedMergeRow.sRawDataID === row.sRawDataID;
+//         return <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected || isAutoSelected ? 'font-bold' : 'font-normal'}`}>{row.sRawDataID}</span>;
+//       }
+//     },
+//     {
+//       key: 'nSequenceNo',
+//       label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.sequenceno") || 'Sequence No'}</span>,
+//       width: "40%",
+//       enableSearch: true,
+//       render: (row, isSelected) => {
+//         const isAutoSelected = autoSelectedMergeRow && autoSelectedMergeRow.sRawDataID === row.sRawDataID;
+//         return <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected || isAutoSelected ? 'font-bold' : 'font-normal'}`}>{row.nSequenceNo}</span>;
+//       }
+//     },
+//     {
+//       key: 'nMergeFileCount',
+//       label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.mergefilecount") || 'Merge File Count'}</span>,
+//       width: "20%",
+//       enableSearch: true,
+//       render: (row, isSelected) => {
+//         const isAutoSelected = autoSelectedMergeRow && autoSelectedMergeRow.sRawDataID === row.sRawDataID;
+//         return <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected || isAutoSelected ? 'font-bold' : 'font-normal'}`}>{row.nMergeFileCount}</span>;
+//       }
+//     }
+//   ], [t, autoSelectedMergeRow]);
+
+//   const nullDataColumns = useMemo(() => [
+//     {
+//       key: 'sRawDataID',
+//       label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.rawdataid") || 'Raw Data ID'}</span>,
+//       width: "25%",
+//       enableSearch: true,
+//       render: (row, isSelected) => <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>{row.sRawDataID}</span>
+//     },
+//     {
+//       key: 'nSequenceNo',
+//       label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.sequenceno") || 'Sequence No'}</span>,
+//       width: "15%",
+//       enableSearch: true,
+//       render: (row, isSelected) => <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>{row.nSequenceNo}</span>
+//     },
+//     {
+//       key: 'nMergeFileCount',
+//       label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.mergefilecount") || 'Merge File Count'}</span>,
+//       width: "15%",
+//       enableSearch: true,
+//       render: (row, isSelected) => <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>{row.nMergeFileCount}</span>
+//     },
+//     {
+//       key: 'sLockID',
+//       label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.lockid") || 'Lock ID'}</span>,
+//       width: "25%",
+//       enableSearch: true,
+//       render: (row, isSelected) => <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>{row.sLockID}</span>
+//     },
+//     {
+//       key: 'nInstrumentID',
+//       label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.instrumentid") || 'Instrument ID'}</span>,
+//       width: "20%",
+//       enableSearch: true,
+//       render: (row, isSelected) => <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>{row.nInstrumentID}</span>
+//     }
+//   ], [t]);
+
+//   const fileColumns = useMemo(() => [
+//     {
+//       key: 'File Name',
+//       label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.filename") || 'File Name'}</span>,
+//       width: "40%",
+//       enableSearch: true,
+//       render: (row, isSelected) => {
+//         const fileName = row["ActualFileName"] || row["File Name"] || "";
+//         const createdOn = row["Created On"] || "";
+//         return (
+//           <div className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'} truncate`}>
+//             {fileName} {createdOn}
+//           </div>
+//         );
+//       }
+//     },
+//     {
+//       key: 'Upload Status',
+//       label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.uploadstatus") || 'Upload Status'}</span>,
+//       width: "20%",
+//       render: (row) => {
+//         const status = row["Upload Status"]?.trim() || "";
+//         const statusLower = status.toLowerCase();
+//         let color = "text-gray-400";
+        
+//         if (statusLower.includes("uploaded") || statusLower.includes("success")) color = "text-green-500";
+//         else if (statusLower.includes("queue")) color = "text-amber-500";
+//         else if (statusLower.includes("failed") || statusLower.includes("error")) color = "text-red-500";
+        
+//         return (
+//           <div className="flex items-center justify-center">
+//             <svg className={`w-4 h-4 ${color}`} fill="currentColor" viewBox="0 0 20 20">
+//               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+//             </svg>
+//           </div>
+//         );
+//       }
+//     },
+//     {
+//       key: 'Client Name',
+//       label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t('label.clientName') || 'Client Name'}</span>,
+//       width: "40%",
+//       enableSearch: true,
+//       render: (row, isSelected) => (
+//         <div className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>
+//           {row["Client Name"]}
+//         </div>
+//       )
+//     }
+//   ], [t]);
+
+//   // Format data for grids
+//   const mergeRows = useMemo(() => (mergedFiles || []).map((item, index) => ({ ...item, id: item.sRawDataID || `merge-${index}` })), [mergedFiles]);
+//   const nullRows = useMemo(() => (nullData || []).map((item, index) => ({ ...item, id: item.sRawDataID || `null-${index}` })), [nullData]);
+//   const files = useMemo(() => (fileInformation || []).map((item, index) => ({ ...item, id: item.Reference || `file-${index}` })), [fileInformation]);
+
+//   return (
+//     <div className="font-roboto flex flex-col space-y-2 px-4">
+//       {infoDialog.open && <Errordialog message={infoDialog.message} type={infoDialog.type} onClose={closeInfoDialog} />}
+      
+//       {/* Instrument Dropdown */}
+//       <div className="mb-1 mt-2">
+//         <label className="block text-xs font-bold text-[#4a6fa5] mb-1">
+//           {t("label.instrument")} <span className="text-red-500">*</span>
+//         </label>
+//         <div className="w-80">
+//           <AnimatedDropdown
+//             name="instrument"
+//             value={instrument}
+//             options={instruments}
+//             displayKey="label"
+//             valueKey="value"
+//             onChange={(e) => handleInstrumentChange(e.target.value)}
+//             loading={isLoading.instruments}
+//             required={true}
+//           />
+//         </div>
+//       </div>
+
+//       {/* Instrument Tag Information */}
+//       {showInstrumentTags && (
+//         <div className="mb-0">
+//           <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">{t("instrumentlocktag.instrumenttagsinformation")}</h3>
+//           <InfoBox data={formattedInstrumentTags} />
+//         </div>
+//       )}
+
+//       {/* Latest Merged File Information */}
+//       <div className="mb-4">
+//         <div className="flex justify-between items-center mb-2">
+//           <h3 className="text-xs font-bold text-[#4a6fa5]">{t("instrumentlocktag.latestmergedfileinformation")}</h3>
+//           <div className="flex gap-6">
+//             <button
+//               className={`text-xs font-bold pb-1 transition-colors ${tab === "merge" ? "text-[#0049b0] text-sm border-b-2 border-[#2883fe]" : "text-gray-600 hover:text-gray-800"}`}
+//               onClick={() => handleTabChange("merge")}
+//             >
+//               {t("instrumentlocktag.mergedata")}
+//             </button>
+//             <button
+//               className={`text-xs font-bold pb-1 transition-colors ${tab === "null" ? "text-[#0049b0] text-sm border-b-2 border-[#2883fe]" : "text-gray-600 hover:text-gray-800"}`}
+//               onClick={() => handleTabChange("null")}
+//             >
+//               {t("instrumentlocktag.viewnulldata")}
+//             </button>
+//           </div>
+//         </div>
+
+//         {tab === "merge" ? (
+//           <>
+//             <div className="flex justify-end gap-2 mb-2">
+//               <PrimaryButton 
+//                 icon={RefreshCw}
+//                 label={t("button.refresh")}
+//                 onClick={handleRefreshMergedFiles}
+//                 loading={isLoading.mergedFiles}
+//               />
+//             </div>
+//             <div className=" overflow-hidden -m-2">
+//               <GridLayout
+//                 columns={mergeColumns}
+//                 data={mergeRows}
+//                 hidePagination={false}
+//                 height="400px"
+//                 onRowClick={handleMergeRowSelect}
+//                 selectedRowId={selectedMergeRow?.id}
+//                 emptyMessage="No merged files available"
+//               />
+//             </div>
+//           </>
+//         ) : (
+//           <>
+//             <div className="flex justify-end mb-2 gap-2">
+//               <PrimaryButton 
+//                 label={t("instrumentlocktag.proceedacknowledgement")}
+//                 onClick={handleNullDataAcknowledgement}
+//                 variant="primary"
+//               />
+//               <PrimaryButton 
+//                 icon={RefreshCw}
+//                 label={t("button.refresh")}
+//                 onClick={handleRefreshNullData}
+//                 loading={isLoading.nullData}
+//               />
+//             </div>
+//             <div className="overflow-hidden  -m-2">
+//               <GridLayout
+//                 columns={nullDataColumns}
+//                 data={nullRows}
+//                 hidePagination={false}
+//                 height="400px"
+//                 onRowClick={handleNullRowSelect}
+//                 selectedRowId={selectedNullRow?.id}
+//                 emptyMessage="No null data available"
+//               />
+//             </div>
+//           </>
+//         )}
+        
+//         {/* Merge File Raw Data Display */}
+//         <div className="mt-4">
+//           <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">{t("instrumentlocktag.mergedfilerawdata")}</h3>
+//           <div className="border border-gray-300 bg-white min-h-[200px] p-1 overflow-auto max-h-[300px]">
+//             <pre className="text-sm font-['helvetica'] m-0 p-0 whitespace-pre-wrap break-words">
+//               {displayedMergeData || ""}
+//             </pre>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* File Information */}
+//       <div className="mb-4">
+//         <div className="flex justify-between items-center mb-2">
+//           <h3 className="text-xs font-bold text-[#4a6fa5]">{t("instrumentlocktag.fileinformation")}</h3>
+//           <PrimaryButton 
+//             icon={RefreshCw}
+//             label={t("button.refresh")}
+//             onClick={handleRefreshFileInfo}
+//             loading={isLoading.fileInformation}
+//           />
+//         </div>
+//         <div className="overflow-hidden -m-2">
+//           {isLoading.fileInformation ? (
+//             <div className="text-center text-gray-500 bg-white flex items-center justify-center h-[500px]">
+//               <RefreshCw className="w-5 h-5 animate-spin mr-2" />
+//             </div>
+//           ) : files.length > 0 ? (
+//             <GridLayout
+//               columns={fileColumns}
+//               height="500px"
+//               data={files}
+//               hidePagination={false}
+//               onRowClick={handleFileSelect}
+//               selectedRowId={selectedFile?.id}
+//               emptyMessage="No files available"
+//             />
+//           ) : (
+//             <GridLayout
+//               columns={fileColumns}
+//               height="500px"
+//               data={[]}
+//               hidePagination={false}
+//               onRowClick={handleFileSelect}
+//               selectedRowId={null}
+//               emptyMessage="No files available"
+//             />
+//           )}
+//         </div>
+//       </div>
+
+//       {/* File Tags Information */}
+//       {showInstrumentTags && (
+//         <div className="mb-4">
+//           <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">{t("instrumentlocktag.filetagsinformation")}</h3>
+//           <InfoBox data={formattedFileTags} />
+//         </div>
+//       )}
+
+//       {/* File Raw Data Viewer */}
+//       <div className="mb-4">
+//         <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">{t("instrumentlocktag.filerawdata")}</h3>
+//         <div className="bg-white min-h-[200px] ">
+//           <FileViewer src={fileViewerSrc} />
+//         </div>
+//       </div>
+
+//       {/* Parsed Data */}
+//       <div className="mb-4">
+//         <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">{t("instrumentlocktag.parseddata")}</h3>
+//         <InfoBox data={formattedParsedData} fixedHeight={true} />
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw, FileText } from "lucide-react";
+import * as XLSX from "xlsx";
 
 // Components
 import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import Errordialog from "../../../../Layout/Common/Errordialog";
+import FullPageLoader from "../../../../Layout/Common/FullPageLoader"; // Added import
 
 // Services
 import servicecall from '../../../../../Services/servicecall';
 import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
+import { CF_decrypt } from "../../../../Common/encryptiondecryption";
 
 /* ------------------ HELPER COMPONENTS ------------------ */
 
-const InfoBox = ({ data, className = "", title, showEmptyMessage = true }) => (
-  <div className={`border border-gray-300 bg-white min-h-[100px] p-1 ${className}`}>
-    {data.length === 0 ? (
-      showEmptyMessage ? (
-        <div className="text-gray-400 italic text-sm text-center py-4">
-          No data available
-        </div>
-      ) : (
-        <div></div>
-      )
-    ) : (
+const InfoBox = ({ data, className = "", fixedHeight = false }) => (
+  <div className={`border border-gray-300 bg-white p-1 ${fixedHeight ? 'min-h-[200px] max-h-[200px] overflow-auto' : 'min-h-[100px]'} ${className}`}>
+    {data.length > 0 && (
       <div className="p-0">
         {data.map((d, i) => (
           <div key={i} className="flex">
             <label className="w-[45%] text-xs font-bold font-roboto text-[#070707] truncate">
               {d.Category || d.label}:
             </label>
-            <span className="w-[55%] text-sm font-bold font-['helvetica']  text-[#162ddc] truncate">
+            <span className="w-[55%] text-sm font-bold font-['helvetica'] text-[#162ddc] truncate">
               {d.Value || d.value}
             </span>
           </div>
@@ -40,38 +1299,165 @@ const InfoBox = ({ data, className = "", title, showEmptyMessage = true }) => (
   </div>
 );
 
-const FileViewer = ({ src, fileType, supportedExtensions = [] }) => {
-  const isSupported = supportedExtensions.some(ext => 
-    src?.toLowerCase().endsWith(`.${ext.toLowerCase()}`)
-  );
-  
+const FileViewer = ({ src }) => {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [ext, setExt] = useState("");
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!src) return;
+
+    setError(false);
+    setData(null);
+    setBlobUrl(null);
+
+    const loadFile = async () => {
+      try {
+        const cleanSrc = src.split("#")[0].split("?")[0];
+        let decryptedUrl;
+        
+        try {
+          decryptedUrl = CF_decrypt(cleanSrc);
+          if (!decryptedUrl || decryptedUrl === cleanSrc) {
+            decryptedUrl = cleanSrc;
+          }
+        } catch {
+          decryptedUrl = cleanSrc;
+        }
+
+        const finalUrl = decryptedUrl
+          .replace(/\\/g, "/")
+          .replace("localhost:3000", "localhost:9091");
+
+        const extension = finalUrl.split(".").pop()?.toLowerCase() || "";
+        setExt(extension);
+
+        const response = await fetch(finalUrl);
+        if (!response.ok) throw new Error();
+        
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setBlobUrl(url);
+
+        if (extension === "csv") await parseCSV(blob);
+        if (["xls", "xlsx"].includes(extension)) await parseExcel(blob);
+        if (["txt", "xml", "json"].includes(extension)) await parseText(blob);
+
+      } catch {
+        setError(true);
+      }
+    };
+
+    loadFile();
+
+    return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [src]);
+
+  const parseCSV = async (blob) => {
+    const text = await blob.text();
+    const rows = text.split("\n").map(row => row.split(","));
+    setData(rows);
+  };
+
+  const parseExcel = async (blob) => {
+    const buffer = await blob.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    setData(json);
+  };
+
+  const parseText = async (blob) => {
+    const text = await blob.text();
+    setData(text);
+  };
+
+  if (!src) return <EmptyState message="No file selected" />;
+  if (error) return <EmptyState message="Unable to load file" />;
+  if (!blobUrl) return <EmptyState message="Loading file..." />;
+
+  // PDF - hide toolbar using embed tag
+  if (ext === "pdf") {
+    return (
+      <embed 
+        src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+        type="application/pdf" 
+        className="w-full h-[200px]" 
+      />
+    );
+  }
+
+  // Images
+  if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) {
+    return <img src={blobUrl} className="max-h-[200px] mx-auto object-contain" alt="preview" />;
+  }
+
+  // CSV / Excel Table
+  if (["csv", "xls", "xlsx"].includes(ext) && data) {
+    return <TablePreview data={data} />;
+  }
+
+  // Text / XML / JSON
+  if (["txt", "xml", "json"].includes(ext)) {
+    return <TextPreview content={data} />;
+  }
+
+  // Video
+  if (["mp4", "webm", "ogg"].includes(ext)) {
+    return <video controls className="w-full h-[200px]" src={blobUrl} />;
+  }
+
+  // Audio
+  if (["mp3", "wav", "ogg"].includes(ext)) {
+    return <audio controls src={blobUrl} className="w-full" />;
+  }
+
+  // Fallback → Download ANY file
   return (
-    <div className="bg-white min-h-[200px]">
-      {src && isSupported ? (
-        <iframe
-          src={`${src}#toolbar=0&navpanes=0`}
-          className="w-full h-[200px] border-none"
-          title="File Viewer"
-          sandbox="allow-same-origin"
-        />
-      ) : src && !isSupported ? (
-        <div className="flex flex-col items-center justify-center h-[200px] text-gray-400">
-          <FileText className="w-16 h-16 mb-2" />
-          <h2 className="text-lg">File format not supported for preview</h2>
-        </div>
-      ) : (
-        <div></div>
-      )}
+    <div className="flex items-center justify-center h-[200px]">
+      <a href={blobUrl} download className="text-blue-600 underline">
+        Download File
+      </a>
     </div>
   );
 };
 
+const TextPreview = ({ content }) => (
+  <pre className="p-2 max-h-[200px] overflow-auto bg-white text-[13px] font-mono break-words">
+    {content}
+  </pre>
+);
+
+const TablePreview = ({ data }) => (
+  <div className="overflow-auto max-h-[200px] border border-gray-300">
+    <table className="w-full text-sm border-collapse">
+      <tbody>
+        {data.map((row, i) => (
+          <tr key={i}>
+            {row.map((cell, j) => (
+              <td key={j} className="border border-gray-200 px-2 py-1">
+                {cell}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+const EmptyState = ({ message }) => (
+  <div className="flex flex-col items-center justify-center h-[200px] text-gray-400 bg-white">
+  </div>
+);
+
 const PrimaryButton = ({ icon: Icon, label, disabled, onClick, className = "", variant = "primary", loading = false }) => {
-  const baseStyles = "flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseStyles = "flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed";
   const variants = {
-    primary: "bg-blue-50 text-blue-600 hover:bg-blue-100",
-    secondary: "bg-gray-100 text-gray-700 hover:bg-gray-200",
-    danger: "bg-red-50 text-red-600 hover:bg-red-100"
+    primary: "bg-[#f0f2f5] text-[#2883fe] ",
   };
   
   return (
@@ -80,9 +1466,7 @@ const PrimaryButton = ({ icon: Icon, label, disabled, onClick, className = "", v
       disabled={disabled || loading}
       className={`${baseStyles} ${variants[variant]} ${className}`}
     >
-      {loading ? (
-        <RefreshCw className="w-4 h-4 animate-spin" />
-      ) : Icon && <Icon className="w-4 h-4" />}
+      {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : Icon && <Icon className="w-4 h-4" />}
       <span>{label}</span>
     </button>
   );
@@ -105,8 +1489,6 @@ export default function InstrumentDataPage() {
   const [fileViewerSrc, setFileViewerSrc] = useState("");
   const [supportedExtensions, setSupportedExtensions] = useState([]);
   const [oldRawDataID, setOldRawDataID] = useState(" ");
-  const [newRawDataID, setNewRawDataID] = useState("");
-  const [nullDataRawId, setNullDataRawId] = useState("");
   const [mergeDataContent, setMergeDataContent] = useState("");
   const [parsedData, setParsedData] = useState([]);
   const [fileTags, setFileTags] = useState([]);
@@ -114,6 +1496,9 @@ export default function InstrumentDataPage() {
   const [mergedFiles, setMergedFiles] = useState([]);
   const [fileInformation, setFileInformation] = useState([]);
   const [nullData, setNullData] = useState([]);
+  
+  // Full page loader state
+  const [fullPageLoading, setFullPageLoading] = useState(false);
   
   const [isLoading, setIsLoading] = useState({
     template: false,
@@ -123,7 +1508,6 @@ export default function InstrumentDataPage() {
     fileInformation: false,
     nullData: false,
     mergeData: false,
-    fileData: false,
     fileViewer: false,
     fileTags: false,
     parsedData: false
@@ -138,96 +1522,125 @@ export default function InstrumentDataPage() {
     type: "information"
   });
 
-  // New state for auto-loaded data
+  // Auto-loaded data
   const [autoSelectedFile, setAutoSelectedFile] = useState(null);
   const [autoSelectedMergeRow, setAutoSelectedMergeRow] = useState(null);
   const [autoLoadedMergeData, setAutoLoadedMergeData] = useState("");
   const [autoLoadedFileTags, setAutoLoadedFileTags] = useState([]);
   const [autoLoadedParsedData, setAutoLoadedParsedData] = useState([]);
 
+  // Ref for auto-refresh timer
+  const autoRefreshTimerRef = useRef(null);
+
   // Dialog functions
   const showInfoDialog = useCallback((message, type = "information") => {
-    setInfoDialog({
-      open: true,
-      message,
-      type
-    });
+    setInfoDialog({ open: true, message, type });
   }, []);
 
   const closeInfoDialog = useCallback(() => {
-    setInfoDialog(prev => ({
-      ...prev,
-      open: false
-    }));
+    setInfoDialog(prev => ({ ...prev, open: false }));
   }, []);
 
-  // Function to make API call with proper formatting
-  const makeAPICall = async (url, passObjDet) => {
+  // Function to make API call
+  const makeAPICall = useCallback(async (url, passObjDet) => {
     const userDetailsData = CF_activeUserdetails();
     const reqObj = { ...passObjDet, ...userDetailsData };
-    
-    console.log(`Making API call to ${url}:`, reqObj);
-    
-    const response = await postData(url, reqObj);
-    console.log(`Response from ${url}:`, response);
-    
-    return response;
-  };
+    return await postData(url, reqObj);
+  }, [postData]);
 
-  // 1. Fetch Template Validation on component mount
+  // Auto-refresh for merge files
+  const setupAutoRefreshTimer = useCallback((mergeCount) => {
+    if (autoRefreshTimerRef.current) {
+      clearInterval(autoRefreshTimerRef.current);
+    }
+    
+    if (mergeCount > 1) {
+      autoRefreshTimerRef.current = setInterval(async () => {
+        if (selectedInstrument && instrument) {
+          try {
+            const passObjDet = {
+              sInstrumentID: parseInt(instrument),
+              sLockID: selectedInstrument.sLockID
+            };
+            
+            const mergedFilesData = await makeAPICall("InstrumentLock/LoadMergeFileDetails", passObjDet);
+            
+            if (mergedFilesData && Array.isArray(mergedFilesData)) {
+              setMergedFiles(mergedFilesData);
+              
+              if (mergedFilesData.length > 0 && !selectedMergeRow && !autoSelectedMergeRow) {
+                const firstMergeRow = mergedFilesData[0];
+                setAutoSelectedMergeRow(firstMergeRow);
+                setSelectedMergeRow(firstMergeRow);
+                await loadMergeFileData(firstMergeRow, true);
+              }
+            }
+          } catch (error) {
+            console.error("Auto-refresh error:", error);
+          }
+        }
+      }, 1000);
+    }
+  }, [selectedInstrument, instrument, selectedMergeRow, autoSelectedMergeRow, makeAPICall]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoRefreshTimerRef.current) {
+        clearInterval(autoRefreshTimerRef.current);
+      }
+    };
+  }, []);
+
+  // 1. Fetch Template Validation on component mount with full page loader
   useEffect(() => {
     const loadTemplateValidation = async () => {
-      console.log("Loading template validation...");
       setIsLoading(prev => ({ ...prev, template: true }));
+      setFullPageLoading(true);
       try {
         const data = await makeAPICall("InstrumentLock/ValidatingTemplateTobeLoad", {});
         
         if (data && Array.isArray(data) && data.length > 0) {
           const status = data[0]?.L67Status ?? false;
-          console.log("Feature status (L67Status):", status);
           setFeatureStatus(status);
           setShowInstrumentTags(!status);
           
-          // Set file extensions if provided
-          if (data[1]?.sFileExtensionList) {
-            const extensionList = data[1].sFileExtensionList.split(",").map(ext => ext.trim().toLowerCase());
-            setSupportedExtensions(extensionList);
-            console.log("Supported extensions:", extensionList);
+          let extensions = [];
+          if (data[1] && data[1].sFileExtensionList) {
+            extensions = data[1].sFileExtensionList.split(",").map(ext => ext.trim().toLowerCase());
+          }
+          
+          if (extensions.length > 0) {
+            setSupportedExtensions(extensions);
           } else {
-            // Default extensions
             setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
           }
           
-          // Load instruments after template validation
           await loadInstruments(status);
         } else {
-          console.warn("No template validation data received");
+          setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
           showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
         }
       } catch (error) {
-        console.error("Error loading template validation:", error);
+        setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
         showInfoDialog("Failed to load template validation", "information");
       } finally {
         setIsLoading(prev => ({ ...prev, template: false }));
+        setFullPageLoading(false);
       }
     };
     
     loadTemplateValidation();
-  }, [postData, showInfoDialog, t]);
+  }, [makeAPICall, showInfoDialog, t]);
 
   // Load instruments
   const loadInstruments = async (featureStatus) => {
-    console.log("Loading instruments with featureStatus:", featureStatus);
     setIsLoading(prev => ({ ...prev, instruments: true }));
     try {
       const userDetailsData = CF_activeUserdetails();
-      const reqObj = { 
-        sFeature: featureStatus,
-        ...userDetailsData 
-      };
+      const reqObj = { sFeature: featureStatus, ...userDetailsData };
       
       const instrumentsData = await postData("InstrumentLock/LoadInterfaceLockInstrumentNameCombo", reqObj);
-      console.log("Instruments response:", instrumentsData);
       
       if (instrumentsData && Array.isArray(instrumentsData)) {
         const formattedInstruments = instrumentsData.map(inst => ({
@@ -235,27 +1648,31 @@ export default function InstrumentDataPage() {
           label: inst.sInstrumentAliasName || "Unknown Instrument",
           originalItem: inst
         }));
-        console.log("Formatted instruments:", formattedInstruments);
+        
         setInstruments(formattedInstruments);
         
-        // Auto-select first instrument
         if (formattedInstruments.length > 0) {
           const firstInstrument = formattedInstruments[0];
-          console.log("Auto-selecting instrument:", firstInstrument);
           setInstrument(firstInstrument.value);
           setSelectedInstrument(firstInstrument.originalItem);
-          
           await loadInstrumentData({
             value: firstInstrument.value,
             originalItem: firstInstrument.originalItem
           });
+        } else {
+          setInstrument("");
+          setSelectedInstrument(null);
+          setInstruments([]);
         }
       } else {
-        console.warn("No instruments data received");
-        showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
+        setInstruments([]);
+        setInstrument("");
+        setSelectedInstrument(null);
       }
     } catch (error) {
-      console.error("Error loading instruments:", error);
+      setInstruments([]);
+      setInstrument("");
+      setSelectedInstrument(null);
       showInfoDialog("Failed to load instruments", "information");
     } finally {
       setIsLoading(prev => ({ ...prev, instruments: false }));
@@ -263,12 +1680,11 @@ export default function InstrumentDataPage() {
   };
 
   const loadInstrumentData = useCallback(async (instrumentData) => {
-    console.log("Loading data for instrument:", instrumentData);
+    if (!instrumentData || !instrumentData.originalItem) return;
     
     try {
-      // 1. Load instrument tags (if feature is not enabled)
+      // Load instrument tags
       if (showInstrumentTags && instrumentData.originalItem?.sInstrumentID) {
-        console.log("Loading instrument tags for:", instrumentData.originalItem.sInstrumentID);
         setIsLoading(prev => ({ ...prev, instrumentTags: true }));
         try {
           const passObjDet = {
@@ -279,45 +1695,36 @@ export default function InstrumentDataPage() {
           };
           
           const tags = await makeAPICall("InstrumentLock/CurrentLockInstrumentTagInfo", passObjDet);
-          
-          if (tags && Array.isArray(tags)) {
-            setInstrumentTags(tags);
-            console.log("Instrument tags set:", tags.length, "items");
-          }
-        } catch (error) {
-          console.error("Error loading instrument tags:", error);
+          if (tags && Array.isArray(tags)) setInstrumentTags(tags);
         } finally {
           setIsLoading(prev => ({ ...prev, instrumentTags: false }));
         }
       }
 
-      // 2. Load merged files
+      // Load merged files
       if (instrumentData.value && instrumentData.originalItem?.sLockID) {
-        console.log("Loading merged files");
         setIsLoading(prev => ({ ...prev, mergedFiles: true }));
         try {
           const instrumentId = parseInt(instrumentData.value);
-          const passObjDet = {
-            sInstrumentID: instrumentId,
-            sLockID: instrumentData.originalItem.sLockID
-          };
+          const passObjDet = { sInstrumentID: instrumentId, sLockID: instrumentData.originalItem.sLockID };
           
-          console.log("Merged files request:", passObjDet);
           const mergedFilesData = await makeAPICall("InstrumentLock/LoadMergeFileDetails", passObjDet);
           
           if (mergedFilesData && Array.isArray(mergedFilesData)) {
             setMergedFiles(mergedFilesData);
-            console.log("Merged files set:", mergedFilesData.length, "items");
             
-            // AUTO-SELECT FIRST MERGE ROW
+            const mergeCount = mergedFilesData.reduce((count, item) => count + (parseInt(item.nMergeFileCount) || 0), 0);
+            setupAutoRefreshTimer(mergeCount);
+            
             if (mergedFilesData.length > 0) {
               const firstMergeRow = mergedFilesData[0];
-              console.log("Auto-selecting first merge row:", firstMergeRow);
               setAutoSelectedMergeRow(firstMergeRow);
               setSelectedMergeRow(firstMergeRow);
-              
-              // Load merge data for the first row
               await loadMergeFileData(firstMergeRow, true);
+            } else {
+              setAutoSelectedMergeRow(null);
+              setSelectedMergeRow(null);
+              setAutoLoadedMergeData("");
             }
           } else {
             setMergedFiles([]);
@@ -326,7 +1733,6 @@ export default function InstrumentDataPage() {
             setAutoLoadedMergeData("");
           }
         } catch (error) {
-          console.error("Error loading merged files:", error);
           showInfoDialog("Failed to load merged files", "information");
           setMergedFiles([]);
           setAutoSelectedMergeRow(null);
@@ -337,9 +1743,8 @@ export default function InstrumentDataPage() {
         }
       }
 
-      // 3. Load file information
+      // Load file information
       if (instrumentData.originalItem?.sInstrumentID && instrumentData.originalItem?.sTaskID) {
-        console.log("Loading file information");
         setIsLoading(prev => ({ ...prev, fileInformation: true }));
         try {
           const passObjDet = {
@@ -351,17 +1756,17 @@ export default function InstrumentDataPage() {
           
           if (fileInfoData && Array.isArray(fileInfoData)) {
             setFileInformation(fileInfoData);
-            console.log("File information set:", fileInfoData.length, "items");
             
-            // AUTO-SELECT FIRST FILE
             if (fileInfoData.length > 0) {
               const firstFile = fileInfoData[0];
-              console.log("Auto-selecting first file:", firstFile);
               setAutoSelectedFile(firstFile);
               setSelectedFile(firstFile);
-              
-              // Load file data for the first file
               await loadFileData(firstFile, true);
+            } else {
+              setAutoSelectedFile(null);
+              setSelectedFile(null);
+              setAutoLoadedFileTags([]);
+              setAutoLoadedParsedData([]);
             }
           } else {
             setFileInformation([]);
@@ -371,7 +1776,6 @@ export default function InstrumentDataPage() {
             setAutoLoadedParsedData([]);
           }
         } catch (error) {
-          console.error("Error loading file information:", error);
           setFileInformation([]);
           setAutoSelectedFile(null);
           setSelectedFile(null);
@@ -383,14 +1787,12 @@ export default function InstrumentDataPage() {
       }
 
     } catch (error) {
-      console.error("Error loading instrument data:", error);
       showInfoDialog("Failed to load instrument data", "information");
     }
-  }, [postData, showInstrumentTags, showInfoDialog]);
+  }, [makeAPICall, showInstrumentTags, showInfoDialog, setupAutoRefreshTimer]);
 
-  // Function to load merge file data (reusable)
+  // Function to load merge file data
   const loadMergeFileData = async (row, isAutoLoad = false) => {
-    console.log("Loading merge file data for row:", row);
     setIsLoading(prev => ({ ...prev, mergeData: true }));
     
     try {
@@ -402,85 +1804,50 @@ export default function InstrumentDataPage() {
         nInstrumentID: row.nInstrumentID
       };
       
-      console.log("Merge file data request:", passObjDet);
       const response = await makeAPICall("InstrumentLock/MergeFileDatas", passObjDet);
-      
-      console.log("Merge file data response:", response);
       
       if (response) {
         if (response.NullDataStatus === "Created") {
-          showInfoDialog(
-            (response.CreatedList || "") + " " + (response.Message || ""), 
-            "information"
-          );
-          setNullDataRawId(response.CreatedList || "");
-          
-          if (isAutoLoad) {
-            setAutoLoadedMergeData("");
-          } else {
-            setMergeDataContent("");
-          }
+          showInfoDialog((response.CreatedList || "") + " " + (response.Message || ""), "warning");
         } else {
           let mergeContent = "";
           if (response.MergeData) {
             try {
-              // Decode base64 (matching jQuery atob logic)
               mergeContent = atob(response.MergeData);
-              console.log("Decoded merge data:", mergeContent);
-            } catch (error) {
-              console.error("Error decoding merge data:", error);
+            } catch {
               mergeContent = response.MergeData;
             }
           } else if (response.InstData && Array.isArray(response.InstData)) {
-            // If InstData array exists, decode each item
-            const decodedData = response.InstData.map(item => {
-              if (item.sInstrumentData) {
-                try {
-                  return atob(item.sInstrumentData);
-                } catch (e) {
-                  return item.sInstrumentData;
-                }
-              }
-              return item;
-            });
+            const decodedData = response.InstData.map(item => 
+              item.sInstrumentData ? (() => { try { return atob(item.sInstrumentData); } catch { return item.sInstrumentData; } })() : item
+            );
             mergeContent = decodedData.join('\n');
           }
           
-          console.log("Final merge content:", mergeContent);
-          
-          // Handle old/new raw data ID comparison (matching jQuery logic)
           if (oldRawDataID === row.sRawDataID || oldRawDataID === " ") {
             setOldRawDataID(row.sRawDataID);
             if (isAutoLoad) {
-              if (!autoLoadedMergeData) {
-                setAutoLoadedMergeData(mergeContent);
-              }
+              if (!autoLoadedMergeData) setAutoLoadedMergeData(mergeContent);
             } else {
-              if (!mergeDataContent) {
-                setMergeDataContent(mergeContent);
-              }
+              if (!mergeDataContent) setMergeDataContent(mergeContent);
             }
           } else {
             setOldRawDataID(row.sRawDataID);
-            if (isAutoLoad) {
-              setAutoLoadedMergeData(mergeContent);
-            } else {
-              setMergeDataContent(mergeContent);
-            }
+            if (isAutoLoad) setAutoLoadedMergeData(mergeContent);
+            else setMergeDataContent(mergeContent);
           }
         }
       }
     } catch (error) {
-      console.error("Error loading merge file data:", error);
       showInfoDialog("Failed to load merge file data", "information");
     } finally {
       setIsLoading(prev => ({ ...prev, mergeData: false }));
     }
   };
 
-  // Function to load file data (reusable)
+  // Function to load file data
   const loadFileData = async (file, isAutoLoad = false) => {
-    console.log("Loading file data for:", file);
+    setFileViewerSrc("");
     
     try {
       // Load file viewer
@@ -496,28 +1863,14 @@ export default function InstrumentDataPage() {
       
       if (viewerResponse) {
         if (viewerResponse.Rtn?.toLowerCase() === "failed") {
-          showInfoDialog(viewerResponse.Message || "Failed to load file", "information");
+          showInfoDialog(viewerResponse.Message || "Failed to load file", "warning");
         } else if (viewerResponse.Rtn?.toLowerCase() === "success" && viewerResponse.ServerDataViewURL) {
-          console.log("File viewer URL received:", viewerResponse.ServerDataViewURL);
-          
-          // Decrypt the URL if needed (matching jQuery logic)
           let urlPath = viewerResponse.ServerDataViewURL;
-          
-          // Check if it's a supported file type
-          const lastDotIndex = urlPath.lastIndexOf('.');
-          const fileExtension = lastDotIndex !== -1 ? urlPath.substring(lastDotIndex + 1).toLowerCase() : '';
-          
-          if (supportedExtensions.includes(fileExtension)) {
-            setFileViewerSrc(`${urlPath}#toolbar=0&navpanes=0`);
-          } else {
-            // If not supported, hide the iframe (matching jQuery logic)
-            setFileViewerSrc("");
-            showInfoDialog("File format not supported for preview", "information");
-          }
+          if (!urlPath.includes('#')) urlPath += '#toolbar=0&navpanes=0';
+          setFileViewerSrc(urlPath);
         }
       }
     } catch (error) {
-      console.error("Error loading file viewer:", error);
       showInfoDialog("Failed to load file", "information");
     } finally {
       setIsLoading(prev => ({ ...prev, fileViewer: false }));
@@ -535,25 +1888,15 @@ export default function InstrumentDataPage() {
       const tagsResponse = await makeAPICall("InstrumentLock/LoadCategoryValueForFiles", passObjDet);
       
       if (tagsResponse && Array.isArray(tagsResponse)) {
-        if (isAutoLoad) {
-          setAutoLoadedFileTags(tagsResponse);
-        } else {
-          setFileTags(tagsResponse);
-        }
+        if (isAutoLoad) setAutoLoadedFileTags(tagsResponse);
+        else setFileTags(tagsResponse);
       } else {
-        if (isAutoLoad) {
-          setAutoLoadedFileTags([]);
-        } else {
-          setFileTags([]);
-        }
+        if (isAutoLoad) setAutoLoadedFileTags([]);
+        else setFileTags([]);
       }
     } catch (error) {
-      console.error("Error loading file tags:", error);
-      if (isAutoLoad) {
-        setAutoLoadedFileTags([]);
-      } else {
-        setFileTags([]);
-      }
+      if (isAutoLoad) setAutoLoadedFileTags([]);
+      else setFileTags([]);
     } finally {
       setIsLoading(prev => ({ ...prev, fileTags: false }));
     }
@@ -570,25 +1913,15 @@ export default function InstrumentDataPage() {
       const parsedResponse = await makeAPICall("InstrumentLock/getParsedDataDetails", passObjDet);
       
       if (parsedResponse && Array.isArray(parsedResponse)) {
-        if (isAutoLoad) {
-          setAutoLoadedParsedData(parsedResponse);
-        } else {
-          setParsedData(parsedResponse);
-        }
+        if (isAutoLoad) setAutoLoadedParsedData(parsedResponse);
+        else setParsedData(parsedResponse);
       } else {
-        if (isAutoLoad) {
-          setAutoLoadedParsedData([]);
-        } else {
-          setParsedData([]);
-        }
+        if (isAutoLoad) setAutoLoadedParsedData([]);
+        else setParsedData([]);
       }
     } catch (error) {
-      console.error("Error loading parsed data:", error);
-      if (isAutoLoad) {
-        setAutoLoadedParsedData([]);
-      } else {
-        setParsedData([]);
-      }
+      if (isAutoLoad) setAutoLoadedParsedData([]);
+      else setParsedData([]);
     } finally {
       setIsLoading(prev => ({ ...prev, parsedData: false }));
     }
@@ -600,7 +1933,7 @@ export default function InstrumentDataPage() {
       return;
     }
     
-    console.log("Refreshing merged files");
+    setFullPageLoading(true);
     setIsLoading(prev => ({ ...prev, mergedFiles: true }));
     try {
       const passObjDet = {
@@ -613,14 +1946,13 @@ export default function InstrumentDataPage() {
       if (mergedFilesData && Array.isArray(mergedFilesData)) {
         setMergedFiles(mergedFilesData);
         
-        // AUTO-SELECT FIRST MERGE ROW AFTER REFRESH
+        const mergeCount = mergedFilesData.reduce((count, item) => count + (parseInt(item.nMergeFileCount) || 0), 0);
+        setupAutoRefreshTimer(mergeCount);
+        
         if (mergedFilesData.length > 0) {
           const firstMergeRow = mergedFilesData[0];
-          console.log("Auto-selecting first merge row after refresh:", firstMergeRow);
           setAutoSelectedMergeRow(firstMergeRow);
           setSelectedMergeRow(firstMergeRow);
-          
-          // Load merge data for the first row
           await loadMergeFileData(firstMergeRow, true);
         } else {
           setAutoSelectedMergeRow(null);
@@ -634,7 +1966,6 @@ export default function InstrumentDataPage() {
         setAutoLoadedMergeData("");
       }
     } catch (error) {
-      console.error("Error refreshing merged files:", error);
       showInfoDialog("Failed to refresh data", "information");
       setMergedFiles([]);
       setAutoSelectedMergeRow(null);
@@ -642,14 +1973,20 @@ export default function InstrumentDataPage() {
       setAutoLoadedMergeData("");
     } finally {
       setIsLoading(prev => ({ ...prev, mergedFiles: false }));
+      setFullPageLoading(false);
     }
-  }, [selectedInstrument, instrument, postData, showInfoDialog, loadMergeFileData]);
+  }, [selectedInstrument, instrument, makeAPICall, showInfoDialog, loadMergeFileData, setupAutoRefreshTimer]);
 
   const handleInstrumentChange = useCallback(async (value) => {
-    console.log("Instrument changed to:", value);
+    setFullPageLoading(true);
+    
+    if (autoRefreshTimerRef.current) {
+      clearInterval(autoRefreshTimerRef.current);
+      autoRefreshTimerRef.current = null;
+    }
+    
     setInstrument(value);
     const selectedInst = instruments.find(inst => inst.value === value);
-    console.log("Selected instrument:", selectedInst);
     setSelectedInstrument(selectedInst?.originalItem || null);
     setSelectedFile(null);
     setSelectedMergeRow(null);
@@ -658,15 +1995,11 @@ export default function InstrumentDataPage() {
     setMergeDataContent("");
     setParsedData([]);
     setFileTags([]);
-    setNewRawDataID("");
-    setOldRawDataID(" ");
-    setNullDataRawId("");
     setInstrumentTags([]);
     setMergedFiles([]);
     setFileInformation([]);
     setNullData([]);
     
-    // Reset auto-loaded data
     setAutoSelectedFile(null);
     setAutoSelectedMergeRow(null);
     setAutoLoadedMergeData("");
@@ -679,56 +2012,55 @@ export default function InstrumentDataPage() {
         originalItem: selectedInst.originalItem
       });
     }
+    
+    setFullPageLoading(false);
   }, [instruments, loadInstrumentData]);
 
   // Load null data when tab changes to "null"
   useEffect(() => {
     const loadNullData = async () => {
-      if (tab === "null" && selectedInstrument?.nInterInstrumentID && selectedInstrument?.sLockID) {
-        console.log("Loading null data");
-        setIsLoading(prev => ({ ...prev, nullData: true }));
-        try {
-          const passObjDet = {
-            nInterfaceInstID: selectedInstrument.nInterInstrumentID,
-            sLockID: selectedInstrument.sLockID
-          };
-          
-          const nullDataResponse = await makeAPICall("InstrumentLock/FetchNullDataBasedOnInstrument", passObjDet);
-          
-          if (nullDataResponse && Array.isArray(nullDataResponse)) {
-            setNullData(nullDataResponse);
-            console.log("Null data set:", nullDataResponse.length, "items");
+      if (tab === "null") {
+        if (!selectedInstrument) {
+          showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
+          return;
+        }
+        
+        if (selectedInstrument?.nInterInstrumentID && selectedInstrument?.sLockID) {
+          setIsLoading(prev => ({ ...prev, nullData: true }));
+          try {
+            const passObjDet = {
+              nInterfaceInstID: selectedInstrument.nInterInstrumentID,
+              sLockID: selectedInstrument.sLockID
+            };
+            
+            const nullDataResponse = await makeAPICall("InstrumentLock/FetchNullDataBasedOnInstrument", passObjDet);
+            if (nullDataResponse && Array.isArray(nullDataResponse)) setNullData(nullDataResponse);
+          } catch (error) {
+            showInfoDialog("Failed to load null data", "information");
+          } finally {
+            setIsLoading(prev => ({ ...prev, nullData: false }));
           }
-        } catch (error) {
-          console.error("Error loading null data:", error);
-          showInfoDialog("Failed to load null data", "information");
-        } finally {
-          setIsLoading(prev => ({ ...prev, nullData: false }));
         }
       }
     };
 
     loadNullData();
-  }, [tab, selectedInstrument, postData, showInfoDialog]);
+  }, [tab, selectedInstrument, makeAPICall, showInfoDialog, t]);
 
   // Handle file selection
   const handleFileSelect = useCallback(async (file) => {
-    console.log("File selected:", file);
     setSelectedFile(file);
     await loadFileData(file, false);
-  }, [postData, showInfoDialog, supportedExtensions]);
+  }, [loadFileData]);
 
   // Handle merge row selection
   const handleMergeRowSelect = useCallback(async (row) => {
-    console.log("Merge row selection started:", row);
     setSelectedMergeRow(row);
-    setNewRawDataID(row.sRawDataID);
     await loadMergeFileData(row, false);
-  }, [postData, oldRawDataID, mergeDataContent, showInfoDialog]);
+  }, [loadMergeFileData]);
 
   // Handle null data row selection
   const handleNullRowSelect = useCallback((row) => {
-    console.log("Null row selected:", row);
     setSelectedNullRow(row);
   }, []);
 
@@ -738,7 +2070,7 @@ export default function InstrumentDataPage() {
       return;
     }
     
-    console.log("Refreshing file info");
+    setFullPageLoading(true);
     setIsLoading(prev => ({ ...prev, fileInformation: true }));
     try {
       const passObjDet = {
@@ -751,14 +2083,10 @@ export default function InstrumentDataPage() {
       if (fileInfoData && Array.isArray(fileInfoData)) {
         setFileInformation(fileInfoData);
         
-        // AUTO-SELECT FIRST FILE AFTER REFRESH
         if (fileInfoData.length > 0) {
           const firstFile = fileInfoData[0];
-          console.log("Auto-selecting first file after refresh:", firstFile);
           setAutoSelectedFile(firstFile);
           setSelectedFile(firstFile);
-          
-          // Load file data for the first file
           await loadFileData(firstFile, true);
         } else {
           setAutoSelectedFile(null);
@@ -774,7 +2102,6 @@ export default function InstrumentDataPage() {
         setAutoLoadedParsedData([]);
       }
     } catch (error) {
-      console.error("Error refreshing file information:", error);
       showInfoDialog("Failed to refresh data", "information");
       setFileInformation([]);
       setAutoSelectedFile(null);
@@ -783,16 +2110,17 @@ export default function InstrumentDataPage() {
       setAutoLoadedParsedData([]);
     } finally {
       setIsLoading(prev => ({ ...prev, fileInformation: false }));
+      setFullPageLoading(false);
     }
-  }, [selectedInstrument, postData, showInfoDialog, loadFileData]);
+  }, [selectedInstrument, makeAPICall, showInfoDialog, loadFileData]);
 
   const handleRefreshNullData = useCallback(async () => {
     if (!selectedInstrument) {
-      showInfoDialog("Please select an instrument first", "information");
+      showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
       return;
     }
     
-    console.log("Refreshing null data");
+    setFullPageLoading(true);
     setIsLoading(prev => ({ ...prev, nullData: true }));
     try {
       const passObjDet = {
@@ -801,17 +2129,14 @@ export default function InstrumentDataPage() {
       };
       
       const nullDataResponse = await makeAPICall("InstrumentLock/FetchNullDataBasedOnInstrument", passObjDet);
-      
-      if (nullDataResponse && Array.isArray(nullDataResponse)) {
-        setNullData(nullDataResponse);
-      }
+      if (nullDataResponse && Array.isArray(nullDataResponse)) setNullData(nullDataResponse);
     } catch (error) {
-      console.error("Error refreshing null data:", error);
       showInfoDialog("Failed to refresh data", "information");
     } finally {
       setIsLoading(prev => ({ ...prev, nullData: false }));
+      setFullPageLoading(false);
     }
-  }, [selectedInstrument, postData, showInfoDialog]);
+  }, [selectedInstrument, makeAPICall, showInfoDialog, t]);
 
   // Handle null data acknowledgement
   const handleNullDataAcknowledgement = useCallback(async () => {
@@ -820,6 +2145,7 @@ export default function InstrumentDataPage() {
       return;
     }
     
+    setFullPageLoading(true);
     try {
       const passObjDet = {
         nInterfaceInstID: selectedNullRow.nInstrumentID,
@@ -837,105 +2163,88 @@ export default function InstrumentDataPage() {
       }
       
     } catch (error) {
-      console.error("Error acknowledging null data:", error);
       showInfoDialog("Failed to acknowledge null data", "information");
+    } finally {
+      setFullPageLoading(false);
     }
-  }, [postData, selectedNullRow, showInfoDialog, t, handleRefreshNullData]);
+  }, [makeAPICall, selectedNullRow, showInfoDialog, t, handleRefreshNullData]);
 
   // Handle tab change
   const handleTabChange = useCallback((newTab) => {
-    console.log("Tab changed to:", newTab);
     setTab(newTab);
     setSelectedNullRow(null);
-  }, []);
+    
+    if (newTab === "null" && !selectedInstrument) {
+      showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
+    }
+  }, [selectedInstrument, showInfoDialog, t]);
 
   // Format parsed data for InfoBox
   const formattedParsedData = useMemo(() => {
     const dataToUse = parsedData.length > 0 ? parsedData : autoLoadedParsedData;
     return (dataToUse || []).map(item => {
       let fieldName = item.FieldName || "";
-      const bracketMatch = fieldName.match(/\[([^\]]+)\]/);
-      if (bracketMatch) {
-        fieldName = bracketMatch[1];
-      } else {
-        const splitField = fieldName.split("]");
-        if (splitField.length > 1) {
-          fieldName = splitField[1];
-        }
+      const lastBracketIndex = fieldName.lastIndexOf(']');
+      if (lastBracketIndex !== -1) {
+        fieldName = fieldName.substring(lastBracketIndex + 1).trim();
       }
       
-      return {
-        Category: fieldName,
-        Value: item.FieldValue || ""
-      };
+      if (!fieldName || /^\d+$/.test(fieldName)) {
+        const original = item.FieldName || '';
+        if (original.includes('IF0001')) fieldName = 'Parsed Time';
+        else if (original.includes('IF0002')) fieldName = 'Instrument Code';
+        else if (original.includes('IF0003')) fieldName = 'Instrument Name';
+        else fieldName = `Field ${original.replace(/[\[\]]/g, '')}`;
+      }
+      
+      return { Category: fieldName, Value: item.FieldValue || "" };
     });
   }, [parsedData, autoLoadedParsedData]);
 
   // Format file tags for InfoBox
   const formattedFileTags = useMemo(() => {
     const tagsToUse = fileTags.length > 0 ? fileTags : autoLoadedFileTags;
-    return (tagsToUse || []).map(tag => ({
-      Category: tag.Category || "",
-      Value: tag.Value || ""
-    }));
+    return (tagsToUse || []).map(tag => ({ Category: tag.Category || "", Value: tag.Value || "" }));
   }, [fileTags, autoLoadedFileTags]);
 
   // Format instrument tags for InfoBox
   const formattedInstrumentTags = useMemo(() => {
-    return (instrumentTags || []).map(tag => ({
-      Category: tag.Category || "",
-      Value: tag.Value || ""
-    }));
+    return (instrumentTags || []).map(tag => ({ Category: tag.Category || "", Value: tag.Value || "" }));
   }, [instrumentTags]);
 
   // Determine which merge data to display
-  const displayedMergeData = useMemo(() => {
-    return mergeDataContent || autoLoadedMergeData;
-  }, [mergeDataContent, autoLoadedMergeData]);
+  const displayedMergeData = useMemo(() => mergeDataContent || autoLoadedMergeData, [mergeDataContent, autoLoadedMergeData]);
 
-  // Column definitions with Verdana font and 12px size - MATCHING JQUERY
+  // Column definitions
   const mergeColumns = useMemo(() => [
     {
       key: 'sRawDataID',
-      label: t("instrumentlocktag.rawdataid") || 'Raw Data ID',
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.rawdataid") || 'Raw Data ID'}</span>,
       width: "40%",
       enableSearch: true,
       render: (row, isSelected) => {
-        // Check if this is the auto-selected row
         const isAutoSelected = autoSelectedMergeRow && autoSelectedMergeRow.sRawDataID === row.sRawDataID;
-        return (
-          <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected || isAutoSelected ? 'font-bold' : 'font-normal'}`}>
-            {row.sRawDataID}
-          </span>
-        );
+        return <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected || isAutoSelected ? 'font-bold' : 'font-normal'}`}>{row.sRawDataID}</span>;
       }
     },
     {
       key: 'nSequenceNo',
-      label: t("instrumentlocktag.sequenceno") || 'Sequence No',
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.sequenceno") || 'Sequence No'}</span>,
       width: "40%",
       enableSearch: true,
       render: (row, isSelected) => {
         const isAutoSelected = autoSelectedMergeRow && autoSelectedMergeRow.sRawDataID === row.sRawDataID;
-        return (
-          <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected || isAutoSelected ? 'font-bold' : 'font-normal'}`}>
-            {row.nSequenceNo}
-          </span>
-        );
+        return <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected || isAutoSelected ? 'font-bold' : 'font-normal'}`}>{row.nSequenceNo}</span>;
       }
     },
     {
       key: 'nMergeFileCount',
-      label: t("instrumentlocktag.mergefilecount") || 'Merge File Count',
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.mergefilecount") || 'Merge File Count'}</span>,
       width: "20%",
       enableSearch: true,
       render: (row, isSelected) => {
         const isAutoSelected = autoSelectedMergeRow && autoSelectedMergeRow.sRawDataID === row.sRawDataID;
-        return (
-          <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected || isAutoSelected ? 'font-bold' : 'font-normal'}`}>
-            {row.nMergeFileCount}
-          </span>
-        );
+        return <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected || isAutoSelected ? 'font-bold' : 'font-normal'}`}>{row.nMergeFileCount}</span>;
       }
     }
   ], [t, autoSelectedMergeRow]);
@@ -943,175 +2252,106 @@ export default function InstrumentDataPage() {
   const nullDataColumns = useMemo(() => [
     {
       key: 'sRawDataID',
-      label: t("instrumentlocktag.rawdataid") || 'Raw Data ID',
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.rawdataid") || 'Raw Data ID'}</span>,
       width: "25%",
       enableSearch: true,
-      render: (row, isSelected) => (
-        <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>
-          {row.sRawDataID}
-        </span>
-      )
+      render: (row, isSelected) => <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>{row.sRawDataID}</span>
     },
     {
       key: 'nSequenceNo',
-      label: t("instrumentlocktag.sequenceno") || 'Sequence No',
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.sequenceno") || 'Sequence No'}</span>,
       width: "15%",
       enableSearch: true,
-      render: (row, isSelected) => (
-        <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>
-          {row.nSequenceNo}
-        </span>
-      )
+      render: (row, isSelected) => <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>{row.nSequenceNo}</span>
     },
     {
       key: 'nMergeFileCount',
-      label: t("instrumentlocktag.mergefilecount") || 'Merge File Count',
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.mergefilecount") || 'Merge File Count'}</span>,
       width: "15%",
       enableSearch: true,
-      render: (row, isSelected) => (
-        <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>
-          {row.nMergeFileCount}
-        </span>
-      )
+      render: (row, isSelected) => <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>{row.nMergeFileCount}</span>
     },
     {
       key: 'sLockID',
-      label: t("instrumentlocktag.lockid") || 'Lock ID',
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.lockid") || 'Lock ID'}</span>,
       width: "25%",
       enableSearch: true,
-      render: (row, isSelected) => (
-        <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>
-          {row.sLockID}
-        </span>
-      )
+      render: (row, isSelected) => <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>{row.sLockID}</span>
     },
     {
       key: 'nInstrumentID',
-      label: t("instrumentlocktag.instrumentid") || 'Instrument ID',
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.instrumentid") || 'Instrument ID'}</span>,
       width: "20%",
       enableSearch: true,
-      render: (row, isSelected) => (
-        <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>
-          {row.nInstrumentID}
-        </span>
-      )
+      render: (row, isSelected) => <span className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>{row.nInstrumentID}</span>
     }
   ], [t]);
 
   const fileColumns = useMemo(() => [
-  {
-    key: 'File Name',
-    label: t("instrumentlocktag.filename") || 'File Name',
-    width: "40%",
-    enableSearch: true,
-    render: (row, isSelected) => {
-      const fileName = row["ActualFileName"] || row["File Name"] || "";
-      const createdOn = row["Created On"] || "";
-      // REMOVE the isAutoSelected check - only use isSelected
-      return (
-        <div className="flex flex-col">
+    {
+      key: 'File Name',
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.filename") || 'File Name'}</span>,
+      width: "40%",
+      enableSearch: true,
+      render: (row, isSelected) => {
+        const fileName = row["ActualFileName"] || row["File Name"] || "";
+        const createdOn = row["Created On"] || "";
+        return (
           <div className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'} truncate`}>
-            {fileName}  
-          
-              {createdOn}
-            </div>
-       
-        </div>
-      );
-    }
-  },
-  {
-    key: 'Upload Status',
-    label: t("instrumentlocktag.uploadstatus") || 'Upload Status',
-    width: "20%",
-    render: (row) => {
-      const status = row["Upload Status"]?.trim() || "";
-      const statusLower = status.toLowerCase();
-
-      // Use CHECK ICONS with different colors (not dots)
-      if (statusLower.includes("uploaded") || statusLower.includes("success")) {
-        return (
-          <div className="flex items-center justify-center">
-            <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
+            {fileName} {createdOn}
           </div>
         );
-      } else if (statusLower.includes("queue")) {
+      }
+    },
+    {
+      key: 'Upload Status',
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.uploadstatus") || 'Upload Status'}</span>,
+      width: "20%",
+      render: (row) => {
+        const status = row["Upload Status"]?.trim() || "";
+        const statusLower = status.toLowerCase();
+        let color = "text-gray-400";
+        
+        if (statusLower.includes("uploaded") || statusLower.includes("success")) color = "text-green-500";
+        else if (statusLower.includes("queue")) color = "text-amber-500";
+        else if (statusLower.includes("failed") || statusLower.includes("error")) color = "text-red-500";
+        
         return (
           <div className="flex items-center justify-center">
-            <svg className="w-4 h-4 font-bold text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-          </div>
-        );
-      } else if (statusLower.includes("failed") || statusLower.includes("error")) {
-        return (
-          <div className="flex items-center justify-center">
-            <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-          </div>
-        );
-      } else {
-        // For other statuses, show check icon in gray
-        return (
-          <div className="flex items-center justify-center">
-            <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+            <svg className={`w-4 h-4 ${color}`} fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
           </div>
         );
       }
-    }
-  },
-  {
-    key: 'Client Name',
-    label: t("label.clientName") || 'Client Name',
-    width: "40%",
-    enableSearch: true,
-    render: (row, isSelected) => {
-      // REMOVE the isAutoSelected check - only use isSelected
-      return (
+    },
+    {
+      key: 'Client Name',
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t('label.clientName') || 'Client Name'}</span>,
+      width: "40%",
+      enableSearch: true,
+      render: (row, isSelected) => (
         <div className={`text-[12px] text-[#373737] font-['verdana'] ${isSelected ? 'font-bold' : 'font-normal'}`}>
           {row["Client Name"]}
         </div>
-      );
+      )
     }
-  }
-], [t]); 
+  ], [t]);
+
   // Format data for grids
-  const mergeRows = useMemo(() => {
-    return (mergedFiles || []).map((item, index) => ({ 
-      ...item, 
-      id: item.sRawDataID || `merge-${index}`,
-    }));
-  }, [mergedFiles]);
-
-  const nullRows = useMemo(() => {
-    return (nullData || []).map((item, index) => ({ 
-      ...item, 
-      id: item.sRawDataID || `null-${index}`,
-    }));
-  }, [nullData]);
-
-  const files = useMemo(() => {
-    return (fileInformation || []).map((item, index) => ({ 
-      ...item, 
-      id: item.Reference || `file-${index}`,
-    }));
-  }, [fileInformation]);
+  const mergeRows = useMemo(() => (mergedFiles || []).map((item, index) => ({ ...item, id: item.sRawDataID || `merge-${index}` })), [mergedFiles]);
+  const nullRows = useMemo(() => (nullData || []).map((item, index) => ({ ...item, id: item.sRawDataID || `null-${index}` })), [nullData]);
+  const files = useMemo(() => (fileInformation || []).map((item, index) => ({ ...item, id: item.Reference || `file-${index}` })), [fileInformation]);
 
   return (
-    <div className="px-4 font-roboto flex flex-col space-y-2">
-      {/* Information Dialog */}
-      {infoDialog.open && (
-        <Errordialog
-          message={infoDialog.message}
-          type={infoDialog.type}
-          onClose={closeInfoDialog}
-        />
-      )}
+    <div className="font-roboto flex flex-col space-y-2 px-4 relative">
+      {/* Full Page Loader */}
+      <FullPageLoader 
+        loading={fullPageLoading} 
+        text="Loading data..." 
+      />
+      
+      {infoDialog.open && <Errordialog message={infoDialog.message} type={infoDialog.type} onClose={closeInfoDialog} />}
       
       {/* Instrument Dropdown */}
       <div className="mb-1 mt-2">
@@ -1132,42 +2372,27 @@ export default function InstrumentDataPage() {
         </div>
       </div>
 
-      {/* Instrument Tag Information - Show/Hide based on feature status (matching jQuery) */}
+      {/* Instrument Tag Information */}
       {showInstrumentTags && (
         <div className="mb-0">
-          <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">
-            {t("instrumentlocktag.instrumenttagsinformation")}
-          </h3>
-          <InfoBox 
-            data={formattedInstrumentTags} 
-            showEmptyMessage={false}
-          />
+          <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">{t("instrumentlocktag.instrumenttagsinformation")}</h3>
+          <InfoBox data={formattedInstrumentTags} />
         </div>
       )}
 
       {/* Latest Merged File Information */}
       <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
-          <h3 className="text-xs font-bold text-[#4a6fa5]">
-            {t("instrumentlocktag.latestmergedfileinformation")}
-          </h3>
+          <h3 className="text-xs font-bold text-[#4a6fa5]">{t("instrumentlocktag.latestmergedfileinformation")}</h3>
           <div className="flex gap-6">
             <button
-              className={`text-xs font-bold pb-1 transition-colors ${
-                tab === "merge"
-                  ? "text-[#0049b0] text-sm border-b-2 border-[#2883fe] tabSelectedFocus"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
+              className={`text-xs font-bold pb-1 transition-colors ${tab === "merge" ? "text-[#0049b0] text-sm border-b-2 border-[#2883fe]" : "text-gray-600 hover:text-gray-800"}`}
               onClick={() => handleTabChange("merge")}
             >
               {t("instrumentlocktag.mergedata")}
             </button>
             <button
-              className={`text-xs font-bold pb-1 transition-colors ${
-                tab === "null"
-                  ? "text-[#0049b0] text-sm border-b-2 border-[#2883fe] tabSelectedFocus"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
+              className={`text-xs font-bold pb-1 transition-colors ${tab === "null" ? "text-[#0049b0] text-sm border-b-2 border-[#2883fe]" : "text-gray-600 hover:text-gray-800"}`}
               onClick={() => handleTabChange("null")}
             >
               {t("instrumentlocktag.viewnulldata")}
@@ -1182,11 +2407,10 @@ export default function InstrumentDataPage() {
                 icon={RefreshCw}
                 label={t("button.refresh")}
                 onClick={handleRefreshMergedFiles}
-                disabled={!selectedInstrument || isLoading.mergedFiles}
                 loading={isLoading.mergedFiles}
               />
             </div>
-            <div className="w-full overflow-hidden">
+            <div className=" overflow-hidden -m-2">
               <GridLayout
                 columns={mergeColumns}
                 data={mergeRows}
@@ -1194,22 +2418,9 @@ export default function InstrumentDataPage() {
                 height="400px"
                 onRowClick={handleMergeRowSelect}
                 selectedRowId={selectedMergeRow?.id}
-                emptyMessage={selectedInstrument ? "No merged files available" : "Select an instrument to load data"}
+                emptyMessage="No merged files available"
               />
             </div>
-            
-            {/* Merge File Raw Data Display */}
-              <div className="mt-4">
-                <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">
-                  {t("instrumentlocktag.mergedfilerawdata")}
-                </h3>
-                <div className="border border-gray-300 bg-white min-h-[200px] p-1 overflow-auto max-h-[300px]">
-                  <pre className="text-sm font-['helvetica'] m-0 p-0 whitespace-pre-wrap break-words">
-                    {displayedMergeData || "No merge data available"}
-                  </pre>
-                </div>
-              </div>
-            
           </>
         ) : (
           <>
@@ -1218,17 +2429,15 @@ export default function InstrumentDataPage() {
                 label={t("instrumentlocktag.proceedacknowledgement")}
                 onClick={handleNullDataAcknowledgement}
                 variant="primary"
-                disabled={!selectedNullRow}
               />
               <PrimaryButton 
                 icon={RefreshCw}
                 label={t("button.refresh")}
                 onClick={handleRefreshNullData}
-                disabled={!selectedInstrument || isLoading.nullData}
                 loading={isLoading.nullData}
               />
             </div>
-            <div className="w-full overflow-hidden">
+            <div className="overflow-hidden  -m-2">
               <GridLayout
                 columns={nullDataColumns}
                 data={nullRows}
@@ -1236,32 +2445,38 @@ export default function InstrumentDataPage() {
                 height="400px"
                 onRowClick={handleNullRowSelect}
                 selectedRowId={selectedNullRow?.id}
-                emptyMessage={selectedInstrument ? "No null data available" : "Select an instrument to load data"}
+                emptyMessage="No null data available"
               />
             </div>
           </>
         )}
+        
+        {/* Merge File Raw Data Display */}
+        <div className="mt-4">
+          <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">{t("instrumentlocktag.mergedfilerawdata")}</h3>
+          <div className="border border-gray-300 bg-white min-h-[200px] p-1 overflow-auto max-h-[300px]">
+            <pre className="text-sm font-['helvetica'] m-0 p-0 whitespace-pre-wrap break-words">
+              {displayedMergeData || ""}
+            </pre>
+          </div>
+        </div>
       </div>
 
       {/* File Information */}
       <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
-          <h3 className="text-xs font-bold text-[#4a6fa5]">
-            {t("instrumentlocktag.fileinformation")}
-          </h3>
+          <h3 className="text-xs font-bold text-[#4a6fa5]">{t("instrumentlocktag.fileinformation")}</h3>
           <PrimaryButton 
             icon={RefreshCw}
             label={t("button.refresh")}
             onClick={handleRefreshFileInfo}
-            disabled={!selectedInstrument || isLoading.fileInformation}
             loading={isLoading.fileInformation}
           />
         </div>
-        <div className="w-full overflow-hidden">
+        <div className="overflow-hidden -m-2">
           {isLoading.fileInformation ? (
-            <div className="p-4 text-center text-gray-500 bg-white flex items-center justify-center">
+            <div className="text-center text-gray-500 bg-white flex items-center justify-center h-[500px]">
               <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-              Loading file information...
             </div>
           ) : files.length > 0 ? (
             <GridLayout
@@ -1271,53 +2486,42 @@ export default function InstrumentDataPage() {
               hidePagination={false}
               onRowClick={handleFileSelect}
               selectedRowId={selectedFile?.id}
+              emptyMessage="No files available"
             />
           ) : (
-            <div className="p-4 text-center text-gray-500 bg-white">
-              {selectedInstrument ? "No files available" : "Select an instrument to load data"}
-            </div>
+            <GridLayout
+              columns={fileColumns}
+              height="500px"
+              data={[]}
+              hidePagination={false}
+              onRowClick={handleFileSelect}
+              selectedRowId={null}
+              emptyMessage="No files available"
+            />
           )}
         </div>
       </div>
 
-      {/* File Tags Information - Show/Hide based on feature status (matching jQuery) */}
+      {/* File Tags Information */}
       {showInstrumentTags && (
         <div className="mb-4">
-          <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">
-            {t("instrumentlocktag.filetagsinformation")}
-          </h3>
-          <InfoBox 
-            data={formattedFileTags} 
-            showEmptyMessage={false}
-          />
+          <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">{t("instrumentlocktag.filetagsinformation")}</h3>
+          <InfoBox data={formattedFileTags} />
         </div>
       )}
 
       {/* File Raw Data Viewer */}
       <div className="mb-4">
-        <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">
-          {t("instrumentlocktag.filerawdata")}
-        </h3>
-        <div className="bg-white min-h-[200px]">
-            <iframe
-              src={fileViewerSrc}
-              className="w-full h-[200px] border-none"
-              title="File Viewer"
-              sandbox="allow-same-origin"
-            />
-        
+        <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">{t("instrumentlocktag.filerawdata")}</h3>
+        <div className="bg-white min-h-[200px] ">
+          <FileViewer src={fileViewerSrc} />
         </div>
       </div>
 
       {/* Parsed Data */}
       <div className="mb-4">
-        <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">
-          {t("instrumentlocktag.parseddata")}
-        </h3>
-        <InfoBox 
-          data={formattedParsedData} 
-          showEmptyMessage={false}
-        />
+        <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">{t("instrumentlocktag.parseddata")}</h3>
+        <InfoBox data={formattedParsedData} fixedHeight={true} />
       </div>
     </div>
   );
