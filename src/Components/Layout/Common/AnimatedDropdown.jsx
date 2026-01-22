@@ -298,7 +298,7 @@ const AnimatedDropdown = ({
   disabled = false,
   required = false,
   showError = false,
-  borderColor,
+  borderColor,           // ✅ NEW PROP
   type = "text", 
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -310,11 +310,30 @@ const AnimatedDropdown = ({
   const optionsRefs = useRef([]);
   const hasError = required && showError && !value;
 
-  const getValue = (opt) =>
-    valueKey && typeof opt === "object" ? opt[valueKey] : opt;
+  // const getValue = (opt) =>
+  //   valueKey && typeof opt === "object" ? opt[valueKey] : opt;
 
-  const getLabel = (opt) =>
-    displayKey && typeof opt === "object" ? opt[displayKey] : opt;
+  // const getLabel = (opt) =>
+  //   displayKey && typeof opt === "object" ? opt[displayKey] : opt;
+
+  const getValue = (opt) => {
+  // Handle {value, label} objects first
+  if (opt && typeof opt === 'object' && 'value' in opt) {
+    return String(opt.value || '');
+  }
+  // Fallback for other cases
+  return valueKey && typeof opt === "object" ? String(opt[valueKey] || '') : String(opt || '');
+};
+
+const getLabel = (opt) => {
+  // Handle {value, label} objects first
+  if (opt && typeof opt === 'object' && 'label' in opt) {
+    return String(opt.label || '');
+  }
+  // Fallback for other cases
+  return displayKey && typeof opt === "object" ? String(opt[displayKey] || '') : String(opt || '');
+};
+
 
   const getDisplayValue = () => {
     if (!value) return "";
