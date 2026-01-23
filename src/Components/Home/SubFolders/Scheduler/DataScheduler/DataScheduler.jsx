@@ -9,6 +9,9 @@ import Errordialog from '../../../../Layout/Common/Errordialog';
 import { t } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
+import AuditTrail from '../../../../Layout/Common/AuditTrail';
+// import { useNavigate } from 'react-router-dom';
+import { useSchedulerNavigation } from '../../../../../Context/SchedulerNavigationContext';
 
 const isPastDate = (dateStr) => {
     if (!dateStr) return false;
@@ -113,84 +116,43 @@ const SelectorDropdown = ({
 
             {/* Options List */}
             <div className="max-h-48 overflow-y-auto bg-white custom-scrollbar">
-                {/* {// In the SelectorDropdown component, update the option rendering:
-                    filteredOptions.map((option) => {
-                        const isSelected = selectedValues.includes(option);
-                        const isDisabled = disabledOptions.includes(option);
-                        const isNone = option.toUpperCase() === 'NONE';
-
-                        return (
-                            <div
-                                key={option}
-                                onClick={() => !isDisabled && onSelect(option)}
-                                className={`flex items-center gap-3 px-3 py-2 border-l-4 font-['Verdana'] ${isDisabled
-                                        ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50 blur-[0.3px]'
-                                        : isSelected
-                                            ? 'bg-blue-50 border-blue-500 text-black cursor-pointer'
-                                            : 'bg-white border-transparent text-gray-900 hover:bg-gray-50 cursor-pointer'
-                                    } ${isNone && isSelected ? 'border-l-4 border-blue-500' : ''
-                                    }`}
-                            >
-                                <div
-                                    className={`w-4 h-4 border rounded flex items-center justify-center flex-shrink-0 ${isDisabled
-                                            ? 'bg-gray-100 border-gray-300'
-                                            : isSelected
-                                                ? 'bg-blue-500 border-blue-500'
-                                                : 'bg-white border-gray-300'
-                                        } ${isNone && isSelected ? 'bg-blue-500 border-blue-500' : ''}`}
-                                >
-                                    {isSelected && !isDisabled && (
-                                        <Check size={12} className="text-white" strokeWidth={3} />
-                                    )}
-                                </div>
-                                <span className="text-xs font-bold">{option}</span>
-                            </div>
-                        );
-                    })} */}
                 {filteredOptions.map((option) => {
-                    const isSelected = selectedValues.includes(option);
+                    // const isSelected = selectedValues.includes(option);
+                    const isSelected = selectedValues.some(val =>
+                        val.toString().toUpperCase() === option.toString().toUpperCase()
+                    );
                     const isDisabled = disabledOptions.includes(option);
                     const isNone = option.toUpperCase() === 'NONE';
+
 
                     return (
                         <div
                             key={option}
                             onClick={() => !isDisabled && onSelect(option)}
-                            className={`flex items-center gap-3 px-3 py-2 border-l-4 font-['Verdana'] ${isDisabled
-                                ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50 blur-[0.3px]'
-                                : isSelected
-                                    ? 'bg-blue-50 border-blue-500 text-black cursor-pointer'
-                                    : 'bg-white border-transparent text-gray-900 hover:bg-gray-50 cursor-pointer'
-                                } ${isNone && isSelected ? 'border-l-4 border-blue-500' : ''
+                            className={`flex items-center gap-3 px-3 py-2 border-l-4 font-['Verdana'] 
+            ${isDisabled && !isNone // NONE shouldn't be disabled visually even if in disabledOptions
+                                    ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50 blur-[0.3px]'
+                                    : isSelected
+                                        ? 'bg-blue-50 border-blue-500 text-black cursor-pointer'
+                                        : 'bg-white border-transparent text-gray-900 hover:bg-gray-50 cursor-pointer'
                                 }`}
                         >
-                            {/* <div
-                                className={`w-4 h-4 border rounded flex items-center justify-center flex-shrink-0 ${isDisabled
-                                    ? 'bg-gray-100 border-gray-300'
-                                    : isSelected
+
+                            <div
+                                className={`w-4 h-4 border rounded flex items-center justify-center flex-shrink-0 
+                ${isSelected
                                         ? 'bg-blue-500 border-blue-500'
                                         : 'bg-white border-gray-300'
-                                    } ${isNone && isSelected ? 'bg-blue-500 border-blue-500' : ''
                                     }`}
                             >
-                                {isSelected && !isDisabled && (
-                                    <Check size={12} className="text-white" strokeWidth={3} />
-                                )}
-                            </div> */}
-                            <div
-                                className={`w-4 h-4 border rounded flex items-center justify-center flex-shrink-0 ${isDisabled && !isNone // Allow NONE even if it's in disabledOptions
-                                    ? 'bg-gray-100 border-gray-300'
-                                    : isSelected
-                                        ? 'bg-blue-500 border-blue-500'
-                                        : 'bg-white border-gray-300'
-                                    } ${isNone && isSelected ? 'bg-blue-500 border-blue-500' : ''}`}
-                            >
-                                {/* Always show check for NONE when selected, even if disabled */}
-                                {isSelected && (!isDisabled || isNone) && (
+                                {/* Show check for all selected items */}
+                                {isSelected && (
                                     <Check size={12} className="text-white" strokeWidth={3} />
                                 )}
                             </div>
-                            <span className="text-xs font-bold">{option}</span>
+                            <span className={`text-xs font-bold ${isSelected ? 'text-blue-600' : ''}`}>
+                                {option}
+                            </span>
                         </div>
                     );
                 })}
@@ -212,69 +174,84 @@ const TagMasterRow = ({
     setSampleFilenameError,
     delimiterError,
     setDelimiterError,
-    delimiterOptions
+    delimiterOptions,
+    tagRowErrors = [],
+    isSelected,
+    onSelect,
+    onRowDataChange
 }) => {
-    const [rowSourceFlag, setRowSourceFlag] = useState(tag.sSourceFlag || 'NONE');
+    const [rowSourceFlag, setRowSourceFlag] = useState(tag.sSourceFlag || '');
     const [rowMetadata, setRowMetadata] = useState(tag.sTextData || '');
     const [rowError, setRowError] = useState(false);
 
     const [selectedParsedItem, setSelectedParsedItem] = useState(null);
 
+    useEffect(() => {
+        // Clear metadata when sample filename is removed AND source flag is Filename
+        if (!sampleFilename.trim() && rowSourceFlag === 'Filename') {
+            setRowMetadata('');
+            setShowMetadataTooltip(null);
+            setSelectedParsedItem(null);
+        }
+    }, [sampleFilename, rowSourceFlag]);
+
+    // Add this after your existing state declarations in TagMasterRow
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            // Close if clicking outside the tooltip
+            const tooltip = document.querySelector('.metadata-tooltip');
+            const pencilButton = document.querySelector(`[data-pencil-id="${index}"]`);
+
+            if (tooltip && !tooltip.contains(e.target) &&
+                pencilButton && !pencilButton.contains(e.target)) {
+                setShowMetadataTooltip(null);
+                setSelectedParsedItem(null);
+            }
+        };
+
+        if (showMetadataTooltip === index) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showMetadataTooltip, index]);
+
+    // Sync row data changes to parent
+    useEffect(() => {
+        if (onRowDataChange) {
+            onRowDataChange(index, rowSourceFlag, rowMetadata);
+        }
+    }, [rowSourceFlag, rowMetadata]);
+
     const handleRadioChange = (newValue) => {
         setRowSourceFlag(newValue);
         setRowMetadata('');
         setRowError(false);
+
+        // Update parent immediately
+        if (onRowDataChange) {
+            onRowDataChange(index, newValue, '');
+        }
     };
 
-    // const handlePencilClick = (e) => {
-    //     e.stopPropagation(); // Prevent event bubbling
-
-    //     let hasError = false;
-
-    //     if (rowSourceFlag === 'Filename') {
-    //         if (!sampleFilename.trim()) {
-    //             setSampleFilenameError(true);
-    //             hasError = true;
-    //         } else {
-    //             const hasExtension = sampleFilename.includes('.') &&
-    //                 sampleFilename.lastIndexOf('.') < sampleFilename.length - 1;
-    //             if (!hasExtension) {
-    //                 setSampleFilenameError(true);
-    //                 hasError = true;
-    //             } else {
-    //                 setSampleFilenameError(false);
-    //             }
-    //         }
-
-    //         if (!selectedDelimiters.length) {
-    //             setDelimiterError(true);
-    //             hasError = true;
-    //         } else {
-    //             setDelimiterError(false);
-    //         }
-
-    //         if (hasError) {
-    //             setRowError(true);
-    //             return;
-    //         }
-    //     }
-
-    //     const concatenatedDelimiter = ConcatenateDelimeterfromlist(selectedDelimiters, delimiterOptions);
-    //     const result = SplitFilenamewithExt(sampleFilename, concatenatedDelimiter);
-
-    //     let parsedData = [...result.splitpath];
-    //     if (result.lastDot > -1 && result.extension) {
-    //         parsedData.push(result.extension);
-    //     }
-
-    //     setParsedMetadata(parsedData);
-    //     setShowMetadataTooltip(index);
-    //     setRowError(false);
-    // };
-
+    const handleInputFocus = () => {
+        // Clear error for this row when user focuses on it
+        if (tagRowErrors.includes(index)) {
+            const updatedErrors = tagRowErrors.filter(i => i !== index);
+            // You need to pass this up to parent
+            // Or handle it differently
+        }
+    };
 
     const handlePencilClick = (e) => {
         e.stopPropagation();
+        // Toggle: if already open, close it
+        if (showMetadataTooltip === index) {
+            setShowMetadataTooltip(null);
+            return;
+        }
 
         let hasError = false;
 
@@ -334,14 +311,8 @@ const TagMasterRow = ({
         setRowError(false);
     };
 
-    // const handleParsedItemClick = (item) => {
-    //     setRowMetadata(item);
-    //     setShowMetadataTooltip(null);
-    // };
-
     const handleParsedItemClick = (item) => {
         setSelectedParsedItem(item);
-        // Don't update rowMetadata yet - only on double click or submit
     };
 
     const handleSubmitParsedData = () => {
@@ -359,7 +330,11 @@ const TagMasterRow = ({
     };
 
     return (
-        <tr key={tag.sTagID} className={index % 2 === 0 ? "bg-blue-50/30 border-b border-gray-100" : "bg-white border-b border-gray-100"}>
+        <tr
+            key={tag.sTagID}
+            className={index % 2 === 0 ? "bg-blue-50/30 border-b border-gray-100" : "bg-white border-b border-gray-100"}
+            onClick={() => onSelect && onSelect()}
+        >
             {/* Tag Name */}
             <td className="px-6 py-4 font-medium text-gray-900">
                 {tag.sTagName}
@@ -368,6 +343,20 @@ const TagMasterRow = ({
             {/* Extract From */}
             <td className="px-6 py-4">
                 <div className="flex items-center gap-4">
+                    {/* <label className="flex items-center cursor-pointer group">
+                        <input
+                            type="radio"
+                            name={`extract_${tag.sTagID}`}
+                            className="hidden peer"
+                            checked={rowSourceFlag === 'NONE'}
+                            onChange={() => handleRadioChange('NONE')}
+                        />
+                        <div className="w-4 h-4 border border-gray-300 rounded-full flex items-center justify-center peer-checked:border-blue-500 peer-checked:bg-white transition-colors">
+                            <div className={`w-2 h-2 bg-blue-500 rounded-full transition-transform ${rowSourceFlag === 'NONE' ? 'scale-100' : 'scale-0'}`}></div>
+                        </div>
+                        <span className="ml-2 text-sm text-gray-700 font-bold group-hover:text-blue-600 select-none">NONE</span>
+                    </label> */}
+
                     <label className="flex items-center cursor-pointer group">
                         <input
                             type="radio"
@@ -412,68 +401,11 @@ const TagMasterRow = ({
                 </div>
             </td>
 
-            {/* Metadata */}
-            {/* <td className="px-6 py-4 relative">
-                <div className="flex items-center gap-2"> */}
-            {/* <input
-                        type="text"
-                        value={rowMetadata}
-                        onChange={(e) => setRowMetadata(e.target.value)}
-                        disabled={rowSourceFlag === 'NONE'}
-                        className={`flex-1 py-1 text-sm focus:outline-none ${rowSourceFlag === 'NONE'
-                            ? 'bg-transparent cursor-not-allowed'
-                            : 'bg-white border-b-2 focus:border-blue-400'
-                            } ${rowError ? 'border-red-500' : 'border-gray-200'}`} */}
-            {/* <input
-                        type="text"
-                        value={rowMetadata}
-                        onChange={(e) => setRowMetadata(e.target.value)}
-                        className={`flex-1 py-1 text-sm focus:outline-none ${rowSourceFlag === 'NONE'
-                            ? 'bg-transparent'
-                            : 'bg-white border-b-2 focus:border-blue-400 border-gray-200'
-                            }`}
-                        // placeholder={rowSourceFlag === 'Filename' ? "Select from parsed data" : rowSourceFlag === 'Folder' ? "Enter folder level" : ""}
-                    /> */}
-
-            {/* Info icon for Folder */}
-            {/* {rowSourceFlag === 'Folder' && (
-                        <div className="relative group z-[99999]">
-                            <svg
-                                className="w-4 h-4 text-gray-400 cursor-help"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                            >
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                            </svg>
-                            <div className="absolute right-full mr-2 hidden group-hover:block z-[99999]"> top-1/2 -translate-y-1/2 */}
-            {/* <div className="bg-white border border-gray-300 text-black text-xs px-3 py-2 rounded shadow-lg whitespace-nowrap">
-                                    For parent folder enter 0, Grand parent enter -1 and so on...
-                                </div>
-                            </div>
-                        </div>
-                    )} */}
-
-
-
-            {/* Pencil icon for Filename */}
-            {/* {rowSourceFlag === 'Filename' && (
-                        <button
-                            data-pencil-id={index}
-                            onClick={handlePencilClick}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="View parsed metadata"
-                        >
-                            <Pencil size={16} />
-                        </button>
-                    )} */}
-            {/* </div> */}
-
-
-            {/* Metadata */}
+            {/* Metadata column - UPDATED with red border logic */}
             <td className="px-6 py-4 relative">
+
                 {rowSourceFlag === 'Filename' ? (
-                    <div className="flex items-center justify-between">
-                        {/* Show selected value or placeholder */}
+                    <div className={`flex items-center justify-between ${tagRowErrors.length > 0 && !isSelected && !rowMetadata.trim() ? 'border-2 border-red-500 p-2 rounded' : ''}`}>
                         <div className={`text-sm ${rowMetadata ? 'text-gray-900' : 'text-gray-500 italic'}`}>
                             {rowMetadata || "Click pencil to select"}
                         </div>
@@ -491,13 +423,70 @@ const TagMasterRow = ({
                         <input
                             type="text"
                             value={rowMetadata}
-                            onChange={(e) => setRowMetadata(e.target.value)}
-                            disabled={rowSourceFlag === 'NONE'}
-                            className={`flex-1 py-1 text-sm focus:outline-none ${rowSourceFlag === 'NONE'
-                                ? 'bg-transparent cursor-not-allowed'
-                                : 'bg-white border-b-2 focus:border-blue-400 border-gray-200'
+                            onChange={(e) => {
+                                const value = e.target.value;
+
+                                /* ================= NONE ================= */
+                                if (rowSourceFlag === 'NONE' || rowSourceFlag === '') {
+                                    if (value.length > 50) return;
+                                    if (!CF_textFieldValidation(value)) return;
+                                    setRowMetadata(value);
+                                    return;
+                                }
+
+                                /* ================= Folder ================= */
+                                if (rowSourceFlag === 'Folder') {
+                                    const value = e.target.value;
+
+                                    // Allow empty or just "-"
+                                    if (value === '' || value === '-') {
+                                        setRowMetadata(value);
+                                        return;
+                                    }
+
+                                    // Check if valid format: single '0' or negative numbers without leading zeros
+                                    if (value === '0') {
+                                        setRowMetadata(value);
+                                        return;
+                                    }
+
+                                    // Check for negative numbers from -1 to -99 without leading zeros
+                                    if (/^-\d{1,2}$/.test(value)) {
+                                        const num = Number(value);
+                                        if (num >= -99 && num <= -1) {
+                                            setRowMetadata(value);
+                                        }
+                                    }
+                                }
+                            }}
+                            // className={`flex-1 py-1 text-sm focus:outline-none bg-white border-b-2 focus:border-blue-400 transition-colors 
+                            //     ${tagRowErrors.includes(index) &&
+                            //         (rowSourceFlag === 'Folder' || rowSourceFlag === 'Filename') &&
+                            //         !rowMetadata.trim()
+                            //         ? 'border-red-500 border-2'
+                            //         : 'border-gray-200'
+                            //     }`}
+                            //                         onFocus={handleInputFocus}
+                            //                         // onBlur={handleInputBlur}
+                            //                         className={`flex-1 py-1 text-sm focus:outline-none bg-white border-b-2 focus:border-blue-400 transition-colors 
+                            // ${tagRowErrors.length > 0 &&
+                            //                                 !isSelected && // NOT the selected row (omit selected row from red border)
+                            //                                 (rowSourceFlag === 'Folder' || rowSourceFlag === 'Filename') &&
+                            //                                 !rowMetadata.trim()
+                            //                                 ? 'border-red-500 border-2'
+                            //                                 : 'border-gray-200'
+                            //                             }`}
+
+                            onFocus={handleInputFocus}
+                            className={`flex-1 py-1 text-sm focus:outline-none bg-white border-b-2 focus:border-blue-400 transition-colors 
+        ${tagRowErrors.length > 0 && // When ANY row has error
+                                    !isSelected && // AND this is NOT the selected row
+                                    !rowMetadata.trim() // AND this row has empty metadata
+                                    ? 'border-red-500 border-2'
+                                    : 'border-gray-200'
                                 }`}
                         />
+
                         {/* Info icon for Folder */}
                         {rowSourceFlag === 'Folder' && (
                             <div className="relative group z-[99999]">
@@ -514,102 +503,9 @@ const TagMasterRow = ({
                     </div>
                 )}
 
-                {/* {showMetadataTooltip === index && rowSourceFlag === 'Filename' && (
-                    <div
-                        className="fixed z-[99999] bg-white border border-gray-300 rounded-md shadow-lg"
-                        style={{
-                            position: 'fixed',
-                            width: '256px',
-                            zIndex: 99999
-                        }}
-                        ref={(el) => {
-                            if (el) {
-                                const pencilButton = document.querySelector(`[data-pencil-id="${index}"]`);
-                                if (pencilButton) {
-                                    const rect = pencilButton.getBoundingClientRect();
-                                    // Position to the left and above the pencil icon
-                                    el.style.left = `${rect.left - 264}px`; // 256px width + 8px gap
-                                    el.style.top = `${rect.top - el.offsetHeight - 8}px`;
-
-                                    // If it goes off screen on the left, position to the right instead
-                                    if (rect.left - 264 < 0) {
-                                        el.style.left = `${rect.right + 8}px`;
-                                    }
-
-                                    // If it goes off screen on top, position below instead
-                                    if (rect.top - el.offsetHeight - 8 < 0) {
-                                        el.style.top = `${rect.bottom + 8}px`;
-                                    }
-                                }
-                            }
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="p-2 border-b border-gray-300">
-                            <label className="text-xs text-gray-600 font-semibold">Parsed Metadata:</label>
-                        </div>
-
-                        
-
-                        <div className="max-h-40 overflow-y-auto custom-scrollbar">
-                            {parsedMetadata.length === 0 ? (
-                                <div className="px-3 py-6 text-center text-sm text-gray-500">
-                                    No delimiter found in filename
-                                </div>
-                            ) : (
-                                parsedMetadata.map((item, i) => (
-                                    <div
-                                        key={i}
-                                        onClick={() => handleParsedItemClick(item)}
-                                        onDoubleClick={() => handleDoubleClick(item)}
-                                        className={`px-3 py-2 text-sm cursor-pointer border-b last:border-b-0 transition-colors ${selectedParsedItem === item
-                                            ? 'bg-blue-100 text-blue-700 font-semibold border-l-4 border-blue-500'
-                                            : 'hover:bg-blue-50'
-                                            }`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <span>{item}</span>
-                                            {selectedParsedItem === item && (
-                                                <Check size={14} className="text-blue-500" />
-                                            )}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
-
-                        <div className="border-t border-gray-300">
-                            <p className="text-xs text-gray-500 italic px-3 pt-2">
-                                Single click to select, double-click to apply, or click Submit
-                            </p>
-                            
-                            <div className="flex justify-end gap-2 p-2 border-t border-gray-300">
-                                <button
-                                    onClick={handleSubmitParsedData}
-                                    className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
-                                    disabled={!selectedParsedItem}
-                                >
-                                    Submit
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowMetadataTooltip(null);
-                                        setSelectedParsedItem(null);
-                                    }}
-                                    className="border border-gray-300 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-50"
-                                >
-                                    Close
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )} */}
-
-
                 {showMetadataTooltip === index && rowSourceFlag === 'Filename' && (
                     <div
-                        className="fixed z-[99999] bg-white border border-gray-300 rounded-md shadow-lg"
+                        className="fixed z-[99999] bg-white border border-gray-300 rounded-md shadow-lg metadata-tooltip"
                         style={{
                             position: 'fixed',
                             width: '256px',
@@ -777,23 +673,6 @@ const ConcatenateDelimeterfromlist = (Delimeterlst, delimiterOptions) => {
     return concatdelimeter || "None";
 };
 
-// const SplitFilenamewithExt = (samplefilename, Delimeter) => {
-//     console.log("Splitting filename:", samplefilename, "with delimiter:", Delimeter);
-
-//     let lastDot = samplefilename.lastIndexOf('.');
-//     let filename = "", extension = "";
-
-//     if (lastDot > -1) {
-//         filename = samplefilename.slice(0, lastDot);
-//         extension = samplefilename.slice(lastDot + 1);
-//         var splitpath = splitfilenamewithdelimeter(filename, Delimeter);
-//     } else {
-//         var splitpath = splitfilenamewithdelimeter(samplefilename, Delimeter);
-//     }
-
-//     return { "lastDot": lastDot, "splitpath": splitpath, "extension": extension };
-// };
-
 const SplitFilenamewithExt = (samplefilename, Delimeter) => {
     console.log("Splitting filename:", samplefilename, "with delimiter:", Delimeter);
 
@@ -832,14 +711,24 @@ const splitfilenamewithdelimeter = (filename, Delimeter) => {
     return splitfilename;
 };
 
-const SearchServerData = () => {
+const DataScheduler = () => {
+    const { navigateToInstrumentLockTag, navigateToActivatedTask, navigateToDeactivatedTask } = useSchedulerNavigation();
     const { t } = useTranslation();
+    // const navigate = useNavigate();
+    const { setNavigationData } = useSchedulerNavigation();
+
+    // const daysCombo = [
+    //     { Date: t("label.days"), Number: "Days" },
+    //     { Date: t("label.weeks"), Number: "Weeks" },
+    //     { Date: t("label.months"), Number: "Months" },
+    //     { Date: t("label.year"), Number: "Years" }
+    // ];
 
     const daysCombo = [
-        { Date: t("label.days"), Number: "Days" },
-        { Date: t("label.weeks"), Number: "Weeks" },
-        { Date: t("label.months"), Number: "Months" },
-        { Date: t("label.year"), Number: "Years" }
+        { DaysType: t("label.days"), DaysValue: "Days" },
+        { DaysType: t("label.weeks"), DaysValue: "Weeks" },
+        { DaysType: t("label.months"), DaysValue: "Months" },
+        { DaysType: t("label.year"), DaysValue: "Years" }
     ];
 
     const monthOptions = [
@@ -928,7 +817,13 @@ const SearchServerData = () => {
     const [clientError, setClientError] = useState(false);
     const [usernameError, setUsernameError] = useState(false);
     const [passwordError, setPasswordError] = useState(false);
-
+    const [instrumentError, setInstrumentError] = useState(false);
+    const [destinationError, setDestinationError] = useState(false);
+    const [filterError, setFilterError] = useState(false);
+    const [methodError, setMethodError] = useState(false);
+    const [levelValueError, setLevelValueError] = useState(false);
+    const [filesOlderDaysError, setFilesOlderDaysError] = useState(false);
+    const [auditFilterError, setAuditFilterError] = useState(false);
 
     // UNC Path states
     const [isUNCPathEnabled, setIsUNCPathEnabled] = useState(false);
@@ -945,7 +840,8 @@ const SearchServerData = () => {
     const [filesOlderThanEnabled, setFilesOlderThanEnabled] = useState(false);
     const [filesOlderDays, setFilesOlderDays] = useState('');
     const [filesOlderDaysUnit, setFilesOlderDaysUnit] = useState('Days');
-    const [localDeleteMode, setLocalDeleteMode] = useState('automatic');
+    const [localDeleteMode, setLocalDeleteMode] = useState(1);
+    const [serverDeleteMode, setServerDeleteMode] = useState(1);
     const [filesOlderThanDate, setFilesOlderThanDate] = useState(new Date().toLocaleDateString('en-GB'));
     const [filesOlderThanDateEnabled, setFilesOlderThanDateEnabled] = useState(false);
 
@@ -958,7 +854,6 @@ const SearchServerData = () => {
 
     // File Delete Policy states
     const [applyDeletePolicy, setApplyDeletePolicy] = useState(false);
-    const [serverDeleteMode, setServerDeleteMode] = useState('automatic');
     const [enableFileLink, setEnableFileLink] = useState(false);
 
     // Compliance Policy states
@@ -1047,8 +942,6 @@ const SearchServerData = () => {
 
     const [isManualTyping, setIsManualTyping] = useState(false);
 
-    // const [hasShownTriggerError, setHasShownTriggerError] = useState(false);
-    // const [hasShownExpiryError, setHasShownExpiryError] = useState(false);
     const [lastTriggerDateWasValid, setLastTriggerDateWasValid] = useState(true);
     const [lastExpiryDateWasValid, setLastExpiryDateWasValid] = useState(true);
 
@@ -1065,13 +958,12 @@ const SearchServerData = () => {
     const [sampleFilename, setSampleFilename] = useState('');
     const [sampleFilenameError, setSampleFilenameError] = useState(false);
     const [delimiterError, setDelimiterError] = useState(false);
-    const [showMetadataTooltip, setShowMetadataTooltip] = useState(null); // null or row index
+    const [showMetadataTooltip, setShowMetadataTooltip] = useState(null);
     const [parsedMetadata, setParsedMetadata] = useState([]);
     const [ruleNameOptions, setRuleNameOptions] = useState([]);
 
     const [selectedRuleName, setSelectedRuleName] = useState('');
 
-    // Add these states
     const [ruleGridData, setRuleGridData] = useState([]);
     const [newRuleMetadata, setNewRuleMetadata] = useState('');
     const [newRuleTagName, setNewRuleTagName] = useState('');
@@ -1080,10 +972,33 @@ const SearchServerData = () => {
     const [showRelOpSelector, setShowRelOpSelector] = useState(false);
     const [ruleGridError, setRuleGridError] = useState(false);
 
+    const [tagGridError, setTagGridError] = useState(false);
+
     const [tagNameSearchTerm, setTagNameSearchTerm] = useState('');
     const [selectedRowId, setSelectedRowId] = useState(null);
     const [newRuleRelationalOp, setNewRuleRelationalOp] = useState('');
     const [relOpSearchTerm, setRelOpSearchTerm] = useState('');
+    const [uncDomainError, setUncDomainError] = useState(false);
+    const [templateError, setTemplateError] = useState(false);
+
+    const [tagRowErrors, setTagRowErrors] = useState([]);  // Track which tag rows have errors
+    const [selectedTagRowIndex, setSelectedTagRowIndex] = useState(null);
+
+
+    // Add these after other state declarations in SearchServerData component
+    const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+    const [isManualParsingInstrument, setIsManualParsingInstrument] = useState(false);
+    const [submitAction, setSubmitAction] = useState(''); // 'save', 'saveActivate', 'activateLock'
+    // Add to your state declarations:
+    const [submitPassObjDet, setSubmitPassObjDet] = useState(null);
+
+    const [mode, setMode] = useState('create');
+
+    // Add to your state declarations (around line 220-230):
+    const [showAuditTrail, setShowAuditTrail] = useState(false);
+    const [auditAction, setAuditAction] = useState(''); // 'saveActivate' or 'activateLock'
+    const [auditData, setAuditData] = useState(null);
+    const [auditPasswordError, setAuditPasswordError] = useState(false);
 
     // Ref for the scrollable container (The specific div that scrolls)
     const scrollContainerRef = useRef(null);
@@ -1180,104 +1095,6 @@ const SearchServerData = () => {
             .padStart(2, '0')}/${year}`;
     };
 
-    // const handleAddRule = () => {
-    //     // Check if all fields are empty
-    //     const isEmpty = !newRuleMetadata.trim() && !newRuleTagName && !newRuleFieldValue.trim();
-
-    //     if (isEmpty) {
-    //         setRuleGridError(true);
-
-    //         // Show error dialog
-    //         // setErrorDialog({
-    //         //     isOpen: true,
-    //         //     message: 'Please fill at least one column in the rule grid',
-    //         //     type: 'warning'
-    //         // });
-    //         return;
-    //     }
-
-    //     // Clear error if validation passes
-    //     setRuleGridError(false);
-
-    //     // Create new rule object
-    //     const newRule = {
-    //         id: Date.now(), // Unique ID
-    //         ruleName: selectedRuleName,
-    //         metadata: newRuleMetadata,
-    //         tagName: newRuleTagName,
-    //         relationalOp: newRuleRelationalOp,
-    //         fieldValue: newRuleFieldValue
-    //     };
-
-    //     // Add to grid data
-    //     setRuleGridData(prev => [...prev, newRule]);
-
-    //     // Clear form fields
-    //     setNewRuleMetadata('');
-    //     setNewRuleTagName('');
-    //     setNewRuleRelationalOp('=');
-    //     setNewRuleFieldValue('');
-    // };
-
-    // const handleAddRule = () => {
-    //     let hasError = false;
-
-    //     // Validate that at least one field has data
-    //     if (!newRuleMetadata.trim() && !newRuleTagName && !newRuleFieldValue.trim()) {
-    //         hasError = true;
-    //         // Show red border to whole grid
-    //         setRuleGridError(true);
-    //     }
-
-    //     // Individual field validation - show error for each empty field
-    //     const metadataError = !newRuleMetadata.trim();
-    //     const tagNameError = !newRuleTagName;
-    //     const fieldValueError = !newRuleFieldValue.trim();
-
-    //     if (hasError) {
-    //         setErrorDialog({
-    //             isOpen: true,
-    //             message: 'Please fill at least one column in the rule grid',
-    //             type: 'warning'
-    //         });
-    //         return;
-    //     }
-
-    //     // If metadata is empty, don't add to grid and show error
-    //     if (metadataError) {
-    //         setErrorDialog({
-    //             isOpen: true,
-    //             message: 'Metadata is required. Please enter metadata value.',
-    //             type: 'warning'
-    //         });
-    //         // Show red border only for metadata input
-    //         setRuleGridError(true);
-    //         return;
-    //     }
-
-    //     // Clear error if validation passes
-    //     setRuleGridError(false);
-
-    //     // Create new rule object
-    //     const newRule = {
-    //         id: Date.now(), // Unique ID
-    //         ruleName: selectedRuleName,
-    //         metadata: newRuleMetadata,
-    //         tagName: newRuleTagName,
-    //         relationalOp: newRuleRelationalOp,
-    //         fieldValue: newRuleFieldValue
-    //     };
-
-    //     // Add to grid data
-    //     setRuleGridData(prev => [...prev, newRule]);
-
-    //     // Clear form fields
-    //     setNewRuleMetadata('');
-    //     setNewRuleTagName('');
-    //     setNewRuleRelationalOp(''); // Reset to empty
-    //     setNewRuleFieldValue('');
-    // };
-
     const handleAddRule = () => {
         // Check if ALL fields are filled
         const allFieldsFilled =
@@ -1287,9 +1104,7 @@ const SearchServerData = () => {
             newRuleRelationalOp;
 
         if (!allFieldsFilled) {
-            // Show red border to the whole grid
             setRuleGridError(true);
-            // DON'T show error dialog box
             return;
         }
 
@@ -1322,8 +1137,8 @@ const SearchServerData = () => {
         if (ruleGridData.length === 0) {
             setErrorDialog({
                 isOpen: true,
-                message: 'No records to remove',
-                type: 'warning'
+                message: 'Select an existing record.',
+                type: 'information'
             });
             return;
         }
@@ -1466,6 +1281,17 @@ const SearchServerData = () => {
         try {
             const requestData = CF_activeUserdetails();
 
+            // Detect if we're in edit mode by checking URL params or props
+            // This replicates: $("#datascheduler_childmenu_item").attr("process")
+            const urlParams = new URLSearchParams(window.location.search);
+            const processParam = urlParams.get('process');
+
+            if (processParam) {
+                setMode('edit');
+            } else {
+                setMode('create');
+            }
+
             // Client Combo
             const clientResponse = await postData(
                 'Scheduler/DataSchedulerClientCombo',
@@ -1522,6 +1348,35 @@ const SearchServerData = () => {
 
 
     // Load instruments based on selected client
+    // const loadInstruments = async (clientId) => {
+    //     try {
+    //         const requestData = {
+    //             sClientID: clientId,
+    //             ...CF_activeUserdetails()
+    //         };
+
+    //         const response = await postData(
+    //             'Scheduler/DataSchedulerInstrumentCombo',
+    //             requestData
+    //         );
+
+    //         console.log("=== INSTRUMENT OPTIONS STRUCTURE ===", response);
+    //         setInstrumentOptions(response || []);
+    //         setIsInstrumentDisabled(false);
+
+    //         // Reset instrument and method selections
+    //         setSelectedInstrument('');
+    //         setSelectedMethod('');
+    //         setMethodOptions([]);
+    //         setIsMethodDisabled(true);
+    //     } catch (error) {
+    //         console.error("Error loading instruments:", error);
+    //         setInstrumentOptions([]);
+    //     }
+    // };
+
+    // Replace your existing loadInstruments function (around line 530)
+    // Replace your current loadInstruments function (around line 1330):
     const loadInstruments = async (clientId) => {
         try {
             const requestData = {
@@ -1529,10 +1384,21 @@ const SearchServerData = () => {
                 ...CF_activeUserdetails()
             };
 
-            const response = await postData(
-                'Scheduler/DataSchedulerInstrumentCombo',
-                requestData
-            );
+            // ALWAYS use DataSchedulerActiveInstrument to get LockType
+            const endpoint = 'Scheduler/DataSchedulerActiveInstrument';
+
+            console.log("Loading instruments with LockType via:", endpoint);
+
+            const response = await postData(endpoint, requestData);
+
+            console.log("=== INSTRUMENT OPTIONS WITH LOCKTYPE ===", response);
+
+            // Debug: Check if LockType field exists
+            if (response && response.length > 0) {
+                console.log("First instrument has LockType?", 'L11LockType' in response[0]);
+                console.log("First instrument LockType value:", response[0]?.L11LockType);
+                console.log("All instrument fields:", Object.keys(response[0]));
+            }
 
             setInstrumentOptions(response || []);
             setIsInstrumentDisabled(false);
@@ -1545,6 +1411,44 @@ const SearchServerData = () => {
         } catch (error) {
             console.error("Error loading instruments:", error);
             setInstrumentOptions([]);
+        }
+    };
+
+    // Add this function somewhere in your component (after loadInstruments):
+    const checkParsingOrder = async (passObjDet) => {
+        try {
+            const checkParsingOrderData = {
+                ...CF_activeUserdetails(),
+                ...passObjDet
+            };
+
+            console.log("Checking parsing order with data:", checkParsingOrderData);
+
+            const parsingOrderResponse = await postData(
+                'Scheduler/CheckInstrumentExistwithParsingOrder',
+                checkParsingOrderData
+            );
+
+            console.log("Parsing order response:", parsingOrderResponse);
+
+            if (parsingOrderResponse && parsingOrderResponse.nParsingInstrOrderCount >= 1) {
+                // Instrument is locked - show 2-button dialog
+                console.log("Instrument locked - showing 2-button dialog");
+                setIsManualParsingInstrument(false);  // FALSE = 2 buttons
+                setShowSubmitDialog(true);
+            } else {
+                // Instrument is not locked - show 3-button dialog
+                console.log("Instrument not locked - showing 3-button dialog");
+                setIsManualParsingInstrument(true);  // TRUE = 3 buttons
+                setShowSubmitDialog(true);
+            }
+        } catch (error) {
+            console.error("Error checking parsing order:", error);
+            setErrorDialog({
+                isOpen: true,
+                message: 'Error checking instrument parsing order',
+                type: 'error'
+            });
         }
     };
 
@@ -1598,6 +1502,7 @@ const SearchServerData = () => {
             );
 
             if (response && response.lstWebMethod && response.lstWebMethod.length > 0) {
+                console.log("=== METHOD OPTIONS STRUCTURE ===", response.lstWebMethod); // ← ADD THIS
                 setMethodOptions(response.lstWebMethod);
                 setIsMethodDisabled(false);
             } else {
@@ -1684,101 +1589,6 @@ const SearchServerData = () => {
         return parts;
     };
 
-    // // Check path validation
-    // const validateAndShowCheckPathModal = () => {
-    //     let hasError = false;
-
-    //     // Validate client selection
-    //     if (!selectedClient) {
-    //         setClientError(true);
-    //         hasError = true;
-    //     } else {
-    //         setClientError(false);
-    //     }
-
-    //     // Validate source path
-    //     if (!sourcePath.trim()) {
-    //         setSourcePathError(true);
-    //         hasError = true;
-    //     } else if (!CF_pathValidation(sourcePath)) {
-    //         setSourcePathError(true);
-    //         hasError = true;
-    //     } else {
-    //         setSourcePathError(false);
-    //     }
-
-    //     if (hasError) {
-    //         return;
-    //     }
-
-    //     // Open check path modal
-    //     // setIsCheckPathModalOpen(true);
-    //     // setCheckPathType('client');
-    //     // setClientUsername('');
-    //     // setClientPassword('');
-    //     // setUsernameError(false);
-    //     // setPasswordError(false);
-
-    //     // Clear first, then open modal
-    //     setClientUsername('');
-    //     setClientPassword('');
-    //     setUsernameError(false);
-    //     setPasswordError(false);
-
-    //     // Small delay to ensure state is cleared before modal opens
-    //     setTimeout(() => {
-    //         setIsCheckPathModalOpen(true);
-    //         setCheckPathType('client');
-    //     }, 10);
-    // };
-
-    // const validateAndShowUNCPathModal = () => {
-    //     let hasError = false;
-
-    //     // Validate client selection
-    //     if (!selectedClient) {
-    //         setClientError(true);
-    //         hasError = true;
-    //     } else {
-    //         setClientError(false);
-    //     }
-
-    //     // Validate UNC path
-    //     if (!uncPath.trim()) {
-    //         setUncPathError(true);
-    //         hasError = true;
-    //     } else if (!CF_UNCPathValidation(uncPath)) {
-    //         setUncPathError(true);
-    //         hasError = true;
-    //     } else {
-    //         setUncPathError(false);
-    //     }
-
-    //     if (hasError) {
-    //         return;
-    //     }
-
-    //     // // Open check path modal for UNC
-    //     // setIsCheckPathModalOpen(true);
-    //     // setCheckPathType('client');
-    //     // setClientUsername('');
-    //     // setClientPassword('');
-    //     // setUsernameError(false);
-    //     // setPasswordError(false);
-
-    //     // Clear first, then open modal
-    //     setClientUsername('');
-    //     setClientPassword('');
-    //     setUsernameError(false);
-    //     setPasswordError(false);
-
-    //     // Small delay to ensure state is cleared before modal opens
-    //     setTimeout(() => {
-    //         setIsCheckPathModalOpen(true);
-    //         setCheckPathType('client');
-    //     }, 10);
-    // };
-
     const validateAndShowUNCPathModal = () => {
         let hasError = false;
 
@@ -1832,7 +1642,6 @@ const SearchServerData = () => {
             }
 
             try {
-                // ADD LOGGING HERE TO DEBUG
                 console.log("=== Sending to backend ===");
                 console.log("Path:", pathToCheck);
                 console.log("Is UNC Path:", isUNCPathEnabled);
@@ -2036,6 +1845,81 @@ const SearchServerData = () => {
         setSelectedDelimiter('');
         setTagMasterData([]);
 
+        // Clear all validation errors
+        setSourcePathError(false);
+        setClientError(false);
+        setUncPathError(false);
+        setUncUsernameError(false);
+        setUncPasswordError(false);
+        setUsernameError(false);
+        setPasswordError(false);
+        setSampleFilenameError(false);
+        setDelimiterError(false);
+        setRuleGridError(false);
+        setShowExpiryWarning(false);
+        setShowTriggerWarning(false);
+
+        // Clear error messages
+        setClientPathErrorMessage('');
+        setUncPathErrorMessage('');
+
+        // Reset scheduler metadata fields
+        setSampleFilename('');
+        setSelectedDelimiters([]);
+        setTempSelectedDelimiters([]);
+        setShowDelimiterSelector(false);
+        setIsNoneSelected(false);
+
+        // Clear rule grid
+        setRuleGridData([]);
+        setSelectedRowId(null);
+        setNewRuleMetadata('');
+        setNewRuleTagName('');
+        setNewRuleRelationalOp('');
+        setNewRuleFieldValue('');
+        setTagNameSearchTerm('');
+        setRelOpSearchTerm('');
+
+        // Clear all dropdown states
+        setShowDaySelector(false);
+        setShowWeekSelector(false);
+        setShowWeekdaysSelector(false);
+        setShowMonthSelector(false);
+        setShowTagNameSelector(false);
+        setShowRelOpSelector(false);
+        setShowMetadataTooltip(null);
+
+        // Reset tag master data
+        setTagMasterData([]);
+        setInstrumentError(false);
+        setMethodError(false);
+        setDestinationError(false);
+        setFilterError(false);
+        setLevelValueError(false);
+        setFilesOlderDaysError(false);
+        setAuditFilterError(false);
+        setUncDomainError(false);
+        setTemplateError(false);
+
+        // Clear all validation errors
+        setClientError(false);
+        setInstrumentError(false);
+        setSourcePathError(false);
+        setUncPathError(false);
+        setUncUsernameError(false);
+        setUncPasswordError(false);
+        setDestinationError(false);
+        setMethodError(false);
+        setFilterError(false);
+        setLevelValueError(false);
+        setFilesOlderDaysError(false);
+        setAuditFilterError(false);
+        setTemplateError(false);
+        setSampleFilenameError(false);
+        setDelimiterError(false);
+        setRuleGridError(false);
+        setTagRowErrors([]);
+
         // Reload combos
         loadCombos();
     };
@@ -2084,109 +1968,6 @@ const SearchServerData = () => {
         }
     };
 
-
-    // const handleTriggerDateChange = (date) => {
-    //     console.log("=== handleTriggerDateChange called ===");
-    //     console.log("Input date:", date);
-    //     console.log("lastTriggerDateWasValid:", lastTriggerDateWasValid);
-
-    //     const formattedDate = validateAndFormatDate(date);
-    //     console.log("Formatted date:", formattedDate);
-
-    //     const today = new Date();
-    //     today.setHours(0, 0, 0, 0);
-
-    //     const parts = formattedDate.split('/');
-
-    //     if (parts.length === 3) {
-    //         const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
-    //         selectedDate.setHours(0, 0, 0, 0); // IMPORTANT: Set to start of day for accurate comparison
-
-    //         console.log("Selected date:", selectedDate);
-    //         console.log("Today:", today);
-    //         console.log("Is past?", selectedDate < today);
-
-    //         // CHANGED: Only treat as PAST if strictly less than today (not equal)
-    //         if (selectedDate < today) {
-    //             // Calculate yesterday
-    //             const yesterday = new Date();
-    //             yesterday.setTime(yesterday.getTime() - 86400000);
-    //             yesterday.setHours(0, 0, 0, 0);
-    //             const yesterdayFormatted = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
-
-    //             console.log("Setting to yesterday:", yesterdayFormatted);
-
-    //             // Show error ONLY if last date was valid (current or future)
-    //             if (lastTriggerDateWasValid) {
-    //                 console.log("Showing error dialog - transitioning from valid to past date");
-    //                 setErrorDialog({
-    //                     isOpen: true,
-    //                     message: 'Selected date earlier than the current date',
-    //                     type: 'warning'
-    //                 });
-    //             } else {
-    //                 console.log("No error dialog - already in past date state");
-    //             }
-
-    //             setTriggerDate(yesterdayFormatted);
-    //             setShowTriggerWarning(false);
-    //             setLastTriggerDateWasValid(false); // Mark as invalid state
-    //             return;
-    //         } else {
-    //             // Valid date (today or future) - CHANGED: includes today
-    //             console.log("Valid date (today or future), setting:", formattedDate);
-    //             setTriggerDate(formattedDate);
-    //             setShowTriggerWarning(false);
-    //             setLastTriggerDateWasValid(true); // Mark as valid state
-    //         }
-    //     } else {
-    //         setTriggerDate(formattedDate);
-    //     }
-    // };
-
-    // const handleExpiryDateChange = (date) => {
-    //     const formattedDate = validateAndFormatDate(date);
-    //     const today = new Date();
-    //     today.setHours(0, 0, 0, 0);
-
-    //     const parts = formattedDate.split('/');
-
-    //     if (parts.length === 3) {
-    //         const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
-    //         selectedDate.setHours(0, 0, 0, 0); // IMPORTANT: Set to start of day
-
-    //         // CHANGED: Only treat as PAST if strictly less than today (not equal)
-    //         if (selectedDate < today) {
-    //             // Calculate yesterday
-    //             const yesterday = new Date();
-    //             yesterday.setTime(yesterday.getTime() - 86400000);
-    //             yesterday.setHours(0, 0, 0, 0);
-    //             const yesterdayFormatted = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
-
-    //             // Show error ONLY if last date was valid (current or future)
-    //             if (lastExpiryDateWasValid) {
-    //                 setErrorDialog({
-    //                     isOpen: true,
-    //                     message: 'Selected date earlier than the current date',
-    //                     type: 'warning'
-    //                 });
-    //             }
-
-    //             setExpiryDate(yesterdayFormatted);
-    //             setShowExpiryWarning(false);
-    //             setLastExpiryDateWasValid(false); // Mark as invalid state
-    //             return;
-    //         } else {
-    //             // Valid date (today or future) - CHANGED: includes today
-    //             setExpiryDate(formattedDate);
-    //             setShowExpiryWarning(false);
-    //             setLastExpiryDateWasValid(true); // Mark as valid state
-    //         }
-    //     } else {
-    //         setExpiryDate(formattedDate);
-    //     }
-    // };
-
     const handleTriggerDateChange = (date) => {
         console.log("=== handleTriggerDateChange called ===");
         console.log("Input date:", date);
@@ -2230,7 +2011,6 @@ const SearchServerData = () => {
                     console.log("No error dialog - already in past date state");
                 }
 
-                // IMPORTANT: Force update even if value is the same
                 // First clear it, then set it in next tick
                 setTriggerDate('');
                 setTimeout(() => {
@@ -2300,38 +2080,6 @@ const SearchServerData = () => {
         }
     };
 
-    // const handleOneTimeDateChange = (date) => {
-    //     const formattedDate = validateAndFormatDate(date);
-    //     const today = new Date();
-    //     today.setHours(0, 0, 0, 0);
-
-    //     const parts = formattedDate.split('/');
-
-    //     // Check if it's a valid date
-    //     if (parts.length === 3) {
-    //         const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
-
-    //         if (selectedDate < today) {
-    //             // For One Time schedule, also show error and set to yesterday
-    //             setErrorDialog({
-    //                 isOpen: true,
-    //                 message: 'Selected date earlier than the current date',
-    //                 type: 'warning'
-    //             });
-
-    //             const yesterday = new Date();
-    //             yesterday.setDate(yesterday.getDate() - 1);
-    //             const yesterdayFormatted = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
-    //             setOneTimeDate(yesterdayFormatted);
-    //         } else {
-    //             setOneTimeDate(formattedDate);
-    //         }
-    //     } else {
-    //         setOneTimeDate(formattedDate);
-    //     }
-    // };
-
-
     const handleOneTimeDateChange = (date) => {
         const formattedDate = validateAndFormatDate(date);
         const today = new Date();
@@ -2399,19 +2147,7 @@ const SearchServerData = () => {
             setFilesOlderThanDate(formattedDate);
         }
     };
-    // useEffect(() => {
-    //     if (tagMasterData && tagMasterData.length > 0) {
-    //         // Extract tag names for rule name dropdown
-    //         const tagNames = tagMasterData.map(tag => ({
-    //             RuleName: tag.sTagName,
-    //             RuleID: tag.sTagID
-    //         }));
-    //         // Update your rule name combo options
-    //         // You'll need to create a state for this
-    //         setRuleNameOptions(tagNames);
-    //     }
-    // }, [tagMasterData]);
-    // In the useEffect that loads tagMasterData, or create a new one:
+
     useEffect(() => {
         if (tagMasterData && tagMasterData.length > 0) {
             // Extract tag names for rule name dropdown
@@ -2486,6 +2222,95 @@ const SearchServerData = () => {
         }
     }, [ruleGridData]);
 
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            const tagNameDropdown = document.querySelector('.tag-name-dropdown');
+            const tagNameButton = document.querySelector('[title="Select tag name"]');
+
+            if (showTagNameSelector &&
+                tagNameDropdown && !tagNameDropdown.contains(e.target) &&
+                tagNameButton && !tagNameButton.contains(e.target)) {
+                setShowTagNameSelector(false);
+                setTagNameSearchTerm('');
+            }
+        };
+
+        if (showTagNameSelector) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showTagNameSelector]);
+
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            const relOpDropdown = document.querySelector('.rel-op-dropdown');
+            const relOpButton = document.querySelector('[title="Select relational operator"]');
+
+            if (showRelOpSelector &&
+                relOpDropdown && !relOpDropdown.contains(e.target) &&
+                relOpButton && !relOpButton.contains(e.target)) {
+                setShowRelOpSelector(false);
+                setRelOpSearchTerm('');
+            }
+        };
+
+        if (showRelOpSelector) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showRelOpSelector]);
+
+    // Add this useEffect to reset Scheduler Metadata section when toggled
+    useEffect(() => {
+        if (!isSchedulerMetadataEnabled) {
+            // Reset all Scheduler Metadata fields when unchecked
+            setSelectedTemplate(templateOptions.length > 0 ? templateOptions[0].sTemplateID : '');
+            setSampleFilename('');
+            setSelectedDelimiters([]);
+            setTempSelectedDelimiters([]);
+            setDelimiterSearchTerm('');
+            setShowDelimiterSelector(false);
+            setIsNoneSelected(false);
+            setSampleFilenameError(false);
+            setDelimiterError(false);
+            setTemplateError(false);
+            setSampleFilenameError(false);
+            setDelimiterError(false);
+            setShowMetadataTooltip(null);
+            setParsedMetadata([]);
+            setTagMasterData([]);
+            setTagRowErrors([]);
+
+            // Reset Rule section
+            setSelectedRuleName('');
+            setRuleNameOptions([]);
+            setRuleGridData([]);
+            setSelectedRowId(null);
+            setNewRuleMetadata('');
+            setNewRuleTagName('');
+            setNewRuleRelationalOp('');
+            setNewRuleFieldValue('');
+            setTagNameSearchTerm('');
+            setRelOpSearchTerm('');
+            setShowTagNameSelector(false);
+            setShowRelOpSelector(false);
+            setRuleGridError(false);
+        } else {
+            // When enabled, load the first template's data if available
+            if (templateOptions.length > 0 && selectedTemplate) {
+                loadTagMaster(selectedTemplate);
+            }
+        }
+    }, [isSchedulerMetadataEnabled]);
+
     // Scroll Handler (Manual Calculation to prevent Header movement)
     const scrollToSection = (ref, tabName) => {
         setActiveTab(tabName);
@@ -2506,49 +2331,1175 @@ const SearchServerData = () => {
         }
     };
 
-    // const handleSubmit = () => {
-    //     // Reset warning first
-    //     setShowExpiryWarning(false);
-    //     setShowTriggerWarning(false);
+    // const handleSubmit = async () => {
+    //     console.log("=== SUBMIT STARTED ===");
 
-    //     // Validate that both trigger and expiry dates are not in the past
-    //     const triggerParts = triggerDate.split('/');
-    //     const triggerDateOnly = new Date(triggerParts[2], triggerParts[1] - 1, triggerParts[0]);
-    //     const today = new Date();
-    //     today.setHours(0, 0, 0, 0);
+    //     // Initialize validation object
+    //     let passObjDet = {};
 
-    //     if (triggerDateOnly < today) {
-    //         setShowTriggerWarning(true);
-    //         // Scroll to the Trigger/Expiry section
-    //         if (triggerExpiryRef.current && scrollContainerRef.current) {
-    //             const container = scrollContainerRef.current;
-    //             const element = triggerExpiryRef.current;
-    //             const elementRect = element.getBoundingClientRect();
-    //             const containerRect = container.getBoundingClientRect();
-    //             const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
+    //     // ========== PHASE 1: ALL FIELD VALIDATION (RED BORDERS IMMEDIATELY) ==========
+    //     console.log("--- Phase 1: All Field Validation (Red Borders) ---");
 
-    //             container.scrollTo({
-    //                 top: offsetPosition,
-    //                 behavior: 'smooth'
-    //             });
+    //     let hasErrors = false;
+    //     let IsEmpty = false; // Keep this for other validations
+
+    //     // 1. Client Validation - ALWAYS validate (red borders immediately)
+    //     if (!selectedClient) {
+    //         console.log("Client validation failed");
+    //         setClientError(true);
+    //         hasErrors = true;
+    //         IsEmpty = true;
+    //     } else {
+    //         setClientError(false);
+    //     }
+
+    //     // 2. Instrument Validation - ALWAYS validate (red borders immediately)
+    //     if (!selectedInstrument) {
+    //         console.log("Instrument validation failed");
+    //         setInstrumentError(true);
+    //         hasErrors = true;
+    //         IsEmpty = true;
+    //     } else {
+    //         setInstrumentError(false);
+    //     }
+
+    //     // 3. Path Validation (Local or UNC) - ALWAYS validate (red borders immediately)
+    //     if (!isUNCPathEnabled) {
+    //         // Local Path
+    //         if (!sourcePath.trim()) {
+    //             console.log("Source path is empty");
+    //             setSourcePathError(true);
+    //             hasErrors = true;
+    //             IsEmpty = true;
+    //         } else {
+    //             const pathValidation = CF_pathValidation(sourcePath);
+    //             const sourcepathParts = sourcePath.split("\\");
+
+    //             if (!pathValidation || sourcepathParts[1] === "") {
+    //                 console.log("Source path validation failed");
+    //                 setSourcePathError(true);
+    //                 hasErrors = true;
+    //                 IsEmpty = true;
+    //             } else {
+    //                 setSourcePathError(false);
+    //             }
     //         }
+    //     } else {
+    //         // UNC Path
+    //         if (!uncPath.trim()) {
+    //             console.log("UNC Path is empty");
+    //             setUncPathError(true);
+    //             hasErrors = true;
+    //             IsEmpty = true;
+    //         } else {
+    //             const UNCPathValidation = CF_UNCPathValidation(uncPath.trim());
+    //             if (!UNCPathValidation) {
+    //                 console.log("UNC Path validation failed");
+    //                 setUncPathError(true);
+    //                 hasErrors = true;
+    //                 IsEmpty = true;
+    //             } else {
+    //                 setUncPathError(false);
+    //             }
+    //         }
+    //     }
+
+    //     // 4. Destination Validation - ALWAYS validate (red borders immediately)
+    //     if (!selectedDestination) {
+    //         console.log("Destination not selected");
+    //         setDestinationError(true);
+    //         hasErrors = true;
+    //         IsEmpty = true;
+    //     } else {
+    //         setDestinationError(false);
+    //     }
+
+    //     // Show error dialog ONLY if client and instrument are selected
+    //     if (hasErrors && selectedClient && selectedInstrument) {
+    //         console.log("Client and Instrument selected - showing error dialog");
+    //         setErrorDialog({
+    //             isOpen: true,
+    //             message: 'Incomplete Data Fields',
+    //             type: 'information'
+    //         });
+
+    //         // Scroll to File Settings section
+    //         scrollToSection(fileSettingsRef, 'File Settings');
+    //         return; // EXIT - Don't proceed
+    //     }
+
+    //     // If there are errors but client/instrument not selected, just show red borders and return
+    //     if (hasErrors) {
+    //         console.log("Errors exist but client/instrument not selected - only showing red borders");
+    //         // Scroll to first error
+    //         scrollToSection(fileSettingsRef, 'File Settings');
+    //         return; // EXIT - Only red borders, no dialog
+    //     }
+
+    //     // ========== PHASE 2: CONDITIONAL FIELDS VALIDATION ==========
+    //     console.log("--- Phase 2: Conditional Fields Validation ---");
+
+    //     // 5. Method Validation (only if not disabled)
+    //     if (!isMethodDisabled) {
+    //         const selectedMethodIndex = methodOptions.findIndex(m => m.InstMethodName === selectedMethod);
+
+    //         if (selectedMethodIndex === -1 || !selectedMethod) {
+    //             console.log("Method validation failed");
+    //             setMethodError(true);
+    //             IsEmpty = true;
+    //             scrollToSection(fileSettingsRef, 'File Settings');
+    //         } else {
+    //             setMethodError(false);
+    //             const selectedMethodItem = methodOptions[selectedMethodIndex];
+    //             passObjDet["L13MethodName"] = selectedMethodItem.MethodName;
+    //             passObjDet["L13ParserInstCode"] = selectedMethodItem.InstName;
+    //             passObjDet["L13ParserMethodGroup"] = selectedMethodItem.MethodGroup;
+    //         }
+    //     } else {
+    //         passObjDet["L13MethodName"] = "DEFAULT";
+    //     }
+
+    //     // Set Path in passObjDet
+    //     if (!isUNCPathEnabled) {
+    //         passObjDet["L13SourcePath"] = sourcePath;
+    //         passObjDet["L13UNCStatus"] = 0;
+    //     } else {
+    //         passObjDet["L13SourcePath"] = uncPath.trim();
+    //         passObjDet["L13UNCStatus"] = 1;
+
+    //         // UNC credentials validation
+    //         if (!uncUsername.trim()) {
+    //             console.log("UNC Username is empty");
+    //             setUncUsernameError(true);
+    //             IsEmpty = true;
+    //             scrollToSection(fileSettingsRef, 'File Settings');
+    //         } else {
+    //             setUncUsernameError(false);
+    //         }
+
+    //         if (!uncPassword.trim()) {
+    //             console.log("UNC Password is empty");
+    //             setUncPasswordError(true);
+    //             IsEmpty = true;
+    //             scrollToSection(fileSettingsRef, 'File Settings');
+    //         } else {
+    //             setUncPasswordError(false);
+    //         }
+
+    //         if (!selectedDomain) {
+    //             console.log("Domain not selected");
+    //             setUncDomainError(true);
+    //             IsEmpty = true;
+    //             scrollToSection(fileSettingsRef, 'File Settings');
+    //         } else {
+    //             setUncDomainError(false);
+    //         }
+    //     }
+
+    //     // 5. Filter Validation
+    //     if (!filter.trim()) {
+    //         console.log("Filter is empty");
+    //         setFilterError(true);
+    //         IsEmpty = true;
+    //         scrollToSection(fileSettingsRef, 'File Settings');
+    //     } else {
+    //         setFilterError(false);
+    //     }
+
+    //     // Set Destination in passObjDet
+    //     const destinationItem = destinationOptions.find(d => d.L09FTPID === selectedDestination);
+    //     if (destinationItem) {
+    //         passObjDet["L13FTPText"] = destinationItem.L09FTPAliasName;
+    //     }
+
+    //     // 6. Delete Local Copy Validation
+    //     if (deleteLocalCopy) {
+    //         console.log("Validating Delete Local Copy");
+
+    //         if (filesOlderThanEnabled) {
+    //             if (!filesOlderDays.trim()) {
+    //                 console.log("Files older days is empty");
+    //                 setFilesOlderDaysError(true);
+    //                 IsEmpty = true;
+    //                 scrollToSection(uploadPolicyRef, 'Upload Policy');
+    //             } else {
+    //                 setFilesOlderDaysError(false);
+    //             }
+    //         }
+    //     }
+
+    //     // 7. Subfolder Level Validation
+    //     if (includeSubfolder) {
+    //         console.log("Validating Subfolder Level");
+
+    //         if (levelEnabled) {
+    //             if (!levelValue.trim()) {
+    //                 console.log("Level value is empty");
+    //                 setLevelValueError(true);
+    //                 IsEmpty = true;
+    //                 scrollToSection(uploadPolicyRef, 'Upload Policy');
+    //             } else {
+    //                 setLevelValueError(false);
+    //             }
+    //         }
+    //     }
+
+    //     // 8. File Audit Validation
+    //     if (enableFileAudit) {
+    //         console.log("Validating File Audit");
+    //         if (!auditFilter.trim()) {
+    //             console.log("Audit filter is empty");
+    //             setAuditFilterError(true);
+    //             IsEmpty = true;
+    //         } else {
+    //             setAuditFilterError(false);
+    //             passObjDet["L52EnableVerAudit"] = true;
+    //             passObjDet["L52AuditFilter"] = auditFilter;
+    //         }
+    //     } else {
+    //         passObjDet["L52EnableVerAudit"] = false;
+    //         passObjDet["L52AuditFilter"] = "";
+    //     }
+
+    //     // ========== SCHEDULER METADATA VALIDATION ==========
+    //     console.log("--- Processing Scheduler Metadata ---");
+
+    //     passObjDet["L13Active"] = isSchedulerMetadataEnabled ? 1 : 0;
+
+    //     if (isSchedulerMetadataEnabled) {
+    //         console.log("Scheduler Metadata is enabled - validating");
+
+    //         // Template validation
+    //         if (!selectedTemplate) {
+    //             console.log("Template not selected");
+    //             setTemplateError(true);
+    //             IsEmpty = true;
+    //             scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //         } else {
+    //             setTemplateError(false);
+    //             passObjDet["L13TemplateID"] = selectedTemplate;
+    //         }
+
+    //         // Sample filename validation
+    //         if (!sampleFilename.trim()) {
+    //             console.log("Sample filename is empty");
+    //             setSampleFilenameError(true);
+    //             IsEmpty = true;
+    //             scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //         } else {
+    //             // Check if filename has valid extension
+    //             const hasExtension = sampleFilename.includes('.') &&
+    //                 sampleFilename.lastIndexOf('.') < sampleFilename.length - 1;
+    //             if (!hasExtension) {
+    //                 setSampleFilenameError(true);
+    //                 IsEmpty = true;
+    //                 scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //             } else {
+    //                 setSampleFilenameError(false);
+    //             }
+    //         }
+
+    //         // Delimiter validation
+    //         if (!selectedDelimiters.length) {
+    //             console.log("Delimiter not selected");
+    //             setDelimiterError(true);
+    //             IsEmpty = true;
+    //             scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //         } else {
+    //             setDelimiterError(false);
+    //         }
+
+    //         const Delimeter = selectedDelimiters.length > 0
+    //             ? ConcatenateDelimeterfromlist(selectedDelimiters, delimiterOptions)
+    //             : "";
+
+    //         // Validate tag rows
+    //         let tagmetadatagridlst = [...tagMasterData];
+
+    //         // Clear previous tag row errors
+    //         setTagRowErrors([]);
+    //         const errorRows = [];
+
+    //         // Validate each tag row - you need to track actual row state
+    //         // This is a placeholder - you need to implement actual row state tracking
+    //         for (let i = 0; i < tagmetadatagridlst.length; i++) {
+    //             const tag = tagmetadatagridlst[i];
+
+    //             // Check if this row should have metadata but doesn't
+    //             // This requires tracking each row's radio selection and metadata value
+    //             // For now, this is simplified - you need to implement proper row state tracking
+
+    //             // Placeholder logic - update with your actual row state tracking
+    //             const rowSourceFlag = tag.sSourceFlag || 'NONE';
+    //             const rowMetadata = tag.sTextData || '';
+
+    //             if ((rowSourceFlag === 'Folder' || rowSourceFlag === 'Filename') && !rowMetadata.trim()) {
+    //                 console.log(`Tag row ${i} has empty metadata`);
+    //                 errorRows.push(i);
+    //                 IsEmpty = true;
+    //                 scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //             }
+    //         }
+
+    //         // Set the error rows if any found
+    //         if (errorRows.length > 0) {
+    //             setTagRowErrors(errorRows);
+    //         }
+
+    //         // Rule Grid validation
+    //         if (ruleGridData.length === 0) {
+    //             console.log("Rule grid is empty");
+    //             setRuleGridError(true);
+    //             IsEmpty = true;
+    //             scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //         } else {
+    //             setRuleGridError(false);
+    //         }
+
+    //         const subfolderlevel = 0;
+    //         const Instrumentitem = instrumentOptions.find(inst => inst.L12InstrumentMappingID === selectedInstrument);
+    //         if (Instrumentitem) {
+    //             passObjDet["L13InstrumentID"] = Instrumentitem.L12InstrumentID;
+    //         }
+
+    //         passObjDet["L13FileDelimiter"] = Delimeter;
+    //         passObjDet["L13Examplefilename"] = sampleFilename;
+    //         passObjDet["L13SubfolderLevel"] = subfolderlevel;
+    //         passObjDet["SchedulerExtractionlst"] = tagmetadatagridlst;
+    //     }
+
+    //     // ========== FINAL VALIDATION CHECK ==========
+    //     console.log("--- Final Validation Check ---");
+    //     console.log("IsEmpty:", IsEmpty);
+
+    //     if (IsEmpty) {
+    //         console.log("Phase 2 validation failed - showing error dialog");
+    //         setErrorDialog({
+    //             isOpen: true,
+    //             message: 'Incomplete Data Fields',
+    //             type: 'information'
+    //         });
+
+    //         // Scroll to the first error section
+    //         if (uncUsernameError || uncPasswordError || uncDomainError ||
+    //             methodError || filterError || templateError ||
+    //             sampleFilenameError || delimiterError) {
+    //             scrollToSection(fileSettingsRef, 'File Settings');
+    //         } else if (levelValueError || filesOlderDaysError) {
+    //             scrollToSection(uploadPolicyRef, 'Upload Policy');
+    //         } else if (auditFilterError) {
+    //             // Stay on current section
+    //         } else if (tagRowErrors.length > 0 || ruleGridError) {
+    //             scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //         }
+
     //         return;
     //     }
 
-    //     const triggerTimeParts = triggerTime.split(':');
-    //     const triggerDateTime = new Date(
-    //         parseInt(triggerParts[2]),
-    //         parseInt(triggerParts[1]) - 1,
-    //         parseInt(triggerParts[0]),
-    //         parseInt(triggerTimeParts[0]),
-    //         parseInt(triggerTimeParts[1]),
-    //         parseInt(triggerTimeParts[2])
-    //     );
+    const handleTagRowDataChange = (rowIndex, sourceFlag, metadata) => {
+        setTagMasterData(prev => {
+            const updated = [...prev];
+            updated[rowIndex] = {
+                ...updated[rowIndex],
+                sSourceFlag: sourceFlag,
+                sTextData: metadata
+            };
+            return updated;
+        });
+    };
+
+    // const checkParsingOrder = async (passObjDet) => {
+    //     try {
+    //         const checkParsingOrderData = {
+    //             ...CF_activeUserdetails(),
+    //             // passObjDet: passObjDet
+    //             ...passObjDet
+    //         };
+
+    //         console.log("Checking parsing order with data:", checkParsingOrderData);
+
+    //         const parsingOrderResponse = await postData(
+    //             'Scheduler/CheckInstrumentExistwithParsingOrder',
+    //             checkParsingOrderData
+    //         );
+
+    //         console.log("Parsing order response:", parsingOrderResponse);
+
+    //         // if (parsingOrderResponse && parsingOrderResponse.nParsingInstrOrderCount > 0) {
+    //         //     // Instrument is already locked - show error
+    //         //     setErrorDialog({
+    //         //         isOpen: true,
+    //         //         message: 'Instrument is already locked with a schedule',
+    //         //         type: 'warning'
+    //         //     });
+    //         // } else {
+    //         //     // Instrument is not locked - show confirmation with 3 buttons
+    //         //     setIsManualParsingInstrument(true);
+    //         //     setShowSubmitDialog(true);
+    //         // }
+
+    //         if (parsingOrderResponse && parsingOrderResponse.nParsingInstrOrderCount > 0) {
+    //             // Instrument is locked - show 2-button dialog
+    //             console.log("Instrument locked - showing 2-button dialog");
+    //             setIsManualParsingInstrument(false);  // FALSE = 2 buttons
+    //             setShowSubmitDialog(true);
+    //         } else {
+    //             // Instrument is not locked - show 3-button dialog
+    //             console.log("Instrument not locked - showing 3-button dialog");
+    //             setIsManualParsingInstrument(true);  // TRUE = 3 buttons
+    //             setShowSubmitDialog(true);
+    //         }
+
+    //     } catch (error) {
+    //         console.error("Error checking parsing order:", error);
+    //         setErrorDialog({
+    //             isOpen: true,
+    //             message: 'Error checking instrument parsing order',
+    //             type: 'error'
+    //         });
+    //     }
+    // };
+
+    // const handleSubmit = async () => {
+    //     console.log("=== SUBMIT STARTED ===");
+
+    //     // Initialize validation object
+    //     let passObjDet = {};
+
+    //     // ========== PHASE 1: ALL FIELD VALIDATION ==========
+    //     console.log("--- Phase 1: All Field Validation ---");
+
+    //     let hasErrors = false;
+    //     let IsEmpty = false;
+    //     let errorSections = []; // Track which sections have errors
+
+    //     // 1. Client Validation
+    //     if (!selectedClient) {
+    //         console.log("Client validation failed");
+    //         setClientError(true);
+    //         hasErrors = true;
+    //         IsEmpty = true;
+    //         if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+    //     } else {
+    //         setClientError(false);
+    //     }
+
+    //     // 2. Instrument Validation
+    //     if (!selectedInstrument) {
+    //         console.log("Instrument validation failed");
+    //         setInstrumentError(true);
+    //         hasErrors = true;
+    //         IsEmpty = true;
+    //         if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+    //     } else {
+    //         setInstrumentError(false);
+    //     }
+
+    //     // 3. Path Validation (Local or UNC)
+    //     if (!isUNCPathEnabled) {
+    //         // Local Path
+    //         if (!sourcePath.trim()) {
+    //             console.log("Source path is empty");
+    //             setSourcePathError(true);
+    //             hasErrors = true;
+    //             IsEmpty = true;
+    //             if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+    //         } else {
+    //             const pathValidation = CF_pathValidation(sourcePath);
+    //             const sourcepathParts = sourcePath.split("\\");
+
+    //             if (!pathValidation || sourcepathParts[1] === "") {
+    //                 console.log("Source path validation failed");
+    //                 setSourcePathError(true);
+    //                 hasErrors = true;
+    //                 IsEmpty = true;
+    //                 if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+    //             } else {
+    //                 setSourcePathError(false);
+    //             }
+    //         }
+    //     } else {
+    //         // UNC Path
+    //         if (!uncPath.trim()) {
+    //             console.log("UNC Path is empty");
+    //             setUncPathError(true);
+    //             hasErrors = true;
+    //             IsEmpty = true;
+    //             if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+    //         } else {
+    //             const UNCPathValidation = CF_UNCPathValidation(uncPath.trim());
+    //             if (!UNCPathValidation) {
+    //                 console.log("UNC Path validation failed");
+    //                 setUncPathError(true);
+    //                 hasErrors = true;
+    //                 IsEmpty = true;
+    //                 if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+    //             } else {
+    //                 setUncPathError(false);
+    //             }
+    //         }
+    //     }
+
+    //     // 4. Destination Validation
+    //     if (!selectedDestination) {
+    //         console.log("Destination not selected");
+    //         setDestinationError(true);
+    //         hasErrors = true;
+    //         IsEmpty = true;
+    //         if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+    //     } else {
+    //         setDestinationError(false);
+    //     }
+
+    //     // 5. Method Validation (only if not disabled)
+    //     if (!isMethodDisabled) {
+    //         const selectedMethodIndex = methodOptions.findIndex(m => m.InstMethodName === selectedMethod);
+
+    //         if (selectedMethodIndex === -1 || !selectedMethod) {
+    //             console.log("Method validation failed");
+    //             setMethodError(true);
+    //             hasErrors = true;
+    //             IsEmpty = true;
+    //             if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+    //         } else {
+    //             setMethodError(false);
+    //             const selectedMethodItem = methodOptions[selectedMethodIndex];
+    //             passObjDet["L13MethodName"] = selectedMethodItem.MethodName;
+    //             passObjDet["L13ParserInstCode"] = selectedMethodItem.InstName;
+    //             passObjDet["L13ParserMethodGroup"] = selectedMethodItem.MethodGroup;
+    //         }
+    //     } else {
+    //         passObjDet["L13MethodName"] = "DEFAULT";
+    //     }
+
+    //     // 6. Filter Validation
+    //     if (!filter.trim()) {
+    //         console.log("Filter is empty");
+    //         setFilterError(true);
+    //         hasErrors = true;
+    //         IsEmpty = true;
+    //         if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+    //     } else {
+    //         setFilterError(false);
+    //     }
+
+    //     // 7. UNC credentials validation (if UNC enabled)
+    //     if (isUNCPathEnabled) {
+    //         if (!uncUsername.trim()) {
+    //             console.log("UNC Username is empty");
+    //             setUncUsernameError(true);
+    //             hasErrors = true;
+    //             IsEmpty = true;
+    //             if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+    //         } else {
+    //             setUncUsernameError(false);
+    //         }
+
+    //         if (!uncPassword.trim()) {
+    //             console.log("UNC Password is empty");
+    //             setUncPasswordError(true);
+    //             hasErrors = true;
+    //             IsEmpty = true;
+    //             if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+    //         } else {
+    //             setUncPasswordError(false);
+    //         }
+
+    //         if (!selectedDomain) {
+    //             console.log("Domain not selected");
+    //             setUncDomainError(true);
+    //             hasErrors = true;
+    //             IsEmpty = true;
+    //             if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+    //         } else {
+    //             setUncDomainError(false);
+    //         }
+    //     }
+
+    //     // 8. Delete Local Copy Validation
+    //     if (deleteLocalCopy) {
+    //         console.log("Validating Delete Local Copy");
+
+    //         if (filesOlderThanEnabled) {
+    //             if (!filesOlderDays.trim()) {
+    //                 console.log("Files older days is empty");
+    //                 setFilesOlderDaysError(true);
+    //                 hasErrors = true;
+    //                 IsEmpty = true;
+    //                 if (!errorSections.includes('uploadPolicy')) errorSections.push('uploadPolicy');
+    //             } else {
+    //                 setFilesOlderDaysError(false);
+    //             }
+    //         }
+    //     }
+
+    //     // 9. Subfolder Level Validation
+    //     if (includeSubfolder) {
+    //         console.log("Validating Subfolder Level");
+
+    //         if (levelEnabled) {
+    //             if (!levelValue.trim()) {
+    //                 console.log("Level value is empty");
+    //                 setLevelValueError(true);
+    //                 hasErrors = true;
+    //                 IsEmpty = true;
+    //                 if (!errorSections.includes('uploadPolicy')) errorSections.push('uploadPolicy');
+    //             } else {
+    //                 setLevelValueError(false);
+    //             }
+    //         }
+    //     }
+
+    //     // 10. File Audit Validation
+    //     if (enableFileAudit) {
+    //         console.log("Validating File Audit");
+    //         if (!auditFilter.trim()) {
+    //             console.log("Audit filter is empty");
+    //             setAuditFilterError(true);
+    //             hasErrors = true;
+    //             IsEmpty = true;
+    //         } else {
+    //             setAuditFilterError(false);
+    //         }
+    //     }
+
+    //     // ========== SCHEDULER METADATA VALIDATION ==========
+    //     console.log("--- Processing Scheduler Metadata ---");
+
+    //     passObjDet["L13Active"] = isSchedulerMetadataEnabled ? 1 : 0;
+
+    //     if (isSchedulerMetadataEnabled) {
+    //         console.log("Scheduler Metadata is enabled - validating");
+
+    //         // Template validation
+    //         if (!selectedTemplate) {
+    //             console.log("Template not selected");
+    //             setTemplateError(true);
+    //             hasErrors = true;
+    //             IsEmpty = true;
+    //             if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+    //         } else {
+    //             setTemplateError(false);
+    //             passObjDet["L13TemplateID"] = selectedTemplate;
+    //         }
+
+    //         // Sample filename validation
+    //         // if (!sampleFilename.trim()) {
+    //         //     console.log("Sample filename is empty");
+    //         //     setSampleFilenameError(true);
+    //         //     hasErrors = true;
+    //         //     IsEmpty = true;
+    //         //     if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+    //         // } else {
+    //         //     // Check if filename has valid extension
+    //         //     const hasExtension = sampleFilename.includes('.') &&
+    //         //         sampleFilename.lastIndexOf('.') < sampleFilename.length - 1;
+    //         //     if (!hasExtension) {
+    //         //         setSampleFilenameError(true);
+    //         //         hasErrors = true;
+    //         //         IsEmpty = true;
+    //         //         if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+    //         //     } else {
+    //         //         setSampleFilenameError(false);
+    //         //     }
+    //         // }
+
+    //         // Delimiter validation
+    //         // if (!selectedDelimiters.length) {
+    //         //     console.log("Delimiter not selected");
+    //         //     setDelimiterError(true);
+    //         //     hasErrors = true;
+    //         //     IsEmpty = true;
+    //         //     if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+    //         // } else {
+    //         //     setDelimiterError(false);
+    //         // }
+
+    //         // Rule Grid validation
+    //         // if (ruleGridData.length === 0) {
+    //         //     console.log("Rule grid is empty");
+    //         //     setRuleGridError(true);
+    //         //     hasErrors = true;
+    //         //     IsEmpty = true;
+    //         //     if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+    //         // } else {
+    //         //     setRuleGridError(false);
+    //         // }
+
+    //         // Tag rows validation (placeholder - implement actual row state tracking)
+    //         const errorRows = [];
+    //         let hasAnyError = false;
+
+    //         // // Check each tag row in the grid
+    //         // for (let i = 0; i < tagMasterData.length; i++) {
+    //         //     const tag = tagMasterData[i];
+    //         //     const rowSourceFlag = tag.sSourceFlag || 'NONE';
+    //         //     const rowMetadata = tag.sTextData || '';
+
+    //         //     // Show error for empty metadata when source is Folder or Filename
+    //         //     // (NONE doesn't need metadata)
+    //         //     if ((rowSourceFlag === 'Folder' || rowSourceFlag === 'Filename') && !rowMetadata.trim()) {
+    //         //         console.log(`Tag row ${i} has empty metadata - ADDING ERROR`);
+    //         //         errorRows.push(i);
+    //         //         IsEmpty = true;
+
+    //         //         scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //         //     }
+    //         // }
+
+    //         // Check each tag row in the grid
+    //         // for (let i = 0; i < tagMasterData.length; i++) {
+    //         //     const tag = tagMasterData[i];
+    //         //     const rowSourceFlag = tag.sSourceFlag || 'NONE';
+    //         //     const rowMetadata = tag.sTextData || '';
+
+    //         //     // Show error for empty metadata when source is Folder or Filename
+    //         //     if ((rowSourceFlag === 'Folder' || rowSourceFlag === 'Filename') && !rowMetadata.trim()) {
+    //         //         console.log(`Tag row ${i} has empty metadata - ADDING ERROR`);
+    //         //         errorRows.push(i);
+    //         //         hasAnyError = true;
+    //         //         IsEmpty = true;
+    //         //     }
+    //         // }
+
+    //         // // If ANY error exists, mark ALL empty Folder/Filename rows
+    //         // if (hasAnyError) {
+    //         //     setTagRowErrors(errorRows);
+    //         //     scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //         //     if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+    //         // }
+
+    //         // Check each tag row in the grid
+    //         // for (let i = 0; i < tagMasterData.length; i++) {
+    //         //     const tag = tagMasterData[i];
+    //         //     const rowSourceFlag = tag.sSourceFlag || 'NONE';
+    //         //     const rowMetadata = tag.sTextData || '';
+
+    //         //     // Show error for empty metadata when source is Folder or Filename
+    //         //     // EXCEPT for the currently selected row
+    //         //     if ((rowSourceFlag === 'Folder' || rowSourceFlag === 'Filename') &&
+    //         //         !rowMetadata.trim() &&
+    //         //         i !== selectedTagRowIndex) {  // ← ADD THIS CONDITION
+    //         //         console.log(`Tag row ${i} has empty metadata - ADDING ERROR`);
+    //         //         errorRows.push(i);
+    //         //         hasAnyError = true;
+    //         //         IsEmpty = true;
+    //         //     }
+    //         // }
+
+    //         // Check each tag row - show red border for empty metadata (except selected row)
+    //         for (let i = 0; i < tagMasterData.length; i++) {
+    //             const tag = tagMasterData[i];
+    //             const rowMetadata = tag.sTextData || '';
+
+    //             // Show error for ANY empty metadata, regardless of radio selection
+    //             // BUT skip the currently selected row
+    //             if (!rowMetadata.trim() && i !== selectedTagRowIndex) {
+    //                 console.log(`Tag row ${i} has empty metadata - ADDING ERROR`);
+    //                 errorRows.push(i);
+    //                 hasAnyError = true;
+    //                 IsEmpty = true;
+    //             }
+    //         }
+
+    //         // If ANY error exists, mark the error rows
+    //         if (hasAnyError) {
+    //             setTagRowErrors(errorRows);
+    //             scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //             if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+    //         }
+
+
+
+    //         // Add indices to errorRows array
+    //         setTagRowErrors(errorRows);
+    //         if (errorRows.length > 0) {
+    //             hasErrors = true;
+    //             IsEmpty = true;
+    //             if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+    //         }
+    //     }
+
+    //     // ========== CHECK IF WE SHOULD SHOW ERROR DIALOG ==========
+    //     // Show error dialog ONLY if client and instrument are selected
+    //     if (hasErrors && selectedClient && selectedInstrument) {
+    //         console.log("Client and Instrument selected - showing error dialog");
+    //         setErrorDialog({
+    //             isOpen: true,
+    //             message: 'Incomplete Data Fields',
+    //             type: 'information'
+    //         });
+
+    //         // Scroll to first error section
+    //         if (errorSections.length > 0) {
+    //             const firstSection = errorSections[0];
+    //             switch (firstSection) {
+    //                 case 'fileSettings':
+    //                     scrollToSection(fileSettingsRef, 'File Settings');
+    //                     break;
+    //                 case 'uploadPolicy':
+    //                     scrollToSection(uploadPolicyRef, 'Upload Policy');
+    //                     break;
+    //                 case 'schedulerMetadata':
+    //                     scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //                     break;
+    //                 default:
+    //                     scrollToSection(fileSettingsRef, 'File Settings');
+    //             }
+    //         }
+
+    //         return; // EXIT - Don't proceed
+    //     }
+
+    //     // If there are errors but client/instrument not selected, just show red borders and return
+    //     if (hasErrors) {
+    //         console.log("Errors exist but client/instrument not selected - only showing red borders");
+
+    //         // Scroll to first error section
+    //         if (errorSections.length > 0) {
+    //             const firstSection = errorSections[0];
+    //             switch (firstSection) {
+    //                 case 'fileSettings':
+    //                     scrollToSection(fileSettingsRef, 'File Settings');
+    //                     break;
+    //                 case 'uploadPolicy':
+    //                     scrollToSection(uploadPolicyRef, 'Upload Policy');
+    //                     break;
+    //                 case 'schedulerMetadata':
+    //                     scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //                     break;
+    //                 default:
+    //                     scrollToSection(fileSettingsRef, 'File Settings');
+    //             }
+    //         }
+
+    //         return; // EXIT - Only red borders, no dialog
+    //     }
+    //     // ========== LIVE BACKUP / SCHEDULE MODE ==========
+    //     console.log("--- Processing Schedule Mode ---");
+
+    //     passObjDet["L13LiveArchive"] = 0;
+    //     passObjDet["L13VersionPolicy"] = 0;
+
+    //     if (liveCapture) {
+    //         console.log("Live Capture is enabled");
+
+    //         passObjDet["L13ScheduleMode"] = "";
+    //         passObjDet["L13LiveArchive"] = 1;
+
+    //         if (liveCaptureVersioning) {
+    //             passObjDet["L13VersionPolicy"] = 0;
+    //         } else if (oneVersionPerDay) {
+    //             passObjDet["L13VersionPolicy"] = 1;
+    //         } else {
+    //             passObjDet["L13VersionPolicy"] = 2;
+    //         }
+    //     }
+
+    //     if (!liveCapture) {
+    //         console.log("Schedule Mode is enabled");
+
+    //         passObjDet["L13LiveArchive"] = 0;
+
+    //         if (oneTime) {
+    //             passObjDet["L13ScheduleMode"] = "O";
+    //         } else if (daily) {
+    //             passObjDet["L13ScheduleMode"] = "D";
+    //         } else if (weekly) {
+    //             passObjDet["L13ScheduleMode"] = "W";
+    //         } else if (monthly) {
+    //             passObjDet["L13ScheduleMode"] = "M";
+    //         }
+
+    //         if (oneTime) {
+    //             passObjDet["L13VersionPolicy"] = 2;
+    //         } else if (scheduleWithoutVersioning) {
+    //             passObjDet["L13VersionPolicy"] = 0;
+    //         } else {
+    //             passObjDet["L13VersionPolicy"] = 2;
+    //         }
+    //     }
+
+    //     // ========== TRIGGER TIME VALIDATION ==========
+    //     console.log("--- Validating Trigger Time ---");
+
+    //     const starttriggertime = triggerTime.split(' ');
+    //     console.log("Start trigger time:", starttriggertime);
+
+    //     if (starttriggertime[0] === "00:00:00") {
+    //         console.log("Trigger time is 00:00:00 - showing error");
+    //         setErrorDialog({
+    //             isOpen: true,
+    //             message: 'Must choose trigger time',
+    //             type: 'warning'
+    //         });
+    //         scrollToSection(triggerExpiryRef, scrollContainerRef);
+    //         return;
+    //     } else {
+    //         const startdate = `${triggerDate} ${starttriggertime[0]}`;
+    //         passObjDet["L13StartDate"] = startdate;
+    //         console.log("L13StartDate set to:", startdate);
+    //     }
+
+    //     // ========== EXPIRY DATE/TIME VALIDATION ==========
+    //     console.log("--- Validating Expiry Date/Time ---");
 
     //     if (expiryEnabled) {
+    //         const expirytime = expiryTime.split(' ');
+    //         console.log("Expiry time:", expirytime);
+
+    //         if (expirytime[0] === "00:00:00") {
+    //             console.log("Expiry time is 00:00:00 - showing error");
+    //             setErrorDialog({
+    //                 isOpen: true,
+    //                 message: 'Must choose end time',
+    //                 type: 'warning'
+    //             });
+    //             scrollToSection(triggerExpiryRef, scrollContainerRef);
+    //             return;
+    //         } else {
+    //             const enddate = `${expiryDate} ${expirytime[0]}`;
+    //             passObjDet["L13EndDate"] = enddate;
+    //             console.log("L13EndDate set to:", enddate);
+    //         }
+    //     } else {
+    //         passObjDet["L13EndDate"] = "";
+    //     }
+
+    //     // Set Trigger Time
+    //     const timeinput = triggerTime.split(' ');
+    //     const triggertime = `${triggerDate} ${timeinput[0]}`;
+    //     passObjDet["L13TriggerTime"] = triggertime;
+    //     console.log("L13TriggerTime set to:", triggertime);
+
+    //     // ========== ONE TIME DATE ==========
+    //     if (passObjDet["L13ScheduleMode"] === "O") {
+    //         console.log("Setting One Time Date:", oneTimeDate);
+    //         passObjDet["L13OneTimeDate"] = oneTimeDate;
+    //         passObjDet["L13TriggerTime"] = `${oneTimeDate} ${starttriggertime[0]}`;
+    //     } else {
+    //         passObjDet["L13OneTimeDate"] = null;
+    //     }
+
+    //     // ========== DAILY SCHEDULE ==========
+    //     if (passObjDet["L13ScheduleMode"] === "D") {
+    //         console.log("Processing Daily Schedule");
+
+    //         passObjDet["L13DayRepeatStatus"] = dailyRepeatTask ? 1 : 0;
+    //         passObjDet["L13DateInterval"] = parseInt(dailyEveryDays);
+
+    //         const hourtominconvert = CF_HOURTOMINCONVERTION(
+    //             parseInt(dailyEveryHours),
+    //             parseInt(dailyEveryMinutes)
+    //         );
+    //         passObjDet["L13TimeInterval"] = hourtominconvert;
+
+    //         console.log("Daily Schedule Data:", {
+    //             DayRepeatStatus: passObjDet["L13DayRepeatStatus"],
+    //             DateInterval: passObjDet["L13DateInterval"],
+    //             TimeInterval: passObjDet["L13TimeInterval"]
+    //         });
+    //     } else {
+    //         passObjDet["L13DayRepeatStatus"] = 0;
+    //         passObjDet["L13DateInterval"] = 0;
+    //         passObjDet["L13TimeInterval"] = 0;
+    //     }
+
+    //     // ========== WEEKLY SCHEDULE ==========
+    //     if (passObjDet["L13ScheduleMode"] === "W") {
+    //         console.log("Processing Weekly Schedule");
+
+    //         let weekdays = "";
+    //         weekdays += weeklyDays.Sunday ? "1" : "0";
+    //         weekdays += weeklyDays.Monday ? "1" : "0";
+    //         weekdays += weeklyDays.Tuesday ? "1" : "0";
+    //         weekdays += weeklyDays.Wednesday ? "1" : "0";
+    //         weekdays += weeklyDays.Thursday ? "1" : "0";
+    //         weekdays += weeklyDays.Friday ? "1" : "0";
+    //         weekdays += weeklyDays.Saturday ? "1" : "0";
+
+    //         passObjDet["L13ActiveDaysWeekly"] = weekdays;
+    //         console.log("L13ActiveDaysWeekly:", weekdays);
+    //     } else {
+    //         passObjDet["L13ActiveDaysWeekly"] = "0000000";
+    //     }
+
+    //     // ========== MONTHLY SCHEDULE ==========
+    //     if (passObjDet["L13ScheduleMode"] === "M") {
+    //         console.log("Processing Monthly Schedule");
+
+    //         passObjDet["L13ActiveMonth"] = GetActiveMonths(monthlySelectedMonths, monthOptions);
+
+    //         if (monthlyDayToggle) {
+    //             passObjDet["L13StatusMonthDaysOrWeek"] = "Days";
+    //             passObjDet["L13ActiveMonthlydays"] = GetActiveMonthlyDays(monthlySelectedDays);
+    //             console.log("Monthly Days:", passObjDet["L13ActiveMonthlydays"]);
+    //         } else {
+    //             passObjDet["L13ActiveMonthlydays"] = "";
+    //         }
+
+    //         if (monthlyOnToggle) {
+    //             passObjDet["L13StatusMonthDaysOrWeek"] = "Week";
+    //             passObjDet["L13ActiveWeekNoMonthly"] = GetActiveWeekNO(monthlySelectedWeeks, weekOptions);
+    //             passObjDet["L13ActiveDayOfWeekMonthly"] = GetActiveWeekDays(monthlySelectedWeekdays, weekdayOptions);
+    //             console.log("Monthly Week Data:", {
+    //                 WeekNo: passObjDet["L13ActiveWeekNoMonthly"],
+    //                 DayOfWeek: passObjDet["L13ActiveDayOfWeekMonthly"]
+    //             });
+    //         } else {
+    //             passObjDet["L13StatusMonthDaysOrWeek"] = "Week";
+    //             passObjDet["L13ActiveWeekNoMonthly"] = "";
+    //             passObjDet["L13ActiveDayOfWeekMonthly"] = "";
+    //         }
+    //     } else {
+    //         passObjDet["L13ActiveMonth"] = "000000000000";
+    //         passObjDet["L13StatusMonthDaysOrWeek"] = "Week";
+    //         passObjDet["L13ActiveMonthlydays"] = "";
+    //         passObjDet["L13ActiveWeekNoMonthly"] = "00000";
+    //         passObjDet["L13ActiveDayOfWeekMonthly"] = "0000000";
+    //     }
+
+    //     // ========== COPY/MOVE FILES ==========
+    //     console.log("--- Processing Copy/Move Files ---");
+    //     passObjDet["L13CopyFiles"] = copyFiles ? 1 : 0;
+    //     passObjDet["L13MovePermenently"] = moveFiles ? 1 : 0;
+
+    //     // ========== DELETE LOCAL COPY ==========
+    //     console.log("--- Processing Delete Local Copy ---");
+
+    //     if (deleteLocalCopy) {
+    //         passObjDet["L13DeleteLocalCopy"] = 1;
+
+    //         if (filesOlderThanEnabled) {
+    //             passObjDet["L13OlderFileType"] = 0;
+    //             passObjDet["L13OlderFileNO"] = parseInt(filesOlderDays);
+    //             passObjDet["L13OlderFileNoType"] = filesOlderDaysUnit;
+    //             passObjDet["L13OlderFileDate"] = null;
+    //             passObjDet["L13AutoLocalDeleteStatus"] = localDeleteMode;
+    //         }
+
+    //         if (filesOlderThanDateEnabled) {
+    //             passObjDet["L13OlderFileNO"] = 0;
+    //             passObjDet["L13OlderFileNoType"] = "";
+    //             passObjDet["L13OlderFileType"] = 1;
+    //             passObjDet["L13OlderFileDate"] = filesOlderThanDate;
+    //             passObjDet["L13AutoLocalDeleteStatus"] = localDeleteMode;
+    //         }
+    //     } else {
+    //         passObjDet["L13DeleteLocalCopy"] = 0;
+    //         passObjDet["L13OlderFileType"] = 0;
+    //         passObjDet["L13OlderFileNO"] = 0;
+    //         passObjDet["L13OlderFileNoType"] = "";
+    //         passObjDet["L13OlderFileDate"] = null;
+    //         passObjDet["L13AutoLocalDeleteStatus"] = localDeleteMode;
+    //     }
+
+    //     // ========== FILE DELETE VERSION POLICY ==========
+    //     console.log("--- Processing File Delete Policy ---");
+
+    //     if (applyDeletePolicy) {
+    //         passObjDet["L13FileDeleteVersionPolicy"] = 1;
+    //         passObjDet["L52DBMaintenanceDelType"] = true;
+    //         passObjDet["L52FileVersionDeleteType"] = false;
+    //         passObjDet["L13AutoServerDeleteStatus"] = serverDeleteMode;
+    //     } else {
+    //         passObjDet["L13FileDeleteVersionPolicy"] = 0;
+    //         passObjDet["L52DBMaintenanceDelType"] = false;
+    //         passObjDet["L52FileVersionDeleteType"] = false;
+    //         passObjDet["L13AutoServerDeleteStatus"] = 1;
+    //     }
+
+    //     // ========== FILE LINK STATUS ==========
+    //     passObjDet["L13FileLinkStatus"] = enableFileLink ? 1 : 0;
+
+    //     // ========== SUBFOLDER SETTINGS ==========
+    //     console.log("--- Processing Subfolder Settings ---");
+
+    //     if (includeSubfolder) {
+    //         passObjDet["L13SubDirectory"] = 1;
+
+    //         if (completeTree) {
+    //             passObjDet["L13DataArchiveMode"] = 0;
+    //             passObjDet["L13Level"] = 0;
+    //         }
+
+    //         if (levelEnabled) {
+    //             passObjDet["L13DataArchiveMode"] = 1;
+    //             if (levelValue.trim() !== "") {
+    //                 passObjDet["L13Level"] = parseInt(levelValue);
+    //             }
+    //         } else {
+    //             passObjDet["L13Level"] = 0;
+    //             passObjDet["L13DataArchiveMode"] = 0;
+    //         }
+    //     } else {
+    //         passObjDet["L13SubDirectory"] = 0;
+    //         passObjDet["L13Level"] = 0;
+    //         passObjDet["L13DataArchiveMode"] = 0;
+    //     }
+
+    //     // ========== INSTRUMENT & UNC DATA ==========
+    //     console.log("--- Processing Instrument & UNC Data ---");
+
+    //     passObjDet["L13EmpowerStatus"] = 0;
+    //     passObjDet["L13InstrumentMappingID"] = selectedInstrument.trim();
+
+    //     const Instrumentitem = instrumentOptions.find(inst => inst.L12InstrumentMappingID === selectedInstrument);
+    //     if (Instrumentitem) {
+    //         passObjDet["L13InstrumentID"] = Instrumentitem.L12InstrumentID;
+    //         passObjDet["sInstrumentName"] = Instrumentitem.L11InstrumentName;
+    //         console.log("Instrument Data:", {
+    //             InstrumentID: passObjDet["L13InstrumentID"],
+    //             InstrumentName: passObjDet["sInstrumentName"]
+    //         });
+    //     }
+
+    //     passObjDet["L13FTPID"] = selectedDestination.trim();
+    //     passObjDet["L13FileFilter"] = filter;
+    //     passObjDet["L13UNCUserName"] = uncUsername.trim();
+    //     passObjDet["L13UNCPassword"] = uncPassword.trim();
+
+    //     const domainItem = domainOptions.find(d => d.L03DomainID === selectedDomain);
+    //     if (domainItem) {
+    //         passObjDet["L13UNCDomain"] = domainItem.L03DomainName;
+    //     } else {
+    //         passObjDet["L13UNCDomain"] = "";
+    //     }
+
+    //     // ========== TASK SETTINGS ==========
+    //     console.log("--- Setting Task Settings ---");
+    //     const userDetails = CF_activeUserdetails();
+
+    //     passObjDet["L13TaskStatus"] = "D";
+    //     passObjDet["L13DayStatus"] = 1;
+    //     passObjDet["L13TimeStatus"] = 1;
+    //     passObjDet["L13CreatedBy"] = userDetails.sUserID;
+    //     passObjDet["L13TaskName"] = "Scheduler";
+    //     passObjDet["L13WatcherFlag"] = 0;
+    //     passObjDet["L13TaskCompleted"] = 0;
+    //     passObjDet["bExist"] = false;
+    //     passObjDet["process"] = "";
+
+    //     // ========== EXPIRY DATE/TIME COMPARISON ==========
+    //     console.log("--- Comparing Trigger and Expiry Times ---");
+
+    //     setShowExpiryWarning(false);
+    //     setShowTriggerWarning(false);
+
+    //     if (expiryEnabled) {
+    //         const triggerParts = triggerDate.split('/');
+    //         const triggerTimeParts = triggerTime.split(':');
+    //         const triggerDateTime = new Date(
+    //             parseInt(triggerParts[2]),
+    //             parseInt(triggerParts[1]) - 1,
+    //             parseInt(triggerParts[0]),
+    //             parseInt(triggerTimeParts[0]),
+    //             parseInt(triggerTimeParts[1]),
+    //             parseInt(triggerTimeParts[2])
+    //         );
+
     //         const expiryParts = expiryDate.split('/');
     //         const expiryTimeParts = expiryTime.split(':');
-
     //         const expiryDateTime = new Date(
     //             parseInt(expiryParts[2]),
     //             parseInt(expiryParts[1]) - 1,
@@ -2558,59 +3509,380 @@ const SearchServerData = () => {
     //             parseInt(expiryTimeParts[2])
     //         );
 
-    //         if (expiryDateTime <= triggerDateTime) {
-    //             setShowExpiryWarning(true);
-    //             // Scroll to the Trigger/Expiry section
-    //             if (triggerExpiryRef.current && scrollContainerRef.current) {
-    //                 const container = scrollContainerRef.current;
-    //                 const element = triggerExpiryRef.current;
-    //                 const elementRect = element.getBoundingClientRect();
-    //                 const containerRect = container.getBoundingClientRect();
-    //                 const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
+    //         console.log("Trigger DateTime:", triggerDateTime);
+    //         console.log("Expiry DateTime:", expiryDateTime);
 
-    //                 container.scrollTo({
-    //                     top: offsetPosition,
-    //                     behavior: 'smooth'
-    //                 });
-    //             }
+    //         if (expiryDateTime <= triggerDateTime) {
+    //             console.log("Expiry time is less than or equal to trigger time - showing error");
+    //             setShowExpiryWarning(true);
+    //             setErrorDialog({
+    //                 isOpen: true,
+    //                 message: 'Trigger Date/time should not be less than expiry date/time',
+    //                 type: 'warning'
+    //             });
+    //             scrollToSection(triggerExpiryRef, scrollContainerRef);
     //             return;
     //         }
     //     }
 
-    //     if (expiryEnabled) {
-    //         const expiryParts = expiryDate.split('/');
-    //         const expiryTimeParts = expiryTime.split(':');
+    //     // ========== DATA LOGGER ==========
+    //     console.log("--- Processing Data Logger ---");
 
-    //         const expiryDateTime = new Date(
-    //             parseInt(expiryParts[2]),
-    //             parseInt(expiryParts[1]) - 1,
-    //             parseInt(expiryParts[0]),
-    //             parseInt(expiryTimeParts[0]),
-    //             parseInt(expiryTimeParts[1]),
-    //             parseInt(expiryTimeParts[2])
-    //         );
-
-    //         if (expiryDateTime <= triggerDateTime) {
-    //             setShowExpiryWarning(true);
-    //             // Scroll to the Trigger/Expiry section
-    //             if (triggerExpiryRef.current && scrollContainerRef.current) {
-    //                 const container = scrollContainerRef.current;
-    //                 const element = triggerExpiryRef.current;
-    //                 const elementRect = element.getBoundingClientRect();
-    //                 const containerRect = container.getBoundingClientRect();
-    //                 const offsetPosition = container.scrollTop + (elementRect.top - containerRect.top) - 20;
-
-    //                 container.scrollTo({
-    //                     top: offsetPosition,
-    //                     behavior: 'smooth'
-    //                 });
-    //             }
-    //             return; // Don't submit
-    //         }
+    //     if (dataLogger) {
+    //         passObjDet["nDataLoggerStatus"] = 1;
+    //     } else {
+    //         passObjDet["nDataLoggerStatus"] = 0;
     //     }
 
-    //     // Continue with your submission logic here
-    //     console.log('Form submitted successfully');
+    //     const daysVal = archivalDays;
+    //     passObjDet["nDataLoggerArchivalDays"] = daysVal ? parseInt(daysVal) : 0;
+
+    //     // ========== SCHEDULER METADATA ==========
+    //     // console.log("--- Processing Scheduler Metadata ---");
+
+    //     // passObjDet["L13Active"] = isSchedulerMetadataEnabled ? 1 : 0;
+
+    //     // if (isSchedulerMetadataEnabled) {
+    //     //     console.log("Scheduler Metadata is enabled - validating");
+
+    //     //     if (!selectedTemplate) {
+    //     //         console.log("Template not selected");
+    //     //         setTemplateError(true);
+    //     //         IsEmpty = true;
+    //     //         scrollToSection(schedulerMetadataRef, scrollContainerRef);
+    //     //     } else {
+    //     //         setTemplateError(false);
+    //     //         passObjDet["L13TemplateID"] = selectedTemplate;
+    //     //     }
+
+    //     //     const samplefilename = sampleFilename;
+    //     //     const Delimeter = selectedDelimiters.length > 0
+    //     //         ? ConcatenateDelimeterfromlist(selectedDelimiters, delimiterOptions)
+    //     //         : "";
+
+    //     //     console.log("Sample Filename:", samplefilename);
+    //     //     console.log("Delimiter:", Delimeter);
+
+    //     //     let tagmetadatagridlst = [...tagMasterData];
+
+    //     //     // Clear previous tag row errors
+    //     //     setTagRowErrors([]);
+    //     //     const errorRows = [];
+    //     //     // Validate tags
+    //     //     for (let i = 0; i < tagmetadatagridlst.length; i++) {
+    //     //         const sValue = (tagmetadatagridlst[i]["sValue"] || "").trim();
+    //     //         const sValueID = (tagmetadatagridlst[i]["sValueID"] || "").trim();
+    //     //         const sSourceFlag = tagmetadatagridlst[i]["sSourceFlag"] || "NONE";
+
+    //     //         console.log(`Validating tag ${i}:`, {
+    //     //             TagName: tagmetadatagridlst[i]["sTagName"],
+    //     //             SourceFlag: sSourceFlag,
+    //     //             Value: sValue,
+    //     //             ValueID: sValueID
+    //     //         });
+
+    //     //         if ((sValue === "" || sValueID === "") && sSourceFlag !== "NONE" && sSourceFlag !== "") {
+    //     //             console.log(`Tag ${i} validation failed - missing value or valueID`);
+    //     //             errorRows.push(i);
+    //     //             IsEmpty = true;
+    //     //             scrollToSection(schedulerMetadataRef, scrollContainerRef);
+    //     //         }
+
+    //     //         if (sSourceFlag === "Filename") {
+    //     //             if (Delimeter === "") {
+    //     //                 console.log("Delimiter is empty for Filename source");
+    //     //                 setDelimiterError(true);
+    //     //                 IsEmpty = true;
+    //     //                 scrollToSection(schedulerMetadataRef, scrollContainerRef);
+    //     //             } else {
+    //     //                 setDelimiterError(false);
+    //     //             }
+
+    //     //             if (samplefilename === "") {
+    //     //                 console.log("Sample filename is empty");
+    //     //                 setSampleFilenameError(true);
+    //     //                 IsEmpty = true;
+    //     //                 scrollToSection(schedulerMetadataRef, scrollContainerRef);
+    //     //             }
+
+    //     //             const { splitpath } = SplitFilenamewithExt(samplefilename, Delimeter);
+    //     //             console.log("Split path result:", splitpath);
+
+    //     //             if (splitpath.length <= 1 && Delimeter !== "None") {
+    //     //                 console.log("Split path validation failed");
+    //     //                 IsEmpty = true;
+    //     //                 setDelimiterError(true);
+    //     //                 setSampleFilenameError(true);
+    //     //                 scrollToSection(schedulerMetadataRef, scrollContainerRef);
+    //     //             }
+
+    //     //             if (parseInt(sValue) > splitpath.length) {
+    //     //                 console.log("Value index exceeds split path length");
+    //     //                 IsEmpty = true;
+    //     //                 setDelimiterError(true);
+    //     //                 setSampleFilenameError(true);
+    //     //                 scrollToSection(schedulerMetadataRef, scrollContainerRef);
+    //     //             }
+
+    //     //             if (!IsEmpty) {
+    //     //                 setSampleFilenameError(false);
+    //     //             }
+    //     //         }
+
+    //     //         // Transform data
+    //     //         tagmetadatagridlst[i]["sTextData"] = "";
+    //     //         if (sSourceFlag === "NONE") {
+    //     //             tagmetadatagridlst[i]["sTextData"] = sValueID;
+    //     //             tagmetadatagridlst[i]["sValue"] = "";
+    //     //             tagmetadatagridlst[i]["sValueID"] = "";
+    //     //         }
+
+
+    //     //     }
+
+    //     //     // Set the error rows if any found
+    //     //     if (errorRows.length > 0) {
+    //     //         setTagRowErrors(errorRows);
+    //     //     }
+
+    //     //     const subfolderlevel = 0;
+
+    //     //     if (Instrumentitem) {
+    //     //         passObjDet["L13InstrumentID"] = Instrumentitem.L12InstrumentID;
+    //     //     }
+
+    //     //     passObjDet["L13FileDelimiter"] = Delimeter;
+    //     //     passObjDet["L13Examplefilename"] = samplefilename;
+    //     //     passObjDet["L13SubfolderLevel"] = subfolderlevel;
+    //     //     passObjDet["SchedulerExtractionlst"] = tagmetadatagridlst;
+
+    //     //     console.log("Scheduler Metadata Data:", {
+    //     //         FileDelimiter: passObjDet["L13FileDelimiter"],
+    //     //         Examplefilename: passObjDet["L13Examplefilename"],
+    //     //         ExtractionList: passObjDet["SchedulerExtractionlst"]
+    //     //     });
+    //     // }
+
+    //     // // ========== FINAL VALIDATION CHECK ==========
+    //     // console.log("--- Final Validation Check ---");
+    //     // console.log("IsEmpty:", IsEmpty);
+
+    //     // // if (IsEmpty) {
+    //     // //     console.log("Phase 2 validation failed - showing red borders AND error dialog");
+    //     // //     setErrorDialog({
+    //     // //         isOpen: true,
+    //     // //         message: 'Incomplete Data Fields',
+    //     // //         type: 'information'
+    //     // //     });
+    //     // //     scrollToSection(fileSettingsRef, scrollContainerRef);
+    //     // //     return;
+    //     // // }
+
+    //     // if (IsEmpty) {
+    //     //     console.log("Phase 2 validation failed - showing red borders AND error dialog");
+    //     //     setErrorDialog({
+    //     //         isOpen: true,
+    //     //         message: 'Incomplete Data Fields',
+    //     //         type: 'information'
+    //     //     });
+
+    //     //     // Scroll to the first error section
+    //     //     if (uncUsernameError || uncPasswordError || uncDomainError) {
+    //     //         scrollToSection(fileSettingsRef, scrollContainerRef);
+    //     //     } else if (levelValueError || filesOlderDaysError) {
+    //     //         scrollToSection(uploadPolicyRef, scrollContainerRef);
+    //     //     } else if (auditFilterError) {
+    //     //         // Stay on current section (policies section)
+    //     //     } else if (templateError || sampleFilenameError || delimiterError) {
+    //     //         scrollToSection(schedulerMetadataRef, scrollContainerRef);
+    //     //     } else {
+    //     //         scrollToSection(fileSettingsRef, scrollContainerRef);
+    //     //     }
+
+    //     //     return;
+    //     // }
+
+    //     // // ========== FINAL VALIDATION CHECK ==========
+    //     // console.log("--- Final Validation Check ---");
+    //     // console.log("IsEmpty:", IsEmpty);
+
+    //     // if (IsEmpty) {
+    //     //     console.log("Phase 2 validation failed - showing red borders AND error dialog");
+    //     //     setErrorDialog({
+    //     //         isOpen: true,
+    //     //         message: 'Incomplete Data Fields',
+    //     //         type: 'information'
+    //     //     });
+
+    //     //     // Scroll to the first error section
+    //     //     if (uncUsernameError || uncPasswordError || uncDomainError) {
+    //     //         scrollToSection(fileSettingsRef, 'File Settings');
+    //     //     } else if (levelValueError || filesOlderDaysError) {
+    //     //         scrollToSection(uploadPolicyRef, 'Upload Policy');
+    //     //     } else if (auditFilterError) {
+    //     //         // Stay on current section (policies section)
+    //     //     } else if (templateError || sampleFilenameError || delimiterError) {
+    //     //         scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //     //     } else {
+    //     //         scrollToSection(fileSettingsRef, 'File Settings');
+    //     //     }
+
+    //     //     return;
+    //     // }
+
+    //     // // ========== CHECK IF INSTRUMENT IS MANUAL PARSING ==========
+    //     // console.log("--- Checking Instrument Type ---");
+
+    //     // // Get the selected instrument
+    //     // const selectedInstData = instrumentOptions.find(
+    //     //     inst => inst.L12InstrumentMappingID === selectedInstrument
+    //     // );
+
+    //     // // Check if it's manual parsing instrument
+    //     // const isManualParsing = selectedInstData &&
+    //     //     selectedInstData.L11InterfaceStatus === 1 &&
+    //     //     selectedInstData.L11ParserType > 0 &&
+    //     //     selectedInstData.L11LockType === "M";
+
+    //     // console.log("Is Manual Parsing Instrument:", isManualParsing);
+    //     // console.log("Instrument Data:", selectedInstData);
+
+    //     // if (isManualParsing) {
+    //     //     // For manual parsing instruments, show confirmation dialog with Save, Save&Activate, Activate&Lock options
+    //     //     setIsManualParsingInstrument(true);
+    //     //     setShowSubmitDialog(true);
+    //     //     setSubmitAction('');
+    //     // } else {
+    //     //     // For automatic instruments, show confirmation dialog with Save and Save&Activate options
+    //     //     setIsManualParsingInstrument(false);
+    //     //     setShowSubmitDialog(true);
+    //     //     setSubmitAction('');
+    //     // }
+
+    //     // ========== FINAL VALIDATION CHECK ==========
+    //     console.log("--- Final Validation Check ---");
+    //     console.log("IsEmpty:", IsEmpty);
+
+    //     if (IsEmpty) {
+    //         console.log("Phase 2 validation failed - showing red borders AND error dialog");
+    //         setErrorDialog({
+    //             isOpen: true,
+    //             message: 'Incomplete Data Fields',
+    //             type: 'information'
+    //         });
+
+    //         // Scroll to the first error section
+    //         if (uncUsernameError || uncPasswordError || uncDomainError) {
+    //             scrollToSection(fileSettingsRef, 'File Settings');
+    //         } else if (levelValueError || filesOlderDaysError) {
+    //             scrollToSection(uploadPolicyRef, 'Upload Policy');
+    //         } else if (auditFilterError) {
+    //             // Stay on current section (policies section)
+    //         } else if (templateError || sampleFilenameError || delimiterError) {
+    //             scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+    //         } else {
+    //             scrollToSection(fileSettingsRef, 'File Settings');
+    //         }
+
+    //         return;
+    //     }
+
+    //     // ========== BUILD COMPLETE passObjDet FOR SUBMISSION ==========
+    //     console.log("--- Building Complete passObjDet Object ---");
+
+    //     // let passObjDet = {};
+    //     // ... [ALL YOUR passObjDet BUILDING LOGIC FROM BEFORE] ...
+
+
+    //     // Store the passObjDet in state
+    //     setSubmitPassObjDet(passObjDet);
+
+    //     // Get selected instrument data
+    //     const selectedInstData = instrumentOptions.find(
+    //         inst => inst.L12InstrumentMappingID === selectedInstrument
+    //     );
+
+    //     // Check if it's manual parsing instrument
+    //     const isManualParsing = selectedInstData &&
+    //         selectedInstData.L11InterfaceStatus === 1 &&
+    //         selectedInstData.L11ParserType > 0 &&
+    //         selectedInstData.L11LockType === "M";
+
+    //     console.log("Is Manual Parsing Instrument:", isManualParsing);
+    //     console.log("Instrument Data:", selectedInstData);
+
+    //     if (isManualParsing) {
+    //         // For manual parsing instruments, FIRST check parsing order
+    //         console.log("Checking parsing order for manual instrument...");
+
+    //         // Add the required property
+    //         passObjDet["sInstrumentMappingID"] = selectedInstData.L12InstrumentMappingID;
+
+    //         // Store updated passObjDet
+    //         setSubmitPassObjDet(passObjDet);
+
+    //         // Call the parsing order check API
+    //         checkParsingOrder(passObjDet);
+    //     } else {
+    //         // For automatic instruments, show confirmation dialog directly
+    //         setIsManualParsingInstrument(false);
+    //         setShowSubmitDialog(true);
+    //     }
+
+    //     // ========== API SUBMISSION ==========
+    //     console.log("--- Starting API Submission ---");
+    //     console.log("Final passObjDet:", passObjDet);
+
+    //     try {
+    //         // Check if instrument needs parsing order validation
+    //         const InstrumentOriginalItem = Instrumentitem;
+
+    //         if (
+    //             InstrumentOriginalItem &&
+    //             InstrumentOriginalItem.L11InterfaceStatus === 1 &&
+    //             InstrumentOriginalItem.L11ParserType > 0 &&
+    //             InstrumentOriginalItem.L11LockType === "M"
+    //         ) {
+    //             console.log("Checking instrument parsing order");
+
+    //             passObjDet["sInstrumentMappingID"] = InstrumentOriginalItem.L12InstrumentMappingID;
+
+    //             const checkParsingOrderData = {
+    //                 ...CF_activeUserdetails(),
+    //                 passObjDet: passObjDet
+    //             };
+
+    //             const parsingOrderResponse = await postData(
+    //                 'Scheduler/CheckInstrumentExistwithParsingOrder',
+    //                 checkParsingOrderData
+    //             );
+
+    //             console.log("Parsing order response:", parsingOrderResponse);
+
+    //             // Handle parsing order response
+    //             if (parsingOrderResponse && parsingOrderResponse.success) {
+    //                 // Proceed with final submission
+    //                 await submitScheduler(passObjDet);
+    //             } else {
+    //                 // Show error if parsing order check failed
+    //                 setErrorDialog({
+    //                     isOpen: true,
+    //                     message: parsingOrderResponse.message || 'Failed to validate instrument parsing order',
+    //                     type: 'error'
+    //                 });
+    //             }
+    //         } else {
+    //             // No parsing order check needed - proceed directly
+    //             await submitScheduler(passObjDet);
+    //         }
+    //     } catch (error) {
+    //         console.error("API submission error:", error);
+    //         setErrorDialog({
+    //             isOpen: true,
+    //             message: error.message || 'An error occurred while submitting the form',
+    //             type: 'error'
+    //         });
+    //     }
     // };
 
     const handleSubmit = async () => {
@@ -2618,17 +3890,21 @@ const SearchServerData = () => {
 
         // Initialize validation object
         let passObjDet = {};
-        let IsEmpty = false;
 
-        // ========== VALIDATION SECTION ==========
-        console.log("--- Starting Validation ---");
+        // ========== PHASE 1: ALL FIELD VALIDATION ==========
+        console.log("--- Phase 1: All Field Validation ---");
+
+        let hasErrors = false;
+        let IsEmpty = false;
+        let errorSections = []; // Track which sections have errors
 
         // 1. Client Validation
         if (!selectedClient) {
             console.log("Client validation failed");
             setClientError(true);
+            hasErrors = true;
             IsEmpty = true;
-            scrollToSection(fileSettingsRef, scrollContainerRef);
+            if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
         } else {
             setClientError(false);
         }
@@ -2636,20 +3912,128 @@ const SearchServerData = () => {
         // 2. Instrument Validation
         if (!selectedInstrument) {
             console.log("Instrument validation failed");
+            setInstrumentError(true);
+            hasErrors = true;
             IsEmpty = true;
-            scrollToSection(fileSettingsRef, scrollContainerRef);
+            if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+        } else {
+            setInstrumentError(false);
         }
 
-        // 3. Method Validation (only if not disabled)
+        // 3. Path Validation (Local or UNC)
+        if (!isUNCPathEnabled) {
+            // Local Path
+            if (!sourcePath.trim()) {
+                console.log("Source path is empty");
+                setSourcePathError(true);
+                hasErrors = true;
+                IsEmpty = true;
+                if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+            } else {
+                const pathValidation = CF_pathValidation(sourcePath);
+                const sourcepathParts = sourcePath.split("\\");
+
+                if (!pathValidation || sourcepathParts[1] === "") {
+                    console.log("Source path validation failed");
+                    setSourcePathError(true);
+                    hasErrors = true;
+                    IsEmpty = true;
+                    if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+                } else {
+                    setSourcePathError(false);
+                }
+            }
+        } else {
+            // UNC Path
+            if (!uncPath.trim()) {
+                console.log("UNC Path is empty");
+                setUncPathError(true);
+                hasErrors = true;
+                IsEmpty = true;
+                if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+            } else {
+                const UNCPathValidation = CF_UNCPathValidation(uncPath.trim());
+                if (!UNCPathValidation) {
+                    console.log("UNC Path validation failed");
+                    setUncPathError(true);
+                    hasErrors = true;
+                    IsEmpty = true;
+                    if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+                } else {
+                    setUncPathError(false);
+                }
+            }
+        }
+
+        // 4. Destination Validation
+        if (!selectedDestination) {
+            console.log("Destination not selected");
+            setDestinationError(true);
+            hasErrors = true;
+            IsEmpty = true;
+            if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+        } else {
+            setDestinationError(false);
+        }
+
+        // Show error dialog ONLY if client and instrument are selected
+        if (hasErrors && selectedClient && selectedInstrument) {
+            console.log("Client and Instrument selected - showing error dialog");
+            setErrorDialog({
+                isOpen: true,
+                message: 'Incomplete Data Fields',
+                type: 'information'
+            });
+
+            // Scroll to File Settings section
+            scrollToSection(fileSettingsRef, 'File Settings');
+            return; // EXIT - Don't proceed
+        }
+
+        // If there are errors but client/instrument not selected, just show red borders and return
+        if (hasErrors) {
+            console.log("Errors exist but client/instrument not selected - only showing red borders");
+            // Scroll to first error
+            scrollToSection(fileSettingsRef, 'File Settings');
+            return; // EXIT - Only red borders, no dialog
+        }
+
+        // ========== PHASE 2: CONDITIONAL FIELDS VALIDATION ==========
+        console.log("--- Phase 2: Conditional Fields Validation ---");
+
+        // 5. Method Validation (only if not disabled)
+        // if (!isMethodDisabled) {
+        //     const selectedMethodIndex = methodOptions.findIndex(m => m.InstMethodName === selectedMethod);
+
+        //     if (selectedMethodIndex === -1 || !selectedMethod) {
+        //         console.log("Method validation failed");
+        //         setMethodError(true);
+        //         IsEmpty = true;
+        //         if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+        //     } else {
+        //         setMethodError(false);
+        //         const selectedMethodItem = methodOptions[selectedMethodIndex];
+        //         passObjDet["L13MethodName"] = selectedMethodItem.MethodName;
+        //         passObjDet["L13ParserInstCode"] = selectedMethodItem.InstName;
+        //         passObjDet["L13ParserMethodGroup"] = selectedMethodItem.MethodGroup;
+        //     }
+        // } else {
+        //     passObjDet["L13MethodName"] = "DEFAULT";
+        // }
+        // 5. Method Validation (only if not disabled)
         if (!isMethodDisabled) {
             const selectedMethodIndex = methodOptions.findIndex(m => m.InstMethodName === selectedMethod);
 
             if (selectedMethodIndex === -1 || !selectedMethod) {
                 console.log("Method validation failed");
+                setMethodError(true);
                 IsEmpty = true;
-                scrollToSection(fileSettingsRef, scrollContainerRef);
+                if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
             } else {
+                setMethodError(false);
                 const selectedMethodItem = methodOptions[selectedMethodIndex];
+
+
                 passObjDet["L13MethodName"] = selectedMethodItem.MethodName;
                 passObjDet["L13ParserInstCode"] = selectedMethodItem.InstName;
                 passObjDet["L13ParserMethodGroup"] = selectedMethodItem.MethodGroup;
@@ -2658,66 +4042,20 @@ const SearchServerData = () => {
             passObjDet["L13MethodName"] = "DEFAULT";
         }
 
-        // 4. Path Validation (Local or UNC)
-        const radLocalPath = !isUNCPathEnabled;
-        const radUNCPath = isUNCPathEnabled;
+        // Set Path in passObjDet
+        if (!isUNCPathEnabled) {
+            passObjDet["L13SourcePath"] = sourcePath;
+            passObjDet["L13UNCStatus"] = 0;
+        } else {
+            passObjDet["L13SourcePath"] = uncPath.trim();
+            passObjDet["L13UNCStatus"] = 1;
 
-        if (radLocalPath) {
-            console.log("Validating Local Path:", sourcePath);
-
-            if (!sourcePath.trim()) {
-                console.log("Source path is empty");
-                setSourcePathError(true);
-                IsEmpty = true;
-                scrollToSection(fileSettingsRef, scrollContainerRef);
-            } else {
-                const pathValidation = CF_pathValidation(sourcePath);
-                const sourcepathParts = sourcePath.split("\\");
-
-                console.log("Path validation result:", pathValidation);
-                console.log("Source path parts:", sourcepathParts);
-
-                if (pathValidation) {
-                    if (sourcepathParts[1] === "") {
-                        console.log("Source path invalid - second part is empty");
-                        setSourcePathError(true);
-                        IsEmpty = true;
-                        scrollToSection(fileSettingsRef, scrollContainerRef);
-                    } else {
-                        setSourcePathError(false);
-                        passObjDet["L13SourcePath"] = sourcePath;
-                        passObjDet["L13UNCStatus"] = 0;
-                    }
-                } else {
-                    console.log("Source path validation failed");
-                    setSourcePathError(true);
-                    IsEmpty = true;
-                    scrollToSection(fileSettingsRef, scrollContainerRef);
-                }
-            }
-        }
-
-        if (radUNCPath) {
-            console.log("Validating UNC Path");
-            IsEmpty = false;
-
-            const UNCPathValidation = CF_UNCPathValidation(uncPath.trim());
-            console.log("UNC Path validation result:", UNCPathValidation);
-
-            if (!UNCPathValidation) {
-                console.log("UNC Path validation failed");
-                setUncPathError(true);
-                IsEmpty = true;
-                scrollToSection(fileSettingsRef, scrollContainerRef);
-            } else {
-                setUncPathError(false);
-            }
-
+            // UNC credentials validation
             if (!uncUsername.trim()) {
                 console.log("UNC Username is empty");
                 setUncUsernameError(true);
                 IsEmpty = true;
-                scrollToSection(fileSettingsRef, scrollContainerRef);
+                if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
             } else {
                 setUncUsernameError(false);
             }
@@ -2726,82 +4064,251 @@ const SearchServerData = () => {
                 console.log("UNC Password is empty");
                 setUncPasswordError(true);
                 IsEmpty = true;
-                scrollToSection(fileSettingsRef, scrollContainerRef);
+                if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
             } else {
                 setUncPasswordError(false);
             }
 
             if (!selectedDomain) {
                 console.log("Domain not selected");
+                setUncDomainError(true);
                 IsEmpty = true;
-                scrollToSection(fileSettingsRef, scrollContainerRef);
-            }
-
-            if (!IsEmpty) {
-                passObjDet["L13SourcePath"] = uncPath.trim();
-                passObjDet["L13UNCStatus"] = 1;
+                if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
+            } else {
+                setUncDomainError(false);
             }
         }
 
         // 5. Filter Validation
         if (!filter.trim()) {
             console.log("Filter is empty");
+            setFilterError(true);
             IsEmpty = true;
-            scrollToSection(fileSettingsRef, scrollContainerRef);
-        }
-
-        // 6. Destination Validation
-        if (!selectedDestination) {
-            console.log("Destination not selected");
-            IsEmpty = true;
-            scrollToSection(fileSettingsRef, scrollContainerRef);
+            if (!errorSections.includes('fileSettings')) errorSections.push('fileSettings');
         } else {
-            const destinationItem = destinationOptions.find(d => d.L09FTPID === selectedDestination);
-            if (destinationItem) {
-                passObjDet["L13FTPText"] = destinationItem.L09FTPAliasName;
-            }
+            setFilterError(false);
         }
 
-        // 7. Delete Local Copy Validation
+        // Set Destination in passObjDet
+        const destinationItem = destinationOptions.find(d => d.L09FTPID === selectedDestination);
+        if (destinationItem) {
+            passObjDet["L13FTPText"] = destinationItem.L09FTPAliasName;
+        }
+
+        // 6. Delete Local Copy Validation
         if (deleteLocalCopy) {
             console.log("Validating Delete Local Copy");
 
             if (filesOlderThanEnabled) {
                 if (!filesOlderDays.trim()) {
                     console.log("Files older days is empty");
+                    setFilesOlderDaysError(true);
                     IsEmpty = true;
-                    scrollToSection(uploadPolicyRef, scrollContainerRef);
+                    if (!errorSections.includes('uploadPolicy')) errorSections.push('uploadPolicy');
+                } else {
+                    setFilesOlderDaysError(false);
                 }
             }
         }
 
-        // 8. Subfolder Level Validation
+        // 7. Subfolder Level Validation
         if (includeSubfolder) {
             console.log("Validating Subfolder Level");
 
             if (levelEnabled) {
                 if (!levelValue.trim()) {
                     console.log("Level value is empty");
+                    setLevelValueError(true);
                     IsEmpty = true;
-                    scrollToSection(uploadPolicyRef, scrollContainerRef);
+                    if (!errorSections.includes('uploadPolicy')) errorSections.push('uploadPolicy');
+                } else {
+                    setLevelValueError(false);
                 }
             }
         }
 
-        // 9. File Audit Validation
+        // 8. File Audit Validation
         if (enableFileAudit) {
             console.log("Validating File Audit");
-
             if (!auditFilter.trim()) {
                 console.log("Audit filter is empty");
+                setAuditFilterError(true);
+                hasErrors = true;
                 IsEmpty = true;
             } else {
+                setAuditFilterError(false);
                 passObjDet["L52EnableVerAudit"] = true;
                 passObjDet["L52AuditFilter"] = auditFilter;
             }
         } else {
             passObjDet["L52EnableVerAudit"] = false;
             passObjDet["L52AuditFilter"] = "";
+        }
+
+        // ========== SCHEDULER METADATA VALIDATION ==========
+        console.log("--- Processing Scheduler Metadata ---");
+
+        passObjDet["L13Active"] = isSchedulerMetadataEnabled ? 1 : 0;
+
+        if (isSchedulerMetadataEnabled) {
+            console.log("Scheduler Metadata is enabled - validating");
+
+            // Template validation
+            if (!selectedTemplate) {
+                console.log("Template not selected");
+                setTemplateError(true);
+                IsEmpty = true;
+                if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+            } else {
+                setTemplateError(false);
+                passObjDet["L13TemplateID"] = selectedTemplate;
+            }
+
+            // Sample filename validation - only validate if there are Filename rows
+            const hasFilenameRows = tagMasterData.some(tag => tag.sSourceFlag === 'Filename');
+            if (hasFilenameRows) {
+                if (!sampleFilename.trim()) {
+                    console.log("Sample filename is empty");
+                    setSampleFilenameError(true);
+                    IsEmpty = true;
+                    if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+                } else {
+                    // Check if filename has valid extension
+                    const hasExtension = sampleFilename.includes('.') &&
+                        sampleFilename.lastIndexOf('.') < sampleFilename.length - 1;
+                    if (!hasExtension) {
+                        setSampleFilenameError(true);
+                        IsEmpty = true;
+                        if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+                    } else {
+                        setSampleFilenameError(false);
+                    }
+                }
+
+                // Delimiter validation - only for Filename rows
+                if (!selectedDelimiters.length) {
+                    console.log("Delimiter not selected");
+                    setDelimiterError(true);
+                    IsEmpty = true;
+                    if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+                } else {
+                    setDelimiterError(false);
+                }
+            }
+
+            // Rule Grid validation
+            // if (ruleGridData.length === 0) {
+            //     console.log("Rule grid is empty");
+            //     setRuleGridError(true);
+            //     IsEmpty = true;
+            //     if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+            // } else {
+            //     setRuleGridError(false);
+            // }
+
+            // Tag rows validation
+            const errorRows = [];
+            let hasAnyError = false;
+
+            // Check each tag row in the grid
+            for (let i = 0; i < tagMasterData.length; i++) {
+                const tag = tagMasterData[i];
+                const rowMetadata = tag.sTextData || '';
+
+                // Show error for ANY empty metadata, regardless of radio selection
+                // BUT skip the currently selected row
+                if (!rowMetadata.trim() && i !== selectedTagRowIndex) {
+                    console.log(`Tag row ${i} has empty metadata - ADDING ERROR`);
+                    errorRows.push(i);
+                    hasAnyError = true;
+                    IsEmpty = true;
+                }
+            }
+
+            // If ANY error exists, mark the error rows
+            if (hasAnyError) {
+                setTagRowErrors(errorRows);
+                if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+            }
+
+            // Add indices to errorRows array
+            setTagRowErrors(errorRows);
+            if (errorRows.length > 0) {
+                hasErrors = true;
+                IsEmpty = true;
+                if (!errorSections.includes('schedulerMetadata')) errorSections.push('schedulerMetadata');
+            }
+
+            const Delimeter = selectedDelimiters.length > 0
+                ? ConcatenateDelimeterfromlist(selectedDelimiters, delimiterOptions)
+                : "";
+
+            const subfolderlevel = 0;
+            const Instrumentitem = instrumentOptions.find(inst => inst.L12InstrumentMappingID === selectedInstrument);
+            if (Instrumentitem) {
+                passObjDet["L13InstrumentID"] = Instrumentitem.L12InstrumentID;
+            }
+
+            passObjDet["L13FileDelimiter"] = Delimeter;
+            passObjDet["L13Examplefilename"] = sampleFilename;
+            passObjDet["L13SubfolderLevel"] = subfolderlevel;
+            passObjDet["SchedulerExtractionlst"] = tagMasterData;
+        }
+
+        // ========== CHECK IF WE SHOULD SHOW ERROR DIALOG ==========
+        // Show error dialog ONLY if client and instrument are selected
+        if (hasErrors && selectedClient && selectedInstrument) {
+            console.log("Client and Instrument selected - showing error dialog");
+            setErrorDialog({
+                isOpen: true,
+                message: 'Incomplete Data Fields',
+                type: 'information'
+            });
+
+            // Scroll to first error section
+            if (errorSections.length > 0) {
+                const firstSection = errorSections[0];
+                switch (firstSection) {
+                    case 'fileSettings':
+                        scrollToSection(fileSettingsRef, 'File Settings');
+                        break;
+                    case 'uploadPolicy':
+                        scrollToSection(uploadPolicyRef, 'Upload Policy');
+                        break;
+                    case 'schedulerMetadata':
+                        scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+                        break;
+                    default:
+                        scrollToSection(fileSettingsRef, 'File Settings');
+                }
+            }
+
+            return; // EXIT - Don't proceed
+        }
+
+        // If there are errors but client/instrument not selected, just show red borders and return
+        if (hasErrors) {
+            console.log("Errors exist but client/instrument not selected - only showing red borders");
+
+            // Scroll to first error section
+            if (errorSections.length > 0) {
+                const firstSection = errorSections[0];
+                switch (firstSection) {
+                    case 'fileSettings':
+                        scrollToSection(fileSettingsRef, 'File Settings');
+                        break;
+                    case 'uploadPolicy':
+                        scrollToSection(uploadPolicyRef, 'Upload Policy');
+                        break;
+                    case 'schedulerMetadata':
+                        scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+                        break;
+                    default:
+                        scrollToSection(fileSettingsRef, 'File Settings');
+                }
+            }
+
+            return; // EXIT - Only red borders, no dialog
         }
 
         // ========== LIVE BACKUP / SCHEDULE MODE ==========
@@ -2823,9 +4330,7 @@ const SearchServerData = () => {
             } else {
                 passObjDet["L13VersionPolicy"] = 2;
             }
-        }
-
-        if (!liveCapture) {
+        } else {
             console.log("Schedule Mode is enabled");
 
             passObjDet["L13LiveArchive"] = 0;
@@ -2862,7 +4367,7 @@ const SearchServerData = () => {
                 message: 'Must choose trigger time',
                 type: 'warning'
             });
-            scrollToSection(triggerExpiryRef, scrollContainerRef);
+            scrollToSection(triggerExpiryRef, 'Schedule Trigger/Expiry On');
             return;
         } else {
             const startdate = `${triggerDate} ${starttriggertime[0]}`;
@@ -2884,7 +4389,7 @@ const SearchServerData = () => {
                     message: 'Must choose end time',
                     type: 'warning'
                 });
-                scrollToSection(triggerExpiryRef, scrollContainerRef);
+                scrollToSection(triggerExpiryRef, 'Schedule Trigger/Expiry On');
                 return;
             } else {
                 const enddate = `${expiryDate} ${expirytime[0]}`;
@@ -3020,7 +4525,7 @@ const SearchServerData = () => {
             passObjDet["L13OlderFileNO"] = 0;
             passObjDet["L13OlderFileNoType"] = "";
             passObjDet["L13OlderFileDate"] = null;
-            passObjDet["L13AutoLocalDeleteStatus"] = localDeleteMode;
+            passObjDet["L13AutoLocalDeleteStatus"] = 1;
         }
 
         // ========== FILE DELETE VERSION POLICY ==========
@@ -3102,7 +4607,7 @@ const SearchServerData = () => {
         passObjDet["L13TaskStatus"] = "D";
         passObjDet["L13DayStatus"] = 1;
         passObjDet["L13TimeStatus"] = 1;
-        passObjDet["L13CreatedBy"] = userDetails.sUserID;
+        passObjDet["L13CreatedBy"] = userDetails.ActiveUserDetails.sUserID;
         passObjDet["L13TaskName"] = "Scheduler";
         passObjDet["L13WatcherFlag"] = 0;
         passObjDet["L13TaskCompleted"] = 0;
@@ -3149,7 +4654,7 @@ const SearchServerData = () => {
                     message: 'Trigger Date/time should not be less than expiry date/time',
                     type: 'warning'
                 });
-                scrollToSection(triggerExpiryRef, scrollContainerRef);
+                scrollToSection(triggerExpiryRef, 'Schedule Trigger/Expiry On');
                 return;
             }
         }
@@ -3166,308 +4671,570 @@ const SearchServerData = () => {
         const daysVal = archivalDays;
         passObjDet["nDataLoggerArchivalDays"] = daysVal ? parseInt(daysVal) : 0;
 
-        // ========== SCHEDULER METADATA ==========
-        console.log("--- Processing Scheduler Metadata ---");
-
-        passObjDet["L13Active"] = isSchedulerMetadataEnabled ? 1 : 0;
-
-        if (isSchedulerMetadataEnabled) {
-            console.log("Scheduler Metadata is enabled - validating");
-
-            // Template validation
-            if (!selectedTemplate) {
-                console.log("Template not selected");
-                IsEmpty = true;
-                scrollToSection(schedulerMetadataRef, scrollContainerRef);
-            } else {
-                passObjDet["L13TemplateID"] = selectedTemplate;
-            }
-
-            const samplefilename = sampleFilename;
-            const Delimeter = selectedDelimiters.length > 0
-                ? ConcatenateDelimeterfromlist(selectedDelimiters, delimiterOptions)
-                : "";
-
-            console.log("Sample Filename:", samplefilename);
-            console.log("Delimiter:", Delimeter);
-
-            let tagmetadatagridlst = [...tagMasterData];
-
-            // Validate tags
-            for (let i = 0; i < tagmetadatagridlst.length; i++) {
-                const sValue = (tagmetadatagridlst[i]["sValue"] || "").trim();
-                const sValueID = (tagmetadatagridlst[i]["sValueID"] || "").trim();
-                const sSourceFlag = tagmetadatagridlst[i]["sSourceFlag"] || "NONE";
-
-                console.log(`Validating tag ${i}:`, {
-                    TagName: tagmetadatagridlst[i]["sTagName"],
-                    SourceFlag: sSourceFlag,
-                    Value: sValue,
-                    ValueID: sValueID
-                });
-
-                if ((sValue === "" || sValueID === "") && sSourceFlag !== "NONE") {
-                    console.log(`Tag ${i} validation failed - missing value or valueID`);
-                    IsEmpty = true;
-                    scrollToSection(schedulerMetadataRef, scrollContainerRef);
-                }
-
-                if (sSourceFlag === "Filename") {
-                    if (Delimeter === "") {
-                        console.log("Delimiter is empty for Filename source");
-                        setDelimiterError(true);
-                        IsEmpty = true;
-                        scrollToSection(schedulerMetadataRef, scrollContainerRef);
-                    } else {
-                        setDelimiterError(false);
-                    }
-
-                    if (samplefilename === "") {
-                        console.log("Sample filename is empty");
-                        setSampleFilenameError(true);
-                        IsEmpty = true;
-                        scrollToSection(schedulerMetadataRef, scrollContainerRef);
-                    }
-
-                    const { splitpath } = SplitFilenamewithExt(samplefilename, Delimeter);
-                    console.log("Split path result:", splitpath);
-
-                    if (splitpath.length <= 1 && Delimeter !== "None") {
-                        console.log("Split path validation failed");
-                        IsEmpty = true;
-                        setDelimiterError(true);
-                        setSampleFilenameError(true);
-                        scrollToSection(schedulerMetadataRef, scrollContainerRef);
-                    }
-
-                    if (parseInt(sValue) > splitpath.length) {
-                        console.log("Value index exceeds split path length");
-                        IsEmpty = true;
-                        setDelimiterError(true);
-                        setSampleFilenameError(true);
-                        scrollToSection(schedulerMetadataRef, scrollContainerRef);
-                    }
-
-                    if (!IsEmpty) {
-                        setSampleFilenameError(false);
-                    }
-                }
-
-                // Transform data
-                tagmetadatagridlst[i]["sTextData"] = "";
-                if (sSourceFlag === "NONE") {
-                    tagmetadatagridlst[i]["sTextData"] = sValueID;
-                    tagmetadatagridlst[i]["sValue"] = "";
-                    tagmetadatagridlst[i]["sValueID"] = "";
-                }
-            }
-
-            const subfolderlevel = 0;
-
-            if (Instrumentitem) {
-                passObjDet["L13InstrumentID"] = Instrumentitem.L12InstrumentID;
-            }
-
-            passObjDet["L13FileDelimiter"] = Delimeter;
-            passObjDet["L13Examplefilename"] = samplefilename;
-            passObjDet["L13SubfolderLevel"] = subfolderlevel;
-            passObjDet["SchedulerExtractionlst"] = tagmetadatagridlst;
-
-            console.log("Scheduler Metadata Data:", {
-                FileDelimiter: passObjDet["L13FileDelimiter"],
-                Examplefilename: passObjDet["L13Examplefilename"],
-                ExtractionList: passObjDet["SchedulerExtractionlst"]
-            });
-        }
-
-        // // ========== SCHEDULER METADATA ==========
-        // console.log("--- Processing Scheduler Metadata ---");
-
-        // passObjDet["L13Active"] = isSchedulerMetadataEnabled ? 1 : 0;
-
-        // if (isSchedulerMetadataEnabled) {
-        //     console.log("Scheduler Metadata is enabled - validating");
-
-        //     // Template validation
-        //     if (!selectedTemplate) {
-        //         console.log("Template not selected");
-        //         IsEmpty = true;
-        //         scrollToSection(schedulerMetadataRef, scrollContainerRef);
-        //     } else {
-        //         passObjDet["L13TemplateID"] = selectedTemplate;
-        //     }
-
-        //     const samplefilename = sampleFilename;
-        //     const Delimeter = selectedDelimiters.length > 0
-        //         ? ConcatenateDelimeterfromlist(selectedDelimiters, delimiterOptions)
-        //         : "";
-
-        //     console.log("Sample Filename:", samplefilename);
-        //     console.log("Delimiter:", Delimeter);
-
-        //     let tagmetadatagridlst = [...tagMasterData];
-
-        //     // Validate tags
-        //     for (let i = 0; i < tagmetadatagridlst.length; i++) {
-        //         const sValue = (tagmetadatagridlst[i]["sValue"] || "").trim();
-        //         const sValueID = (tagmetadatagridlst[i]["sValueID"] || "").trim();
-        //         const sSourceFlag = tagmetadatagridlst[i]["sSourceFlag"] || "NONE";
-
-        //         console.log(`Validating tag ${i}:`, {
-        //             TagName: tagmetadatagridlst[i]["sTagName"],
-        //             SourceFlag: sSourceFlag,
-        //             Value: sValue,
-        //             ValueID: sValueID
-        //         });
-
-        //         if ((sValue === "" || sValueID === "") && sSourceFlag !== "NONE") {
-        //             console.log(`Tag ${i} validation failed - missing value or valueID`);
-        //             IsEmpty = true;
-        //             scrollToSection(schedulerMetadataRef, scrollContainerRef);
-        //         }
-
-        //         if (sSourceFlag === "Filename") {
-        //             if (Delimeter === "") {
-        //                 console.log("Delimiter is empty for Filename source");
-        //                 setDelimiterError(true);
-        //                 IsEmpty = true;
-        //                 scrollToSection(schedulerMetadataRef, scrollContainerRef);
-        //             } else {
-        //                 setDelimiterError(false);
-        //             }
-
-        //             if (samplefilename === "") {
-        //                 console.log("Sample filename is empty");
-        //                 setSampleFilenameError(true);
-        //                 IsEmpty = true;
-        //                 scrollToSection(schedulerMetadataRef, scrollContainerRef
-        //                 );
-        //             }
-        //             const { splitpath } = SplitFilenamewithExt(samplefilename, selectedDelimiters, delimiterOptions);
-        //             console.log("Split path result:", splitpath);
-
-        //             if (splitpath.length <= 1 && Delimeter !== "None") {
-        //                 console.log("Split path validation failed");
-        //                 IsEmpty = true;
-        //                 setDelimiterError(true);
-        //                 setSampleFilenameError(true);
-        //                 scrollToSection(schedulerMetadataRef, scrollContainerRef);
-        //             }
-
-        //             if (parseInt(sValue) > splitpath.length) {
-        //                 console.log("Value index exceeds split path length");
-        //                 IsEmpty = true;
-        //                 setDelimiterError(true);
-        //                 setSampleFilenameError(true);
-        //                 scrollToSection(schedulerMetadataRef, scrollContainerRef);
-        //             }
-
-        //             if (!IsEmpty) {
-        //                 setSampleFilenameError(false);
-        //             }
-        //         }
-
-        //         // Transform data
-        //         tagmetadatagridlst[i]["sTextData"] = "";
-        //         if (sSourceFlag === "NONE") {
-        //             tagmetadatagridlst[i]["sTextData"] = sValueID;
-        //             tagmetadatagridlst[i]["sValue"] = "";
-        //             tagmetadatagridlst[i]["sValueID"] = "";
-        //         }
-        //     }
-
-        //     const subfolderlevel = 0;
-
-        //     if (Instrumentitem) {
-        //         passObjDet["L13InstrumentID"] = Instrumentitem.L12InstrumentID;
-        //     }
-
-        //     passObjDet["L13FileDelimiter"] = Delimeter;
-        //     passObjDet["L13Examplefilename"] = samplefilename;
-        //     passObjDet["L13SubfolderLevel"] = subfolderlevel;
-        //     passObjDet["SchedulerExtractionlst"] = tagmetadatagridlst;
-
-        //     console.log("Scheduler Metadata Data:", {
-        //         FileDelimiter: passObjDet["L13FileDelimiter"],
-        //         Examplefilename: passObjDet["L13Examplefilename"],
-        //         ExtractionList: passObjDet["SchedulerExtractionlst"]
-        //     });
-
-        //     // Path Extraction Rules (if needed)
-        //     let pathextractionrule = [];
-        //     // Add your path extraction rule logic here if you have a grid for it
-        //     passObjDet["PathExtractionRule"] = pathextractionrule;
-        // }
-
         // ========== FINAL VALIDATION CHECK ==========
         console.log("--- Final Validation Check ---");
         console.log("IsEmpty:", IsEmpty);
 
         if (IsEmpty) {
-            console.log("Validation failed - showing error dialog");
+            console.log("Phase 2 validation failed - showing red borders AND error dialog");
             setErrorDialog({
                 isOpen: true,
-                message: 'Please fill in all required fields',
-                type: 'warning'
+                message: 'Incomplete Data Fields',
+                type: 'information'
+            });
+
+            // Scroll to the first error section
+            if (uncUsernameError || uncPasswordError || uncDomainError) {
+                scrollToSection(fileSettingsRef, 'File Settings');
+            } else if (levelValueError || filesOlderDaysError) {
+                scrollToSection(uploadPolicyRef, 'Upload Policy');
+            } else if (auditFilterError) {
+                // Stay on current section (policies section)
+            } else if (templateError || sampleFilenameError || delimiterError) {
+                scrollToSection(schedulerMetadataRef, 'Scheduler Metadata');
+            } else {
+                scrollToSection(fileSettingsRef, 'File Settings');
+            }
+
+            return;
+        }
+
+        // // ========== BUILD COMPLETE passObjDet FOR SUBMISSION ==========
+        // console.log("--- Building Complete passObjDet Object ---");
+
+        // // Store the passObjDet in state
+        // // setSubmitPassObjDet(passObjDet);
+
+        // // // Get selected instrument data
+        // // const selectedInstData = instrumentOptions.find(
+        // //     inst => inst.L12InstrumentMappingID === selectedInstrument
+        // // );
+
+        // // // Check if it's manual parsing instrument
+        // // const isManualParsing = selectedInstData &&
+        // //     selectedInstData.L11InterfaceStatus === 1 &&
+        // //     selectedInstData.L11ParserType > 0 &&
+        // //     selectedInstData.L11LockType === "M";
+
+        // // console.log("Is Manual Parsing Instrument:", isManualParsing);
+        // // console.log("Instrument Data:", selectedInstData);
+
+        // // if (isManualParsing) {
+        // //     // For manual parsing instruments, FIRST check parsing order
+        // //     console.log("Checking parsing order for manual instrument...");
+
+        // //     // Add the required property
+        // //     passObjDet["sInstrumentMappingID"] = selectedInstData.L12InstrumentMappingID;
+
+        // //     // Store updated passObjDet
+        // //     setSubmitPassObjDet(passObjDet);
+
+        // //     // Call the parsing order check API
+        // //     await checkParsingOrder(passObjDet);
+        // // } else {
+        // //     // For automatic instruments, show confirmation dialog directly
+        // //     setIsManualParsingInstrument(false);
+        // //     setShowSubmitDialog(true);
+        // // }
+
+        // // ========== ALWAYS CHECK PARSING ORDER FIRST ==========
+        // console.log("--- Calling CheckInstrumentExistwithParsingOrder ---");
+
+        // // Add required properties for parsing order check
+        // passObjDet["sInstrumentMappingID"] = selectedInstrument.trim();
+
+        // // Store passObjDet in state for later use
+        // setSubmitPassObjDet(passObjDet);
+
+        // // Build request for parsing order check
+        // const checkParsingOrderData = {
+        //     ...CF_activeUserdetails(),
+        //     ...passObjDet
+        // };
+
+        // console.log("CheckInstrumentExistwithParsingOrder request:", checkParsingOrderData);
+
+        // try {
+        //     const parsingOrderResponse = await postData(
+        //         'Scheduler/CheckInstrumentExistwithParsingOrder',
+        //         checkParsingOrderData
+        //     );
+
+        //     console.log("Parsing order response:", parsingOrderResponse);
+
+        //     if (parsingOrderResponse && parsingOrderResponse.nParsingInstrOrderCount !== undefined) {
+        //         if (parsingOrderResponse.nParsingInstrOrderCount === 0) {
+        //             // Show 3-button dialog (Save, Activate & Lock, Save & Activate)
+        //             console.log("nParsingInstrOrderCount = 0 → Showing 3-button dialog");
+        //             setIsManualParsingInstrument(true);
+        //             setShowSubmitDialog(true);
+        //         } else {
+        //             // nParsingInstrOrderCount = 1 → Show 2-button dialog (Save, Save & Activate)
+        //             console.log("nParsingInstrOrderCount = 1 → Showing 2-button dialog");
+        //             setIsManualParsingInstrument(false);
+        //             setShowSubmitDialog(true);
+        //         }
+        //     } else {
+        //         // API didn't return expected response - show error
+        //         setErrorDialog({
+        //             isOpen: true,
+        //             message: 'Failed to check instrument parsing order',
+        //             type: 'error'
+        //         });
+        //     }
+        // } catch (error) {
+        //     console.error("Error checking parsing order:", error);
+        //     setErrorDialog({
+        //         isOpen: true,
+        //         message: 'Error checking instrument parsing order',
+        //         type: 'error'
+        //     });
+        // }
+        // ========== BUILD COMPLETE passObjDet FOR SUBMISSION ==========
+        console.log("--- Building Complete passObjDet Object ---");
+
+        // Store the passObjDet in state
+        setSubmitPassObjDet(passObjDet);
+
+        // Get selected instrument data
+        const selectedInstData = instrumentOptions.find(
+            inst => inst.L12InstrumentMappingID === selectedInstrument
+        );
+        //recent commented
+        // console.log("=== CHECKING INSTRUMENT TYPE ===");
+        // console.log("Full instrument data:", selectedInstData);
+        // console.log("L11InterfaceStatus:", selectedInstData?.L11InterfaceStatus);
+        // console.log("L11ParserType:", selectedInstData?.L11ParserType);
+        // console.log("L11LockType:", selectedInstData?.L11LockType);
+        // // Check if it's manual parsing instrument
+        // const isManualParsing = selectedInstData &&
+        //     selectedInstData.L11InterfaceStatus === 1 &&
+        //     selectedInstData.L11ParserType > 0 &&
+        //     selectedInstData.L11LockType === "M";
+
+        // console.log("Is Manual Parsing Instrument:", isManualParsing);
+        // console.log("Instrument Data:", selectedInstData);
+
+        // if (isManualParsing) {
+        //     // For manual parsing instruments, FIRST check parsing order
+        //     console.log("Checking parsing order for manual instrument...");
+
+        //     // Add the required property
+        //     passObjDet["sInstrumentMappingID"] = selectedInstData.L12InstrumentMappingID;
+
+        //     // Store updated passObjDet
+        //     setSubmitPassObjDet(passObjDet);
+
+        //     // Build request for parsing order check
+        //     const checkParsingOrderData = {
+        //         ...CF_activeUserdetails(),
+        //         ...passObjDet
+        //     };
+
+        //     console.log("CheckInstrumentExistwithParsingOrder request:", checkParsingOrderData);
+
+        //     try {
+        //         const parsingOrderResponse = await postData(
+        //             'Scheduler/CheckInstrumentExistwithParsingOrder',
+        //             checkParsingOrderData
+        //         );
+
+        //         console.log("Parsing order response:", parsingOrderResponse);
+
+        //         if (parsingOrderResponse && parsingOrderResponse.nParsingInstrOrderCount !== undefined) {
+        //             if (parsingOrderResponse.nParsingInstrOrderCount >= 1) {
+        //                 // Instrument is locked - show 2-button dialog
+        //                 console.log("nParsingInstrOrderCount >= 1 → Showing 2-button dialog (Save, Save & Activate)");
+        //                 setIsManualParsingInstrument(false);  // FALSE = 2 buttons
+        //                 setShowSubmitDialog(true);
+        //             } else {
+        //                 // nParsingInstrOrderCount = 0 → Show 3-button dialog
+        //                 console.log("nParsingInstrOrderCount = 0 → Showing 3-button dialog (Save, Activate & Lock, Save & Activate)");
+        //                 passObjDet["TaskType"] = "ScheduleCreation"; // Add TaskType for 3-button flow
+        //                 setSubmitPassObjDet(passObjDet); // Update with TaskType
+        //                 setIsManualParsingInstrument(true);  // TRUE = 3 buttons
+        //                 setShowSubmitDialog(true);
+        //             }
+        //         } else {
+        //             // API didn't return expected response - show error
+        //             setErrorDialog({
+        //                 isOpen: true,
+        //                 message: 'Failed to check instrument parsing order',
+        //                 type: 'error'
+        //             });
+        //         }
+        //     } catch (error) {
+        //         console.error("Error checking parsing order:", error);
+        //         setErrorDialog({
+        //             isOpen: true,
+        //             message: 'Error checking instrument parsing order',
+        //             type: 'error'
+        //         });
+        //     }
+        // } else {
+        //     // For automatic instruments (non-manual parsing), show 2-button dialog directly
+        //     console.log("Not a manual parsing instrument - showing 2-button dialog directly");
+        //     setIsManualParsingInstrument(false);  // FALSE = 2 buttons (Save, Save & Activate)
+        //     setShowSubmitDialog(true);
+        // }
+
+
+
+        // In handleSubmit(), around line 4748:
+        console.log("=== CHECKING INSTRUMENT TYPE ===");
+        console.log("Full instrument data:", selectedInstData);
+
+        // Check if it's manual parsing instrument
+        // Manual = Interface=1, ParserType>0, AND LockType="M"
+        const isManualParsing = selectedInstData &&
+            selectedInstData.L11InterfaceStatus === 1 &&
+            selectedInstData.L11ParserType > 0 &&
+            selectedInstData.L11LockType === "M";  // MUST check for "M"
+
+        console.log("Manual parsing check:", {
+            interfaceStatus: selectedInstData?.L11InterfaceStatus,
+            parserType: selectedInstData?.L11ParserType,
+            lockType: selectedInstData?.L11LockType,
+            isManual: isManualParsing
+        });
+
+        if (isManualParsing) {
+            console.log("Manual parsing instrument detected");
+
+            // Add the required property for parsing order check
+            passObjDet["sInstrumentMappingID"] = selectedInstData.L12InstrumentMappingID;
+
+            // Store updated passObjDet
+            setSubmitPassObjDet(passObjDet);
+
+            // Build request for parsing order check
+            const checkParsingOrderData = {
+                ...CF_activeUserdetails(),
+                ...passObjDet
+            };
+
+            console.log("Calling CheckInstrumentExistwithParsingOrder...");
+
+            const parsingOrderResponse = await postData(
+                'Scheduler/CheckInstrumentExistwithParsingOrder',
+                checkParsingOrderData
+            );
+
+            console.log("Parsing order response:", parsingOrderResponse);
+
+            if (parsingOrderResponse && parsingOrderResponse.nParsingInstrOrderCount !== undefined) {
+                if (parsingOrderResponse.nParsingInstrOrderCount >= 1) {
+                    // Instrument is already locked - show 2-button dialog
+                    console.log("Instrument locked - showing 2-button dialog");
+                    setIsManualParsingInstrument(false);  // FALSE = 2 buttons
+                    setShowSubmitDialog(true);
+                } else {
+                    // Instrument not locked - show 3-button dialog
+                    console.log("Instrument not locked - showing 3-button dialog");
+                    setIsManualParsingInstrument(true);  // TRUE = 3 buttons
+                    setShowSubmitDialog(true);
+                }
+            }
+        } else {
+            // For ALL other instruments (automatic) show 2-button dialog directly
+            console.log("Automatic instrument - showing 2-button dialog directly");
+            setIsManualParsingInstrument(false);
+            setShowSubmitDialog(true);
+        }
+    };
+
+
+    const handleFinalSubmission = async (action) => {
+        console.log("=== Starting Final Submission ===");
+        console.log("Action:", action);
+
+        if (!submitPassObjDet) {
+            console.error("No passObjDet data available");
+            setErrorDialog({
+                isOpen: true,
+                message: 'Submission data is missing. Please try again.',
+                type: 'error'
+            });
+            setShowSubmitDialog(false);
+            return;
+        }
+
+        // Clone the passObjDet to avoid mutating state
+        let passObjDet = { ...submitPassObjDet };
+
+        // Check if audit trail is required
+        const requiresAuditTrail = action === 'saveActivate' || action === 'activateLock';
+
+        if (requiresAuditTrail) {
+            // For Save & Activate OR Activate & Lock, show audit trail first
+            console.log("Action requires audit trail:", action);
+            setAuditAction(action);
+            setAuditData(passObjDet); // Store the data for later use
+            setShowAuditTrail(true);
+            setShowSubmitDialog(false); // Close the confirmation dialog
+            return; // Don't submit yet, wait for audit trail
+        } else {
+            // For 'save' action, submit directly (no audit trail needed)
+            console.log("Save action - submitting directly");
+            await submitWithAuditTrail(passObjDet, null, action);
+        }
+    };
+
+    const submitWithAuditTrail = async (passObjDet, auditPayload, action) => {
+        console.log("=== Submitting with audit trail ===");
+
+        // Build final payload
+        const finalData = {
+            ...CF_activeUserdetails(),
+            ...passObjDet
+        };
+
+        // Add audit trail if provided
+        if (auditPayload) {
+            finalData.AuditTrailValues = auditPayload.AuditTrailValues;
+        }
+
+        // Set sActiveSchedule based on action
+        if (action === 'saveActivate' || action === 'activateLock') {
+            finalData["sActiveSchedule"] = 1;
+        }
+
+        console.log("Final API request data:", finalData);
+
+        try {
+            const response = await postData(
+                'Scheduler/DataSchedulerSave',
+                finalData
+            );
+
+            console.log("Scheduler creation response:", response);
+
+            if (response && response.oResObj === "Success") {
+                // Close the dialog first
+                setShowSubmitDialog(false);
+
+                // Show success message
+                // setErrorDialog({
+                //     isOpen: true,
+                //     message: `Scheduler created successfully with ID: ${response.L13ScheduleID}`,
+                //     type: 'success'
+                // });
+
+
+                // // Prepare navigation data
+                // const submissionData = {
+                //     scheduleId: response.L13ScheduleID,
+                //     clientId: selectedClient,
+                //     clientName: clientOptions.find(c => c.L06ClientID === selectedClient)?.L06ClientName || '',
+                //     instrumentId: instrumentOptions.find(i => i.L12InstrumentMappingID === selectedInstrument)?.L12InstrumentID || '',
+                //     instrumentName: instrumentOptions.find(i => i.L12InstrumentMappingID === selectedInstrument)?.L11InstrumentName || '',
+                //     sourcePath: isUNCPathEnabled ? uncPath : sourcePath,
+                //     destinationId: selectedDestination,
+                //     // Add any other data you want to pass
+                // };
+
+                // console.log('=== Navigating after successful submission ===');
+                // console.log('Action:', action);
+                // console.log('Data:', submissionData);
+
+                // // Navigate based on action using your context
+                // if (action === 'activateLock') {
+                //     console.log('Navigating to Instrument Lock Tag tab');
+                //     navigateToInstrumentLockTag(submissionData);
+                // } else if (action === 'saveActivate') {
+                //     console.log('Navigating to Activated Task tab');
+                //     navigateToActivatedTask(submissionData);
+                // } else {
+                //     console.log('Navigating to Deactivated Task tab');
+                //     navigateToDeactivatedTask(submissionData);
+                // }
+
+                // Reset form after success
+                handleReset();
+            } else {
+                setErrorDialog({
+                    isOpen: true,
+                    message: response.oResObj || 'Failed to create scheduler',
+                    type: 'error'
+                });
+            }
+        } catch (error) {
+            console.error("Submission error:", error);
+            setErrorDialog({
+                isOpen: true,
+                message: error.message || 'An error occurred while creating the scheduler',
+                type: 'error'
+            });
+        } finally {
+            setSubmitPassObjDet(null);
+        }
+    };
+
+    const beautifyErrorMessage = (msg = '') => {
+        if (!msg || typeof msg !== 'string') return 'Something went wrong';
+
+        return msg
+            // split acronym + word (Ftpconnection → Ftp connection)
+            .replace(/([A-Z][a-z]+)([a-z]+)/, '$1 $2')
+            // split camelCase words
+            .replace(/([a-z])([A-Z])/g, '$1 $2')
+            // normalize FTP to uppercase
+            .replace(/\bftp\b/gi, 'FTP')
+            // capitalize first letter
+            .replace(/^./, c => c.toUpperCase());
+    };
+
+    const handleAuditTrailAuthorized = async (auditPayload, action) => {
+        // console.log("=== Audit Trail Authorized ===");
+        // console.log("Action:", auditAction);
+        // console.log("Audit payload:", auditPayload);
+
+        // Close audit trail dialog
+        setShowAuditTrail(false);
+        setAuditPasswordError(false);
+
+        // Get the stored data
+        let passObjDet = { ...auditData };
+
+        if (!passObjDet) {
+            console.error("No data available after audit trail");
+            setErrorDialog({
+                isOpen: true,
+                message: 'Submission data is missing after audit trail.',
+                type: 'error'
             });
             return;
         }
 
-        // ========== API SUBMISSION ==========
-        console.log("--- Starting API Submission ---");
-        console.log("Final passObjDet:", passObjDet);
+        // Add sActiveSchedule for activate actions
+        if (auditAction === 'saveActivate' || auditAction === 'activateLock') {
+            passObjDet["sActiveSchedule"] = 1;
+            console.log("Setting sActiveSchedule: 1 (Active)");
+        }
+
+        // Merge audit trail data with submission data
+        const finalData = {
+            ...CF_activeUserdetails(),
+            ...passObjDet,
+            AuditTrailValues: auditPayload.AuditTrailValues
+        };
+
+        console.log("Final API request data with audit trail:", finalData);
 
         try {
-            // Check if instrument needs parsing order validation
-            const InstrumentOriginalItem = Instrumentitem;
+            const response = await postData(
+                'Scheduler/DataSchedulerSave',
+                finalData
+            );
 
-            if (
-                InstrumentOriginalItem &&
-                InstrumentOriginalItem.L11InterfaceStatus === 1 &&
-                InstrumentOriginalItem.L11ParserType > 0 &&
-                InstrumentOriginalItem.L11LockType === "M"
-            ) {
-                console.log("Checking instrument parsing order");
+            console.log("Scheduler creation response:", response);
 
-                passObjDet["sInstrumentMappingID"] = InstrumentOriginalItem.L12InstrumentMappingID;
+            if (response && response.oResObj === "Success") {
+                // Show success message
+                // setErrorDialog({
+                //     isOpen: true,
+                //     message: `Scheduler created successfully with ID: ${response.L13ScheduleID}`,
+                //     type: 'success'
+                // });
 
-                const checkParsingOrderData = {
-                    ...CF_activeUserdetails(),
-                    passObjDet: passObjDet
+
+                // Prepare navigation data
+                const submissionData = {
+                    scheduleId: response.L13ScheduleID,
+                    clientId: selectedClient,
+                    clientName: clientOptions.find(c => c.L06ClientID === selectedClient)?.L06ClientName || '',
+                    instrumentId: instrumentOptions.find(i => i.L12InstrumentMappingID === selectedInstrument)?.L12InstrumentID || '',
+                    instrumentName: instrumentOptions.find(i => i.L12InstrumentMappingID === selectedInstrument)?.L11InstrumentName || '',
+                    sourcePath: isUNCPathEnabled ? uncPath : sourcePath,
+                    destinationId: selectedDestination,
+                    // Add any other data you want to pass
                 };
 
-                const parsingOrderResponse = await postData(
-                    'Scheduler/CheckInstrumentExistwithParsingOrder',
-                    checkParsingOrderData
-                );
+                console.log('=== Navigating after successful submission ===');
+                console.log('Action:', action);
+                console.log('Data:', submissionData);
 
-                console.log("Parsing order response:", parsingOrderResponse);
-
-                // Handle parsing order response
-                if (parsingOrderResponse && parsingOrderResponse.success) {
-                    // Proceed with final submission
-                    await submitScheduler(passObjDet);
+                // Navigate based on action using your context
+                if (action === 'activateLock') {
+                    console.log('Navigating to Instrument Lock Tag tab');
+                    navigateToInstrumentLockTag(submissionData);
+                } else if (action === 'saveActivate') {
+                    console.log('Navigating to Activated Task tab');
+                    navigateToActivatedTask(submissionData);
                 } else {
-                    // Show error if parsing order check failed
+                    console.log('Navigating to Deactivated Task tab');
+                    navigateToDeactivatedTask(submissionData);
+                }
+
+
+                // Reset form after success
+                handleReset();
+            } else {
+                // Check for password error
+                // const errorMessage = response?.oResObj || 'Failed to create scheduler';
+
+                const rawMessage = response?.oResObj;
+                const errorMessage = beautifyErrorMessage(rawMessage) || 'Failed to create scheduler';
+
+                const isPasswordError = errorMessage.toLowerCase().includes('password') ||
+                    errorMessage.toLowerCase().includes('invalid') ||
+                    errorMessage.includes('Invalid password');
+
+                if (isPasswordError) {
+                    // Show audit trail again with password error
+                    setAuditPasswordError(true);
+                    setShowAuditTrail(true);
+                } else {
+                    // Other errors
                     setErrorDialog({
                         isOpen: true,
-                        message: parsingOrderResponse.message || 'Failed to validate instrument parsing order',
+                        message: errorMessage,
                         type: 'error'
                     });
                 }
-            } else {
-                // No parsing order check needed - proceed directly
-                await submitScheduler(passObjDet);
             }
+            // } else {
+            //     // If backend returns password error
+            //     if (response.oResObj && response.oResObj.includes("password") ||
+            //         response.oResObj && response.oResObj.includes("Password")) {
+            //         // Show audit trail again with password error
+            //         setAuditPasswordError(true);
+            //         setShowAuditTrail(true);
+            //         setErrorDialog({
+            //             isOpen: true,
+            //             message: response.oResObj || 'Invalid password',
+            //             type: 'warning'
+            //         });
+            //     } else {
+            //         setErrorDialog({
+            //             isOpen: true,
+            //             message: response.oResObj || 'Failed to create scheduler',
+            //             type: 'error'
+            //         });
+            //     }
+            // }
         } catch (error) {
-            console.error("API submission error:", error);
+            console.error("Submission error:", error);
             setErrorDialog({
                 isOpen: true,
-                message: error.message || 'An error occurred while submitting the form',
+                message: error.message || 'An error occurred while creating the scheduler',
                 type: 'error'
             });
+        } finally {
+            // Clear audit trail state
+            setAuditAction('');
+            setAuditData(null);
         }
     };
+
+    const handleAuditTrailClose = () => {
+        setShowAuditTrail(false);
+        setAuditAction('');
+        setAuditData(null);
+        setAuditPasswordError(false);
+    };
+
+
     // Helper function for final scheduler submission
     const submitScheduler = async (passObjDet) => {
         console.log("=== Submitting Scheduler ===");
@@ -3480,7 +5247,7 @@ const SearchServerData = () => {
             console.log("Final submission data:", finalData);
 
             const response = await postData(
-                'Scheduler/CreateScheduler', // Replace with your actual API endpoint
+                'Scheduler/DataSchedulerSave',
                 finalData
             );
 
@@ -3588,6 +5355,14 @@ const SearchServerData = () => {
                     </nav>
 
                     <div className="flex items-center gap-3">
+                        {/* <button
+                            onClick={handleSubmit}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-[5px] shadow-md hover:shadow-lg flex items-center gap-2 text-sm font-medium transition-all duration-200 transform active:scale-95">
+                            <div className="w-4 h-4 border-2 border-white rounded flex items-center justify-center">
+                                <Check size={10} strokeWidth={4} />
+                            </div>
+                            <span>Submit</span>
+                        </button> */}
                         <button
                             onClick={handleSubmit}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-[5px] shadow-md hover:shadow-lg flex items-center gap-2 text-sm font-medium transition-all duration-200 transform active:scale-95">
@@ -3659,13 +5434,12 @@ const SearchServerData = () => {
                                             </div>
                                         </div>
                                     </div>
-
                                     <div className="relative group w-full">
                                         <label className="block text-gray-600 text-sm font-bold mb-2">
                                             Instrument <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
-                                            <select
+                                            {/* <select
                                                 value={selectedInstrument || ""}
                                                 onChange={async (e) => {
                                                     const value = e.target.value;
@@ -3691,6 +5465,37 @@ const SearchServerData = () => {
                                                     ? 'opacity-50 cursor-not-allowed bg-gray-50 border-[rgb(145,220,243)]'
                                                     : 'cursor-pointer border-[#e2e2e2] focus:border-blue-400'
                                                     }`}
+                                            > */}
+                                            <select
+                                                value={selectedInstrument || ""}
+                                                onChange={async (e) => {
+                                                    const value = e.target.value;
+                                                    const selectedInstrData = instrumentOptions.find(
+                                                        inst => inst.L12InstrumentMappingID === value
+                                                    );
+
+                                                    if (selectedInstrData) {
+                                                        const canProceed = await checkAutoLock(selectedInstrData.L12InstrumentID);
+
+                                                        if (canProceed) {
+                                                            setSelectedInstrument(value);
+                                                            setInstrumentError(false);
+                                                            await loadMethods(selectedInstrData);
+                                                        }
+                                                    } else {
+                                                        setSelectedInstrument('');
+                                                        setInstrumentError(false);
+                                                        setMethodOptions([]);
+                                                        setIsMethodDisabled(true);
+                                                    }
+                                                }}
+                                                disabled={isInstrumentDisabled}
+                                                className={`w-full bg-transparent border-b-2 py-2 pr-8 text-gray-700 text-sm focus:outline-none appearance-none transition-colors ${isInstrumentDisabled
+                                                    ? 'opacity-50 cursor-not-allowed bg-gray-50 border-[rgb(145,220,243)]'
+                                                    : instrumentError
+                                                        ? 'border-red-500'
+                                                        : 'cursor-pointer border-[#e2e2e2] focus:border-blue-400'
+                                                    }`}
                                             >
                                                 <option value="" disabled hidden></option>
                                                 {instrumentOptions.map((option, index) => (
@@ -3709,13 +5514,27 @@ const SearchServerData = () => {
                                             Default Parser Method
                                         </label>
                                         <div className="relative">
-                                            <select
+                                            {/* <select
                                                 value={selectedMethod || ""}
                                                 onChange={(e) => setSelectedMethod(e.target.value)}
                                                 disabled={isMethodDisabled}
                                                 className={`w-full bg-transparent border-b-2 py-2 pr-8 text-gray-700 text-sm focus:outline-none appearance-none transition-colors ${isMethodDisabled
                                                     ? 'opacity-50 cursor-not-allowed bg-gray-50 border-[rgb(145,220,243)]'
                                                     : 'cursor-pointer border-[#e2e2e2] focus:border-blue-400'
+                                                    }`}
+                                            > */}
+                                            <select
+                                                value={selectedMethod || ""}
+                                                onChange={(e) => {
+                                                    setSelectedMethod(e.target.value);
+                                                    setMethodError(false);
+                                                }}
+                                                disabled={isMethodDisabled}
+                                                className={`w-full bg-transparent border-b-2 py-2 pr-8 text-gray-700 text-sm focus:outline-none appearance-none transition-colors ${isMethodDisabled
+                                                    ? 'opacity-50 cursor-not-allowed bg-gray-50 border-[rgb(145,220,243)]'
+                                                    : methodError
+                                                        ? 'border-red-500'
+                                                        : 'cursor-pointer border-[#e2e2e2] focus:border-blue-400'
                                                     }`}
                                             >
                                                 <option value="" disabled hidden></option>
@@ -3831,15 +5650,20 @@ const SearchServerData = () => {
                                                     <input
                                                         type="text"
                                                         value={uncPath}
-                                                        onChange={(e) => {
-                                                            const value = e.target.value;
-                                                            setUncPath(value);
+                                                        // onChange={(e) => {
+                                                        //     const value = e.target.value;
+                                                        //     setUncPath(value);
 
-                                                            setUncPathError(
-                                                                !CF_UNCPathValidation(value) ||
-                                                                !CF_sourcePathValidation(value) ||
-                                                                !CF_textFieldValidation(value)
-                                                            );
+                                                        //     setUncPathError(
+                                                        //         !CF_UNCPathValidation(value) ||
+                                                        //         !CF_sourcePathValidation(value) ||
+                                                        //         !CF_textFieldValidation(value)
+                                                        //     );
+                                                        // }}
+                                                        onChange={(e) => {
+                                                            setUncPath(e.target.value);
+                                                            // Remove validation from here - only validate on Check button click
+                                                            setUncPathError(false); // Clear any previous errors while typing
                                                         }}
                                                         disabled={!isUNCPathEnabled}
                                                         className={`w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none transition-colors
@@ -3861,7 +5685,7 @@ const SearchServerData = () => {
                                             <p className="text-gray-400 text-xs mt-3 font-medium">NOTE:- Browse is not supported. Manually copy the path</p>
                                         </div>
                                         <div className="grid grid-cols-2 gap-6">
-                                            <div className="group w-full relative">
+                                            {/* <div className="group w-full relative">
                                                 <label className="block text-gray-700 text-sm font-bold mb-2">
                                                     Username
                                                 </label>
@@ -3896,9 +5720,57 @@ const SearchServerData = () => {
                                                     className={`w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none transition-colors ${!isUNCPathEnabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''
                                                         } ${uncPasswordError ? 'border-red-500' : 'border-gray-200 focus:border-blue-400'}`}
                                                 />
+                                            </div> */}
+
+                                            {/* Username */}
+                                            <div className="group w-full relative">
+                                                <label className="block text-gray-700 text-sm font-bold mb-2">
+                                                    Username
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={uncUsername}
+                                                    onChange={(e) => {
+                                                        if (CF_textFieldValidation(e.target.value)) {
+                                                            setUncUsername(e.target.value);
+                                                            setUncUsernameError(false);
+                                                        }
+                                                    }}
+                                                    disabled={!isUNCPathEnabled}
+                                                    className={`w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none transition-colors ${!isUNCPathEnabled
+                                                        ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200'
+                                                        : uncUsernameError
+                                                            ? 'border-red-500'
+                                                            : 'border-gray-200 focus:border-blue-400'
+                                                        }`}
+                                                />
+                                            </div>
+
+                                            {/* Password */}
+                                            <div className="group w-full relative">
+                                                <label className="block text-gray-700 text-sm font-bold mb-2">
+                                                    Password
+                                                </label>
+                                                <input
+                                                    type="password"
+                                                    value={uncPassword}
+                                                    onChange={(e) => {
+                                                        if (CF_textFieldValidation(e.target.value)) {
+                                                            setUncPassword(e.target.value);
+                                                            setUncPasswordError(false);
+                                                        }
+                                                    }}
+                                                    disabled={!isUNCPathEnabled}
+                                                    className={`w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none transition-colors ${!isUNCPathEnabled
+                                                        ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200'
+                                                        : uncPasswordError
+                                                            ? 'border-red-500'
+                                                            : 'border-gray-200 focus:border-blue-400'
+                                                        }`}
+                                                />
                                             </div>
                                         </div>
-                                        <UnderlineSelect
+                                        {/* <UnderlineSelect
                                             label="Domain"
                                             options={domainOptions}
                                             displayKey="L03DomainName"
@@ -3906,10 +5778,23 @@ const SearchServerData = () => {
                                             value={selectedDomain}
                                             onChange={(value) => setSelectedDomain(value)}
                                             disabled={!isUNCPathEnabled}
+                                        /> */}
+                                        <UnderlineSelect
+                                            label="Domain"
+                                            options={domainOptions}
+                                            displayKey="L03DomainName"
+                                            valueKey="L03DomainID"
+                                            value={selectedDomain}
+                                            onChange={(value) => {
+                                                setSelectedDomain(value);
+                                                setUncDomainError(false);
+                                            }}
+                                            disabled={!isUNCPathEnabled}
+                                            hasError={uncDomainError}
                                         />
                                     </div>
                                     <div className="space-y-10">
-                                        <UnderlineSelect
+                                        {/* <UnderlineSelect
                                             label="Destination"
                                             required
                                             options={destinationOptions}
@@ -3917,7 +5802,37 @@ const SearchServerData = () => {
                                             valueKey="L09FTPID"
                                             value={selectedDestination}
                                             onChange={(value) => setSelectedDestination(value)}
+                                        /> */}
+                                        <UnderlineSelect
+                                            label="Destination"
+                                            required
+                                            options={destinationOptions}
+                                            displayKey="L09FTPAliasName"
+                                            valueKey="L09FTPID"
+                                            value={selectedDestination}
+                                            onChange={(value) => {
+                                                setSelectedDestination(value);
+                                                setDestinationError(false);
+                                            }}
+                                            hasError={destinationError}
                                         />
+                                        {/* <div className="group w-full relative">
+                                            <label className="block text-gray-700 text-sm font-bold mb-2">
+                                                Filter
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={filter}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    if (CF_textFieldValidation(value) && CF_maxLengthValidation(value, 50)) {
+                                                        setFilter(value);
+                                                    
+                                                    }
+                                                }}
+                                                className="w-full bg-transparent border-b-2 border-gray-200 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-400"
+                                            />
+                                        </div> */}
                                         <div className="group w-full relative">
                                             <label className="block text-gray-700 text-sm font-bold mb-2">
                                                 Filter
@@ -3929,9 +5844,11 @@ const SearchServerData = () => {
                                                     const value = e.target.value;
                                                     if (CF_textFieldValidation(value) && CF_maxLengthValidation(value, 50)) {
                                                         setFilter(value);
+                                                        setFilterError(false);
                                                     }
                                                 }}
-                                                className="w-full bg-transparent border-b-2 border-gray-200 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-400"
+                                                className={`w-full bg-transparent border-b-2 py-2 text-sm text-gray-700 focus:outline-none transition-colors ${filterError ? 'border-red-500' : 'border-gray-200 focus:border-blue-400'
+                                                    }`}
                                             />
                                         </div>
                                     </div>
@@ -4006,7 +5923,7 @@ const SearchServerData = () => {
                                                     <div className={`bg-white w-3 h-3 rounded-full shadow transform transition-transform ${levelEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
                                                 </div>
                                             </div>
-                                            <input
+                                            {/* <input
                                                 type="text"
                                                 value={levelValue}
                                                 onChange={(e) => {
@@ -4016,6 +5933,40 @@ const SearchServerData = () => {
                                                 }}
                                                 disabled={!levelEnabled || !includeSubfolder}
                                                 className={`w-24 border-b-2 px-2 py-1 text-sm ${(!levelEnabled || !includeSubfolder) ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'border-gray-200 focus:border-blue-400 focus:outline-none'
+                                                    }`}
+                                            /> */}
+                                            {/* <input
+                                                type="text"
+                                                value={levelValue}
+                                                onChange={(e) => {
+                                                    if (CF_numberValidation(e.target.value, 5)) {
+                                                        setLevelValue(e.target.value);
+                                                        setLevelValueError(false);
+                                                    }
+                                                }}
+                                                disabled={!levelEnabled || !includeSubfolder}
+                                                className={`w-24 border-b-2 px-2 py-1 text-sm ${(!levelEnabled || !includeSubfolder)
+                                                    ? 'bg-gray-100 border-gray-200 cursor-not-allowed'
+                                                    : levelValueError
+                                                        ? 'border-red-500'
+                                                        : 'border-gray-200 focus:border-blue-400 focus:outline-none'
+                                                    }`}
+                                            /> */}
+                                            <input
+                                                type="text"
+                                                value={levelValue}
+                                                onChange={(e) => {
+                                                    if (CF_numberValidation(e.target.value, 5)) {
+                                                        setLevelValue(e.target.value);
+                                                        setLevelValueError(false);
+                                                    }
+                                                }}
+                                                disabled={!levelEnabled || !includeSubfolder}
+                                                className={`w-24 border-b-2 px-2 py-1 text-sm ${(!levelEnabled || !includeSubfolder)
+                                                    ? 'bg-gray-100 border-gray-200 cursor-not-allowed'
+                                                    : levelValueError
+                                                        ? 'border-red-500'
+                                                        : 'border-gray-200 focus:border-blue-400 focus:outline-none'
                                                     }`}
                                             />
                                         </div>
@@ -4117,7 +6068,7 @@ const SearchServerData = () => {
                                             </div>
                                         </div>
 
-                                        <input
+                                        {/* <input
                                             type="text"
                                             value={filesOlderDays}
                                             onChange={(e) => {
@@ -4130,6 +6081,23 @@ const SearchServerData = () => {
                                                 ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
                                                 : 'border-gray-300'
                                                 }`}
+                                        /> */}
+                                        <input
+                                            type="text"
+                                            value={filesOlderDays}
+                                            onChange={(e) => {
+                                                if (CF_numberValidation(e.target.value, 5)) {
+                                                    setFilesOlderDays(e.target.value);
+                                                    setFilesOlderDaysError(false);
+                                                }
+                                            }}
+                                            disabled={!filesOlderThanEnabled || !deleteLocalCopy || moveFiles}
+                                            className={`w-16 border-b-2 px-1 py-1 text-sm ${(!filesOlderThanEnabled || !deleteLocalCopy || moveFiles)
+                                                ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                                                : filesOlderDaysError
+                                                    ? 'border-red-500'
+                                                    : 'border-gray-300 focus:border-blue-400 focus:outline-none'
+                                                }`}
                                         />
 
                                         {/* Days dropdown */}
@@ -4138,6 +6106,7 @@ const SearchServerData = () => {
                                                 value={filesOlderDaysUnit}
                                                 onChange={(e) => setFilesOlderDaysUnit(e.target.value)}
                                                 disabled={!filesOlderThanEnabled || !deleteLocalCopy}
+
                                                 className={`w-full bg-transparent border-b-2 py-1 pr-6 text-sm appearance-none focus:outline-none ${(!filesOlderThanEnabled || !deleteLocalCopy)
                                                     ? 'text-gray-400 border-gray-200 cursor-not-allowed'
                                                     : 'text-gray-700 border-gray-300 focus:border-blue-400 cursor-pointer'
@@ -4148,6 +6117,8 @@ const SearchServerData = () => {
                                                         {item.Date}
                                                     </option>
                                                 ))}
+
+
                                             </select>
                                             <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
                                                 <ChevronDown size={14} className={(!filesOlderThanEnabled || !deleteLocalCopy) ? 'text-gray-300' : 'text-gray-400'} />
@@ -4156,7 +6127,7 @@ const SearchServerData = () => {
 
                                         {/* Automatic/Manual dropdown - SAME LINE */}
                                         <div className="w-32 relative">
-                                            <select
+                                            {/* <select
                                                 value={localDeleteMode}
                                                 onChange={(e) => setLocalDeleteMode(e.target.value)}
                                                 // disabled={(!filesOlderThanEnabled && !filesOlderThanDateEnabled) || !deleteLocalCopy || moveFiles}
@@ -4171,7 +6142,24 @@ const SearchServerData = () => {
                                                         {item.ServerDeleteName}
                                                     </option>
                                                 ))}
+                                            </select> */}
+
+                                            <select
+                                                value={localDeleteMode}
+                                                onChange={(e) => setLocalDeleteMode(Number(e.target.value))}
+                                                disabled={!deleteLocalCopy || moveFiles}
+                                                className={`w-full bg-transparent border-b-2 py-1 pr-6 text-sm italic appearance-none focus:outline-none ${((!filesOlderThanEnabled && !filesOlderThanDateEnabled) || !deleteLocalCopy || moveFiles)
+                                                    ? 'text-gray-300 border-gray-200 cursor-not-allowed'
+                                                    : 'text-gray-600 border-gray-300 focus:border-blue-400 cursor-pointer'
+                                                    }`}
+                                            >
+                                                {localDeleteCombo.map((item) => (
+                                                    <option key={item.LocalDeleteNo} value={item.LocalDeleteNo}>
+                                                        {item.LocalDeleteName}
+                                                    </option>
+                                                ))}
                                             </select>
+
                                             <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
                                                 <ChevronDown size={14} className={
                                                     ((!filesOlderThanEnabled && !filesOlderThanDateEnabled) || !deleteLocalCopy || moveFiles)
@@ -4249,56 +6237,6 @@ const SearchServerData = () => {
                                 <div className="flex items-center gap-4">
                                     <label className="text-gray-600 text-sm font-bold w-24">Trigger on</label>
 
-                                    {/* 
-                                    <DatePickerInput
-                                        value={triggerDate}
-                                        onChange={handleTriggerDateChange}
-                                        onInputChange={(value) => {
-                                            setIsManualTyping(true);
-                                            handleTriggerDateChange(value);
-                                        }}
-                                        allowPast={false}
-                                        allowFuture={true}
-                                    /> */}
-
-                                    {/* <DatePickerInput
-                                        value={triggerDate}
-                                        onChange={handleTriggerDateChange}
-                                        onInputChange={(value) => {
-                                            const formattedDate = validateAndFormatDate(value);
-                                            handleTriggerDateChange(formattedDate);
-                                        }}
-                                        allowPast={false}
-                                        allowFuture={true}
-                                        validateAndFormatDate={validateAndFormatDate}
-                                    /> */}
-
-                                    {/* <DatePickerInput
-                                        value={triggerDate}
-                                        onChange={handleTriggerDateChange}
-                                        onInputChange={(value) => {
-                                            const formattedDate = validateAndFormatDate(value);
-                                            // Check if the date is past BEFORE calling handleTriggerDateChange
-                                            const parts = formattedDate.split('/');
-                                            const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
-                                            const today = new Date();
-                                            today.setHours(0, 0, 0, 0);
-
-                                            if (selectedDate < today) {
-                                                // Don't call handleTriggerDateChange here, let onBlur handle it
-                                                // Just update the input display
-                                                const formatted = validateAndFormatDate(value);
-                                                setTriggerDate(formatted);
-                                            } else {
-                                                handleTriggerDateChange(formattedDate);
-                                            }
-                                        }}
-                                        allowPast={false}
-                                        allowFuture={true}
-                                        validateAndFormatDate={validateAndFormatDate}
-                                    /> */}
-
-
                                     <DatePickerInput
                                         value={triggerDate}
                                         onChange={handleTriggerDateChange}
@@ -4330,56 +6268,6 @@ const SearchServerData = () => {
                                                 setShowExpiryWarning(false); // Clear warning when toggling
                                             }}
                                         />
-                                        {/* <DatePickerInput
-                                            value={expiryDate}
-                                            // onChange={handleExpiryDateChange}
-                                            onChange={(value) => {
-                                                // setIsManualTyping(true);
-                                                handleExpiryDateChange(value);
-                                            }}
-                                            disabled={!expiryEnabled}
-                                            allowPast={false}
-                                            // allowPast={true}
-                                            allowFuture={true}
-                                        /> */}
-                                        {/* <DatePickerInput
-                                            value={expiryDate}
-                                            onChange={handleExpiryDateChange}
-                                            onInputChange={(value) => {
-                                                const formattedDate = validateAndFormatDate(value);
-                                                handleExpiryDateChange(formattedDate);
-                                            }}
-                                            disabled={!expiryEnabled}
-                                            allowPast={false}
-                                            allowFuture={true}
-                                            validateAndFormatDate={validateAndFormatDate}
-                                        /> */}
-
-                                        {/* <DatePickerInput
-                                            value={expiryDate}
-                                            onChange={handleExpiryDateChange}
-                                            onInputChange={(value) => {
-                                                const formattedDate = validateAndFormatDate(value);
-                                                // Check if the date is past BEFORE calling handleExpiryDateChange
-                                                const parts = formattedDate.split('/');
-                                                const selectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
-                                                const today = new Date();
-                                                today.setHours(0, 0, 0, 0);
-
-                                                if (selectedDate < today) {
-                                                    // Don't call handleExpiryDateChange here, let onBlur handle it
-                                                    // Just update the input display
-                                                    const formatted = validateAndFormatDate(value);
-                                                    setExpiryDate(formatted);
-                                                } else {
-                                                    handleExpiryDateChange(formattedDate);
-                                                }
-                                            }}
-                                            disabled={!expiryEnabled}
-                                            allowPast={false}
-                                            allowFuture={true}
-                                            validateAndFormatDate={validateAndFormatDate}
-                                        /> */}
 
                                         <DatePickerInput
                                             value={expiryDate}
@@ -4443,9 +6331,25 @@ const SearchServerData = () => {
                                             </div>
 
                                             <div className="relative w-32">
-                                                <select
+                                                {/* <select
                                                     value={serverDeleteMode}
                                                     onChange={(e) => setServerDeleteMode(e.target.value)}
+                                                    disabled={!applyDeletePolicy}
+                                                    className={`w-full bg-transparent border-b-2 py-1 pr-6 text-sm italic appearance-none focus:outline-none ${!applyDeletePolicy
+                                                        ? 'text-gray-300 border-gray-200 cursor-not-allowed'
+                                                        : 'text-gray-600 border-gray-300 focus:border-blue-400 cursor-pointer'
+                                                        }`}
+                                                >
+                                                    {serverDeleteCombo.map((item) => (
+                                                        <option key={item.ServerDeleteNo} value={item.ServerDeleteNo}>
+                                                            {item.ServerDeleteName}
+                                                        </option>
+                                                    ))}
+                                                </select> */}
+
+                                                <select
+                                                    value={serverDeleteMode}
+                                                    onChange={(e) => setServerDeleteMode(Number(e.target.value))}
                                                     disabled={!applyDeletePolicy}
                                                     className={`w-full bg-transparent border-b-2 py-1 pr-6 text-sm italic appearance-none focus:outline-none ${!applyDeletePolicy
                                                         ? 'text-gray-300 border-gray-200 cursor-not-allowed'
@@ -4485,7 +6389,7 @@ const SearchServerData = () => {
                                         <div className="flex items-center gap-4">
                                             <label className="text-gray-600 text-sm font-bold w-20">Audit Filter</label>
                                             <div className="flex-1">
-                                                <input
+                                                {/* <input
                                                     type="text"
                                                     value={auditFilter}
                                                     onChange={(e) => {
@@ -4496,6 +6400,23 @@ const SearchServerData = () => {
                                                     disabled={!enableFileAudit}
                                                     className={`w-full bg-transparent border-b pb-1 text-sm focus:outline-none ${enableFileAudit
                                                         ? 'border-gray-300 text-gray-700 focus:border-blue-400'
+                                                        : 'border-gray-200 text-gray-400 cursor-not-allowed'
+                                                        }`}
+                                                /> */}
+                                                <input
+                                                    type="text"
+                                                    value={auditFilter}
+                                                    onChange={(e) => {
+                                                        if (CF_textFieldValidation(e.target.value)) {
+                                                            setAuditFilter(e.target.value);
+                                                            setAuditFilterError(false);
+                                                        }
+                                                    }}
+                                                    disabled={!enableFileAudit}
+                                                    className={`w-full bg-transparent border-b pb-1 text-sm focus:outline-none transition-colors ${enableFileAudit
+                                                        ? auditFilterError
+                                                            ? 'border-red-500 text-gray-700'
+                                                            : 'border-gray-300 text-gray-700 focus:border-blue-400'
                                                         : 'border-gray-200 text-gray-400 cursor-not-allowed'
                                                         }`}
                                                 />
@@ -5159,38 +7080,8 @@ const SearchServerData = () => {
 
 
                                     <div>
-                                        {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-6 mb-6">
-                                            
-                                            <UnderlineSelect
-                                                label="Template Master"
-                                                options={templateOptions}
-                                                displayKey="sTemplateName"
-                                                valueKey="sTemplateID"
-                                                value={selectedTemplate}
-                                                onChange={(value) => {
-                                                    console.log("Template changed to:", value);
-                                                    setSelectedTemplate(value);
-                                                    if (isSchedulerMetadataEnabled) {
-                                                        loadTagMaster(value);
-                                                    }
-                                                }}
-
-                                            />
-                                            <UnderlineInput label="Sample Filename" />
-                                            
-                                            <UnderlineSelect
-                                                label="Delimiter"
-                                                options={delimiterOptions}
-                                                displayKey="sDelimiterName"
-                                                valueKey="sDelimiterID"
-                                                value={selectedDelimiter}
-                                                onChange={(value) => setSelectedDelimiter(value)}
-                                            />
-                                        </div> */}
-
-
                                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-6 mb-6">
-                                            <UnderlineSelect
+                                            {/* <UnderlineSelect
                                                 label="Template Master"
                                                 options={templateOptions}
                                                 displayKey="sTemplateName"
@@ -5202,6 +7093,21 @@ const SearchServerData = () => {
                                                         loadTagMaster(value);
                                                     }
                                                 }}
+                                            /> */}
+                                            <UnderlineSelect
+                                                label="Template Master"
+                                                options={templateOptions}
+                                                displayKey="sTemplateName"
+                                                valueKey="sTemplateID"
+                                                value={selectedTemplate}
+                                                onChange={(value) => {
+                                                    setSelectedTemplate(value);
+                                                    setTemplateError(false);
+                                                    if (isSchedulerMetadataEnabled) {
+                                                        loadTagMaster(value);
+                                                    }
+                                                }}
+                                                hasError={templateError}
                                             />
 
                                             {/* Sample Filename Input - UPDATED */}
@@ -5257,7 +7163,7 @@ const SearchServerData = () => {
                                                             return delimiterObj ? delimiterObj.sDelimiterName : d;
                                                         }).join(', ')}
                                                         onClick={(e) => {
-                                                            e.stopPropagation(); // Add this line
+                                                            e.stopPropagation();
                                                             setTempSelectedDelimiters(selectedDelimiters);
                                                             setShowDelimiterSelector(true);
                                                         }}
@@ -5273,18 +7179,7 @@ const SearchServerData = () => {
                                                 </div>
 
                                                 {/* Dropdown - RESTORED */}
-                                                {/* {showDelimiterSelector && (
-                                                    <div
-                                                        className="absolute left-0"
-                                                        style={{
-                                                            position: 'fixed',
-                                                            top: '50%',
-                                                            left: '50%',
-                                                            transform: 'translate(-50%, -50%)',
-                                                            zIndex: 99999
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    > */}
+
                                                 {showDelimiterSelector && (
                                                     <div
                                                         className="absolute left-0 top-full mt-1"
@@ -5371,6 +7266,10 @@ const SearchServerData = () => {
                                                                 delimiterError={delimiterError}
                                                                 setDelimiterError={setDelimiterError}
                                                                 delimiterOptions={delimiterOptions}
+                                                                tagRowErrors={tagRowErrors}
+                                                                isSelected={selectedTagRowIndex === index}
+                                                                onSelect={() => setSelectedTagRowIndex(index)}
+                                                                onRowDataChange={handleTagRowDataChange}
                                                             />
                                                         ))
                                                     ) : (
@@ -5381,112 +7280,9 @@ const SearchServerData = () => {
                                                         </tr>
                                                     )}
                                                 </tbody>
-                                                {/* <tbody>
-                                                    {tagMasterData && tagMasterData.length > 0 ? (
-                                                        tagMasterData.map((tag, index) => (
-                                                            <tr
-                                                                key={tag.sTagID}
-                                                                className={index % 2 === 0
-                                                                    ? "bg-blue-50/30 border-b border-gray-100"
-                                                                    : "bg-white border-b border-gray-100"}
-                                                            >
-                                                                
-                                                                <td className="px-6 py-4 font-medium text-gray-900">
-                                                                    {tag.sTagName}
-                                                                </td>
-
-                                                                
-                                                                <td className="px-6 py-4">
-                                                                    <div className="flex items-center gap-4">
-                                                                        <RadioButton
-                                                                            label="NONE"
-                                                                            name={`extract_${tag.sTagID}`}
-                                                                            checked={!tag.sSourceFlag || tag.sSourceFlag === 'NONE'}
-                                                                        />
-                                                                        <RadioButton
-                                                                            label="Folder"
-                                                                            name={`extract_${tag.sTagID}`}
-                                                                            checked={tag.sSourceFlag === 'Folder'}
-                                                                        />
-                                                                        <RadioButton
-                                                                            label="Filename"
-                                                                            name={`extract_${tag.sTagID}`}
-                                                                            checked={tag.sSourceFlag === 'Filename'}
-                                                                        />
-                                                                    </div>
-                                                                </td>
-
-                                                               
-                                                                <td className="px-6 py-4">
-                                                                    {tag.sTextData || ''}
-                                                                </td>
-
-                                                                
-                                                                <td className="px-6 py-4 text-right">
-                                                                    <Pencil size={16} className="text-blue-600 cursor-pointer" />
-                                                                </td>
-                                                            </tr>
-                                                        ))
-                                                    ) : (
-                                                        <tr>
-                                                            <td colSpan="4" className="px-6 py-10 text-center text-gray-500">
-                                                                No tags found for selected template
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </tbody> */}
                                             </table>
                                         </div>
                                     </div>
-
-
-                                    {/* <div>
-                                        <h3 className="text-blue-600 font-bold text-sm mb-4">Rule</h3>
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-24 gap-y-6 mb-6">
-                                            <UnderlineSelect
-                                                label="Rule Name"
-                                                placeholder="Select Tag"
-                                                options={ruleNameOptions.length > 0 ? ruleNameOptions : []}
-                                                displayKey="RuleName"
-                                                valueKey="RuleID"
-                                                value={selectedRuleName}
-                                                onChange={(value) => setSelectedRuleName(value)}
-                                            />
-                                            <UnderlineInput label="Metadata" />
-                                        </div>
-                                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                            <table className="w-full text-sm text-left text-gray-500">
-                                                <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
-                                                    <tr>
-                                                        <th scope="col" className="px-6 py-3">TagName</th>
-                                                        <th scope="col" className="px-6 py-3">Relational Operator</th>
-                                                        <th scope="col" className="px-6 py-3">Field Value</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr className="bg-blue-50/30 border-b border-gray-100">
-                                                        <td className="px-6 py-4 font-medium text-gray-900"></td>
-                                                        <td className="px-6 py-4">
-                                                            <Pencil size={16} className="text-blue-600 cursor-pointer" />
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <Pencil size={16} className="text-blue-600 cursor-pointer" />
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div className="flex justify-end py-4">
-                                            <ActionButton
-                                                label="Add"
-                                                className="bg-[#E6F0FF] text-[#2883FE] text-xs"
-                                                onClick={() => {
-                                                    // Add logic here
-                                                    console.log('Add clicked');
-                                                }}
-                                            />
-                                        </div>
-                                    </div> */}
 
                                     <div className="mb-12">
                                         <h3 className="text-blue-600 font-bold text-sm mb-4">Rule</h3>
@@ -5504,9 +7300,9 @@ const SearchServerData = () => {
 
 
                                             {/* Metadata Input with error styling */}
-                                            {/* <div className="group w-full relative">
+                                            <div className="group w-full relative">
                                                 <label className="block text-gray-700 text-sm font-bold mb-2">
-                                                    Metadata
+                                                    Metadata <span className="text-red-500">*</span>
                                                 </label>
                                                 <input
                                                     type="text"
@@ -5519,21 +7315,6 @@ const SearchServerData = () => {
                                                         ? 'border-red-500'
                                                         : 'border-gray-200 focus:border-blue-400'
                                                         }`}
-                                                    placeholder="Enter metadata"
-                                                />
-                                            </div> */}
-                                            <div className="group w-full relative">
-                                                <label className="block text-gray-700 text-sm font-bold mb-2">
-                                                    Metadata <span className="text-red-500">*</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={newRuleMetadata}
-                                                    onChange={(e) => {
-                                                        setNewRuleMetadata(e.target.value);
-                                                        setRuleGridError(false); // Clear error when user types
-                                                    }}
-                                                    className="w-full bg-transparent border-b-2 py-2 text-gray-700 text-sm focus:outline-none border-gray-200 focus:border-blue-400"
                                                     placeholder="Enter metadata"
                                                 />
                                             </div>
@@ -5562,12 +7343,19 @@ const SearchServerData = () => {
                                                                 <div className={`text-sm ${newRuleTagName ? 'text-gray-900' : 'text-gray-500 italic'}`}>
                                                                     {newRuleTagName || "Click pencil to select"}
                                                                 </div>
+
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        setShowTagNameSelector(true);
-                                                                        setShowRelOpSelector(false);
-                                                                        setRuleGridError(false); // Clear error when clicking pencil
+                                                                        // Toggle: if already open, close it
+                                                                        if (showTagNameSelector) {
+                                                                            setShowTagNameSelector(false);
+                                                                            setTagNameSearchTerm('');
+                                                                        } else {
+                                                                            setShowTagNameSelector(true);
+                                                                            setShowRelOpSelector(false);
+                                                                            setRuleGridError(false);
+                                                                        }
                                                                     }}
                                                                     className="text-blue-600 hover:text-blue-800 ml-2"
                                                                     title="Select tag name"
@@ -5600,7 +7388,8 @@ const SearchServerData = () => {
                                                                             }
                                                                         }
                                                                     }}
-                                                                    className="fixed z-[99999]"
+                                                                    // className="fixed z-[99999]"
+                                                                    className="fixed z-[99999] tag-name-dropdown"
                                                                 >
                                                                     <div className="w-64 bg-white border border-gray-300 rounded-md shadow-lg">
                                                                         {/* Search Input */}
@@ -5637,8 +7426,8 @@ const SearchServerData = () => {
                                                                                             }`}
                                                                                     >
                                                                                         <div className={`w-4 h-4 border rounded flex items-center justify-center ${newRuleTagName === tag.sTagName
-                                                                                                ? 'bg-blue-500 border-blue-500'
-                                                                                                : 'bg-white border-gray-300'
+                                                                                            ? 'bg-blue-500 border-blue-500'
+                                                                                            : 'bg-white border-gray-300'
                                                                                             }`}>
                                                                                             {newRuleTagName === tag.sTagName && (
                                                                                                 <Check size={12} className="text-white" strokeWidth={3} />
@@ -5660,12 +7449,19 @@ const SearchServerData = () => {
                                                                 <div className={`text-sm ${newRuleRelationalOp ? 'text-gray-900' : 'text-gray-500 italic'}`}>
                                                                     {newRuleRelationalOp || "Click pencil to select"}
                                                                 </div>
+
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        setShowRelOpSelector(true);
-                                                                        setShowTagNameSelector(false);
-                                                                        setRuleGridError(false); // Clear error when clicking pencil
+                                                                        // Toggle: if already open, close it
+                                                                        if (showRelOpSelector) {
+                                                                            setShowRelOpSelector(false);
+                                                                            setRelOpSearchTerm('');
+                                                                        } else {
+                                                                            setShowRelOpSelector(true);
+                                                                            setShowTagNameSelector(false);
+                                                                            setRuleGridError(false);
+                                                                        }
                                                                     }}
                                                                     className="text-blue-600 hover:text-blue-800 ml-2"
                                                                     title="Select relational operator"
@@ -5698,7 +7494,8 @@ const SearchServerData = () => {
                                                                             }
                                                                         }
                                                                     }}
-                                                                    className="fixed z-[99999]"
+
+                                                                    className="fixed z-[99999] rel-op-dropdown"
                                                                 >
                                                                     <div className="w-64 bg-white border border-gray-300 rounded-md shadow-lg">
                                                                         {/* Search Input */}
@@ -5735,8 +7532,8 @@ const SearchServerData = () => {
                                                                                             }`}
                                                                                     >
                                                                                         <div className={`w-4 h-4 border rounded flex items-center justify-center ${newRuleRelationalOp === op.value
-                                                                                                ? 'bg-blue-500 border-blue-500'
-                                                                                                : 'bg-white border-gray-300'
+                                                                                            ? 'bg-blue-500 border-blue-500'
+                                                                                            : 'bg-white border-gray-300'
                                                                                             }`}>
                                                                                             {newRuleRelationalOp === op.value && (
                                                                                                 <Check size={12} className="text-white" strokeWidth={3} />
@@ -5780,114 +7577,9 @@ const SearchServerData = () => {
                                         </div>
                                     </div>
 
-                                    {/* <div>
-                                        <div className="border border-gray-200 rounded-lg overflow-hidden mb-4">
-                                            <table className="w-full text-sm text-left text-gray-500">
-                                                <thead className="text-xs text-gray-700 uppercase bg-white border-b border-gray-200">
-                                                    <tr>
-                                                        <th scope="col" className="px-6 py-3">
-                                                            <div className="flex items-center justify-between">
-                                                                Rule Name <Search size={14} className="text-gray-400" />
-                                                            </div>
-                                                        </th>
-                                                        <th scope="col" className="px-6 py-3">
-                                                            <div className="flex items-center justify-between">
-                                                                Metadata <Search size={14} className="text-gray-400" />
-                                                            </div>
-                                                        </th>
-                                                        <th scope="col" className="px-6 py-3">
-                                                            <div className="flex items-center justify-between">
-                                                                TagName <Search size={14} className="text-gray-400" />
-                                                            </div>
-                                                        </th>
-                                                        <th scope="col" className="px-6 py-3">
-                                                            <div className="flex items-center justify-between">
-                                                                Relational Operator <Search size={14} className="text-gray-400" />
-                                                            </div>
-                                                        </th>
-                                                        <th scope="col" className="px-6 py-3">
-                                                            <div className="flex items-center justify-between">
-                                                                Field Value <Search size={14} className="text-gray-400" />
-                                                            </div>
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr className="bg-white">
-                                                        <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
-                                                            No data to display
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div className="flex justify-end">
-                                            <ActionButton
-                                                label="Remove"
-                                                className="bg-[#E6F0FF] text-[#2883FE] text-xs"
-                                                onClick={() => {
-                                                    // Add logic here
-                                                    console.log('Remove clicked');
-                                                }}
-                                            />
-                                        </div>
-                                    </div> */}
 
                                     <div>
-                                        {/* <div className="border border-gray-200 rounded-lg overflow-hidden mb-4">
-                                            <table className="w-full text-sm text-left text-gray-500">
-                                                <thead className="text-xs text-gray-700 uppercase bg-white border-b border-gray-200">
-                                                    <tr>
-                                                        <th scope="col" className="px-6 py-3">
-                                                            <div className="flex items-center justify-between">
-                                                                Rule Name <Search size={14} className="text-gray-400" />
-                                                            </div>
-                                                        </th>
-                                                        <th scope="col" className="px-6 py-3">
-                                                            <div className="flex items-center justify-between">
-                                                                Metadata <Search size={14} className="text-gray-400" />
-                                                            </div>
-                                                        </th>
-                                                        <th scope="col" className="px-6 py-3">
-                                                            <div className="flex items-center justify-between">
-                                                                TagName <Search size={14} className="text-gray-400" />
-                                                            </div>
-                                                        </th>
-                                                        <th scope="col" className="px-6 py-3">
-                                                            <div className="flex items-center justify-between">
-                                                                Relational Operator <Search size={14} className="text-gray-400" />
-                                                            </div>
-                                                        </th>
-                                                        <th scope="col" className="px-6 py-3">
-                                                            <div className="flex items-center justify-between">
-                                                                Field Value <Search size={14} className="text-gray-400" />
-                                                            </div>
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {ruleGridData.length === 0 ? (
-                                                        <tr className="bg-white">
-                                                            <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
-                                                                No data to display
-                                                            </td>
-                                                        </tr>
-                                                    ) : (
-                                                        ruleGridData.map((rule) => (
-                                                            <tr key={rule.id} className="bg-white border-b border-gray-100">
-                                                                <td className="px-6 py-4 text-sm text-gray-900">
-                                                                    {ruleNameOptions.find(r => r.RuleID === rule.ruleName)?.RuleName || rule.ruleName}
-                                                                </td>
-                                                                <td className="px-6 py-4 text-sm text-gray-900">{rule.metadata}</td>
-                                                                <td className="px-6 py-4 text-sm text-gray-900">{rule.tagName}</td>
-                                                                <td className="px-6 py-4 text-sm text-gray-900">{rule.relationalOp}</td>
-                                                                <td className="px-6 py-4 text-sm text-gray-900">{rule.fieldValue}</td>
-                                                            </tr>
-                                                        ))
-                                                    )}
-                                                </tbody>
-                                            </table>
-                                        </div> */}
+
 
                                         <div className="border border-gray-200 rounded-lg overflow-hidden mb-4">
                                             <table className="w-full text-sm text-left text-gray-500">
@@ -5967,18 +7659,7 @@ const SearchServerData = () => {
                                         </div>
 
                                         {/* Remove Button */}
-                                        {/* <div className="flex justify-end">
-                                            <ActionButton
-                                                label="Remove"
-                                                className="bg-[#E6F0FF] text-[#2883FE] text-xs"
-                                                onClick={() => {
-                                                    // Implement remove functionality - remove last or selected
-                                                    if (ruleGridData.length > 0) {
-                                                        setRuleGridData(prev => prev.slice(0, -1));
-                                                    }
-                                                }}
-                                            />
-                                        </div> */}
+
                                         <div className="flex justify-end">
                                             <ActionButton
                                                 label="Remove"
@@ -5993,9 +7674,7 @@ const SearchServerData = () => {
                     </div>
                 </main>
             </div >
-            {/* <Popup
-                isOpen={isCheckPathModalOpen}
-                onClose={() => setIsCheckPathModalOpen(false)} */}
+
             <Popup
                 isOpen={isCheckPathModalOpen}
                 onClose={() => {
@@ -6054,54 +7733,6 @@ const SearchServerData = () => {
                                 className="w-full bg-gray-50 border-b-2 border-gray-300 px-2 py-2 text-sm text-gray-600 focus:outline-none cursor-not-allowed"
                             />
                         </div>
-
-                        {/* <div>
-                            <label className="block text-gray-600 text-sm font-bold mb-2">
-                                Client User Name
-                                {checkPathType === 'client' && <span className="text-red-500 ml-1">*</span>}
-                            </label>
-                            <input
-                                type="text"
-                                value={clientUsername}
-                                onChange={(e) => {
-                                    setClientUsername(e.target.value);
-                                    setUsernameError(false);
-                                }}
-                                disabled={checkPathType === 'server'}
-                                className={`w-full bg-transparent border-b-2 px-2 py-2 text-sm focus:outline-none transition-colors ${checkPathType === 'server'
-                                    ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
-                                    : usernameError
-                                        ? 'border-red-500'
-                                        : 'border-gray-300 focus:border-blue-400'
-                                    }`}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-gray-600 text-sm font-bold mb-2">
-                                Client Password
-                                {checkPathType === 'client' && <span className="text-red-500 ml-1">*</span>}
-                            </label>
-                            <input
-                                type="password"
-                                value={clientPassword}
-                                onChange={(e) => {
-                                    setClientPassword(e.target.value);
-                                    setPasswordError(false);
-                                }}
-                                disabled={checkPathType === 'server'}
-                                className={`w-full bg-transparent border-b-2 px-2 py-2 text-sm focus:outline-none transition-colors ${checkPathType === 'server'
-                                    ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
-                                    : passwordError
-                                        ? 'border-red-500'
-                                        : 'border-gray-300 focus:border-blue-400'
-                                    }`}
-                            />
-
-
-                        </div> */}
-
-
                         <div>
                             <label className="block text-gray-600 text-sm font-bold mb-2">
                                 Client User Name
@@ -6197,6 +7828,111 @@ const SearchServerData = () => {
                     />
                 )
             }
+
+            {/* Confirmation Dialog for Submit */}
+            {/* {showSubmitDialog && (
+                <Errordialog
+                    message={isManualParsingInstrument
+                        ? "Select an option for manual parsing instrument"
+                        : "Select an option"}
+                    type="confirmation"
+                    onClose={() => setShowSubmitDialog(false)}
+                    buttons={isManualParsingInstrument
+                        ? [
+                            // For manual parsing: 3 buttons - Save, Activate & Lock, Save & Activate
+                            {
+                                text: "Save",
+                                onClick: () => handleFinalSubmission('save'),
+                                bgColor: "bg-gray-200",
+                                textColor: "text-slate-700",
+                                border: "border border-gray-300"
+                            },
+                            {
+                                text: "Activate & Lock",
+                                onClick: () => handleFinalSubmission('activateLock'),
+                                bgColor: "bg-green-500",
+                                textColor: "text-white"
+                            },
+                            {
+                                text: "Save & Activate",
+                                onClick: () => handleFinalSubmission('saveActivate'),
+                                bgColor: "bg-blue-500",
+                                textColor: "text-white"
+                            }
+                        ]
+                        : [
+                            // For automatic: 2 buttons - Save, Save & Activate
+                            {
+                                text: "Save",
+                                onClick: () => handleFinalSubmission('save'),
+                                bgColor: "bg-gray-200",
+                                textColor: "text-slate-700",
+                                border: "border border-gray-300"
+                            },
+                            {
+                                text: "Save & Activate",
+                                onClick: () => handleFinalSubmission('saveActivate'),
+                                bgColor: "bg-blue-500",
+                                textColor: "text-white"
+                            }
+                        ]
+                    }
+                />
+            )} */}
+
+            {
+                showSubmitDialog && (
+                    <Errordialog
+                        message={isManualParsingInstrument
+                            ? "Select an option for manual parsing instrument"
+                            : "Select an option"}
+                        type="confirmation"
+                        onClose={() => setShowSubmitDialog(false)}
+                        customButtons={isManualParsingInstrument
+                            ? [
+                                // Manual parsing instrument: 3 buttons
+                                {
+                                    text: "Save",
+                                    onClick: () => handleFinalSubmission('save'),
+                                    className: "bg-gray-200 text-slate-700 border border-gray-300"
+                                },
+                                {
+                                    text: "Activate & Lock",
+                                    onClick: () => handleFinalSubmission('activateLock'),
+                                    className: "bg-green-500 text-white"
+                                },
+                                {
+                                    text: "Save & Activate",
+                                    onClick: () => handleFinalSubmission('saveActivate'),
+                                    className: "bg-blue-500 text-white"
+                                }
+                            ]
+                            : [
+                                // Automatic instrument: 2 buttons
+                                {
+                                    text: "Save",
+                                    onClick: () => handleFinalSubmission('save'),
+                                    className: "bg-gray-200 text-slate-700 border border-gray-300"
+                                },
+                                {
+                                    text: "Save & Activate",
+                                    onClick: () => handleFinalSubmission('saveActivate'),
+                                    className: "bg-blue-500 text-white"
+                                }
+                            ]
+                        }
+                    />
+                )
+            }
+
+            <AuditTrail
+                isOpen={showAuditTrail}
+                onClose={handleAuditTrailClose}
+                onAuthorized={handleAuditTrailAuthorized}
+                actionLabel={auditAction === 'saveActivate' ? "Save & Activate" : "Activate & Lock"}
+                defaultReason="Activated"
+                showPasswordError={auditPasswordError}
+            />
         </div >
     );
 };
@@ -6229,8 +7965,21 @@ const UnderlineSelect = ({
     onChange,
     displayKey = 'name',
     valueKey = 'id',
-    disabled = false
+    disabled = false,
+    hasError = false
 }) => (
+    // <div className="relative group w-full">
+    //     <label className="block text-gray-600 text-sm font-bold mb-2">
+    //         {label} {required && <span className="text-red-500">*</span>}
+    //     </label>
+    //     <div className="relative">
+    //         <select
+    //             value={value || ""}
+    //             onChange={(e) => onChange && onChange(e.target.value)}
+    //             disabled={disabled}
+    //             className={`w-full bg-transparent border-b-2 border-gray-200 py-2 pr-8 text-gray-700 text-sm focus:border-blue-400 focus:outline-none appearance-none cursor-pointer transition-colors ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''
+    //                 }`}
+    //         >
     <div className="relative group w-full">
         <label className="block text-gray-600 text-sm font-bold mb-2">
             {label} {required && <span className="text-red-500">*</span>}
@@ -6240,7 +7989,11 @@ const UnderlineSelect = ({
                 value={value || ""}
                 onChange={(e) => onChange && onChange(e.target.value)}
                 disabled={disabled}
-                className={`w-full bg-transparent border-b-2 border-gray-200 py-2 pr-8 text-gray-700 text-sm focus:border-blue-400 focus:outline-none appearance-none cursor-pointer transition-colors ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''
+                className={`w-full bg-transparent border-b-2 py-2 pr-8 text-gray-700 text-sm focus:outline-none appearance-none cursor-pointer transition-colors ${disabled
+                    ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200'
+                    : hasError
+                        ? 'border-red-500'
+                        : 'border-gray-200 focus:border-blue-400'
                     }`}
             >
                 <option value="" disabled hidden></option>
@@ -6280,15 +8033,6 @@ const ToggleSwitch = ({ checked }) => (
         <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${checked ? 'translate-x-5' : 'translate-x-0'}`}></div>
     </div>
 );
-
-// const SquareCheckbox = ({ label, boldLabel, checked, onChange }) => (
-//     <div className="flex items-center gap-3 cursor-pointer group" onClick={onChange}>
-//         <div className={`w-5 h-5 border rounded-sm flex items-center justify-center transition-colors ${checked ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-300 group-hover:border-blue-400'}`}>
-//             {checked && <Check size={14} className="text-white" strokeWidth={3} />}
-//         </div>
-//         {label && <span className={`text-sm text-blue-800 ${boldLabel ? 'font-bold' : 'font-medium'}`}>{label}</span>}
-//     </div>
-// );
 
 const SquareCheckbox = ({ label, boldLabel, checked, onChange, disabled = false }) => (
     <div
@@ -6375,256 +8119,6 @@ const RadioButton = ({ label, name, checked, onChange }) => (
         <span className="ml-2 text-sm text-gray-700 font-bold group-hover:text-blue-600">{label}</span>
     </label>
 );
-
-
-// const TimePicker = ({ value, onChange, disabled = false }) => {
-//     const [isOpen, setIsOpen] = useState(false);
-//     const [hours, setHours] = useState('00');
-//     const [minutes, setMinutes] = useState('00');
-//     const [seconds, setSeconds] = useState('00');
-//     const [inputValue, setInputValue] = useState(value || '00:00:00');
-//     const dropdownRef = useRef(null);
-
-//     useEffect(() => {
-//         if (value) {
-//             setInputValue(value);
-//             const parts = value.split(':');
-//             if (parts.length === 3) {
-//                 setHours(parts[0]);
-//                 setMinutes(parts[1]);
-//                 setSeconds(parts[2]);
-//             }
-//         }
-//     }, [value]);
-
-
-//     useEffect(() => {
-//         if (isOpen) {
-//             // Small delay to ensure DOM is rendered
-//             setTimeout(() => {
-//                 const hourElement = document.querySelector(`[data-hour="${hours}"]`);
-//                 const minuteElement = document.querySelector(`[data-minute="${minutes}"]`);
-//                 const secondElement = document.querySelector(`[data-second="${seconds}"]`);
-
-//                 if (hourElement) {
-//                     hourElement.scrollIntoView({ block: 'center', behavior: 'auto' });
-//                 }
-//                 if (minuteElement) {
-//                     minuteElement.scrollIntoView({ block: 'center', behavior: 'auto' });
-//                 }
-//                 if (secondElement) {
-//                     secondElement.scrollIntoView({ block: 'center', behavior: 'auto' });
-//                 }
-//             }, 50);
-//         }
-//     }, [isOpen, hours, minutes, seconds]);
-
-//     useEffect(() => {
-//         const handleClickOutside = (e) => {
-//             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-//                 setIsOpen(false);
-//             }
-//         };
-//         document.addEventListener('mousedown', handleClickOutside);
-//         return () => document.removeEventListener('mousedown', handleClickOutside);
-//     }, []);
-
-//     const validateTimeInput = (value, max) => {
-//         const num = parseInt(value);
-//         if (isNaN(num) || num < 0) return '00';
-//         if (num > max) return max.toString().padStart(2, '0');
-//         return num.toString().padStart(2, '0');
-//     };
-
-//     const validateAndFormatTime = (timeString) => {
-//         const parts = timeString.split(':');
-//         if (parts.length !== 3) return value || '00:00:00';
-
-//         let h = parseInt(parts[0]) || 0;
-//         let m = parseInt(parts[1]) || 0;
-//         let s = parseInt(parts[2]) || 0;
-
-//         // Validate hours (0-23)
-//         if (h < 0) h = 0;
-//         if (h > 23) h = 23;
-
-//         // Validate minutes (0-59)
-//         if (m < 0) m = 0;
-//         if (m > 59) m = 59;
-
-//         // Validate seconds (0-59)
-//         if (s < 0) s = 0;
-//         if (s > 59) s = 59;
-
-//         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-//     };
-
-//     const handleInputChange = (e) => {
-//         const newValue = e.target.value;
-//         setInputValue(newValue);
-//     };
-
-//     const handleInputBlur = () => {
-//         const formatted = validateAndFormatDate(inputValue);
-//         const parts = formatted.split('/');
-//         const formattedDate = new Date(parts[2], parts[1] - 1, parts[0]);
-//         const today = new Date();
-//         today.setHours(0, 0, 0, 0);
-
-//         // Check if date is allowed based on allowPast/allowFuture
-//         if (!allowFuture && formattedDate > today) {
-//             // For past-only dates (Files older than) - set to yesterday
-//             const yesterday = new Date();
-//             yesterday.setDate(yesterday.getDate() - 1);
-//             const yesterdayFormatted = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
-//             setInputValue(yesterdayFormatted);
-//             if (onChange) {
-//                 onChange(yesterdayFormatted);
-//             }
-//         } else if (!allowPast && formattedDate < today) {
-//             // For future-only dates (Trigger, Expiry, One Time)
-//             // Keep the typed date and let parent component handle the error
-//             setInputValue(formatted);
-//             if (onChange) {
-//                 onChange(formatted);
-//             }
-//         } else {
-//             setInputValue(formatted);
-//             if (onChange) {
-//                 onChange(formatted);
-//             }
-//         }
-//     };
-
-//     const handleTimeChange = (newHours, newMinutes, newSeconds) => {
-//         const validHours = validateTimeInput(newHours, 23);
-//         const validMinutes = validateTimeInput(newMinutes, 59);
-//         const validSeconds = validateTimeInput(newSeconds, 59);
-
-//         setHours(validHours);
-//         setMinutes(validMinutes);
-//         setSeconds(validSeconds);
-
-//         const timeString = `${validHours}:${validMinutes}:${validSeconds}`;
-//         setInputValue(timeString);
-
-//         if (onChange) {
-//             onChange(timeString);
-//         }
-//     };
-
-//     const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
-//     const minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
-//     const secondOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
-
-//     return (
-//         <div className="relative" ref={dropdownRef}>
-//             <div className={`relative w-32 ${disabled ? 'cursor-not-allowed' : ''}`}>
-//                 <input
-//                     type="text"
-//                     value={inputValue}
-//                     onChange={handleInputChange}
-//                     onBlur={handleInputBlur}
-//                     onFocus={() => !disabled && setIsOpen(true)}
-//                     disabled={disabled}
-//                     placeholder="HH:MM:SS"
-//                     className={`w-full border border-gray-200 rounded px-3 py-1.5 text-sm text-gray-600 focus:outline-none focus:border-blue-400 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'bg-white'
-//                         }`}
-//                 />
-//                 <Clock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-//             </div>
-
-//             {isOpen && !disabled && (
-//                 <div className="absolute top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 p-3">
-//                     <div className="flex gap-2">
-//                         {/* Hours */}
-//                         <div className="flex flex-col">
-//                             <label className="text-xs text-gray-600 mb-1 text-center font-semibold">Hours</label>
-//                             <div className="h-32 w-16 overflow-y-auto border border-gray-200 rounded custom-scrollbar">
-//                                 {hourOptions.map((hour) => (
-//                                     <div
-//                                         key={hour}
-//                                         data-hour={hour}
-//                                         onClick={() => {
-//                                             setHours(hour);
-//                                             handleTimeChange(hour, minutes, seconds);
-//                                         }}
-//                                         className={`px-3 py-1 text-sm text-center cursor-pointer hover:bg-blue-50 ${hours === hour ? 'bg-blue-100 font-semibold text-blue-600' : ''
-//                                             }`}
-//                                     >
-//                                         {hour}
-//                                     </div>
-//                                 ))}
-//                             </div>
-//                         </div>
-
-//                         <div className="flex items-center justify-center text-xl font-bold text-gray-400 pt-6">:</div>
-
-//                         {/* Minutes */}
-//                         <div className="flex flex-col">
-//                             <label className="text-xs text-gray-600 mb-1 text-center font-semibold">Minutes</label>
-//                             <div className="h-32 w-16 overflow-y-auto border border-gray-200 rounded custom-scrollbar">
-//                                 {minuteOptions.map((minute) => (
-//                                     <div
-//                                         key={minute}
-//                                         data-minute={minute}
-//                                         onClick={() => {
-//                                             setMinutes(minute);
-//                                             handleTimeChange(hours, minute, seconds);
-//                                         }}
-//                                         className={`px-3 py-1 text-sm text-center cursor-pointer hover:bg-blue-50 ${minutes === minute ? 'bg-blue-100 font-semibold text-blue-600' : ''
-//                                             }`}
-//                                     >
-//                                         {minute}
-//                                     </div>
-//                                 ))}
-//                             </div>
-//                         </div>
-
-//                         <div className="flex items-center justify-center text-xl font-bold text-gray-400 pt-6">:</div>
-
-//                         {/* Seconds */}
-//                         <div className="flex flex-col">
-//                             <label className="text-xs text-gray-600 mb-1 text-center font-semibold">Seconds</label>
-//                             <div className="h-32 w-16 overflow-y-auto border border-gray-200 rounded custom-scrollbar">
-//                                 {secondOptions.map((second) => (
-//                                     <div
-//                                         key={second}
-//                                         data-second={second}
-//                                         onClick={() => {
-//                                             setSeconds(second);
-//                                             handleTimeChange(hours, minutes, second);
-//                                         }}
-//                                         className={`px-3 py-1 text-sm text-center cursor-pointer hover:bg-blue-50 ${seconds === second ? 'bg-blue-100 font-semibold text-blue-600' : ''
-//                                             }`}
-//                                     >
-//                                         {second}
-//                                     </div>
-//                                 ))}
-//                             </div>
-//                         </div>
-//                     </div>
-//                     <div className="mt-2 flex justify-end">
-//                         <button
-//                             onClick={() => setIsOpen(false)}
-//                             className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
-//                         >
-//                             Done
-//                         </button>
-//                     </div>
-//                 </div>
-//             )}
-
-//             <style jsx>{`
-//                 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-//                 .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
-//                 .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-//                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-//             `}</style>
-//         </div>
-//     );
-// };
-
 
 const TimePicker = ({ value, onChange, disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -6851,69 +8345,6 @@ const TimePicker = ({ value, onChange, disabled = false }) => {
     );
 };
 
-// const DatePickerInput = ({ value, onChange, disabled = false, allowPast = true, allowFuture = true, validateAndFormatDate }) => {
-//     const [isOpen, setIsOpen] = useState(false);
-//     const [selectedDate, setSelectedDate] = useState(new Date());
-//     const [inputValue, setInputValue] = useState(value || '');
-//     const dropdownRef = useRef(null);
-
-//     useEffect(() => {
-//         if (value) {
-//             setInputValue(value);
-//             const parts = value.split('/');
-//             if (parts.length === 3) {
-//                 const date = new Date(parts[2], parts[1] - 1, parts[0]);
-//                 setSelectedDate(date);
-//             }
-//         }
-//     }, [value]);
-
-//     useEffect(() => {
-//         const handleClickOutside = (e) => {
-//             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-//                 setIsOpen(false);
-//             }
-//         };
-//         document.addEventListener('mousedown', handleClickOutside);
-//         return () => document.removeEventListener('mousedown', handleClickOutside);
-//     }, []);
-
-//     const handleInputChange = (e) => {
-//         const newValue = e.target.value;
-//         setInputValue(newValue);
-//     };
-
-//     const handleInputBlur = () => {
-//         const formatted = validateAndFormatDate(inputValue);
-//         const parts = formatted.split('/');
-//         const formattedDate = new Date(parts[2], parts[1] - 1, parts[0]);
-//         const today = new Date();
-//         today.setHours(0, 0, 0, 0);
-
-//         // Check if date is allowed based on allowPast/allowFuture
-//         if (!allowFuture && formattedDate > today) {
-//             // For past-only dates (Files older than)
-//             const current = new Date();
-//             const currentFormatted = `${current.getDate().toString().padStart(2, '0')}/${(current.getMonth() + 1).toString().padStart(2, '0')}/${current.getFullYear()}`;
-//             setInputValue(currentFormatted);
-//             if (onChange) {
-//                 onChange(currentFormatted);
-//             }
-//         } else if (!allowPast && formattedDate < today) {
-//             // For future-only dates (Trigger, Expiry, One Time)
-//             // Keep the typed date and let parent component handle the error
-//             setInputValue(formatted);
-//             if (onChange) {
-//                 onChange(formatted);
-//             }
-//         } else {
-//             setInputValue(formatted);
-//             if (onChange) {
-//                 onChange(formatted);
-//             }
-//         }
-//     };
-
 const DatePickerInput = ({
     value,
     onChange,
@@ -6927,17 +8358,6 @@ const DatePickerInput = ({
     const [inputValue, setInputValue] = useState(value || '');
     const [isFocused, setIsFocused] = useState(false);
     const dropdownRef = useRef(null);
-
-    // useEffect(() => {
-    //     if (value) {
-    //         setInputValue(value);
-    //         const parts = value.split('/');
-    //         if (parts.length === 3) {
-    //             const date = new Date(parts[2], parts[1] - 1, parts[0]);
-    //             setSelectedDate(date);
-    //         }
-    //     }
-    // }, [value]);
 
     useEffect(() => {
         // Always sync with parent value when not focused
@@ -6955,15 +8375,8 @@ const DatePickerInput = ({
         }
     }, [value, isFocused]);
 
-    // Add this useEffect instead
-    // useEffect(() => {
-    //     // Only update if not focused (user isn't typing)
-    //     if (!isFocused) {
-    //         setInputValue(value || '');
-    //     }
-    // }, [value, isFocused]);
 
-    // Add this NEW useEffect to handle immediate sync after onChange
+
     useEffect(() => {
         if (value && !isFocused) {
             setInputValue(value);
@@ -6980,75 +8393,12 @@ const DatePickerInput = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // const handleInputChange = (e) => {
-    //     const newValue = e.target.value;
-    //     setInputValue(newValue);
-    // };
+
 
     const handleInputChange = (e) => {
         const newValue = e.target.value;
         setInputValue(newValue);
     };
-
-    // const handleInputBlur = () => {
-    //     console.log("=== handleInputBlur called ===");
-    //     console.log("Input value:", inputValue);
-
-    //     const formatted = validateAndFormatDate(inputValue);
-    //     console.log("Formatted value:", formatted);
-
-    //     // ALWAYS call onChange - let parent handle validation
-    //     if (onChange) {
-    //         console.log("Calling onChange with:", formatted);
-    //         onChange(formatted);
-    //     }
-
-    //     setIsFocused(false);
-    // };
-
-    // const handleInputBlur = () => {
-    //     console.log("=== handleInputBlur called ===");
-    //     console.log("Input value:", inputValue);
-
-    //     setIsFocused(false); // SET focused to false on blur
-
-    //     const formatted = validateAndFormatDate(inputValue);
-    //     console.log("Formatted value:", formatted);
-
-    //     // ALWAYS call onChange - let parent handle validation
-    //     if (onChange) {
-    //         console.log("Calling onChange with:", formatted);
-    //         onChange(formatted);
-    //     }
-
-    //     // Force sync with parent value after a short delay
-    //     // This ensures the corrected value from parent shows in the input
-    //     setTimeout(() => {
-    //         console.log("Force syncing to parent value:", value);
-    //         if (value) {
-    //             setInputValue(value);
-    //         }
-    //     }, 10);
-    // };
-
-    // const handleInputBlur = () => {
-    //     console.log("=== handleInputBlur called ===");
-    //     console.log("Input value:", inputValue);
-
-    //     setIsFocused(false);
-
-    //     const formatted = validateAndFormatDate(inputValue);
-    //     console.log("Formatted value:", formatted);
-
-    //     // Call onChange immediately - parent will handle validation and corrections
-    //     if (onChange) {
-    //         console.log("Calling onChange with:", formatted);
-    //         onChange(formatted);
-    //     }
-
-    //     // REMOVED: The setTimeout that was forcing sync
-    //     // This was causing the input to show current date after correction
-    // };
 
     const handleInputBlur = () => {
         console.log("=== DatePickerInput handleInputBlur called ===");
@@ -7065,8 +8415,7 @@ const DatePickerInput = ({
             onChange(formatted);
         }
 
-        // DON'T set inputValue here - let it sync from parent via useEffect
-        // This allows parent to correct invalid dates
+
     };
     const daysInMonth = (date) => {
         return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -7075,59 +8424,6 @@ const DatePickerInput = ({
     const firstDayOfMonth = (date) => {
         return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
     };
-
-
-
-    // const handleDateClick = (day) => {
-    //     const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
-    //     const today = new Date();
-    //     today.setHours(0, 0, 0, 0);
-
-    //     // Check if date is allowed
-    //     if (!allowFuture && newDate > today) {
-    //         // For past-only dates (Files older than) - set to yesterday
-    //         const yesterday = new Date();
-    //         yesterday.setDate(yesterday.getDate() - 1);
-    //         yesterday.setHours(0, 0, 0, 0);
-
-    //         const formattedDate = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
-
-    //         setSelectedDate(yesterday);
-    //         setInputValue(formattedDate);
-    //         if (onChange) {
-    //             onChange(formattedDate);
-    //         }
-    //         setIsOpen(false);
-    //         return;
-    //     }
-
-    //     if (!allowPast && newDate < today) {
-    //         // For future-only fields (Trigger, Expiry) - set to yesterday
-    //         const yesterday = new Date();
-    //         yesterday.setDate(yesterday.getDate() - 1);
-    //         yesterday.setHours(0, 0, 0, 0);
-
-    //         const formattedDate = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
-
-    //         setSelectedDate(yesterday);
-    //         setInputValue(formattedDate);
-    //         if (onChange) {
-    //             onChange(formattedDate);  // This will trigger your handler!
-    //         }
-    //         setIsOpen(false);
-    //         return;
-    //     }
-
-    //     const formattedDate = `${day.toString().padStart(2, '0')}/${(newDate.getMonth() + 1).toString().padStart(2, '0')}/${newDate.getFullYear()}`;
-
-    //     setSelectedDate(newDate);
-    //     setInputValue(formattedDate);
-    //     if (onChange) {
-    //         onChange(formattedDate);
-    //     }
-    //     setIsOpen(false);
-    // };
-
 
     const handleDateClick = (day) => {
         const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
@@ -7153,53 +8449,6 @@ const DatePickerInput = ({
 
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-    // const renderCalendar = () => {
-    //     const days = [];
-    //     const totalDays = daysInMonth(selectedDate);
-    //     const firstDay = firstDayOfMonth(selectedDate);
-    //     const currentDay = inputValue ? parseInt(inputValue.split('/')[0]) : null;
-    //     const today = new Date();
-    //     today.setHours(0, 0, 0, 0);
-
-    //     // Empty cells before first day
-    //     for (let i = 0; i < firstDay; i++) {
-    //         days.push(<div key={`empty-${i}`} className="p-2"></div>);
-    //     }
-
-    //     // Days of month
-    //     for (let day = 1; day <= totalDays; day++) {
-    //         const dayDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
-    //         const isSelected = day === currentDay;
-    //         const isPast = dayDate < today;
-    //         const isFuture = dayDate > today;
-    //         const isToday = dayDate.getTime() === today.getTime();
-
-    //         const isDisabled = (!allowPast && isPast) || (!allowFuture && isFuture);
-
-    //         days.push(
-    //             <div
-    //                 key={day}
-    //                 onClick={() => !isDisabled && handleDateClick(day)}
-    //                 className={`p-2 text-center text-sm rounded transition-colors ${isDisabled
-    //                     ? 'text-gray-300 opacity-40 cursor-not-allowed'
-    //                     : 'cursor-pointer hover:bg-blue-50'
-    //                     } ${isSelected
-    //                         ? 'bg-blue-500 text-white font-bold'
-    //                         : isToday && !isDisabled
-    //                             ? 'bg-blue-100 text-blue-600 font-bold'
-    //                             : !isDisabled
-    //                                 ? 'text-gray-900 font-bold'
-    //                                 : 'text-gray-300'
-    //                     }`}
-    //             >
-    //                 {day}
-    //             </div>
-    //         );
-    //     }
-
-    //     return days;
-    // };
 
     const renderCalendar = () => {
         const days = [];
@@ -7324,4 +8573,4 @@ const ActionButton = ({ icon: Icon, label, disabled, onClick, className = "" }) 
     </button>
 );
 
-export default SearchServerData;
+export default DataScheduler;
