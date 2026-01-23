@@ -220,14 +220,15 @@ const handleCommSubmit = async (data) => {
     // ✅ Interfacer Instrument dropdown
     if (Array.isArray(res.InterfacerInstrument)) {
       const interfacerList = res.InterfacerInstrument.map((item) => ({
-        label: item.InstrumentName, // what user sees
-        value: item.INSTRUMENTID, // what you store
-      }));
+  label: item.InstrumentName,
+  value: String(item.INSTRUMENTID), // ✅ STRING
+}));
+
 
       // ⭐ ADD mode: Show "Create New" option
       if (isAddMode) {
         setInterfacerOptions([
-          { label: "Create New", value: -2 }, // 👈 Only in ADD mode
+          { label: "Create New", value: "-2" }, // ✅ STRING
           ...interfacerList,
         ]);
       } else {
@@ -260,7 +261,8 @@ useEffect(() => {
   const isMapped = inst.iInterfaceStatus === 1;
   
   // Get the saved interfacer ID
-  const savedInterfacerId = initialData.iInterfacerInstID;
+  const savedInterfacerId = String(initialData.iInterfacerInstID);
+
   
   const determineInitialValue = () => {
     if (!isMapped) return "";
@@ -555,7 +557,7 @@ const buildInstrumentEditRequestPayload = (
     InstrumentDLL: null,
     AllowRetest: 0,
     MiltiTestOrder: 0,
-    InstrumentID: pendingForm.interfacerInstrument,
+    InstrumentID: Number(pendingForm.interfacerInstrument),
     IdleTimetoDisconnect: -1,
     AutoReconnectInterval: -1,
     AutoOrderInterval: -1,
@@ -586,7 +588,7 @@ const buildInstrumentEditRequestPayload = (
 
   return {
     InstrumentList: {
-      INSTRUMENTID: pendingForm.interfacerInstrument,
+      INSTRUMENTID: Number(pendingForm.interfacerInstrument),
       LABNUMBER: "1",
       ACTIVE: pendingForm.active ? 1 : 0,
       SERIALNUMBER: "1",
@@ -657,7 +659,7 @@ const handleAuditAuthorized = async (auditPayload) => {
         buildInstrumentEditRequestPayload(pendingForm, commData, auditPayload)
       );
     }
-
+    console.log("communication settings",buildInstrumentEditRequestPayload(pendingForm, commData, auditPayload))
     // ✅ reload grid but keep previous selection
     await loadInstrumentGrid(false, previousRowId);
 
@@ -1008,7 +1010,8 @@ ${
           setForm({
             ...form,
             interfacerMapped: checked,
-            interfacerInstrument: -2,
+            interfacerInstrument: "-2",
+
           });
         } else {
           // EDIT mode: Use first available option
@@ -1061,11 +1064,13 @@ ${
       displayKey="label"
       valueKey="value"
       onChange={(e) =>
-        setForm({
-          ...form,
-          interfacerInstrument: Number(e.target.value),
-        })
-      }
+  setForm({
+    ...form,
+    interfacerInstrument: e.target.value, // 🔥 keep as STRING
+  })
+}
+
+
       required
       showError={submitted}
     />
@@ -1098,14 +1103,13 @@ ${
 
   let commSettings = null;
 
-  // 🔥 Only if interfacerInstrument is NOT -2
   if (form.interfacerInstrument !== -2) {
     commSettings = await getInstrumentCommSettings(
       form.interfacerInstrument
     );
   }
 
-  setCommData(commSettings);   // 👈 backend data (or null)
+  setCommData(commSettings);
   setPendingForm(form);
   setShowCommSettings(true);
 }}

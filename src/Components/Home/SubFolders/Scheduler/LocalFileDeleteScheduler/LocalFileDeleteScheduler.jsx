@@ -63,7 +63,7 @@ export default function LocalFileDeleteScheduler() {
   useEffect(() => {
     const loadClientOptions = async () => {
       setLoading(true);
-      setLoadingText("Loading scheduler data...");
+      setLoadingText(t("common.loading"));
 
       try {
         const response = await postData(
@@ -196,21 +196,21 @@ export default function LocalFileDeleteScheduler() {
         "FileVersionNo",
       ],
       HeaderDetails: [
-        "Select",
-        "Filename",
-        "Client Name",
-        "Source Path",
-        "Upload On",
-        "Modified On",
-        "Deletion Marked On",
-        "File Version",
+        t("label.select"),
+        t("label.fileName"),
+        t("label.clientName"),
+        t("label.sourcePath"),
+        t("label.uploadOn"),
+        t("label.modifiedOn"),
+        t("label.deletionmarkedon"),
+        t("label.versionNo"),
       ],
       ...CF_activeUserdetails(),
     };
   };
 
   const buildPrintRequest = () => ({
-    sModuleName: "Local File Delete Scheduler",
+    sModuleName: "Localfiledelete Scheduler",
     ...CF_activeUserdetails(),
   });
   const handlePrint = () => {
@@ -275,7 +275,7 @@ export default function LocalFileDeleteScheduler() {
     }));
   const fetchGridByDate = async (fromDate, toDate) => {
   setLoading(true);
-  setLoadingText("Loading ...");
+  setLoadingText(t("common.loading"));
 
   try {
     const response = await postData(
@@ -338,7 +338,7 @@ export default function LocalFileDeleteScheduler() {
 
   const handleAuditSubmit = async (auditData) => {
   setLoading(true);
-  setLoadingText("Authorizing records...");
+  setLoadingText(t("common.loading"));
 
   try {
     const selectedRows = filteredData.filter((row) => row.selected);
@@ -483,7 +483,7 @@ export default function LocalFileDeleteScheduler() {
         )}
 
         <button
-          className="absolute right-4 -bottom-4 bg-[#f0f4f8] px-6"
+          className="absolute right-4 -bottom-4 bg-[#f0f4f8] px-5"
           onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? (
@@ -575,8 +575,6 @@ export default function LocalFileDeleteScheduler() {
     </div>
   );
 }
-
-/* ------------------ SMALL COMPONENTS ------------------ */
 const CalendarInput = ({ label, value, onChange, min, max }) => (
   <div className="w-[150px]">
     <label className="block text-[#405f7d] text-[12px] font-semibold font-roboto">

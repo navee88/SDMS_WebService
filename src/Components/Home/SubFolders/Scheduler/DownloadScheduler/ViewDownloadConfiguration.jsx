@@ -11,9 +11,10 @@ import Errordialog from "../../../../Layout/Common/Errordialog";
 import AuditTrail from "../../../../Layout/Common/AuditTrail";
 import { useDownloadScheduler } from "../../../../../Context/DownloadSchedulerContext";
 import { dom } from "@fortawesome/fontawesome-svg-core";
-
-
-
+import useAxios from "../../../../../Services/servicecall";
+import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
+import PrintTable from "../../../../Layout/Common/PrintTable";
+import { handleExportCommon } from "../../../../Layout/Common/exportService";
 
 export default function ViewDownloadConfiguration() {
   const { t } = useTranslation();
@@ -24,15 +25,66 @@ export default function ViewDownloadConfiguration() {
 
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showPrint, setShowPrint] = useState(false); // ✅ ADD THIS
+  const [pendingAction, setPendingAction] = useState(null); // ACTIVE / INACTIVE
+  const [showConfirm, setShowConfirm] = useState(false);
 
   /* ---------- AUDIT POPUP ---------- */
   const [showAudit, setShowAudit] = useState(false);
-  const [auditAction, setAuditAction] = useState("");
-  const {
-  setAutoConfigData,
-  setActiveTabIndex,
-  setOpenedFromView,
-} = useDownloadScheduler();
+  const { setAutoConfigData, setActiveTabIndex, setOpenedFromView } =
+    useDownloadScheduler();
+  const { postData } = useAxios();
+
+  useEffect(() => {
+    const loadDownloadScheduler = async () => {
+      try {
+        setLoading(true);
+
+        const requestPayload = CF_activeUserdetails();
+
+        const response = await postData(
+          "Scheduler/viewdownloadschedulerload",
+          requestPayload,
+        );
+
+        if (!Array.isArray(response) || response.length === 0) {
+          setData([]);
+          setSelectedRow(null);
+          return;
+        }
+
+        // 🔁 MAP API → GRID FORMAT
+        const mappedData = response.map((item, index) => ({
+          id: index + 1,
+          instrument: item.L11InstrumentName,
+          taskId: item.L101TaskID?.trim(),
+          sourcePath: item.L52TaskSourcePath,
+          downloadClientName: item.L06ClientName,
+          downloadPath: item.L101TaskDownloadPath,
+          taskStatus: item.L101TaskStatus?.toLowerCase(), // active / deactive
+          taskFilter: item.L101TaskFilter?.replace(/,$/, ""), // "*.*,"
+          taskCompleted: item.L101TaskCompleted,
+          uncStatus: item.L101UNCStatus,
+          uncUsername: item.L101UNCUserName,
+          uncPassword: item.L101UNCPassword,
+          uncDomain: item.L101UNCDomain,
+          L101DownloadTaskID:item.L101DownloadTaskID,
+          fileSettings: "Original", // backend not sending
+        }));
+
+        setData(mappedData);
+        setSelectedRow(mappedData[0] || null);
+      } catch (error) {
+        console.error(error);
+        setErrorMessage(t("errormsg.noresultsfound"));
+        setShowErrorDialog(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDownloadScheduler();
+  }, []);
 
   /* ---------- BUTTON ---------- */
   const ActionButton = ({ icon: Icon, label, onClick }) => (
@@ -40,352 +92,90 @@ export default function ViewDownloadConfiguration() {
       onClick={onClick}
       className="flex items-center gap-1 px-[12px] py-[6px]  bg-[#f0f2f5] text-[#2883fe] font-roboto text-[11px] font-bold rounded shadow-sm"
     >
-      <Icon className="w-4 h-4"  />
+      <Icon className="w-4 h-4" />
       <span className="leading-none">{label}</span>
     </button>
   );
 
   /* ---------- MOCK DATA ---------- */
-  useEffect(() => {
-    setTimeout(() => {
-      const mockData = [
-        {
-          id: 1,
-          instrument: "IN001 (IN001)",
-          taskId: "T2",
-          sourcePath: "D:\\SDMS\\scheduler\\IN001",
-          uncStatus: false,
-          downloadClientName: "AGD54",
-          downloadPath: "D:\\SDMS\\download_schedule",
-          taskStatus: "active",
-          taskFilter: "*.*",
-          taskCompleted: "completed",
-          uncUsername: "",
-          fileSettings: "Original",
-
-        },
-        {
-          id: 2,
-          instrument: "IN002 (IN002)",
-          taskId: "T3",
-          sourcePath: "D:\\SDMS\\scheduler\\IN002",
-          uncStatus: true,
-          downloadClientName: "AGD55",
-          downloadPath: "D:\\SDMS\\download_schedule2",
-          taskStatus: "inactive",
-          taskFilter: "*.csv",
-          taskCompleted: "pending",
-          uncUsername: "admin",
-          uncPassword: "password123",
-          uncDomain: "SDMS",
-          fileSettings: "Original",
-
-        },
-      ];
-
-      setData(mockData);
-      setSelectedRow(mockData[0]); // select first row initially
-      setLoading(false);
-    }, 300);
-  }, []);
 
   /* ---------- EXPORT TO EXCEL FUNCTION ---------- */
+  const buildExportRequest = () => ({
+    sFileName: "DownloadScheduler",
+    sBrowserURL: window.location.origin,
+    AllRows: data.map((row) => ({
+      L11InstrumentName: row.instrument,
+      L101TaskID: row.taskId,
+      L52TaskSourcePath: row.sourcePath,
+      L06ClientName: row.downloadClientName,
+      L101TaskDownloadPath: row.downloadPath,
+      L101TaskStatus: row.taskStatus,
+      L101TaskFilter: row.taskFilter,
+      L101TaskCompleted: row.taskCompleted,
+      L101UNCStatus: row.uncStatus,
+      L101UNCUserName: row.uncUsername,
+      L101UNCPassword: row.uncPassword,
+      L101UNCDomain: row.uncDomain,
+    })),
+
+    HeaderDetails: [
+      "Instrument Name",
+      "Task ID",
+      "Source Path",
+      "UNC Status",
+      "Download Client Name",
+      "Download Path",
+      "Task Status",
+      "Task Filter",
+      "Task Completed",
+      "UNC Username",
+      "UNC Domain",
+    ],
+
+    AllowKeys: [
+      "L11InstrumentName",
+      "L101TaskID",
+      "L52TaskSourcePath",
+      "L101UNCStatus",
+      "L06ClientName",
+      "L101TaskDownloadPath",
+      "L101TaskStatus",
+      "L101TaskFilter",
+      "L101TaskCompleted",
+      "L101UNCUserName",
+      "L101UNCDomain",
+    ],
+
+    ...CF_activeUserdetails(),
+  });
+
   const handleExport = () => {
-    try {
-      if (!data || data.length === 0) {
-        setErrorMessage(t("errormsg.noresultsfound"));
+    handleExportCommon({
+      rows: data, // 🔥 ALL GRID ROWS
+      buildRequest: buildExportRequest,
+      postData,
+      setLoading,
+      setLoadingText: () => {},
+      setErrorDialog: ({ message, type }) => {
+        setErrorMessage(message);
         setShowErrorDialog(true);
-        return;
-      }
-
-      // Prepare data for export - include all columns from grid and detail panel
-      const exportData = data.map((row) => ({
-        [t("label.instrument")]: row.instrument,
-        [t("label.taskId")]: row.taskId,
-        [t("label.sourcePath")]: row.sourcePath,
-        [t("scheduler.uncStatus")]: row.uncStatus ? "✓" : "✗",
-        [t("label.clientName")]: row.downloadClientName,
-        [t("scheduler.destinationpath")]: row.downloadPath,
-        [t("label.taskStatus")]: t(`statuses.${row.taskStatus}`),
-        [t("label.filter")]: row.taskFilter,
-        [t("label.comments")]: row.taskCompleted,
-        [t("label.username")]: row.uncUsername || "-",
-      }));
-
-      // Create worksheet
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      
-      // Set column widths
-      const colWidths = [
-        { wch: 20 }, // Instrument
-        { wch: 10 }, // Task ID
-        { wch: 30 }, // Source Path
-        { wch: 10 }, // UNC Status
-        { wch: 15 }, // Client Name
-        { wch: 30 }, // Download Path
-        { wch: 15 }, // Task Status
-        { wch: 15 }, // Filter
-        { wch: 20 }, // Comments
-        { wch: 15 }, // Username
-      ];
-      worksheet["!cols"] = colWidths;
-
-      // Create workbook
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Download Configuration");
-
-      // Generate filename with timestamp
-      const timestamp = new Date().toISOString().split("T")[0];
-      const fileName = `Download_Configuration_${timestamp}.xlsx`;
-
-      // Export to Excel
-      XLSX.writeFile(workbook, fileName);
-
-
-
-    } catch (error) {
-      console.error("Export error:", error);
-      setErrorMessage(t("errormsg.exportFailed"));
-      setShowErrorDialog(true);
-    }
+      },
+      t,
+    });
   };
-console.log(selectedRow);
+
   /* ---------- PRINT FUNCTION ---------- */
+  const printRequest = {
+    sModuleName: "View Download Scheduler",
+    ...CF_activeUserdetails(),
+  };
   const handlePrint = () => {
     if (!data || data.length === 0) {
       setErrorMessage(t("errormsg.noresultsfound"));
       setShowErrorDialog(true);
       return;
     }
-
-    // Create print content
-    const printWindow = window.open('', '_blank');
-    
-    // Get current date and time
-    const now = new Date();
-    const printDate = now.toLocaleDateString();
-    const printTime = now.toLocaleTimeString();
-
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Download Configuration - Print</title>
-        <style>
-          @media print {
-            @page {
-              margin: 20px;
-            }
-            body {
-              font-family: Arial, sans-serif;
-              margin: 0;
-              padding: 20px;
-            }
-            .print-header {
-              text-align: center;
-              margin-bottom: 30px;
-              border-bottom: 2px solid #000;
-              padding-bottom: 10px;
-            }
-            .print-title {
-              font-size: 24px;
-              font-weight: bold;
-              color: #333;
-              margin-bottom: 5px;
-            }
-            .print-subtitle {
-              font-size: 16px;
-              color: #666;
-              margin-bottom: 10px;
-            }
-            .print-meta {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 20px;
-              font-size: 12px;
-              color: #555;
-            }
-            .print-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 20px;
-            }
-            .print-table th {
-              background-color: #f4f6f8;
-              color: #333;
-              font-weight: bold;
-              padding: 10px;
-              text-align: left;
-              border: 1px solid #ddd;
-            }
-            .print-table td {
-              padding: 8px 10px;
-              border: 1px solid #ddd;
-              font-size: 12px;
-            }
-            .print-table tr:nth-child(even) {
-              background-color: #f9f9f9;
-            }
-            .print-footer {
-              margin-top: 30px;
-              padding-top: 10px;
-              border-top: 1px solid #ddd;
-              font-size: 11px;
-              color: #777;
-              text-align: center;
-            }
-            .status-active {
-              color: #28a745;
-              font-weight: bold;
-            }
-            .status-inactive {
-              color: #dc3545;
-              font-weight: bold;
-            }
-            .unc-true::before {
-              content: "✓";
-              color: #28a745;
-              font-weight: bold;
-            }
-            .unc-false::before {
-              content: "✗";
-              color: #dc3545;
-            }
-          }
-          body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-          }
-          .print-header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #000;
-            padding-bottom: 10px;
-          }
-          .print-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-          }
-          .print-subtitle {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 10px;
-          }
-          .print-meta {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            font-size: 12px;
-            color: #555;
-          }
-          .print-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-          }
-          .print-table th {
-            background-color: #f4f6f8;
-            color: #333;
-            font-weight: bold;
-            padding: 10px;
-            text-align: left;
-            border: 1px solid #ddd;
-          }
-          .print-table td {
-            padding: 8px 10px;
-            border: 1px solid #ddd;
-            font-size: 12px;
-          }
-          .print-table tr:nth-child(even) {
-            background-color: #f9f9f9;
-          }
-          .print-footer {
-            margin-top: 30px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
-            font-size: 11px;
-            color: #777;
-            text-align: center;
-          }
-          .status-active {
-            color: #28a745;
-            font-weight: bold;
-          }
-          .status-inactive {
-            color: #dc3545;
-            font-weight: bold;
-          }
-          .unc-true::before {
-            content: "✓";
-            color: #28a745;
-            font-weight: bold;
-          }
-          .unc-false::before {
-            content: "✗";
-            color: #dc3545;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="print-header">
-          <div class="print-title">Download Configuration</div>
-          <div class="print-subtitle">View Download Configuration Report</div>
-        </div>
-        
-        <div class="print-meta">
-          <div>
-            <strong>Report Date:</strong> ${printDate}<br>
-            <strong>Report Time:</strong> ${printTime}<br>
-          </div>
-          <div>
-            <strong>Total Records:</strong> ${data.length}<br>
-            <strong>Generated By:</strong> System Administrator
-          </div>
-        </div>
-
-        <table class="print-table">
-          <thead>
-            <tr>
-              <th>${t("label.instrument")}</th>
-              <th>${t("label.taskId")}</th>
-              <th>${t("label.sourcePath")}</th>
-              <th>${t("scheduler.uncStatus")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.map(row => `
-              <tr>
-                <td>${row.instrument}</td>
-                <td>${row.taskId}</td>
-                <td>${row.sourcePath}</td>
-                <td class="unc-${row.uncStatus}">${row.uncStatus ? 'True' : 'False'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-
-        <div class="print-footer">
-          <p>Generated by SDMS - Download Configuration Module</p>
-          <p>Page 1 of 1</p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    
-    // Wait for content to load before printing
-    printWindow.onload = () => {
-      printWindow.focus();
-      printWindow.print();
-      printWindow.onafterprint = () => {
-        printWindow.close();
-      };
-    };
+    setShowPrint(true);
   };
 
   /* ---------- GRID COLUMNS ---------- */
@@ -397,7 +187,11 @@ console.log(selectedRow);
         width: 160,
         enableSearch: true,
         render: (row) => (
-          <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
+          <span
+            className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
+              row.id === selectedRow?.id ? "font-bold" : ""
+            }`}
+          >
             {row.instrument}
           </span>
         ),
@@ -408,7 +202,11 @@ console.log(selectedRow);
         width: 140,
         enableSearch: true,
         render: (row) => (
-          <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
+          <span
+            className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
+              row.id === selectedRow?.id ? "font-bold" : ""
+            }`}
+          >
             {row.taskId}
           </span>
         ),
@@ -419,7 +217,11 @@ console.log(selectedRow);
         width: 200,
         enableSearch: true,
         render: (row) => (
-          <span className={row.id === selectedRow?.id ? "font-semibold" : ""}>
+          <span
+            className={`text-[12px] font-['Verdana'] truncate cursor-pointer ${
+              row.id === selectedRow?.id ? "font-bold" : ""
+            }`}
+          >
             {row.sourcePath}
           </span>
         ),
@@ -428,48 +230,73 @@ console.log(selectedRow);
         key: "uncStatus",
         label: t("scheduler.uncStatus"),
         width: 140,
-        render: (row) => <input type="checkbox" checked={row.uncStatus} readOnly />,
+        render: (row) => (
+          <input type="checkbox" checked={row.uncStatus} readOnly />
+        ),
       },
     ],
-    [selectedRow, t]
+    [selectedRow, t],
   );
 
   /* ---------- ACTION HANDLER ---------- */
   const handleAction = (action) => {
+    console.log("action",action)
     if (!selectedRow) {
       setErrorMessage(t("errormsg.incompletedatafields"));
       setShowErrorDialog(true);
       return;
     }
 
+    // Already Active
     if (action === "ACTIVE" && selectedRow.taskStatus === "active") {
-      setErrorMessage(t("statuses.activated"));
+      setErrorMessage(t("Download schedule already in Active status"));
       setShowErrorDialog(true);
       return;
     }
 
-    if (action === "INACTIVE" && selectedRow.taskStatus === "inactive") {
-      setErrorMessage(t("statuses.deactivated"));
+    // Already Deactive
+    if (action === "INACTIVE" && selectedRow.taskStatus === "deactive") {
+      setErrorMessage(t("Download schedule already in Deactive status"));
       setShowErrorDialog(true);
       return;
     }
+  
+    if (action === "ACTIVE" || action === "INACTIVE" && selectedRow.taskStatus === "retire") {
+  setErrorMessage(t("Selected Download Schedule is Retired! So it cannot be Activated."));
+  setShowErrorDialog(true);
+  return;
+}
+if (action === "RETIRE" && selectedRow.taskStatus === "retire") {
+  setErrorMessage(t("Download Scheduler already in Retired Status"));
+  setShowErrorDialog(true);
+  return;
+}
 
-    setErrorMessage(t("statuses.activated"));
-    setShowErrorDialog(true);
+
+    // Otherwise → Confirmation popup
+    setPendingAction(action);
+    setShowConfirm(true);
   };
 
   /* ---------- DETAIL PANEL ---------- */
   const DetailRow = ({ label, value }) => (
     <div className="grid grid-cols-2 gap-4 ">
-      <div className="font-bold text-[12px] text-[#405F7D] font-roboto">{label}</div>
-      <div className="font-bold text-[12px] text-[#353f49] font-roboto">{value || "-"}</div>
+      <div className="font-bold text-[12px] text-[#405F7D] font-roboto">
+        {label}
+      </div>
+      <div className="font-bold text-[12px] text-[#353f49] font-roboto">
+        {value || "-"}
+      </div>
     </div>
   );
 
   const renderUserDetail = (row) => (
     <div className="space-y-3">
       <DetailRow label={t("label.clientName")} value={row.downloadClientName} />
-      <DetailRow label={t("scheduler.destinationpath")} value={row.downloadPath} />
+      <DetailRow
+        label={t("scheduler.destinationpath")}
+        value={row.downloadPath}
+      />
       <DetailRow
         label={t("label.taskStatus")}
         value={t(`statuses.${row.taskStatus}`)}
@@ -481,86 +308,262 @@ console.log(selectedRow);
   );
 
   /* ---------- HANDLER FOR AUDITTRAIL SUBMIT ---------- */
+console.log("selected row",selectedRow)
+  const handleAuthorized = async (auditPayload) => {
+    try {
+      // 🔹 VIEW FLOW
+      if (pendingAction === "VIEW") {
+        const request = {
+          process: "",
+          sDownloadTaskID: selectedRow.L101DownloadTaskID,
+          ...auditPayload,
+          bExist: true,
+          ...CF_activeUserdetails(),
+        };
+        console.log("view",request)
+        const response = await postData(
+          "Scheduler/DownloadschedulerSave",
+          request,
+        );
 
+        const viewObj = response?.ViewObj;
+        if (!viewObj) {
+          throw new Error("No view data received");
+        }
 
-const handleAuthorized = () => {
-  setAutoConfigData({
-    instrument: selectedRow.instrument,
-    clientName: selectedRow.downloadClientName,
-    downloadPath: selectedRow.downloadPath,
-    filter: selectedRow.taskFilter,
-    sourcepath: selectedRow.sourcePath,
-    uncStatus: selectedRow.uncStatus,
-    username: selectedRow.uncUsername,
-    password: selectedRow.uncPassword,
-    domain: selectedRow.uncDomain,
-    filesettings: selectedRow.fileSettings,
-  });
+        // ✅ Map API → Context
+        setAutoConfigData({
+          instrument: viewObj.l11InstrumentName,
+          clientName: viewObj.l06ClientName,
+          downloadPath: viewObj.l101TaskDownloadPath,
+          filter: viewObj.l101TaskFilter?.replace(/,$/, ""),
+          sourcepath: viewObj.l52TaskSourcePath,
+          uncStatus: viewObj.l101UNCStatus,
+          username: viewObj.l101UNCUserName,
+          password: viewObj.l101UNCPassword,
+          domain: viewObj.l101UNCDomain,
+          filesettings: viewObj.l101StructureType,
+        });
 
-  setOpenedFromView(true);   // ✅ mark entry
-  setActiveTabIndex(0);      // AutoDownloadConfiguration
-  setShowAudit(false);
+        setOpenedFromView(true);
+        setActiveTabIndex(0); // AutoDownloadConfiguration
+        return;
+      }
+
+      // 🔹 ACTIVE / DEACTIVE FLOW
+      const request = {
+  sTaskID: selectedRow.taskId,
+  sTaskStatus:
+    pendingAction === "ACTIVE"
+      ? "Active"
+      : "Deactive",
+  bStatus:
+    pendingAction === "ACTIVE"
+      ? "Active"
+      : pendingAction === "INACTIVE"
+      ? "DeActive"
+      : "Retire",
+  sDownloadTaskID: selectedRow.L101DownloadTaskID,
+  ...auditPayload,
+  ...CF_activeUserdetails(),
 };
+      console.log("active inactive pass");
+      const response = await postData(
+        "Scheduler/DownloadscheduleActions",
+        request,
+      );
+      console.log("active in active ",request)
 
+if (response?.Rtn === "Success") {
+  // ✅ BEST PRACTICE: update grid from response if available
+  if (Array.isArray(response.returnservice)) {
+    const updatedData = response.returnservice.map((item, index) => ({
+      id: index + 1,
+      instrument: item.L11InstrumentName,
+      taskId: item.L101TaskID?.trim(),
+      sourcePath: item.L52TaskSourcePath,
+      downloadClientName: item.L06ClientName,
+      downloadPath: item.L101TaskDownloadPath,
+      taskStatus: item.L101TaskStatus?.toLowerCase(), // active | deactive | retire
+      taskFilter: item.L101TaskFilter?.replace(/,$/, ""),
+      taskCompleted: item.L101TaskCompleted,
+      uncStatus: item.L101UNCStatus,
+      uncUsername: item.L101UNCUserName,
+      uncPassword: item.L101UNCPassword,
+      uncDomain: item.L101UNCDomain,
+      L101DownloadTaskID: item.L101DownloadTaskID,
+      fileSettings: "Original",
+    }));
 
-
-return (
-  <div className="h-full overflow-hidden bg-[#f5f7fb]">
-    {/* PAGE CONTAINER */}
-    <div className="h-full flex flex-col bg-white">
-
-      {/* ACTION BUTTONS (NO SCROLL) */}
-      <div className="flex justify-end pr-5  gap-2 pt-3">
-        <ActionButton icon={FaFileAlt} label={t("scheduler.view")} onClick={() => setShowAudit(true)} />
-        <ActionButton icon={FaCheck} label={t("scheduler.active")} onClick={() => handleAction("ACTIVE")} />
-        <ActionButton icon={MdOutlineThumbDown} label={t("scheduler.deactive")} onClick={() => handleAction("INACTIVE")} />
-        <ActionButton icon={RiDeleteBin6Line} label={t("scheduler.retire")} onClick={() => handleAction("RETIRE")} />
-        <ActionButton icon={TiExport} label={t("button.export")} onClick={handleExport} />
-        <ActionButton icon={MdPrint} label={t("button.print")} onClick={handlePrint} />
-      </div>
-
-      {/* SCROLLABLE CONTENT AREA */}
-      <div className="flex-1 overflow-auto p-3">
-        {loading ? (
-          <div className="text-center py-10 text-gray-500">
-            {t("login.loadingpasswordpolicy")}
-          </div>
-        ) : (
-          <GridLayout
-            columns={columns}
-            height="100%"
-            detailPanelWidth="46%"
-            data={data}
-            getRowId={(row) => row.id}
-            renderDetailPanel={renderUserDetail}
-            onRowClick={(row) => setSelectedRow(row)}
-            rowClassName={(row) =>
-              row.id === selectedRow?.id
-                ? "bg-blue-50 border-l-4 border-blue-600 font-semibold"
-                : ""
+    setData(updatedData);
+    setSelectedRow(updatedData[0] || null);
+  } else {
+    // fallback (should rarely happen)
+    setData((prev) =>
+      prev.map((row) =>
+        row.id === selectedRow.id
+          ? {
+              ...row,
+              taskStatus:
+                pendingAction === "ACTIVE"
+                  ? "active"
+                  : pendingAction === "INACTIVE"
+                  ? "deactive"
+                  : "retire",
             }
+          : row,
+      ),
+    );
+  }}
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Action failed");
+      setShowErrorDialog(true);
+    } finally {
+      setShowAudit(false);
+      setPendingAction(null);
+    }
+  };
+
+  // const handleAuthorized = () => {
+  //   setAutoConfigData({
+  //     instrument: selectedRow.instrument,
+  //     clientName: selectedRow.downloadClientName,
+  //     downloadPath: selectedRow.downloadPath,
+  //     filter: selectedRow.taskFilter,
+  //     sourcepath: selectedRow.sourcePath,
+  //     uncStatus: selectedRow.uncStatus,
+  //     username: selectedRow.uncUsername,
+  //     password: selectedRow.uncPassword,
+  //     domain: selectedRow.uncDomain,
+  //     filesettings: selectedRow.fileSettings,
+  //   });
+
+  //   setOpenedFromView(true);   // ✅ mark entry
+  //   setActiveTabIndex(0);      // AutoDownloadConfiguration
+  //   setShowAudit(false);
+  // };
+
+  return (
+    <div className="h-full overflow-hidden bg-[#f5f7fb]">
+      {/* PAGE CONTAINER */}
+      <div className="h-full flex flex-col bg-white">
+        {/* ACTION BUTTONS (NO SCROLL) */}
+        <div className="flex justify-end pr-5  gap-2 pt-3">
+          <ActionButton
+            icon={FaFileAlt}
+            label={t("scheduler.view")}
+            onClick={() => {
+              if (!selectedRow) {
+                setErrorMessage(t("errormsg.incompletedatafields"));
+                setShowErrorDialog(true);
+                return;
+              }
+              setPendingAction("VIEW");
+              setShowAudit(true);
+            }}
+          />
+
+          <ActionButton
+            icon={FaCheck}
+            label={t("scheduler.active")}
+            onClick={() => handleAction("ACTIVE")}
+          />
+          <ActionButton
+            icon={MdOutlineThumbDown}
+            label={t("scheduler.deactive")}
+            onClick={() => handleAction("INACTIVE")}
+          />
+          <ActionButton
+            icon={RiDeleteBin6Line}
+            label={t("scheduler.retire")}
+            onClick={() => handleAction("RETIRE")}
+          />
+          <ActionButton
+            icon={TiExport}
+            label={t("button.export")}
+            onClick={handleExport}
+          />
+          <ActionButton
+            icon={MdPrint}
+            label={t("button.print")}
+            onClick={handlePrint}
+          />
+        </div>
+
+        {/* SCROLLABLE CONTENT AREA */}
+        <div className="flex-1 overflow-auto p-3">
+          {loading ? (
+            <div className="text-center py-10 text-gray-500">
+              {t("login.loadingpasswordpolicy")}
+            </div>
+          ) : (
+            <GridLayout
+              columns={columns}
+              height="100%"
+              detailPanelWidth="46%"
+              data={data}
+              getRowId={(row) => row.id}
+              renderDetailPanel={renderUserDetail}
+              onRowClick={(row) => setSelectedRow(row)}
+              rowClassName={(row) =>
+                row.id === selectedRow?.id
+                  ? "bg-blue-50 border-l-4 border-blue-600 font-semibold"
+                  : ""
+              }
+            />
+          )}
+        </div>
+
+        {/* ERROR DIALOG */}
+        {showErrorDialog && (
+          <Errordialog
+            type="warning"
+            message={errorMessage}
+            onClose={() => setShowErrorDialog(false)}
+          />
+        )}
+        {showPrint && (
+          <PrintTable
+            columns={columns}
+            rows={data}
+            title="Download Configuration"
+            subtitle="View Download Scheduler"
+            printRequest={printRequest}
+            onDone={() => setShowPrint(false)}
+          />
+        )}
+        {showConfirm && (
+          <Errordialog
+            type="confirmation"
+            message={
+  pendingAction === "ACTIVE"
+    ? t("Are you sure you want to activate this task?")
+    : pendingAction === "INACTIVE"
+    ? t("Are you sure you want to deactivate this task?")
+    : pendingAction === "RETIRE"
+    ? t("Are you sure you want to retire this task?")
+    : ""
+}
+
+            showCancel={true}
+            onCancel={() => setShowConfirm(false)}
+            onConfirm={() => {
+              setShowConfirm(false);
+              setShowAudit(true); // 🔥 Open Audit Trail
+            }}
+          />
+        )}
+
+        {/* AUDIT POPUP */}
+        {showAudit && (
+          <AuditTrail
+            isOpen={showAudit}
+            onClose={() => setShowAudit(false)}
+            onAuthorized={handleAuthorized}
           />
         )}
       </div>
-
-      {/* ERROR DIALOG */}
-      {showErrorDialog && (
-        <Errordialog
-          type="error"
-          message={errorMessage}
-          onClose={() => setShowErrorDialog(false)}
-        />
-      )}
-
-      {/* AUDIT POPUP */}
-      {showAudit && (
-        <AuditTrail
-          isOpen={showAudit}
-          onClose={() => setShowAudit(false)}
-          onAuthorized={handleAuthorized}
-        />
-      )}
     </div>
-  </div>
-);
+  );
 }
