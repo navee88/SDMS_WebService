@@ -129,7 +129,7 @@ export default function PasswordPolicy() {
           data = JSON.parse(decrypted);
         } catch (decryptError) {
           console.error('Failed to decrypt response:', decryptError);
-          showInfoDialog(t('label.failedtoparseresponse') || 'Failed to parse response', "error");
+          showInfoDialog(t('usermanagement.failedtoparseresponse') || 'Failed to parse response', "error");
           return;
         }
       }
@@ -405,7 +405,7 @@ export default function PasswordPolicy() {
     const userID = sessionStorage.getItem('sUserID');
     
     if (!sessionID || !userID) {
-      showInfoDialog(t('label.sessionexpired') || 'Session expired. Please login again.', "error");
+      showInfoDialog(t('usermanagement.sessionexpired') || 'Session expired. Please login again.', "error");
       return;
     }
     
@@ -433,7 +433,7 @@ export default function PasswordPolicy() {
               {/* Left: Database Login */}
               <div className="flex items-center">
                 <span className="mr-3 text-[#405f7d] text-[12px] mb-1 font-semibold font-roboto">
-                  {t('label.databaselogin') || 'Database Based Login'}
+                  {t('usermanagement.databaselogin') || 'Database Based Login'}
                 </span>
                 <div className="relative inline-block w-10 align-middle select-none">
                   <input
@@ -475,35 +475,35 @@ export default function PasswordPolicy() {
                 <div className="space-y-0">
                   {[
                     { 
-                      labelKey: "label.minlength",
+                      labelKey: "usermanagement.minlength",
                       labelDefault: "Minimum Password Length(Between 4 and 20 Characters)", 
                       field: "minPasswordLength", 
                       min: 4,
                       max: 20
                     },
                     { 
-                      labelKey: "label.maxlength",
+                      labelKey: "usermanagement.maxlength",
                       labelDefault: "Maximum Password Length(Between 4 and 20 Characters)", 
                       field: "maxPasswordLength", 
                       min: 4,
                       max: 20
                     },
                     { 
-                      labelKey: "label.history",
+                      labelKey: "usermanagement.history",
                       labelDefault: "Password History(Between 1 and 5 Times)", 
                       field: "passwordHistory", 
                       min: 1,
                       max: 5
                     },
                     { 
-                      labelKey: "label.expiry",
+                      labelKey: "usermanagement.expiry",
                       labelDefault: "Password Expiry(Between 1 and 180 Days)", 
                       field: "passwordExpiry", 
                       min: 1,
                       max: 180
                     },
                     { 
-                      labelKey: "label.autolock",
+                      labelKey: "usermanagement.autolock",
                       labelDefault: "Autolock Policy(Between 1 and 5 Times)", 
                       field: "autolockPolicy", 
                       min: 1,
@@ -533,11 +533,11 @@ export default function PasswordPolicy() {
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <h2 className="text-[#0049b0] font-roboto font-bold text-[14px] mb-5">
-                      {t('label.complexpasswordpolicy') || 'Complex Password Policy'}
+                      {t('usermanagement.complexpasswordpolicy') || 'Complex Password Policy'}
                     </h2>
                     <div className="flex items-center gap-2">
                       <h2 className="text-[#405f7d] font-semibold font-roboto text-[12px] mb-0">
-                        {t('label.complexpasswordpolicy') || 'Complex Password Policy'}
+                        {t('usermanagement.complexpasswordpolicy') || 'Complex Password Policy'}
                       </h2>
                       <input
                         type="checkbox"
@@ -562,28 +562,28 @@ export default function PasswordPolicy() {
                     <div className="space-y-0">
                       {[
                         { 
-                          labelKey: "label.minuppercase",
+                          labelKey: "usermanagement.minuppercase",
                           labelDefault: "Minimum number of Uppercase characters", 
                           field: "minUppercase", 
                           min: 0,
                           max: 20
                         },
                         { 
-                          labelKey: "label.minlowercase",
+                          labelKey: "usermanagement.minlowercase",
                           labelDefault: "Minimum number of Lowercase characters", 
                           field: "minLowercase", 
                           min: 0,
                           max: 20
                         },
                         { 
-                          labelKey: "label.minnumeric",
+                          labelKey: "usermanagement.minnumeric",
                           labelDefault: "Minimum number of Numeric characters", 
                           field: "minNumeric", 
                           min: 0,
                           max: 20
                         },
                         { 
-                          labelKey: "label.minspecial",
+                          labelKey: "usermanagement.minspecial",
                           labelDefault: "Minimum number of Special characters", 
                           field: "minSpecial", 
                           min: 0,

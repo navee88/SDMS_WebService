@@ -252,7 +252,7 @@ const OnlineUsers = () => {
             if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
                 showInfoDialog("Cannot connect to server. Please check if the service is running.", "error");
             } else {
-                showInfoDialog(t('usermanagement.failedtofetchonlineusers') || 'Failed to fetch online users', "error");
+                showInfoDialog(t('Auditpopup.failed') || 'Failed to fetch online users', "error");
             }
         } finally {
             setLoading(false);
@@ -451,7 +451,7 @@ const OnlineUsers = () => {
             label: (
                 <div> 
                     <span className="text-[12px] font-roboto text-[#353f49] font-bold">
-                        {t('usermanagement.loginid') || 'Login ID'}
+                        {t('label.userName') || 'Username'}
                     </span>
                 </div>
             ),
@@ -566,7 +566,7 @@ const OnlineUsers = () => {
 
             <div className="flex items-center">
                 <div className="w-2/5 font-bold text-gray-600">
-                    {t('usermanagement.createdby') || 'Created By'}
+                    {t('label.createdby') || 'Created By'}
                 </div>
                 <div className="w-3/5 text-gray-800">
                     {user.CreatedBy}
@@ -574,7 +574,7 @@ const OnlineUsers = () => {
             </div>
             <div className="flex items-center">
                 <div className="w-2/5 font-bold text-gray-600">
-                    {t('usermanagement.createdon') || 'Created On'}
+                    {t('label.createdon') || 'Created On'}
                 </div>
                 <div className="w-3/5 text-gray-800">
                     {user.CreatedOn}
@@ -583,7 +583,7 @@ const OnlineUsers = () => {
 
             <div className="flex items-center">
                 <div className="w-2/5 font-bold text-gray-600">
-                    {t('usermanagement.modifiedby') || 'Modified By'}
+                    {t('label.modifiedby') || 'Modified By'}
                 </div>
                 <div className="w-3/5 text-gray-800">
                     {user.ModifiedBy || '-'}
@@ -591,7 +591,7 @@ const OnlineUsers = () => {
             </div>
             <div className="flex items-center">
                 <div className="w-2/5 font-bold text-gray-600">
-                    {t('usermanagement.modifiedon') || 'Modified On'}
+                    {t('label.modifiedon') || 'Modified On'}
                 </div>
                 <div className="w-3/5 text-gray-800">
                     {user.ModifiedOn || '-'}

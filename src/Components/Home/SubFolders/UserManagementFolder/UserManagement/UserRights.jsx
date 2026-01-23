@@ -3,8 +3,10 @@ import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import { useTranslation } from 'react-i18next';
 import Errordialog from '../../../../Layout/Common/Errordialog';
 import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
+import FullPageLoader from '../../../../Layout/Common/FullPageLoader';
+import PrintTable from '../../../../Layout/Common/PrintTable';
 import servicecall from '../../../../../Services/servicecall';
-import { CF_decrypt } from '../../../../../Components/Common/encryptiondecryption.js';
+import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
 
 const UserRights = () => {
     const [userGroups, setUserGroups] = useState([]);
@@ -12,10 +14,19 @@ const UserRights = () => {
     const [rightsData, setRightsData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [fullPageLoading, setFullPageLoading] = useState(false);
     const [infoDialog, setInfoDialog] = useState({
         open: false,
         message: "",
         type: "information"
+    });
+    const [printDialog, setPrintDialog] = useState({
+        open: false,
+        title: '',
+        subtitle: '',
+        columns: [],
+        rows: [],
+        printRequest: null
     });
     const [selectAll, setSelectAll] = useState(false);
     const [createAll, setCreateAll] = useState(false);
@@ -23,7 +34,6 @@ const UserRights = () => {
     const [deleteAll, setDeleteAll] = useState(false);
     const [allowAll, setAllowAll] = useState(false);
     const { t } = useTranslation();
-    
     const { postData } = servicecall();
     const isInitialMount = useRef(true);
 
@@ -86,6 +96,10 @@ const UserRights = () => {
         setInfoDialog(prev => ({ ...prev, open: false }));
     }, []);
 
+    const closePrintDialog = useCallback(() => {
+        setPrintDialog(prev => ({ ...prev, open: false }));
+    }, []);
+
     const updateCheckboxStates = useCallback((data) => {
         if (!data || data.length === 0) {
             setCreateAll(false);
@@ -114,60 +128,20 @@ const UserRights = () => {
         setSelectAll(allChecked);
     }, []);
 
-    const getActiveUserDetails = useCallback(() => {
-        const getDecryptedValue = (key) => {
-            try {
-                const encryptedValue = sessionStorage.getItem(key);
-                if (!encryptedValue) return "";
-                
-                if (encryptedValue.length > 50 && encryptedValue.includes('==')) {
-                    return CF_decrypt(encryptedValue);
-                }
-                return encryptedValue;
-            } catch (error) {
-                console.error(`Error decrypting ${key}:`, error);
-                return "";
-            }
-        };
-
-        const sUsername = getDecryptedValue("sUsername");
-        const sSiteCode = getDecryptedValue("sSiteCode") || "CH-7310   ";
-        const sUserGroupID = getDecryptedValue("sUserGroupID") || "G1        ";
-        const sUserID = getDecryptedValue("sUserID") || "U1";
-        const sSessionID = getDecryptedValue("sSessionID");
-        const sDomainName = getDecryptedValue("sDomainName") || "SDMS";
-        const sTimeZoneID = getDecryptedValue("sTimeZoneID") || "Asia/Kolkata<~>true";
-        const sdbtype = getDecryptedValue("sdbtype") || "MSSQL";
-        const sCategories = getDecryptedValue("sCategories") || "DB";
-        const sUserStatus = getDecryptedValue("sUserStatus") || "";
-        const sTenantID = getDecryptedValue("sTenantID") || "";
-
-        return {
-            sUserDomainName: sDomainName,
-            sSessionID: sSessionID || "",
-            sUserID: sUserID,
-            sTimeZoneID: sTimeZoneID,
-            sApplicationName: "SDMS",
-            sdbtype: sdbtype,
-            sUsername: sUsername || "Administrator",
-            sSiteCode: sSiteCode.padEnd(10, ' ').substring(0, 10),
-            sCategories: sCategories,
-            sUserGroupID: sUserGroupID.padEnd(10, ' ').substring(0, 10),
-            sUserStatus: sUserStatus,
-            sTenantID: sTenantID
-        };
-    }, []);
-
+    // Use CF_activeUserdetails directly in API calls
     const fetchUserRights = useCallback(async (groupID) => {
         if (!groupID) return;
         
         setLoading(true);
+        setFullPageLoading(true);
         try {
-            // Use the exact group ID for API request
+            // Get user details using CF_activeUserdetails
+            const userDetails = CF_activeUserdetails();
+            
             const passObjDet = {
-                sUserGroupFilterID: groupID, // Use the exact ID
-                ActiveUserDetails: getActiveUserDetails(),
-                ApplicationCode: "SDMS"
+                sUserGroupFilterID: groupID,
+                ActiveUserDetails: userDetails.ActiveUserDetails,
+                ApplicationCode: userDetails.ApplicationCode
             };
             
             console.log('Fetching rights for group ID:', groupID, 'Length:', groupID.length);
@@ -177,14 +151,15 @@ const UserRights = () => {
             if (!response) {
                 setRightsData([]);
                 setFilteredData([]);
-                showInfoDialog(t('usermanagement.failedtofetchuserrights') || 'Failed to fetch user rights', "error");
+                showInfoDialog(t('Auditpopup.somethingwentwrong') || 'Failed to fetch user rights', "error");
                 return;
             }
             
             let data = response;
             if (typeof response === 'string' && response.length > 50) {
                 try {
-                    const decrypted = CF_decrypt(response);
+                    // If response is encrypted, try to decrypt it
+                    const decrypted = atob(response);
                     data = JSON.parse(decrypted);
                 } catch (decryptError) {
                     console.error('Failed to decrypt response:', decryptError);
@@ -237,32 +212,38 @@ const UserRights = () => {
             updateCheckboxStates(dataWithIds);
         } catch (error) {
             console.error('Error fetching rights:', error);
-            showInfoDialog(t('usermanagement.failedtofetchuserrights') || 'Failed to fetch user rights', "error");
+            showInfoDialog(t('Auditpopup.somethingwentwrong') || 'Failed to fetch user rights', "error");
         } finally {
             setLoading(false);
+            setFullPageLoading(false);
         }
-    }, [postData, showInfoDialog, t, updateCheckboxStates, getActiveUserDetails]);
+    }, [postData, showInfoDialog, t, updateCheckboxStates]);
 
     const fetchUserGroups = useCallback(async () => {
         setLoading(true);
+        setFullPageLoading(true);
         try {
+            // Get user details using CF_activeUserdetails
+            const userDetails = CF_activeUserdetails();
+            
             const passObjDet = {
-                ActiveUserDetails: getActiveUserDetails(),
-                ApplicationCode: "SDMS"
+                ActiveUserDetails: userDetails.ActiveUserDetails,
+                ApplicationCode: userDetails.ApplicationCode
             };
             
             const response = await postData("User/UserRightsCombo", passObjDet);
             
             if (!response) {
                 setUserGroups([]);
-                showInfoDialog(t('usermanagement.failedtofetchusergroups') || 'Failed to fetch user groups', "error");
+                showInfoDialog(t('Auditpopup.somethingwentwrong') || 'Failed to fetch user groups', "error");
                 return;
             }
             
             let groupsData = response;
             if (typeof response === 'string' && response.length > 50) {
                 try {
-                    const decrypted = CF_decrypt(response);
+                    // If response is encrypted, try to decrypt it
+                    const decrypted = atob(response);
                     groupsData = JSON.parse(decrypted);
                 } catch (decryptError) {
                     console.error('Failed to decrypt response:', decryptError);
@@ -299,13 +280,14 @@ const UserRights = () => {
         } catch (error) {
             console.error('Error fetching groups:', error);
             showInfoDialog(
-                t('usermanagement.failedtofetchusergroups') || 'Failed to fetch user groups.',
+                t('Auditpopup.somethingwentwrong') || 'Failed to fetch user groups.',
                 "error"
             );
         } finally {
             setLoading(false);
+            setFullPageLoading(false);
         }
-    }, [postData, showInfoDialog, t, fetchUserRights, getActiveUserDetails]);
+    }, [postData, showInfoDialog, t, fetchUserRights]);
 
     useEffect(() => {
         const sessionID = sessionStorage.getItem('sSessionID');
@@ -500,16 +482,18 @@ const UserRights = () => {
             return;
         }
         
+        setFullPageLoading(true);
         try {
-            setLoading(true);
-            
             const saveData = rightsData.map(({ id, ...rest }) => rest);
             
+            // Get user details using CF_activeUserdetails
+            const userDetails = CF_activeUserdetails();
+            
             const passObjDet = {
-                sUserGroupFilterID: selectedGroup, // Already padded from API
+                sUserGroupFilterID: selectedGroup,
                 UserRights: saveData,
-                ActiveUserDetails: getActiveUserDetails(),
-                ApplicationCode: "SDMS"
+                ActiveUserDetails: userDetails.ActiveUserDetails,
+                ApplicationCode: userDetails.ApplicationCode
             };
             
             console.log('Saving with group ID:', selectedGroup, 'Length:', selectedGroup.length);
@@ -517,7 +501,7 @@ const UserRights = () => {
             const response = await postData("User/UserRightsSaveButtonclick", passObjDet);
             
             if (!response) {
-                showInfoDialog(t('usermanagement.userrightssavefailed') || 'Failed to save user rights', "error");
+                showInfoDialog(t('Auditpopup.somethingwentwrong') || 'Failed to save user rights', "error");
                 return;
             }
             
@@ -544,247 +528,67 @@ const UserRights = () => {
                 updateCheckboxStates(updatedData);
             } else {
                 showInfoDialog(
-                    t('usermanagement.userrightssavefailed') || 'Failed to save user rights', 
+                    t('Auditpopup.somethingwentwrong') || 'Failed to save user rights', 
                     "error"
                 );
             }
         } catch (error) {
             console.error('Error saving:', error);
             showInfoDialog(
-                t('usermanagement.userrightssavefailed') || 'Failed to save user rights', 
+                t('Auditpopup.somethingwentwrong') || 'Failed to save user rights', 
                 "error"
             );
         } finally {
-            setLoading(false);
+            setFullPageLoading(false);
         }
-    }, [selectedGroup, rightsData, postData, showInfoDialog, t, updateCheckboxStates, getActiveUserDetails]);
+    }, [selectedGroup, rightsData, postData, showInfoDialog, t, updateCheckboxStates]);
 
     const handlePrint = useCallback(() => {
-    if (rightsData.length === 0) {
-        showInfoDialog(t('usermanagement.nodataprint') || 'No data available to print', "warning");
-        return;
-    }
-
-    // Get selected group name
-    const selectedGroupName = userGroups.find(group => group.id === selectedGroup)?.name || selectedGroup;
-
-    // Prepare data for printing
-    const printData = filteredData.map(item => ({
-        moduleName: t(item.sModuleName) || item.sModuleName,
-        taskName: t(item.sDisplayTopic) || item.sDisplayTopic,
-        create: item.sCreate,
-        edit: item.sEdit,
-        delete: item.sDelete,
-        allow: item.sAllow
-    }));
-
-    // Group data by module name
-    const groupedData = printData.reduce((acc, item) => {
-        if (!acc[item.moduleName]) {
-            acc[item.moduleName] = [];
+        if (rightsData.length === 0) {
+            showInfoDialog(t('usermanagement.nodataprint') || 'No data available to print', "warning");
+            return;
         }
-        acc[item.moduleName].push(item);
-        return acc;
-    }, {});
 
-    // Create print HTML
-    const printContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8" />
-            <title>${t('usermanagement.userrights') || 'User Rights'}</title>
-            <style>
-                @media print {
-                    body {
-                        font-family: 'Verdana', sans-serif;
-                        margin: 0;
-                        padding: 20px;
-                    }
-                    .no-print {
-                        display: none !important;
-                    }
-                    .print-header {
-                        text-align: center;
-                        margin-bottom: 20px;
-                        border-bottom: 2px solid #333;
-                        padding-bottom: 10px;
-                    }
-                    .print-title {
-                        font-size: 18px;
-                        font-weight: bold;
-                        margin: 0;
-                        text-transform: uppercase;
-                    }
-                    .group-name {
-                        font-size: 14px;
-                        font-weight: bold;
-                        margin: 10px 0;
-                    }
-                    .print-date {
-                        font-size: 12px;
-                        color: #666;
-                        margin: 5px 0;
-                    }
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-top: 20px;
-                        font-size: 12px;
-                    }
-                    th {
-                        background-color: #f5f5f5;
-                        border: 1px solid #ddd;
-                        padding: 8px;
-                        text-align: center;
-                        font-weight: bold;
-                        color: #333;
-                    }
-                    td {
-                        border: 1px solid #ddd;
-                        padding: 6px;
-                    }
-                    .module-cell {
-                        font-weight: bold;
-                        color: #A52A2A;
-                        background-color: #f9f9f9;
-                    }
-                    .task-cell {
-                        color: #A52A2A;
-                    }
-                    .checkbox-cell {
-                        text-align: center;
-                        vertical-align: middle;
-                    }
-                    .checkbox-cell input[type="checkbox"] {
-                        width: 14px;
-                        height: 14px;
-                        margin: 0;
-                        vertical-align: middle;
-                    }
-                    .na-cell {
-                        text-align: center;
-                        color: #666;
-                        font-style: italic;
-                    }
-                    .module-row {
-                        page-break-inside: avoid;
-                    }
-                }
-                @page {
-                    size: auto;
-                    margin: 0.5in;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="print-header">
-                <h1 class="print-title">${t('usermanagement.userrights') || 'User Rights'}</h1>
-                <div class="group-name">${t('usermanagement.groupname') || 'Group Name'}: ${selectedGroupName}</div>
-                <div class="print-date">${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</div>
-            </div>
-            
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 25%">${t('usermanagement.modulename') || 'Module Name'}</th>
-                        <th style="width: 25%">${t('usermanagement.taskname') || 'Task Name'}</th>
-                        <th style="width: 12.5%">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <input type="checkbox" ${createAll ? 'checked' : ''} disabled />
-                                ${t('usermanagement.create') || 'Create'}
-                            </div>
-                        </th>
-                        <th style="width: 12.5%">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <input type="checkbox" ${editAll ? 'checked' : ''} disabled />
-                                ${t('usermanagement.edit') || 'Edit'}
-                            </div>
-                        </th>
-                        <th style="width: 12.5%">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <input type="checkbox" ${deleteAll ? 'checked' : ''} disabled />
-                                ${t('usermanagement.delete') || 'Delete'}
-                            </div>
-                        </th>
-                        <th style="width: 12.5%">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <input type="checkbox" ${allowAll ? 'checked' : ''} disabled />
-                                ${t('usermanagement.allow') || 'Allow'}
-                            </div>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${Object.entries(groupedData).map(([moduleName, tasks]) => 
-                        tasks.map((task, index) => `
-                            <tr class="module-row">
-                                ${index === 0 ? `<td rowspan="${tasks.length}" class="module-cell">${moduleName}</td>` : ''}
-                                <td class="task-cell">${task.taskName}</td>
-                                <td class="checkbox-cell">
-                                    ${task.create === "NA" 
-                                        ? '<span class="na-cell">NA</span>' 
-                                        : `<input type="checkbox" ${task.create === "1" ? 'checked' : ''} disabled />`
-                                    }
-                                </td>
-                                <td class="checkbox-cell">
-                                    ${task.edit === "NA" 
-                                        ? '<span class="na-cell">NA</span>' 
-                                        : `<input type="checkbox" ${task.edit === "1" ? 'checked' : ''} disabled />`
-                                    }
-                                </td>
-                                <td class="checkbox-cell">
-                                    ${task.delete === "NA" 
-                                        ? '<span class="na-cell">NA</span>' 
-                                        : `<input type="checkbox" ${task.delete === "1" ? 'checked' : ''} disabled />`
-                                    }
-                                </td>
-                                <td class="checkbox-cell">
-                                    <input type="checkbox" ${task.allow === "1" ? 'checked' : ''} disabled />
-                                </td>
-                            </tr>
-                        `).join('')
-                    ).join('')}
-                </tbody>
-            </table>
-            
-            <script>
-                // Function to automatically print when the page loads
-                window.onload = function() {
-                    setTimeout(function() {
-                        window.print();
-                        setTimeout(function() {
-                            window.close();
-                        }, 100);
-                    }, 500);
-                }
-            </script>
-        </body>
-        </html>
-    `;
+        // Get selected group name
+        const selectedGroupName = userGroups.find(group => group.id === selectedGroup)?.name || selectedGroup;
 
-    // Open print window
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
+        // Prepare print data for PrintTable component
+        const printColumns = [
+            { key: 'moduleName', label: t('usermanagement.modulename') || 'Module Name' },
+            { key: 'taskName', label: t('label.taskName') || 'Task Name' },
+            { key: 'create', label: t('button.create') || 'Create' },
+            { key: 'edit', label: t('button.edit') || 'Edit' },
+            { key: 'delete', label: t('usermanagement.delete') || 'Delete' },
+            { key: 'allow', label: t('usermanagement.allow') || 'Allow' }
+        ];
 
-    // Log print activity (optional - similar to your reference code)
-    const logPrintActivity = async () => {
-        try {
-            const passObjDet = {
-                ActiveUserDetails: getActiveUserDetails(),
-                ApplicationCode: "SDMS",
-                sModuleName: "User Rights"
-            };
-            
-            await postData("basemaster/print", passObjDet);
-        } catch (error) {
-            console.error('Error logging print activity:', error);
-        }
-    };
+        const printRows = filteredData.map(item => ({
+            moduleName: item.sModuleName || '',
+            taskName: item.sDisplayTopic || '',
+            create: item.sCreate === "NA" ? "NA" : (item.sCreate === "1" ? "✓" : "✗"),
+            edit: item.sEdit === "NA" ? "NA" : (item.sEdit === "1" ? "✓" : "✗"),
+            delete: item.sDelete === "NA" ? "NA" : (item.sDelete === "1" ? "✓" : "✗"),
+            allow: item.sAllow === "1" ? "✓" : "✗"
+        }));
 
-    logPrintActivity();
-}, [rightsData, filteredData, selectedGroup, userGroups, createAll, editAll, deleteAll, allowAll, t, showInfoDialog, postData, getActiveUserDetails]);
+        // Get user details for print request
+        const userDetails = CF_activeUserdetails();
+        const printRequest = {
+            ActiveUserDetails: userDetails.ActiveUserDetails,
+            ApplicationCode: userDetails.ApplicationCode,
+            sModuleName: "User Rights"
+        };
+
+        // Open print dialog
+        setPrintDialog({
+            open: true,
+            title: t('usermanagement.userrights') || 'User Rights',
+            subtitle: `${t('usermanagement.groupname') || 'Group Name'}: ${selectedGroupName}`,
+            columns: printColumns,
+            rows: printRows,
+            printRequest: printRequest
+        });
+    }, [rightsData, filteredData, selectedGroup, userGroups, t, showInfoDialog]);
 
     const stableData = useMemo(() => filteredData, [JSON.stringify(filteredData)]);
 
@@ -826,7 +630,7 @@ const UserRights = () => {
             label:(
             <div > 
              <span className="text-[12px] text-[#353f49] font-roboto font-bold">
-                        {t('usermanagement.taskname') || 'Task Name'}
+                        {t('label.taskName') || 'Task Name'}
                     </span>
             </div>),
             width: 200,
@@ -850,7 +654,7 @@ const UserRights = () => {
                         className="cursor-pointer w-[14px] h-[14px] accent-blue-600"
                     />
                     <span className="text-[12px] text-[#353f49] font-roboto font-bold">
-                        {t('usermanagement.create') || 'Create'}
+                        {t('button.create') || 'Create'}
                     </span>
                 </div>
             ),
@@ -891,7 +695,7 @@ const UserRights = () => {
                         className="cursor-pointer mr-1 w-[14px] h-[14px] accent-blue-600"
                     />
                     <span className="text-[12px] text-[#353f49] font-roboto font-bold">
-                        {t('usermanagement.edit') || 'Edit'}
+                        {t('button.edit') || 'Edit'}
                     </span>
                 </div>
             ),
@@ -1026,39 +830,53 @@ const UserRights = () => {
         return (
             <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-roboto">
                 <div className="text-gray-500 text-base mb-2.5">
-                    {t('masters.loading') || 'Loading...'}
+                    {t('common.loading') || 'Loading...'}
                 </div>
-                <div className="text-gray-400 text-xs">
-                    Fetching user rights data...
-                </div>
+                
             </div>
         );
     }
 
-    if (!loading && userGroups.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-roboto gap-5 p-5">
-                <div className="text-red-500 text-lg font-bold text-center">
-                    {t('usermanagement.nogroupsavailable') || 'No User Groups Available'}
-                </div>
-                <div className="text-gray-500 text-sm text-center max-w-md">
-                    No user groups are defined in the system. Please contact administrator to create user groups first.
-                </div>
-                <button 
-                    onClick={() => {
-                        setLoading(true);
-                        fetchUserGroups();
-                    }}
-                    className="px-5 py-2.5 bg-[#2883FE] text-white border-none rounded cursor-pointer text-sm font-bold hover:bg-[#1a6fd8]"
-                >
-                    {t('button.retry') || 'Retry'}
-                </button>
-            </div>
-        );
-    }
+    // if (!loading && userGroups.length === 0) {
+    //     return (
+    //         <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-roboto gap-5 p-5">
+    //             <div className="text-red-500 text-lg font-bold text-center">
+    //                 {t('Auditpopup.somethingwentwrong') || 'No User Groups Available'}
+    //             </div>
+                
+    //             <button 
+    //                 onClick={() => {
+    //                     setLoading(true);
+    //                     fetchUserGroups();
+    //                 }}
+    //                 className="px-5 py-2.5 bg-[#2883FE] text-white border-none rounded cursor-pointer text-sm font-bold hover:bg-[#1a6fd8]"
+    //             >
+    //                 {t('button.retry') || 'Retry'}
+    //             </button>
+    //         </div>
+    //     );
+    // }
 
     return (
-        <div className="flex flex-col font-roboto bg-white w-full h-[80vh] overflow-hidden">
+        <div className="flex flex-col font-roboto bg-white w-full h-[80vh] overflow-hidden relative">
+            {/* Full Page Loader */}
+            <FullPageLoader 
+                loading={fullPageLoading} 
+                text={t('common.loading') || 'Loading...'} 
+            />
+            
+            {/* Print Dialog */}
+            {printDialog.open && (
+                <PrintTable
+                    columns={printDialog.columns}
+                    rows={printDialog.rows}
+                    title={printDialog.title}
+                    subtitle={printDialog.subtitle}
+                    printRequest={printDialog.printRequest}
+                    onDone={closePrintDialog}
+                />
+            )}
+            
             {infoDialog.open && (
                 <Errordialog
                     message={infoDialog.message}
@@ -1122,7 +940,7 @@ const UserRights = () => {
                             iconClass="fa fa-print"
                             label={t('button.print') || 'Print'}
                             onClick={handlePrint}
-                            disabled={rightsData.length === 0}
+                            disabled={rightsData.length === 0 || loading}
                         />
                         
                         {/* Save button with fa-check-square-o icon */}
@@ -1130,7 +948,7 @@ const UserRights = () => {
                             iconClass="fa fa-check-square-o"
                             label={t('button.save') || 'Save'}
                             onClick={handleSave}
-                            disabled={!selectedGroup || rightsData.length === 0}
+                            disabled={!selectedGroup || rightsData.length === 0 || loading}
                             variant="primary"
                         />
                     </div>
@@ -1144,7 +962,7 @@ const UserRights = () => {
                         <div>
                             {selectedGroup 
                                 ? (t('usermanagement.norightsfound') || 'No rights found for this group')
-                                : (t('usermanagement.selectgroupfirst') || 'Please select a group first')
+                                : (t('Auditpopup.somethingwentwrong') || 'Please select a group first')
                             }
                         </div>
                         {selectedGroup && (
