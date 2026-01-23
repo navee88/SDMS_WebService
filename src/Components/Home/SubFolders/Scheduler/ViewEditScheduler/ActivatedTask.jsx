@@ -5,8 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from "react-router-dom";
 import Errordialog from '../../../../Layout/Common/Errordialog';
 import CustomPopup from '../../../../Layout/Common/Popup';
+import { useSchedulerNavigation } from '../../../../../Context/SchedulerNavigationContext'; //made change by kirubhakaran on 23-01-2026
 
-const ActivatedTask = () => {
+const ActivatedTask = ({ navigationData }) => { //made change by kirubhakaran on 23-01-2026
     const [schedulerData, setSchedulerData] = useState([]);
     const [selectedScheduler, setSelectedScheduler] = useState(null);
     const [selectedRowId, setSelectedRowId] = useState(0);
@@ -26,6 +27,10 @@ const ActivatedTask = () => {
     const [importModalOpen, setImportModalOpen] = useState(false);
     const [importFile, setImportFile] = useState(null);
     const { t } = useTranslation('scheduler');
+    // Added THESE 3 LINES:(made change by kirubhakaran on 23-01-2026)
+    const { getSubmissionData, clearNavigation } = useSchedulerNavigation();
+    const [highlightScheduleId, setHighlightScheduleId] = useState(null);
+    const [shouldScrollToSchedule, setShouldScrollToSchedule] = useState(false);
     const navigate = useNavigate();
 
     // Mock data - similar to DeactivedTask
@@ -66,6 +71,145 @@ const ActivatedTask = () => {
         // Add more mock data as needed
     ];
 
+
+    // MODIFY THIS useEffect TO HANDLE BOTH PROP AND CONTEXT:
+    // Replace lines ~120-170 with:
+    useEffect(() => {
+        console.log('=== ActivatedTask useEffect triggered ===');
+        console.log('Navigation data from props:', navigationData);
+        console.log('Context submission data:', getSubmissionData());
+
+        // Priority 1: Check props passed from parent (tab system)
+        if (navigationData && navigationData.scheduleId) {
+            console.log('=== Received navigation data via props ===');
+            console.log('Schedule ID:', navigationData.scheduleId);
+            setHighlightScheduleId(navigationData.scheduleId);
+            setShouldScrollToSchedule(true);
+
+            // Add the new schedule to mock data if it doesn't exist
+            const scheduleExists = schedulerData.some(item =>
+                item.L13ScheduleID === navigationData.scheduleId
+            );
+
+            if (!scheduleExists && navigationData.scheduleId) {
+                const newSchedule = {
+                    id: schedulerData.length + 1,
+                    L11InstrumentAliasName: navigationData.instrumentName || "New Instrument",
+                    L13ScheduleID: navigationData.scheduleId,
+                    L06ClientName: navigationData.clientName || "New Client",
+                    L09FTPAliasName: "FTP-Alias-" + (schedulerData.length + 1),
+                    L13LiveArchive: true,
+                    L13TaskName: "New Schedule Task",
+                    L13SourcePath: navigationData.sourcePath || "/new/path",
+                    L52TaskCompleted: "Completed",
+                    EmpowerStatus: "Active",
+                    L13UNCStatus: false,
+                    TaskStatus: "Activated",
+                    ClientStatus: "Active",
+                    InstrumentStatus: "Active",
+                    StartDate: new Date().toISOString(),
+                    UTCStartDate: new Date().toISOString(),
+                    EndDate: null,
+                    UTCEndDate: null,
+                    TriggerTime: "10:00:00",
+                    UTCTriggerTime: "08:00:00",
+                    ScheduleMode: "Daily",
+                    NextScheduleDate: new Date(Date.now() + 86400000).toISOString(),
+                    UTCNextScheduleDate: new Date(Date.now() + 86400000).toISOString(),
+                    LastScheduleDateTime: new Date().toISOString(),
+                    UTCLastScheduleDateTime: new Date().toISOString(),
+                    CreatedBy: "Admin",
+                    CreatedDate: new Date().toISOString(),
+                    UTCCreatedDate: new Date().toISOString(),
+                    ModifiedBy: "Admin",
+                    ModifiedDate: new Date().toISOString(),
+                    UTCModifiedDate: new Date().toISOString()
+                };
+
+                setSchedulerData(prev => [newSchedule, ...prev]);
+            }
+        }
+        // Priority 2: Check context (legacy navigation)
+        else {
+            const submissionData = getSubmissionData();
+            console.log('Submission data from context:', submissionData);
+
+            if (submissionData && submissionData.targetTab === 'Activated Task') {
+                console.log('=== Navigating from context to ActivatedTask ===');
+                console.log('Schedule ID:', submissionData.data?.scheduleId);
+                setHighlightScheduleId(submissionData.data?.scheduleId);
+                clearNavigation();
+                setShouldScrollToSchedule(true);
+
+                // Add to mock data if needed
+                const scheduleExists = schedulerData.some(item =>
+                    item.L13ScheduleID === submissionData.data?.scheduleId
+                );
+
+                if (!scheduleExists && submissionData.data?.scheduleId) {
+                    const newSchedule = {
+                        id: schedulerData.length + 1,
+                        L11InstrumentAliasName: submissionData.data?.instrumentName || "New Instrument",
+                        L13ScheduleID: submissionData.data?.scheduleId,
+                        L06ClientName: submissionData.data?.clientName || "New Client",
+                        L09FTPAliasName: "FTP-Alias-" + (schedulerData.length + 1),
+                        L13LiveArchive: true,
+                        L13TaskName: "New Schedule Task",
+                        L13SourcePath: submissionData.data?.sourcePath || "/new/path",
+                        L52TaskCompleted: "Completed",
+                        EmpowerStatus: "Active",
+                        L13UNCStatus: false,
+                        TaskStatus: "Activated",
+                        ClientStatus: "Active",
+                        InstrumentStatus: "Active",
+                        StartDate: new Date().toISOString(),
+                        UTCStartDate: new Date().toISOString(),
+                        EndDate: null,
+                        UTCEndDate: null,
+                        TriggerTime: "10:00:00",
+                        UTCTriggerTime: "08:00:00",
+                        ScheduleMode: "Daily",
+                        NextScheduleDate: new Date(Date.now() + 86400000).toISOString(),
+                        UTCNextScheduleDate: new Date(Date.now() + 86400000).toISOString(),
+                        LastScheduleDateTime: new Date().toISOString(),
+                        UTCLastScheduleDateTime: new Date().toISOString(),
+                        CreatedBy: "Admin",
+                        CreatedDate: new Date().toISOString(),
+                        UTCCreatedDate: new Date().toISOString(),
+                        ModifiedBy: "Admin",
+                        ModifiedDate: new Date().toISOString(),
+                        UTCModifiedDate: new Date().toISOString()
+                    };
+
+                    setSchedulerData(prev => [newSchedule, ...prev]);
+                }
+            }
+        }
+    }, [navigationData, getSubmissionData, clearNavigation, schedulerData]);
+
+    // MODIFY THIS useEffect TO HANDLE HIGHLIGHTING:
+    useEffect(() => {
+        if (shouldScrollToSchedule && highlightScheduleId && schedulerData.length > 0) {
+            // Find the row with the schedule ID
+            const scheduleRow = schedulerData.find(item =>
+                item.L13ScheduleID === highlightScheduleId
+            );
+
+            if (scheduleRow) {
+                // Select and highlight the row
+                setSelectedScheduler(scheduleRow);
+                setSelectedRowId(scheduleRow.id);
+
+                // Show success message
+                showInfoDialog(`Schedule ${highlightScheduleId} created successfully and is now activated!`, "success");
+
+                console.log('Auto-selected schedule:', highlightScheduleId);
+            }
+
+            setShouldScrollToSchedule(false);
+        }
+    }, [schedulerData, highlightScheduleId, shouldScrollToSchedule]);
+
     useEffect(() => {
         setLoading(true);
         setTimeout(() => {
@@ -94,13 +238,24 @@ const ActivatedTask = () => {
         setSelectedRowId(row.id);
     }, []);
 
+    //Commented by kirubhakaran on 23-01-2026
+    // const handleViewClick = useCallback(() => {
+    //     if (!selectedScheduler) {
+    //         showInfoDialog(t('scheduler.selectRecordToView'), "warning");
+    //         return;
+    //     }
+    //     navigate(`/scheduler/view/${selectedScheduler.L13ScheduleID}`);
+    // }, [selectedScheduler, navigate, showInfoDialog, t]);
+
+    // MODIFIED handleViewClick (remove navigate since no router):
     const handleViewClick = useCallback(() => {
         if (!selectedScheduler) {
             showInfoDialog(t('scheduler.selectRecordToView'), "warning");
             return;
         }
-        navigate(`/scheduler/view/${selectedScheduler.L13ScheduleID}`);
-    }, [selectedScheduler, navigate, showInfoDialog, t]);
+        // In tab system, you might want to switch to edit tab or show modal
+        showInfoDialog(`Viewing schedule ${selectedScheduler.L13ScheduleID}`, "information");
+    }, [selectedScheduler, showInfoDialog, t]);
 
     const handleDeactivateClick = useCallback(() => {
         if (!selectedScheduler) {
@@ -123,7 +278,7 @@ const ActivatedTask = () => {
             showInfoDialog(t('scheduler.noRecordsToExport'), "warning");
             return;
         }
-        
+
         try {
             // Implement export logic based on jQuery's ActiveScheduler_export function
             showInfoDialog(t('scheduler.exportSuccess'), "success");
@@ -191,8 +346,8 @@ const ActivatedTask = () => {
             label: t('scheduler.instrument'),
             width: 150,
             render: (row, isSelected) => (
-                <div style={{ 
-                    fontSize: '12px', 
+                <div style={{
+                    fontSize: '12px',
                     color: '#374151',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -208,8 +363,8 @@ const ActivatedTask = () => {
             label: t('scheduler.taskID'),
             width: 120,
             render: (row, isSelected) => (
-                <div style={{ 
-                    fontSize: '12px', 
+                <div style={{
+                    fontSize: '12px',
                     color: '#374151',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -225,8 +380,8 @@ const ActivatedTask = () => {
             label: t('scheduler.clientName'),
             width: 150,
             render: (row, isSelected) => (
-                <div style={{ 
-                    fontSize: '12px', 
+                <div style={{
+                    fontSize: '12px',
                     color: '#374151',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -242,8 +397,8 @@ const ActivatedTask = () => {
             label: t('scheduler.storageName'),
             width: 150,
             render: (row, isSelected) => (
-                <div style={{ 
-                    fontSize: '12px', 
+                <div style={{
+                    fontSize: '12px',
                     color: '#374151',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -259,8 +414,8 @@ const ActivatedTask = () => {
             label: t('scheduler.liveArchive'),
             width: 140,
             render: (row, isSelected) => (
-                <div style={{ 
-                    fontSize: '12px', 
+                <div style={{
+                    fontSize: '12px',
                     color: '#374151',
                     textAlign: 'center',
                     fontWeight: selectedRowId === row.id ? 'bold' : 'normal'
@@ -272,8 +427,8 @@ const ActivatedTask = () => {
     ], [selectedRowId, t]);
 
     const renderSchedulerDetail = useCallback((scheduler) => (
-        <div style={{ 
-            display: 'flex', 
+        <div style={{
+            display: 'flex',
             flexDirection: 'column',
             gap: '14px',
             fontWeight: '600',
@@ -429,11 +584,11 @@ const ActivatedTask = () => {
 
     if (loading) {
         return (
-            <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                height: '100%' 
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%'
             }}>
                 <div style={{ color: '#6b7280' }}>{t('scheduler.loading')}</div>
             </div>
@@ -456,15 +611,15 @@ const ActivatedTask = () => {
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap',
-                backgroundColor: disabled 
-                    ? '#f8fafc' 
+                backgroundColor: disabled
+                    ? '#f8fafc'
                     : variant === 'primary'
                         ? '#2883FE'
                         : variant === 'danger'
                             ? '#ef4444'
                             : '#f1f5f9',
-                color: disabled 
-                    ? '#cbd5e1' 
+                color: disabled
+                    ? '#cbd5e1'
                     : variant === 'primary' || variant === 'danger'
                         ? 'white'
                         : '#2883FE'
@@ -473,7 +628,7 @@ const ActivatedTask = () => {
                 if (!disabled) {
                     e.currentTarget.style.transform = 'scale(0.98)';
                     e.currentTarget.style.opacity = '0.9';
-                    
+
                     if (variant === 'default') {
                         e.currentTarget.style.backgroundColor = '#E6F0FF';
                     } else if (variant === 'primary') {
@@ -487,7 +642,7 @@ const ActivatedTask = () => {
                 if (!disabled) {
                     e.currentTarget.style.transform = 'scale(1)';
                     e.currentTarget.style.opacity = '1';
-                    
+
                     if (variant === 'default') {
                         e.currentTarget.style.backgroundColor = '#f1f5f9';
                     } else if (variant === 'primary') {
@@ -504,9 +659,9 @@ const ActivatedTask = () => {
     );
 
     return (
-        <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
         }}>
             {/* Error/Info Dialog */}
@@ -519,10 +674,10 @@ const ActivatedTask = () => {
             )}
 
             {/* Top Action Buttons */}
-            <div style={{ 
-                display: 'flex', 
-                justifyContent: 'flex-end', 
-                gap: '10px', 
+            <div style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '10px',
                 padding: '10px',
                 background: 'white',
                 marginBottom: '0px',
@@ -561,7 +716,7 @@ const ActivatedTask = () => {
             </div>
 
             {/* Main GridLayout with Details Panel */}
-            <div style={{ flex: 1,fontFamily: 'verdana, sans-serif' }}>
+            <div style={{ flex: 1, fontFamily: 'verdana, sans-serif' }}>
                 <GridLayout
                     columns={columns}
                     data={schedulerData}
@@ -580,17 +735,17 @@ const ActivatedTask = () => {
                     onClose={handlePopupClose}
                     title={t('scheduler.importSchedule')}
                     content={
-                        <div style={{ 
-                            display: 'flex', 
-                            flexDirection: 'column', 
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
                             gap: '16px',
                             padding: '8px'
                         }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ 
-                                    fontSize: '14px', 
-                                    fontWeight: 600, 
-                                    color: '#374151' 
+                                <label style={{
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    color: '#374151'
                                 }}>
                                     {t('scheduler.file')} <span style={{ color: '#ef4444' }}>*</span>
                                 </label>
@@ -612,9 +767,9 @@ const ActivatedTask = () => {
                                 </div>
                             </div>
 
-                            <div style={{ 
-                                display: 'flex', 
-                                justifyContent: 'flex-end', 
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'flex-end',
                                 gap: '12px',
                                 paddingTop: '12px',
                                 marginTop: '8px',
@@ -685,9 +840,9 @@ const ActivatedTask = () => {
                     onClose={handlePopupClose}
                     title={activePopup === "Deactivate Task" ? t('scheduler.deactivateTask') : t('scheduler.retireTask')}
                     content={
-                        <div style={{ 
-                            display: 'flex', 
-                            flexDirection: 'column', 
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
                             gap: '16px',
                             padding: '8px'
                         }}>
@@ -785,9 +940,9 @@ const ActivatedTask = () => {
                                 />
                             </div>
 
-                            <div style={{ 
-                                display: 'flex', 
-                                justifyContent: 'flex-end', 
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'flex-end',
                                 gap: '12px',
                                 paddingTop: '12px',
                                 marginTop: '8px',
