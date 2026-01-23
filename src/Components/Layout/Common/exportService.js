@@ -15,7 +15,7 @@ export const handleExportCommon = async ({
   if (!rows || rows.length === 0) {
     setErrorDialog({
       open: true,
-      message: t("masters.selectRecord"),
+      message: t("masters.selectrecord"),
       type: "information",
     });
     return;
