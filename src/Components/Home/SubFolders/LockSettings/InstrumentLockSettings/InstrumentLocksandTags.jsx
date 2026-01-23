@@ -321,7 +321,7 @@ const TagGrid = React.memo(({ tags, onTagValueClick, isLoadingTags, isLocked, lo
                   `}
                   onClick={() => setSelectedTagIndex(idx)}
                 >
-                  <div className={`px-4 text-xs flex items-center font-verdana
+                  <div className={`px-4 text-xs flex items-center font-['verdana']
                     ${isSelected ? 'font-bold text-[#373737]' : 'text-[#373737]'}
                   `}>
                     {tag.tagName}
