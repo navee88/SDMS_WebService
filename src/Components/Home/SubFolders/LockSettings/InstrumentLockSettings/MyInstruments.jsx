@@ -7,6 +7,7 @@ import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
 import { CF_decrypt, CF_encrypt } from '../../../../../Components/Common/encryptiondecryption';
 import FullPageLoader from "../../../../Layout/Common/FullPageLoader";
 import Errordialog from "../../../../Layout/Common/Errordialog";
+import { useInstrumentLock } from '../../../../../Context/InstrumentLockContext';
 
 // ============================================
 // OPTIMIZED HELPER FUNCTIONS
@@ -94,66 +95,107 @@ const FileUploadDropzone = React.memo(({ onFilesAdded, files, onRemoveFile, onUp
     fileInputRef.current?.click();
   }, []);
 
+  const formatFileSize = useCallback((bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+  }, []);
+
+  const truncateFileName = useCallback((name) => {
+    if (name.length <= 15) return name;
+    const ext = name.substring(name.lastIndexOf('.'));
+    const nameWithoutExt = name.substring(0, name.lastIndexOf('.'));
+    if (nameWithoutExt.length <= 12) return name;
+    return nameWithoutExt.substring(0, 12) + '...' + ext;
+  }, []);
+
   return (
     <div className="border border-gray-300 bg-white p-4">
       <div
-        className="border-2 border-dashed border-gray-300 bg-gray-50 rounded-lg p-8 text-center cursor-pointer transition-colors"
+        className={`border-2 ${isDragging ? 'border-blue-400' : 'border-dashed border-gray-300'} bg-gray-50 rounded-lg p-8 text-center cursor-pointer transition-colors min-h-[150px] flex flex-col`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleClick}
       >
-        <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" accept="*/*" />   
-        <i className="fa fa-plus-circle mx-auto mb-2 text-gray-400" style={{ fontSize: '2.5em' }} />
-        <div className="text-gray-400 text-[14px]">
-          <span className="font-bold font-['Helvetica'] text-[#505f79a8] text-sm uppercase">
-            {t("instrumentlocktag.dragdrop") || "Drag & Drop"}
-          </span>
-          <br />
-          {t("instrumentlocktag.or") || "or"}{" "}
-          <span className="text-blue-600 ">{t("instrumentlocktag.clickhere") || "Click Here"}</span>
-          {" "}{t("instrumentlocktag.tobrowseoraccesscamera") || "to browse or access camera"}
-          {" "}<i className="fa fa-camera inline ml-1 text-sm" />
-          {" "}{t("instrumentlocktag.toaddfile") || "to add file"}
-        </div>
+        <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" accept="*/*" />
+        
+        {files.length === 0 ? (
+          <>
+            <i className="fa fa-plus-circle mx-auto mb-2 text-gray-400" style={{ fontSize: '2.5em' }} />
+            <div className="text-gray-400 text-[14px]">
+              <span className="font-bold font-['Helvetica'] text-[#505f79a8] text-sm uppercase">
+                {t("instrumentlocktag.dragdrop") || "Drag & Drop"}
+              </span>
+              <br />
+              {t("instrumentlocktag.or") || "or"}{" "}
+              <span className="text-blue-600 ">{t("instrumentlocktag.clickhere") || "Click Here"}</span>
+              {" "}{t("instrumentlocktag.tobrowseoraccesscamera") || "to browse or access camera"}
+              {" "}<i className="fa fa-camera inline ml-1 text-sm" />
+              {" "}{t("instrumentlocktag.toaddfile") || "to add file"}
+            </div>
+          </>
+        ) : (
+          <div className="w-50% h-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {files.map((file, index) => (
+                <div 
+                  key={`${file.name}-${file.lastModified}-${file.size}`} 
+                  className="bg-gray-200 border border-gray-300 rounded p-3 hover:shadow-sm transition-shadow relative group"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="space-y-1 bg-gray-200">
+                     <div className="text-sm font-medium text-gray-800">
+                      {formatFileSize(file.size)}
+                    </div>
+                    <div className="text-sm font-medium text-gray-800 truncate" title={file.name}>
+                      {truncateFileName(file.name)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {files.length > 0 && (
-        <div className="mt-4">
-          <div className="text-xs font-bold text-gray-700 mb-2">Selected Files ({files.length})</div>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {files.map((file, index) => (
-              <div key={`${file.name}-${file.lastModified}-${file.size}`} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                <span className="text-xs text-gray-700 truncate flex-1">{file.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="flex justify-end gap-2 mt-4">
-        <PrimaryButton onClick={onReset} label={t("button.reset") || "Reset"} variant="primary" className="px-3" />
-        <PrimaryButton onClick={onUpload} iconClass="fa-upload" label={t("button.upload") || "Upload"} 
-          variant="primary" className="px-3" loading={loading} />
+        <PrimaryButton 
+          onClick={onReset} 
+          label={t("button.reset") || "Reset"} 
+          variant="primary" 
+          className="px-3" 
+        />
+        <PrimaryButton 
+          onClick={onUpload} 
+          iconClass="fa-upload" 
+          label={t("button.upload") || "Upload"} 
+          variant="primary" 
+          className="px-3" 
+          loading={loading}
+        />
       </div>
     </div>
   );
 });
 
-const InfoBox = React.memo(({ data }) => (
-  data.length === 0 ? null : (
-    <div className="border border-gray-300 bg-white min-h-[170px] p-4 overflow-auto">
-      <div className="space-y-2">
-        {data.map((d, i) => (
-          <div key={i} className="flex">
-            <label className="w-[45%] text-xs font-bold text-gray-800">{d.label}:</label>
-            <span className="w-[45%] text-xs font-bold text-[#162ddc]">{d.value}</span>
-          </div>
-        ))}
-      </div>
+const InfoBox = ({ data }) => (
+  <div className="border border-gray-300 bg-white min-h-[170px] p-4 overflow-auto">
+    <div className="space-y-2">
+      {data.map((d, i) => (
+        <div key={i} className="flex">
+          <label className="w-[45%] text-sm font-bold text-gray-800">
+            {d.label}:
+          </label>
+          <span className="w-[45%] text-sm font-bold text-[#162ddc]">
+            {d.value}
+          </span>
+        </div>
+      ))}
     </div>
-  )
-));
+  </div>
+);
 
 // ============================================
 // MAIN COMPONENT - OPTIMIZED WITH AUTO-SELECTION
@@ -161,6 +203,7 @@ const InfoBox = React.memo(({ data }) => (
 
 export default function MyInstrumentsPage() {
   const { t } = useTranslation();
+  const { navigationData, clearNavigationData } = useInstrumentLock();
   const { postData } = servicecall();
   const abortControllerRef = useRef(null);
 
@@ -221,7 +264,6 @@ export default function MyInstrumentsPage() {
       }
       return JSON.parse(response);
     } catch (error) {
-      console.error('Response parsing error:', error);
       return response;
     }
   }, []);
@@ -248,18 +290,11 @@ export default function MyInstrumentsPage() {
         setFileTags([]);
       }
     } catch (error) {
-      console.error("Error loading file tags:", error);
       setFileTags([]);
     } finally {
       setIsLoading(prev => ({ ...prev, fileTags: false }));
     }
   }, [makeAPICall, handleAPIResponse]);
-
-  // Handle file selection
-  const handleFileSelect = useCallback(async (file) => {
-    setSelectedFile(file);
-    await loadFileTags(file);
-  }, [loadFileTags]);
 
   // Load instrument files with auto-selection of first file
   const loadInstrumentFiles = useCallback(async (instrument) => {
@@ -291,7 +326,6 @@ export default function MyInstrumentsPage() {
         setFileTags([]);
       }
     } catch (error) {
-      console.error("Error loading instrument files:", error);
       showInfoDialog("Failed to load files", "information");
       setFiles([]);
       setSelectedFile(null);
@@ -299,11 +333,25 @@ export default function MyInstrumentsPage() {
     } finally {
       setIsLoading(prev => ({ ...prev, files: false }));
     }
-  }, [makeAPICall, handleAPIResponse, showInfoDialog, loadFileTags]);
+  }, [makeAPICall, handleAPIResponse, loadFileTags, showInfoDialog]);
+
+  // Handle file selection
+  const handleFileSelect = useCallback(async (file) => {
+    setSelectedFile(file);
+    await loadFileTags(file);
+  }, [loadFileTags]);
 
   // Handle instrument selection
   const handleInstrumentSelect = useCallback(async (instrument) => {
-    if (!instrument) return;
+    if (!instrument) {
+      setSelectedInstrument(null);
+      setSelectedFile(null);
+      setFileTags([]);
+      setFiles([]);
+      setUploadFiles([]);
+      setShowUploadZone(false);
+      return;
+    }
     
     setSelectedInstrument(instrument);
     setSelectedFile(null);
@@ -317,7 +365,6 @@ export default function MyInstrumentsPage() {
     
     setShowUploadZone(shouldShow);
     
-    // Load instrument files (auto-selects first file)
     await loadInstrumentFiles(instrument);
   }, [loadInstrumentFiles]);
 
@@ -330,7 +377,6 @@ export default function MyInstrumentsPage() {
       ? `http://localhost:9091/SDMS_WebService/multipart/uploadBrowseMultipleFiles${tenantID}`
       : `http://localhost:9091/SDMS_WebService/multipart/uploadBrowseMultipleFiles`;
     
-    // Prepare headers
     const headers = {};
     const oauthConfig = CF_Oauth2ReturnServer();
     if (oauthConfig.oauth2enable === true) {
@@ -338,7 +384,6 @@ export default function MyInstrumentsPage() {
       if (token) headers["Authorization"] = token;
     }
     
-    // Retry logic (3 attempts)
     let lastError;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
@@ -355,7 +400,6 @@ export default function MyInstrumentsPage() {
         
         const responseText = await response.text();
         
-        // Check for HTML error pages
         if (responseText.trim().startsWith('<!DOCTYPE') || 
             responseText.trim().startsWith('<html') ||
             response.headers.get('content-type')?.includes('text/html')) {
@@ -402,7 +446,6 @@ export default function MyInstrumentsPage() {
         showInfoDialog("No instruments found", "information");
       }
     } catch (error) {
-      console.error("Error loading template validation:", error);
       showInfoDialog("Failed to load template validation", "information");
     } finally {
       setIsLoading(prev => ({ ...prev, template: false }));
@@ -422,15 +465,16 @@ export default function MyInstrumentsPage() {
       
       if (Array.isArray(processedResponse) && processedResponse.length > 0) {
         setLockedInstruments(processedResponse);
-        // Auto-select first instrument
         handleInstrumentSelect(processedResponse[0]);
+        setShowUploadZone(true);
       } else {
         setLockedInstruments([]);
+        setShowUploadZone(true);
       }
     } catch (error) {
-      console.error("Error loading locked instruments:", error);
       showInfoDialog("Failed to load instruments", "information");
       setLockedInstruments([]);
+      setShowUploadZone(true);
     } finally {
       setIsLoading(prev => ({ ...prev, instruments: false }));
     }
@@ -467,11 +511,6 @@ export default function MyInstrumentsPage() {
   }, []);
 
   const checkSchedulerStatus = useCallback(async () => {
-    if (!selectedInstrument) {
-      showInfoDialog(StatusMessage.RECORD_NOT_SELECTED, "information");
-      return false;
-    }
-
     if (uploadFiles.length === 0) {
       showInfoDialog("Please select files to upload", "information");
       return false;
@@ -489,7 +528,6 @@ export default function MyInstrumentsPage() {
       }
       return true;
     } catch (error) {
-      console.error("Error checking scheduler:", error);
       return false;
     }
   }, [selectedInstrument, uploadFiles, makeAPICall, handleAPIResponse, showInfoDialog]);
@@ -497,7 +535,7 @@ export default function MyInstrumentsPage() {
   // Upload multiple files
   const uploadMultipleFiles = useCallback(async () => {
     if (!selectedInstrument) {
-      showInfoDialog(StatusMessage.RECORD_NOT_SELECTED, "information");
+      showInfoDialog("Please select an instrument first", "information");
       return;
     }
 
@@ -509,13 +547,11 @@ export default function MyInstrumentsPage() {
     const formData = new FormData();
     const activeUserDetails = CF_activeUserdetails();
     
-    // Add files
     uploadFiles.forEach((file, index) => {
       formData.append(index.toString(), file.name);
       formData.append('uploadedFile' + index, file);
     });
     
-    // Add metadata
     const addEncryptedField = (key, value) => {
       if (value) formData.append(key, CF_encrypt(value));
     };
@@ -542,7 +578,6 @@ export default function MyInstrumentsPage() {
         showInfoDialog(result.Message || "Upload successful", "success");
         setUploadFiles([]);
         
-        // Refresh files immediately
         setTimeout(() => {
           if (selectedInstrument) loadInstrumentFiles(selectedInstrument);
         }, 1000);
@@ -556,13 +591,12 @@ export default function MyInstrumentsPage() {
       }
       
     } catch (error) {
-      console.error("Upload error:", error);
       let errorMessage = "Upload failed";
       if (error.message.includes('HTML')) errorMessage = "Server error - check backend logs";
       else if (error.message.includes('Failed to fetch')) errorMessage = "Cannot connect to server";
       else if (error.message.includes('Upload failed after')) errorMessage = "Upload failed after multiple attempts";
       
-      throw new Error(errorMessage);
+      showInfoDialog(errorMessage, "error");
     }
   }, [selectedInstrument, uploadFiles, uploadFormData, showInfoDialog, loadInstrumentFiles]);
 
@@ -575,13 +609,42 @@ export default function MyInstrumentsPage() {
     try {
       await uploadMultipleFiles();
     } catch (error) {
-      console.error("Error uploading files:", error);
       showInfoDialog(error.message || "Error uploading files", "information");
     } finally {
       setIsLoading(prev => ({ ...prev, upload: false }));
       setFullPageLoading(false);
     }
   }, [checkSchedulerStatus, uploadMultipleFiles, showInfoDialog]);
+
+  // Auto-selection useEffect
+  useEffect(() => {
+    if (navigationData.autoSelectInstrument && navigationData.instrumentId) {
+      const targetInstrumentId = navigationData.instrumentId.trim();
+      const selectedInst = lockedInstruments.find(inst => {
+        const instrumentId = inst.sInstrumentID || inst.value || '';
+        const cleanInstId = instrumentId.toString().trim();
+        return cleanInstId === targetInstrumentId;
+      });
+      
+      if (selectedInst) {
+        const timer = setTimeout(() => {
+          handleInstrumentSelect(selectedInst);
+          clearNavigationData();
+        }, 100);
+        
+        return () => clearTimeout(timer);
+      } else {
+        if (lockedInstruments.length > 0) {
+          handleInstrumentSelect(lockedInstruments[0]);
+        }
+        clearNavigationData();
+      }
+    } else {
+      if (lockedInstruments.length > 0 && !selectedInstrument) {
+        handleInstrumentSelect(lockedInstruments[0]);
+      }
+    }
+  }, [navigationData, lockedInstruments, handleInstrumentSelect, clearNavigationData, selectedInstrument]);
 
   // Memoized column definitions
   const lockedInstrumentsColumns = useMemo(() => [
@@ -690,7 +753,6 @@ export default function MyInstrumentsPage() {
       )}
       
       <div className="max-w-[1400px] space-y-6">
-        {/* Locked Instruments */}
         <div>
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xs font-bold text-[#405f7d]">
@@ -716,7 +778,6 @@ export default function MyInstrumentsPage() {
           </div>
         </div>
 
-        {/* File Upload Zone */}
         {showUploadZone && (
           <div>
             <FileUploadDropzone
@@ -726,11 +787,11 @@ export default function MyInstrumentsPage() {
               onUpload={handleUpload}
               onReset={handleResetFiles}
               loading={isLoading.upload}
+              selectedInstrument={selectedInstrument}
             />
           </div>
         )}
 
-        {/* File Information - First row auto-selected */}
         <div>
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xs font-bold text-[#405f7d]">
@@ -756,12 +817,13 @@ export default function MyInstrumentsPage() {
           </div>
         </div>
 
-        {/* File Tag Information */}
         {!featureStatus && (
           <div>
-            <h3 className="text-xs font-bold text-[#405f7d] mb-2">
-              {t("instrumentlocktag.filetagsinformation")}
-            </h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-xs font-bold text-[#405f7d]">
+                {t("instrumentlocktag.filetagsinformation")}
+              </h3>
+            </div>
             <InfoBox data={fileTags} />
           </div>
         )}
@@ -770,7 +832,6 @@ export default function MyInstrumentsPage() {
   );
 }
 
-// Export helper functions
 export {
   CF_sessionGet,
   CF_DomainReturnServer,

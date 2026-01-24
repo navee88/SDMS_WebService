@@ -6,6 +6,7 @@ import Errordialog from '../../../../Layout/Common/Errordialog';
 import FullPageLoader from '../../../../Layout/Common/FullPageLoader';
 import servicecall from '../../../../../Services/servicecall';
 import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
+import { useInstrumentLock } from '../../../../../Context/InstrumentLockContext';
 
 const LockIcon = () => (
   <i className="fa fa-lock text-xs mr-1"></i>
@@ -23,7 +24,6 @@ const EditPencilIcon = () => (
   <i className="fa fa-pencil text-xl mr-0.5"></i>
 );
 
-// MergeFileCountRow Component
 const MergeFileCountRow = ({ mergeCount, currentCount, onMergeChange, disabled, showMergeFields, t }) => {
   if (!showMergeFields) return null;
   
@@ -76,7 +76,6 @@ const MergeFileCountRow = ({ mergeCount, currentCount, onMergeChange, disabled, 
   );
 };
 
-// TagGrid Component
 const InlineEditIcon = () => (
   <i className="fa fa-edit text-lg mr-1"></i>
 );
@@ -186,7 +185,6 @@ const TagGrid = React.memo(({ tags, onTagValueClick, isLoadingTags, isLocked, lo
           options: options || []
         });
       } catch (error) {
-        console.error("Error loading tag options:", error);
         showInformationMessage(t('instrumentlocktag.failedtoloadoptions'));
       } finally {
         setIsLoadingOptions(false);
@@ -474,9 +472,9 @@ const TagGrid = React.memo(({ tags, onTagValueClick, isLoadingTags, isLocked, lo
 
 TagGrid.displayName = 'TagGrid';
 
-// Main Component
-const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
+const InstrumentLockTag = ({ scheduleData }) => {
   const { t } = useTranslation();
+  const { navigateAfterLock } = useInstrumentLock();
   const { postData } = servicecall();
   
   const endpoints = {
@@ -532,16 +530,14 @@ const InstrumentLockTag = ({ scheduleData, onNavigateToMyInstruments }) => {
     setErrorDialogCallback(null);
   };
 
-  // Use activeUserDetails component directly
-const getActiveUserDetails = useCallback(() => {
-  const userDetails = CF_activeUserdetails();
-  // Handle both structures: {ActiveUserDetails, ApplicationCode} or direct user object
-  return {
-    ...userDetails.ActiveUserDetails,
-    sUserID: userDetails.ActiveUserDetails?.sUserID || userDetails.sUserID,
-    sUsername: userDetails.ActiveUserDetails?.sUsername || userDetails.sUsername
-  };
-}, []);
+  const getActiveUserDetails = useCallback(() => {
+    const userDetails = CF_activeUserdetails();
+    return {
+      ...userDetails.ActiveUserDetails,
+      sUserID: userDetails.ActiveUserDetails?.sUserID || userDetails.sUserID,
+      sUsername: userDetails.ActiveUserDetails?.sUsername || userDetails.sUsername
+    };
+  }, []);
 
   const getSessionValue = (key) => {
     try {
@@ -564,32 +560,32 @@ const getActiveUserDetails = useCallback(() => {
     try {
       sessionStorage.setItem(key, value);
     } catch (error) {
-      console.error(`Error setting session value ${key}:`, error);
+      // Silent error handling
     }
   };
 
   const makeAjaxCall = async (url, passObjDet, process) => {
-  try {
-    const userDetails = CF_activeUserdetails(); // This returns {ActiveUserDetails, ApplicationCode}
-    
-    let requestBody;
-    
-    if (url === endpoints.loadCategoryTagValueAndID) {
-      requestBody = {
-        passObjDet: passObjDet,
-        ActiveUserDetails: userDetails.ActiveUserDetails, // Use the nested ActiveUserDetails
-        ApplicationCode: userDetails.ApplicationCode
-      };
-    } else {
-      requestBody = {
-        ...passObjDet,
-        ActiveUserDetails: userDetails.ActiveUserDetails, // Use the nested ActiveUserDetails
-        ApplicationCode: userDetails.ApplicationCode
-      };
-    }
-    
-    const response = await postData(url, requestBody);
+    try {
+      const userDetails = CF_activeUserdetails();
       
+      let requestBody;
+      
+      if (url === endpoints.loadCategoryTagValueAndID) {
+        requestBody = {
+          passObjDet: passObjDet,
+          ActiveUserDetails: userDetails.ActiveUserDetails,
+          ApplicationCode: userDetails.ApplicationCode
+        };
+      } else {
+        requestBody = {
+          ...passObjDet,
+          ActiveUserDetails: userDetails.ActiveUserDetails,
+          ApplicationCode: userDetails.ApplicationCode
+        };
+      }
+      
+      const response = await postData(url, requestBody);
+        
       if (!response) {
         return null;
       }
@@ -598,7 +594,6 @@ const getActiveUserDetails = useCallback(() => {
         throw new Error(response.Message || response.ErrorMessage || `${t('Auditpopup.somethingwentwrong')} ${url}`);
       }
       
-      // Handle InterfaceConnectionChecking response
       if (process === "InterfaceConnectionChecking") {
         let formattedResponse;
         
@@ -623,17 +618,14 @@ const getActiveUserDetails = useCallback(() => {
         return formattedResponse;
       }
       
-      // Handle Lock/Unlock responses
       if (process === "LockInstrument" || process === "UnLockInstrument") {
         return response;
       }
       
-      // Handle SelectPathFileUSerTemplate
       if (process === "SelectPathFileUSerTemplate") {
         return response.oResInstChange || response;
       }
       
-      // Check for common response structures
       if (response.oResObj !== undefined) {
         return response.oResObj;
       }
@@ -653,7 +645,6 @@ const getActiveUserDetails = useCallback(() => {
       return response;
       
     } catch (error) {
-      console.error(`[ERROR] ${t('Auditpopup.somethingwentwrong')} ${url}:`, error);
       throw error;
     }
   };
@@ -719,8 +710,10 @@ const getActiveUserDetails = useCallback(() => {
 
   const isInterfaceInstrument = useCallback((instrumentId) => {
     if (!instrumentId) return false;
-    const parts = instrumentId.split(':');
-    return parts.length > 1 && parts[1].trim() !== "0";
+    
+    const idStr = instrumentId.toString().trim();
+    const parts = idStr.split(':');
+    return parts.length > 1 && parts[1] && parts[1].trim() !== "0";
   }, []);
 
   const loadTagValues = useCallback(async (tagId, templateId, instrumentId, tagIndex, previousTagValueID = "") => {
@@ -748,7 +741,6 @@ const getActiveUserDetails = useCallback(() => {
       return [];
       
     } catch (error) {
-      console.error(`${t('instrumentlocktag.errorloadingtagvalues')} ${tagId}:`, error);
       return [];
     }
   }, [formData.path, t]);
@@ -806,7 +798,6 @@ const getActiveUserDetails = useCallback(() => {
         setTags([]);
       }
     } catch (error) {
-      console.error(t('instrumentlocktag.errorfetchingtags'), error);
       setTags([]);
     } finally {
       setIsLoadingTags(false);
@@ -830,7 +821,6 @@ const getActiveUserDetails = useCallback(() => {
       return updatedTags;
     });
     
-    // Clear tag error when value is entered
     if (value) {
       setTagErrors(prev => ({ ...prev, [index]: false }));
     }
@@ -858,7 +848,7 @@ const getActiveUserDetails = useCallback(() => {
         }
       }
     } catch (error) {
-      console.error(t('instrumentlocktag.errorcheckingmergesettings'), error);
+      // Silent error handling
     }
   }, [t]);
 
@@ -883,7 +873,7 @@ const getActiveUserDetails = useCallback(() => {
         }
       }
     } catch (error) {
-      console.error(t('instrumentlocktag.errorloadingusers'), error);
+      // Silent error handling
     }
   }, [t]);
 
@@ -918,7 +908,6 @@ const getActiveUserDetails = useCallback(() => {
         return response;
       }
     } catch (error) {
-      console.error(t('instrumentlocktag.errorloadingprotocol'), error);
       return null;
     }
   }, [isInterfaceInstrument, t]);
@@ -970,7 +959,6 @@ const getActiveUserDetails = useCallback(() => {
         return [];
       }
     } catch (error) {
-      console.error(t('instrumentlocktag.errorloadinglimsorders'), error);
       setLimsOrderOptions([]);
       setIsLimsOrderEnabled(false);
       setFormData(prev => ({ 
@@ -985,99 +973,96 @@ const getActiveUserDetails = useCallback(() => {
     }
   }, [t]);
 
-const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
-  try {
-    const nLLProStatus = 0;
-    const nProtocolStatus = parseInt(formData.protocolID) || 0;
-    const nProtocolStatusfile = isFileNameEnabled ? 101 : 0;
-    
-    const response = await makeAjaxCall(endpoints.onChangeInstrumentCombo, {
-      sInstrumentID: instrumentId,
-      nLLProStatus: nLLProStatus,
-      nProtocolStatus: nProtocolStatus,
-      nProtocolStatusfile: nProtocolStatusfile
-    }, "SelectPathFileUSerTemplate");
-    
-    if (response) {
-      // FIX: Properly handle user ID comparison
-      const activeUserDetails = getActiveUserDetails();
-      const currentUserId = activeUserDetails.sUserID || activeUserDetails.ActiveUserDetails?.sUserID;
+  const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
+    try {
+      const nLLProStatus = 0;
+      const nProtocolStatus = parseInt(formData.protocolID) || 0;
+      const nProtocolStatusfile = isFileNameEnabled ? 101 : 0;
       
-      if (response.sLockType === 'A') {
-        setIsAutoLocked(true);
-        setIsLocked(true);
-        setLockedByOtherUser(false);
-      } else if (response.sUserID) {
-        setIsLocked(true);
-        setIsAutoLocked(false);
+      const response = await makeAjaxCall(endpoints.onChangeInstrumentCombo, {
+        sInstrumentID: instrumentId,
+        nLLProStatus: nLLProStatus,
+        nProtocolStatus: nProtocolStatus,
+        nProtocolStatusfile: nProtocolStatusfile
+      }, "SelectPathFileUSerTemplate");
+      
+      if (response) {
+        const activeUserDetails = getActiveUserDetails();
+        const currentUserId = activeUserDetails.sUserID || activeUserDetails.ActiveUserDetails?.sUserID;
         
-        // Trim and compare user IDs properly
-        const responseUserId = response.sUserID ? response.sUserID.trim() : '';
-        
-        if (responseUserId === currentUserId) {
+        if (response.sLockType === 'A') {
+          setIsAutoLocked(true);
+          setIsLocked(true);
           setLockedByOtherUser(false);
+        } else if (response.sUserID) {
+          setIsLocked(true);
+          setIsAutoLocked(false);
+          
+          const responseUserId = response.sUserID ? response.sUserID.trim() : '';
+          
+          if (responseUserId === currentUserId) {
+            setLockedByOtherUser(false);
+          } else {
+            setLockedByOtherUser(true);
+          }
         } else {
-          setLockedByOtherUser(true);
+          setIsLocked(false);
+          setIsAutoLocked(false);
+          setLockedByOtherUser(false);
         }
-      } else {
-        setIsLocked(false);
-        setIsAutoLocked(false);
-        setLockedByOtherUser(false);
-      }
-        
-        const updates = {};
-        
-        if (response.sFileName) {
-          updates.fileName = response.sFileName;
-        }
-        
-        if (response.nCurMergeFileNo > 0) {
-          updates.currentFileCount = String(response.nCurMergeFileNo);
-        } else {
-          updates.currentFileCount = '0';
-        }
-        
-        if (response.nMergeFileCount > 0) {
-          updates.mergeFileCount = String(response.nMergeFileCount);
-          setSessionValue("LockedMergeCount", String(response.nMergeFileCount));
-        } else if (response.sTaskID != null) {
-          const lockedMergeCount = getSessionValue("LockedMergeCount");
-          if (lockedMergeCount) {
-            updates.mergeFileCount = lockedMergeCount;
+          
+          const updates = {};
+          
+          if (response.sFileName) {
+            updates.fileName = response.sFileName;
+          }
+          
+          if (response.nCurMergeFileNo > 0) {
+            updates.currentFileCount = String(response.nCurMergeFileNo);
+          } else {
+            updates.currentFileCount = '0';
+          }
+          
+          if (response.nMergeFileCount > 0) {
+            updates.mergeFileCount = String(response.nMergeFileCount);
+            setSessionValue("LockedMergeCount", String(response.nMergeFileCount));
+          } else if (response.sTaskID != null) {
+            const lockedMergeCount = getSessionValue("LockedMergeCount");
+            if (lockedMergeCount) {
+              updates.mergeFileCount = lockedMergeCount;
+            } else {
+              updates.mergeFileCount = getSessionValue("MergeCount") || '1';
+            }
           } else {
             updates.mergeFileCount = getSessionValue("MergeCount") || '1';
           }
-        } else {
-          updates.mergeFileCount = getSessionValue("MergeCount") || '1';
+          
+          if (response.nAutoUnlock) {
+            updates.unlockAfterCapture = true;
+          } else {
+            updates.unlockAfterCapture = false;
+          }
+          
+          if (response.sLockID) {
+            updates.lockID = response.sLockID;
+          } else {
+            updates.lockID = '';
+          }
+          
+          if (response.nInterFaceOrderID) {
+            updates.interfaceOrderID = String(response.nInterFaceOrderID);
+          } else {
+            updates.interfaceOrderID = '';
+          }
+          
+          setFormData(prev => ({ ...prev, ...updates }));
+          
+          return response;
         }
-        
-        if (response.nAutoUnlock) {
-          updates.unlockAfterCapture = true;
-        } else {
-          updates.unlockAfterCapture = false;
-        }
-        
-        if (response.sLockID) {
-          updates.lockID = response.sLockID;
-        } else {
-          updates.lockID = '';
-        }
-        
-        if (response.nInterFaceOrderID) {
-          updates.interfaceOrderID = String(response.nInterFaceOrderID);
-        } else {
-          updates.interfaceOrderID = '';
-        }
-        
-        setFormData(prev => ({ ...prev, ...updates }));
-        
-        return response;
-      }
-  } catch (error) {
-    console.error(t('instrumentlocktag.erroronchangeinstrument'), error);
-    return null;
-  }
-}, [formData.protocolID, isFileNameEnabled, t]);
+    } catch (error) {
+      return null;
+    }
+  }, [formData.protocolID, isFileNameEnabled, t]);
 
   const loadPaths = useCallback(async (instrumentId) => {
     try {
@@ -1123,7 +1108,6 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
         setPathOptions([]);
       }
     } catch (error) {
-      console.error(t('instrumentlocktag.errorloadingpaths'), error);
       setPathOptions([]);
     }
   }, [formData.template, fetchTags, t]);
@@ -1183,7 +1167,6 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
         setInstrumentOptions([]);
       }
     } catch (error) {
-      console.error(t('instrumentlocktag.errorloadinginstruments'), error);
       setInstrumentOptions([]);
     }
   }, [loadPaths, loadProtocol, loadLimsOrder, onChangeInstrumentCombo, isInterfaceInstrument, t]);
@@ -1224,7 +1207,6 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
         setClientOptions([]);
       }
     } catch (error) {
-      console.error(t('instrumentlocktag.errorloadingclients'), error);
       setClientOptions([]);
     }
   }, [scheduleData, loadInstruments, t]);
@@ -1250,7 +1232,6 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
       
       return options || [];
     } catch (error) {
-      console.error(`${t('instrumentlocktag.errorloadingoptionsfortag')} ${tagIndex}:`, error);
       return [];
     }
   }, [formData.template, formData.instrument, tags, loadTagValues, t]);
@@ -1272,7 +1253,6 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
       return updatedTags;
     });
     
-    // Clear tag error when value is selected
     if (value) {
       setTagErrors(prev => ({ ...prev, [index]: false }));
     }
@@ -1302,10 +1282,8 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
     return options;
   }, [tags, loadTagOptions]);
 
-  // Combined loading states for FullPageLoader
   const showFullPageLoader = isLoading || isSubmitting || isLoadingTags || isLoadingOptions;
   
-  // Initial data loading with FullPageLoader
   useEffect(() => {
     if (initialLoadDoneRef.current) return;
     
@@ -1360,7 +1338,7 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
         initialLoadDoneRef.current = true;
         
       } catch (error) {
-        console.error(t('instrumentlocktag.errorloadinitialdata'), error);
+        // Silent error handling
       } finally {
         setIsLoading(false);
       }
@@ -1482,7 +1460,7 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
             }));
           }
         } catch (error) {
-          console.error('Error refreshing merge count:', error);
+          // Silent error handling
         } finally {
           setIsLoading(false);
         }
@@ -1571,7 +1549,6 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
       }
     }
     
-    // Validate required tags
     for (let i = 0; i < tags.length; i++) {
       if (tags[i].required && !tags[i].value) {
         newTagErrors[i] = true;
@@ -1701,7 +1678,6 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
       
       await performLockActionWithData(lockData);
     } catch (error) {
-      console.error(t('instrumentlocktag.errorlockinginstrument'), error);
       showErrorDialogMessage(`${t('Auditpopup.failed')}: ${error.message || t('instrumentlocktag.unknownerror')}`, 'error');
     } finally {
       setIsSubmitting(false);
@@ -1734,33 +1710,18 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
           setSessionValue("LockedMergeCount", String(result.oResObj.mergeFileCount));
         }
         
+        const instrumentId = result.oResObj.sInstrumentID || formData.instrument;
+        
+        if (instrumentId) {
+          const cleanInstrumentId = instrumentId.toString().trim();
+          navigateAfterLock(cleanInstrumentId);
+        }
+        
         showErrorDialogMessage(
           `${result.oResObj.sInstrument || t('label.instrument')} ${successMessage}`,
-          'success',
-          async () => {
-            if (formData.instrument) {
-              setIsLoading(true);
-              try {
-                await onChangeInstrumentCombo(formData.instrument);
-              } finally {
-                setIsLoading(false);
-              }
-            }
-            
-            if (formData.template && formData.instrument) {
-              setIsLoadingTags(true);
-              try {
-                await fetchTags(formData.template, formData.instrument);
-              } finally {
-                setIsLoadingTags(false);
-              }
-            }
-            
-            if (onNavigateToMyInstruments) {
-              onNavigateToMyInstruments();
-            }
-          }
+          'success'
         );
+        
       } else {
         const errorInfo = result?.oResObj?.sInformation;
         
@@ -1794,12 +1755,38 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
         }
       }
     } catch (error) {
-      console.error(t('instrumentlocktag.lockaction'), error);
       showErrorDialogMessage(`${t('Auditpopup.failed')}: ${error.message || t('instrumentlocktag.unknownerror')}`, 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const handleUnlockSuccess = useCallback(async (result) => {
+    const successMessage = result?.oResObj?.sInformation || t('instrumentlocktag.instrumentunlockedsuccessfully');
+    const instrumentName = result?.oResObj?.sInstrument || t('label.instrument');
+    
+    setIsLocked(false);
+    setIsAutoLocked(false);
+    setLockedByOtherUser(false);
+    
+    setFormData(prev => ({
+      ...prev,
+      fileName: '',
+      mergeFileCount: getSessionValue("MergeCount") || '1',
+      currentFileCount: '0',
+      lockID: '',
+      interfaceOrderID: '',
+      unlockAfterCapture: false
+    }));
+    
+    setErrors({});
+    setTagErrors({});
+    
+    showErrorDialogMessage(
+      `${instrumentName} ${successMessage}`,
+      'success'
+    );
+  }, [t]);
 
   const prepareUnlockData = useCallback((auditData = null, mergebreak = "true") => {
     const activeUserDetails = getActiveUserDetails();
@@ -1885,13 +1872,12 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
       }
       
     } catch (error) {
-      console.error(t('instrumentlocktag.errorunlockinginstrument'), error);
       showErrorDialogMessage(`${t('Auditpopup.failed')}: ${error.message || t('instrumentlocktag.unknownerror')}`, 'error');
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, prepareUnlockData, t]);
-  
+  }, [formData, prepareUnlockData, t, handleUnlockSuccess]);
+
   const checkInterfaceConnection = useCallback(async (instrumentId) => {
     const isInterface = isInterfaceInstrument(instrumentId);
     
@@ -1921,7 +1907,7 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
         };
       }
     } catch (error) {
-      console.error(t('instrumentlocktag.errorcheckinginterfaceconnection'), error);
+      // Silent error handling
     } finally {
       setIsLoading(false);
     }
@@ -1929,170 +1915,114 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
     return { needsCheck: false, isConnected: true };
   }, [isInterfaceInstrument, t]);
 
-  const handleUnlockSuccess = useCallback(async (result) => {
-    const successMessage = result?.oResObj?.sInformation || t('instrumentlocktag.instrumentunlockedsuccessfully');
-    const instrumentName = result?.oResObj?.sInstrument || t('label.instrument');
-    
-    setIsLocked(false);
-    setIsAutoLocked(false);
-    setLockedByOtherUser(false);
-    
-    setFormData(prev => ({
-      ...prev,
-      fileName: '',
-      mergeFileCount: getSessionValue("MergeCount") || '1',
-      currentFileCount: '0',
-      lockID: '',
-      interfaceOrderID: '',
-      unlockAfterCapture: false
-    }));
-    
-    setErrors({});
-    setTagErrors({});
-    
-    showErrorDialogMessage(
-      `${instrumentName} ${successMessage}`,
-      'success',
-      async () => {
-        if (formData.instrument) {
-          setIsLoading(true);
-          try {
-            await onChangeInstrumentCombo(formData.instrument);
-          } finally {
-            setIsLoading(false);
-          }
-        }
+  const handleUnlock = useCallback(async () => {
+    if (!isLocked) {
+      showErrorDialogMessage(t('instrumentlocktag.instrumentisnotlocked'), 'information');
+      return;
+    }
+
+    if (isAutoLocked) {
+      showErrorDialogMessage(t('instrumentlocktag.thisinstrumentisalreadyautolocked'), 'information');
+      return;
+    }
+
+    const validateCurrentLockStatus = async () => {
+      try {
+        if (!formData.instrument) return;
         
-        if (formData.template && formData.instrument) {
-          setIsLoadingTags(true);
-          try {
-            await fetchTags(formData.template, formData.instrument);
-          } finally {
-            setIsLoadingTags(false);
-          }
-        }
-      }
-    );
-  }, [formData.template, formData.instrument, fetchTags, onChangeInstrumentCombo, t]);
-
-    const handleUnlock = useCallback(async () => {
-  if (!isLocked) {
-    showErrorDialogMessage(t('instrumentlocktag.instrumentisnotlocked'), 'information');
-    return;
-  }
-
-  if (isAutoLocked) {
-    showErrorDialogMessage(t('instrumentlocktag.thisinstrumentisalreadyautolocked'), 'information');
-    return;
-  }
-
-  // CRITICAL FIX: Get the current instrument lock status directly from the API
-  // instead of relying on cached state
-  const validateCurrentLockStatus = async () => {
-    try {
-      if (!formData.instrument) return;
-      
-      setIsLoading(true);
-      const response = await onChangeInstrumentCombo(formData.instrument);
-      
-      if (response) {
-        // Reset lock states based on fresh API response
-        if (response.sLockType === 'A') {
-          setIsAutoLocked(true);
-          setIsLocked(true);
-          setLockedByOtherUser(false);
-          showErrorDialogMessage(t('instrumentlocktag.thisinstrumentisalreadyautolocked'), 'information');
-          return false;
-        } else if (response.sUserID) {
-          setIsLocked(true);
-          setIsAutoLocked(false);
-          
-          const activeUserDetails = getActiveUserDetails();
-          const currentUserId = activeUserDetails.sUserID || activeUserDetails.ActiveUserDetails?.sUserID;
-          
-          // Compare with the actual user ID from API response
-          if (response.sUserID.trim() === currentUserId) {
+        setIsLoading(true);
+        const response = await onChangeInstrumentCombo(formData.instrument);
+        
+        if (response) {
+          if (response.sLockType === 'A') {
+            setIsAutoLocked(true);
+            setIsLocked(true);
             setLockedByOtherUser(false);
-            return true; // User can unlock
+            showErrorDialogMessage(t('instrumentlocktag.thisinstrumentisalreadyautolocked'), 'information');
+            return false;
+          } else if (response.sUserID) {
+            setIsLocked(true);
+            setIsAutoLocked(false);
+            
+            const activeUserDetails = getActiveUserDetails();
+            const currentUserId = activeUserDetails.sUserID || activeUserDetails.ActiveUserDetails?.sUserID;
+            
+            if (response.sUserID.trim() === currentUserId) {
+              setLockedByOtherUser(false);
+              return true;
+            } else {
+              setLockedByOtherUser(true);
+              showErrorDialogMessage(t('instrumentlocktag.instrumentislockedbyanotheruser'), 'information');
+              return false;
+            }
           } else {
-            setLockedByOtherUser(true);
-            showErrorDialogMessage(t('instrumentlocktag.instrumentislockedbyanotheruser'), 'information');
+            setIsLocked(false);
+            setIsAutoLocked(false);
+            setLockedByOtherUser(false);
+            showErrorDialogMessage(t('instrumentlocktag.instrumentisnotlocked'), 'information');
             return false;
           }
-        } else {
-          // Instrument is not locked
-          setIsLocked(false);
-          setIsAutoLocked(false);
-          setLockedByOtherUser(false);
-          showErrorDialogMessage(t('instrumentlocktag.instrumentisnotlocked'), 'information');
-          return false;
         }
+        return false;
+      } catch (error) {
+        return false;
+      } finally {
+        setIsLoading(false);
       }
-      return false;
-    } catch (error) {
-      console.error('Error validating lock status:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  // Validate form fields
-  const newErrors = {};
-  let isValid = true;
-  
-  if (!formData.instrument) {
-    newErrors.instrument = true;
-    isValid = false;
-  }
-  
-  if (!formData.path) {
-    newErrors.path = true;
-    isValid = false;
-  }
-  
-  setErrors(newErrors);
-  
-  if (!isValid) {
-    showErrorDialogMessage(t('instrumentlocktag.pleaseselectinstrumentandpathbeforeunlocking'), 'information');
-    return;
-  }
-
-  // Validate current lock status with API
-  const canProceedWithUnlock = await validateCurrentLockStatus();
-  if (!canProceedWithUnlock) {
-    return; // Already showed appropriate error message
-  }
-
-  // Check admin rights if locked by other user (though this should be false now)
-  if (lockedByOtherUser) {
-    const activeUserDetails = getActiveUserDetails();
-    const isAdmin = activeUserDetails.sUsername === "Administrator" || 
-                   activeUserDetails.ActiveUserDetails?.sUsername === "Administrator";
+    const newErrors = {};
+    let isValid = true;
     
-    if (!isAdmin) {
-      showErrorDialogMessage(t('instrumentlocktag.instrumentislockedbyanotheruser'), 'information');
+    if (!formData.instrument) {
+      newErrors.instrument = true;
+      isValid = false;
+    }
+    
+    if (!formData.path) {
+      newErrors.path = true;
+      isValid = false;
+    }
+    
+    setErrors(newErrors);
+    
+    if (!isValid) {
+      showErrorDialogMessage(t('instrumentlocktag.pleaseselectinstrumentandpathbeforeunlocking'), 'information');
       return;
     }
-  }
 
-  // Check for audit trail requirements
-  const scheduleData = getDeactiveScheduleDataRef.current;
-  if (scheduleData && scheduleData.TaskType !== "ScheduleCreation") {
-    const hasAuditTrailRights = true; // This should be determined based on actual rights
-    
-    if (hasAuditTrailRights) {
-      setAuditAction('unlock');
-      setAuditCallback(() => async (auditData) => {
-        await performUnlockAction(auditData);
-      });
-      setShowAuditTrail(true);
+    const canProceedWithUnlock = await validateCurrentLockStatus();
+    if (!canProceedWithUnlock) {
       return;
     }
-  }
-  
-  await performUnlockAction();
-}, [isLocked, isAutoLocked, lockedByOtherUser, formData.instrument, formData.path, performUnlockAction, onChangeInstrumentCombo, t]);
+
+    if (lockedByOtherUser) {
+      const activeUserDetails = getActiveUserDetails();
+      const isAdmin = activeUserDetails.sUsername === "Administrator" || 
+                     activeUserDetails.ActiveUserDetails?.sUsername === "Administrator";
+      
+      if (!isAdmin) {
+        showErrorDialogMessage(t('instrumentlocktag.instrumentislockedbyanotheruser'), 'information');
+        return;
+      }
+    }
+
+    const scheduleData = getDeactiveScheduleDataRef.current;
+    if (scheduleData && scheduleData.TaskType !== "ScheduleCreation") {
+      const hasAuditTrailRights = true;
+      
+      if (hasAuditTrailRights) {
+        setAuditAction('unlock');
+        setAuditCallback(() => async (auditData) => {
+          await performUnlockAction(auditData);
+        });
+        setShowAuditTrail(true);
+        return;
+      }
+    }
+    
+    await performUnlockAction();
+  }, [isLocked, isAutoLocked, lockedByOtherUser, formData.instrument, formData.path, performUnlockAction, onChangeInstrumentCombo, t]);
 
   const handleLock = useCallback(async () => {
     if (!validateFormForLock()) {
@@ -2137,7 +2067,6 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
             if (accessStatus == 1 || accessStatus === "1") {
               // Interface is connected - continue with normal flow
             } else {
-              // Interface not connected or status unknown - show confirmation
               setIsSubmitting(false);
               setIsLoading(false);
               showErrorDialogMessage(
@@ -2167,7 +2096,6 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
             }
           }
         } catch (error) {
-          console.error('Error checking interface connection:', error);
           // Continue with lock even if check fails
         } finally {
           setIsLoading(false);
@@ -2175,7 +2103,6 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
       }
     }
     
-    // Non-interface instrument or check failed - proceed normally
     const scheduleData = getDeactiveScheduleDataRef.current;
     if (scheduleData && scheduleData.TaskType !== "ScheduleCreation") {
       const hasAuditTrailRights = true;
@@ -2213,7 +2140,7 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
     setErrors(prev => ({ ...prev, [field]: false }));
   }, []);
 
-    const getFieldDisabledState = useMemo(() => {
+  const getFieldDisabledState = useMemo(() => {
     if (isAutoLocked) {
       return {
         client: false,
@@ -2279,9 +2206,7 @@ const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
 
   return (
     <div >
-      {/* Full Page Loader - Shows for initial load and major operations */}
       <FullPageLoader loading={showFullPageLoader} text={
-     
         isSubmitting ? t('common.loading') :
         t('common.loading')
       } />
