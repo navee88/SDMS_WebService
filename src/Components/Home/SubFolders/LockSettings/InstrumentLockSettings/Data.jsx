@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import { useTranslation } from "react-i18next";
 import { RefreshCw, FileText } from "lucide-react";
 import * as XLSX from "xlsx";
+import { useInstrumentLock } from '../../../../../Context/InstrumentLockContext'; // ADD THIS IMPORT
 
 // Components
 import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
@@ -212,6 +213,7 @@ const PrimaryButton = ({ icon: Icon, label, disabled, onClick, className = "", v
 
 export default function InstrumentDataPage() {
   const { t } = useTranslation();
+    const { navigationData, clearNavigationData } = useInstrumentLock(); // ADD THIS
   const { postData } = servicecall();
 
   // State management
@@ -327,94 +329,6 @@ export default function InstrumentDataPage() {
       }
     };
   }, []);
-
-  // 1. Fetch Template Validation on component mount with full page loader
-  useEffect(() => {
-    const loadTemplateValidation = async () => {
-      setIsLoading(prev => ({ ...prev, template: true }));
-      setFullPageLoading(true);
-      try {
-        const data = await makeAPICall("InstrumentLock/ValidatingTemplateTobeLoad", {});
-        
-        if (data && Array.isArray(data) && data.length > 0) {
-          const status = data[0]?.L67Status ?? false;
-          setFeatureStatus(status);
-          setShowInstrumentTags(!status);
-          
-          let extensions = [];
-          if (data[1] && data[1].sFileExtensionList) {
-            extensions = data[1].sFileExtensionList.split(",").map(ext => ext.trim().toLowerCase());
-          }
-          
-          if (extensions.length > 0) {
-            setSupportedExtensions(extensions);
-          } else {
-            setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
-          }
-          
-          await loadInstruments(status);
-        } else {
-          setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
-          showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
-        }
-      } catch (error) {
-        setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
-        showInfoDialog("Failed to load template validation", "information");
-      } finally {
-        setIsLoading(prev => ({ ...prev, template: false }));
-        setFullPageLoading(false);
-      }
-    };
-    
-    loadTemplateValidation();
-  }, [makeAPICall, showInfoDialog, t]);
-
-  // Load instruments
-  const loadInstruments = async (featureStatus) => {
-    setIsLoading(prev => ({ ...prev, instruments: true }));
-    try {
-      const userDetailsData = CF_activeUserdetails();
-      const reqObj = { sFeature: featureStatus, ...userDetailsData };
-      
-      const instrumentsData = await postData("InstrumentLock/LoadInterfaceLockInstrumentNameCombo", reqObj);
-      
-      if (instrumentsData && Array.isArray(instrumentsData)) {
-        const formattedInstruments = instrumentsData.map(inst => ({
-          value: inst.nInterInstrumentID?.toString() || "",
-          label: inst.sInstrumentAliasName || "Unknown Instrument",
-          originalItem: inst
-        }));
-        
-        setInstruments(formattedInstruments);
-        
-        if (formattedInstruments.length > 0) {
-          const firstInstrument = formattedInstruments[0];
-          setInstrument(firstInstrument.value);
-          setSelectedInstrument(firstInstrument.originalItem);
-          await loadInstrumentData({
-            value: firstInstrument.value,
-            originalItem: firstInstrument.originalItem
-          });
-        } else {
-          setInstrument("");
-          setSelectedInstrument(null);
-          setInstruments([]);
-        }
-      } else {
-        setInstruments([]);
-        setInstrument("");
-        setSelectedInstrument(null);
-      }
-    } catch (error) {
-      setInstruments([]);
-      setInstrument("");
-      setSelectedInstrument(null);
-      showInfoDialog("Failed to load instruments", "information");
-    } finally {
-      setIsLoading(prev => ({ ...prev, instruments: false }));
-    }
-  };
-
   const loadInstrumentData = useCallback(async (instrumentData) => {
     if (!instrumentData || !instrumentData.originalItem) return;
     
@@ -526,6 +440,169 @@ export default function InstrumentDataPage() {
       showInfoDialog("Failed to load instrument data", "information");
     }
   }, [makeAPICall, showInstrumentTags, showInfoDialog, setupAutoRefreshTimer]);
+  const handleInstrumentChange = useCallback(async (value) => {
+    setFullPageLoading(true);
+    
+    if (autoRefreshTimerRef.current) {
+      clearInterval(autoRefreshTimerRef.current);
+      autoRefreshTimerRef.current = null;
+    }
+    
+    setInstrument(value);
+    const selectedInst = instruments.find(inst => inst.value === value);
+    setSelectedInstrument(selectedInst?.originalItem || null);
+    setSelectedFile(null);
+    setSelectedMergeRow(null);
+    setSelectedNullRow(null);
+    setFileViewerSrc("");
+    setMergeDataContent("");
+    setParsedData([]);
+    setFileTags([]);
+    setInstrumentTags([]);
+    setMergedFiles([]);
+    setFileInformation([]);
+    setNullData([]);
+    
+    setAutoSelectedFile(null);
+    setAutoSelectedMergeRow(null);
+    setAutoLoadedMergeData("");
+    setAutoLoadedFileTags([]);
+    setAutoLoadedParsedData([]);
+    
+    if (selectedInst) {
+      await loadInstrumentData({
+        value: selectedInst.value,
+        originalItem: selectedInst.originalItem
+      });
+    }
+    
+    setFullPageLoading(false);
+  }, [instruments, loadInstrumentData]);
+
+  useEffect(() => {
+  console.log('Navigation data changed:', navigationData);
+  console.log('Current instruments list:', instruments);
+  
+  if (navigationData.autoSelectInstrument && navigationData.instrumentId) {
+    // Clean the instrument ID for comparison
+    const targetInstrumentId = navigationData.instrumentId.trim();
+    console.log('Looking for instrument with ID:', targetInstrumentId);
+    
+    // Find the instrument in the list
+    const selectedInst = instruments.find(inst => {
+      const instId = inst.value || inst.originalItem?.sInstrumentID || '';
+      const cleanInstId = instId.toString().trim();
+      console.log('Comparing:', cleanInstId, 'with', targetInstrumentId);
+      return cleanInstId === targetInstrumentId;
+    });
+    
+    console.log('Found instrument:', selectedInst);
+    
+    if (selectedInst) {
+      // Use setTimeout to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        console.log('Auto-selecting instrument:', selectedInst.value);
+        handleInstrumentChange(selectedInst.value);
+        // Clear navigation data after selection
+        clearNavigationData();
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    } else {
+      console.log('Instrument not found in list');
+      clearNavigationData();
+    }
+  }
+}, [navigationData, instruments, handleInstrumentChange, clearNavigationData]);
+
+  // 1. Fetch Template Validation on component mount with full page loader
+  useEffect(() => {
+    const loadTemplateValidation = async () => {
+      setIsLoading(prev => ({ ...prev, template: true }));
+      setFullPageLoading(true);
+      try {
+        const data = await makeAPICall("InstrumentLock/ValidatingTemplateTobeLoad", {});
+        
+        if (data && Array.isArray(data) && data.length > 0) {
+          const status = data[0]?.L67Status ?? false;
+          setFeatureStatus(status);
+          setShowInstrumentTags(!status);
+          
+          let extensions = [];
+          if (data[1] && data[1].sFileExtensionList) {
+            extensions = data[1].sFileExtensionList.split(",").map(ext => ext.trim().toLowerCase());
+          }
+          
+          if (extensions.length > 0) {
+            setSupportedExtensions(extensions);
+          } else {
+            setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
+          }
+          
+          await loadInstruments(status);
+        } else {
+          setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
+          showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
+        }
+      } catch (error) {
+        setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
+        showInfoDialog("Failed to load template validation", "information");
+      } finally {
+        setIsLoading(prev => ({ ...prev, template: false }));
+        setFullPageLoading(false);
+      }
+    };
+    
+    loadTemplateValidation();
+  }, [makeAPICall, showInfoDialog, t]);
+
+  // Load instruments
+  const loadInstruments = async (featureStatus) => {
+    setIsLoading(prev => ({ ...prev, instruments: true }));
+    try {
+      const userDetailsData = CF_activeUserdetails();
+      const reqObj = { sFeature: featureStatus, ...userDetailsData };
+      
+      const instrumentsData = await postData("InstrumentLock/LoadInterfaceLockInstrumentNameCombo", reqObj);
+      
+      if (instrumentsData && Array.isArray(instrumentsData)) {
+        const formattedInstruments = instrumentsData.map(inst => ({
+          value: inst.nInterInstrumentID?.toString() || "",
+          label: inst.sInstrumentAliasName || "Unknown Instrument",
+          originalItem: inst
+        }));
+        
+        setInstruments(formattedInstruments);
+        
+        if (formattedInstruments.length > 0) {
+          const firstInstrument = formattedInstruments[0];
+          setInstrument(firstInstrument.value);
+          setSelectedInstrument(firstInstrument.originalItem);
+          await loadInstrumentData({
+            value: firstInstrument.value,
+            originalItem: firstInstrument.originalItem
+          });
+        } else {
+          setInstrument("");
+          setSelectedInstrument(null);
+          setInstruments([]);
+        }
+      } else {
+        setInstruments([]);
+        setInstrument("");
+        setSelectedInstrument(null);
+      }
+    } catch (error) {
+      setInstruments([]);
+      setInstrument("");
+      setSelectedInstrument(null);
+      showInfoDialog("Failed to load instruments", "information");
+    } finally {
+      setIsLoading(prev => ({ ...prev, instruments: false }));
+    }
+  };
+
+  
 
   // Function to load merge file data
   const loadMergeFileData = async (row, isAutoLoad = false) => {
@@ -713,44 +790,7 @@ export default function InstrumentDataPage() {
     }
   }, [selectedInstrument, instrument, makeAPICall, showInfoDialog, loadMergeFileData, setupAutoRefreshTimer]);
 
-  const handleInstrumentChange = useCallback(async (value) => {
-    setFullPageLoading(true);
-    
-    if (autoRefreshTimerRef.current) {
-      clearInterval(autoRefreshTimerRef.current);
-      autoRefreshTimerRef.current = null;
-    }
-    
-    setInstrument(value);
-    const selectedInst = instruments.find(inst => inst.value === value);
-    setSelectedInstrument(selectedInst?.originalItem || null);
-    setSelectedFile(null);
-    setSelectedMergeRow(null);
-    setSelectedNullRow(null);
-    setFileViewerSrc("");
-    setMergeDataContent("");
-    setParsedData([]);
-    setFileTags([]);
-    setInstrumentTags([]);
-    setMergedFiles([]);
-    setFileInformation([]);
-    setNullData([]);
-    
-    setAutoSelectedFile(null);
-    setAutoSelectedMergeRow(null);
-    setAutoLoadedMergeData("");
-    setAutoLoadedFileTags([]);
-    setAutoLoadedParsedData([]);
-    
-    if (selectedInst) {
-      await loadInstrumentData({
-        value: selectedInst.value,
-        originalItem: selectedInst.originalItem
-      });
-    }
-    
-    setFullPageLoading(false);
-  }, [instruments, loadInstrumentData]);
+  
 
   // Load null data when tab changes to "null"
   useEffect(() => {

@@ -160,7 +160,8 @@
 		"createddate": "Created Date",
 		"modifiedBy": "Modified By",
 		"modifiedOn": "Modified On",
-		"utcModifiedOn": "UTC Modified On"
+		"utcModifiedOn": "UTC Modified On",
+		"server":"Server"
 	},
 	"statuses": {
 		"activated": "Activated",
@@ -501,7 +502,18 @@
 		"utcModifiedDate": "UTC Modified Date",
 		"modifiedDate": "Modified Date",
 		"utcNextScheduleDateTime": "UTC Next Schedule Date Time",
-		"utcCreatedOn": "UTC Created On"
+		"utcCreatedOn": "UTC Created On",
+		"downloadclientname":"Download Client Name",
+        "downloadpath":"Download Path",
+        "taskfilter":"Task Filter",
+        "taskcompleted":"Task Completed",
+        "uncusername":"UNC Username",
+        "uncdomain":"UNC Domain",
+        "clientusername":"Client User Name",
+        "servername":"Server Name",
+        "clientpassword":"Client Password",
+		"checkpath":"Check Path"
+ 
 	},
 	"masters": {
 		"clientaliasname": "Client Alias Name",
