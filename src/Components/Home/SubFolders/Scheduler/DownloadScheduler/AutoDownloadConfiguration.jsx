@@ -9,6 +9,8 @@ import useAxios from "../../../../../Services/servicecall";
 import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
 import ClientServerCheckModal from "./ClientServerCheckModal";
 import AuditTrail from "../../../../Layout/Common/AuditTrail"
+import FullPageLoader from "../../../../Layout/Common/FullPageLoader";
+
 
 
 export default function AutoDownloadConfiguration() {
@@ -29,14 +31,21 @@ export default function AutoDownloadConfiguration() {
   const [showCheckModal, setShowCheckModal] = useState(false);
 
   // 🔹 Form values
-  const [instrument, setInstrument] = useState("");
-  const [clientName, setClientName] = useState("");
+  const [instrumentId, setInstrumentId] = useState("");
+const [instrumentOptions, setInstrumentOptions] = useState([]);
+
+  const [clientId, setClientId] = useState("");
+const [clientOptions, setClientOptions] = useState([]);
+
   const [downloadPath, setDownloadPath] = useState("");
   const [structureType, setStructureType] = useState("");
   const [filter, setFilter] = useState("*.*,");
   const [sourcePath, setSourcePath] = useState("");
+  const [sourcePathOptions, setSourcePathOptions] = useState([]);
+
   const [username, setUsername] = useState("");
-  const [fileSettings, setFileSettings] = useState("");
+  const [fileSettingsId, setFileSettingsId] = useState("");
+
   const [password, setPassword] = useState("");
   const [domain, setDomain] = useState("");
 
@@ -45,9 +54,12 @@ export default function AutoDownloadConfiguration() {
   const [loadingText, setLoadingText] = useState("");
 
   // 🔹 Dialog states
-  const [dialogMessage, setDialogMessage] = useState("");
-  const [dialogType, setDialogType] = useState("");
-  const [showDialog, setShowDialog] = useState(false);
+ const [dialog, setDialog] = useState({
+  open: false,
+  type: "",      // "Warning" | "Success" | "Error"
+  message: ""
+});
+
 
   // 🔹 Error states
   const [instrumentError, setInstrumentError] = useState(false);
@@ -57,44 +69,41 @@ export default function AutoDownloadConfiguration() {
   const [usernameError, setUsernameError] = useState(false);
 const [passwordError, setPasswordError] = useState(false);
 const [domainError, setDomainError] = useState(false);
+const [domainOptions, setDomainOptions] = useState([]);
+
+  const isReadOnlyUNC = openedFromView && isUNC;
+  const [scheduleId, setScheduleId] = useState("");
+const [taskId, setTaskId] = useState("");
 
 
-  // 🔹 Popup
-  const [showErrorDialog, setShowErrorDialog] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
 
-  // Add client options if needed
-  const clientOptions = [
-    { label: "Client A", value: "Client A" },
-    { label: "Client B", value: "Client B" }
-  ];
-  const selectedClient = clientOptions.find(opt => opt.value === clientName);
+  const downloadTypeOptions = [
+  { label: "Original", value: "O" },
+  { label: "File Only", value: "F" }
+];
+const selectedClient = clientOptions.find(
+  opt => opt.value === clientId
+);
 
   const resetForm = () => {
-    setInstrument("");
-    setClientName("");
-    setDownloadPath("");
-    setStructureType("");
-    setFilter("");
-    setSourcePath("");
-    setUsername("");
-    setPassword("");
-    setDomain("");
-    setFileSettings("");
-    setPathType("LOCAL");
+  setInstrumentId("");
+  setClientId("");
+  setDownloadPath("");
+  setStructureType("");
+  setFilter("*.*,");
+  setSourcePath("");
+  setUsername("");
+  setPassword("");
+  setDomain("");
+  setFileSettingsId("");
+  setPathType("LOCAL");
 
-    // clear errors
-    setInstrumentError(false);
-    setClientError(false);
-    setPathError(false);
-    setStructureError(false);
+  setInstrumentError(false);
+  setClientError(false);
+  setPathError(false);
+  setStructureError(false);
+};
 
-    // close dialogs
-    setShowErrorDialog(false);
-    setErrorMessage("");
-    setShowDialog(false);
-    setDialogMessage("");
-  };
 
   useEffect(() => {
     // If user did NOT come from View, ensure Close button is hidden
@@ -102,18 +111,133 @@ const [domainError, setDomainError] = useState(false);
       setOpenedFromView(false);
     }
   }, [openedFromView, setOpenedFromView]);
+    const loadInstruments = async () => {
+    const res = await postData(
+      "Scheduler/DownloadSchedulerinstrumentload",
+      {
+        ...CF_activeUserdetails()
+      }
+    );
+
+    const options = res.map(item => ({
+      label: item.L11InstrumentName.trim(),
+      value: item.L11InstrumentID
+    }));
+
+    setInstrumentOptions(options);
+  };
+   const loadClients = async () => {
+    const res = await postData(
+      "Scheduler/DownloadSchedulerclientload",
+      {
+        ...CF_activeUserdetails()
+      }
+    );
+
+    const options = res.map(item => ({
+      label: item.L06ClientName.trim(),
+      value: item.L06ClientID
+    }));
+
+    setClientOptions(options);
+  };
+   const loadDomains = async () => {
+    const res = await postData(
+      "Scheduler/DataSchedulerDomainCombo",
+      {
+        ...CF_activeUserdetails(),
+        ApplicationCode: "SDMS"
+      }
+    );
+
+    const options = res.map(item => ({
+      label: item.L03DomainName,
+      value: item.L03DomainID
+    }));
+
+    setDomainOptions(options);
+  };
+useEffect(() => {
+  const loadInitialData = async () => {
+    try {
+      setLoading(true);
+      setLoadingText(t("common.loading")); // or "Loading..."
+
+      await Promise.all([
+        loadInstruments(),
+        loadClients(),
+        loadDomains()
+      ]);
+
+    } catch (error) {
+      console.error("❌ Initial load failed", error);
+    } finally {
+      setLoading(false);
+      setLoadingText("");
+    }
+  };
+
+  loadInitialData();
+}, []);
+
+useEffect(() => {
+  if (!instrumentId) {
+    setSourcePathOptions([]);
+    setSourcePath("");
+    return;
+  }
+
+  const loadSourcePaths = async () => {
+    try {
+      setLoading(true);
+      setLoadingText(t("common.loading")); // or "Loading source paths..."
+
+      const res = await postData(
+        "Scheduler/DownloadSchedulerSourcepathload",
+        {
+          ...CF_activeUserdetails(),
+          sInstrumentID: instrumentId
+        }
+      );
+
+      const options = res.map(item => ({
+        label: item.L52TaskSourcePath,
+        value: item.ScheduleID
+      }));
+
+      setSourcePathOptions(options);
+
+      // ❌ do not auto select
+      
+
+    } catch (err) {
+      console.error("❌ Source path load failed", err);
+      setSourcePathOptions([]);
+    } finally {
+      setLoading(false);
+      setLoadingText("");
+    }
+  };
+
+  loadSourcePaths();
+}, [instrumentId]);
+
+
+
+
 
   useEffect(() => {
     if (!autoConfigData) return;
 
-    setInstrument(autoConfigData.instrument ?? "");
-    setClientName(autoConfigData.clientName ?? "");
+    setInstrumentId(autoConfigData.instrument ?? "");
+    setClientId(autoConfigData.clientName ?? "");
     setDownloadPath(autoConfigData.downloadPath ?? "");
     setFilter(autoConfigData.filter ?? "");
     setSourcePath(autoConfigData.sourcepath ?? "");
     setUsername(autoConfigData.username ?? "");
     setPassword(autoConfigData.password ?? "");
-    setFileSettings(autoConfigData.filesettings ?? "");
+    setFileSettingsId(autoConfigData.filesettings ?? "");
+
     setDomain(autoConfigData.domain ?? "");
     setPathType(autoConfigData.uncStatus ? "UNC" : "LOCAL");
 
@@ -121,15 +245,15 @@ const [domainError, setDomainError] = useState(false);
   }, [autoConfigData]);
 
 const handleSave = () => {
+
   let hasError = false;
 
-  // Common validations
-  if (!instrument) {
+  if (!instrumentId) {
     setInstrumentError(true);
     hasError = true;
   }
 
-  if (!clientName) {
+  if (!clientId) {
     setClientError(true);
     hasError = true;
   }
@@ -137,17 +261,16 @@ const handleSave = () => {
   if (!downloadPath.trim()) {
     setPathError(true);
     hasError = true;
-  } else if (!isValidWindowsPath(downloadPath)) {
+  } else if (!isValidWindowsPath(downloadPath, pathType)) {
     setPathError(true);
     hasError = true;
   }
 
-  if (!fileSettings) {
+  if (!fileSettingsId) {
     setStructureError(true);
     hasError = true;
   }
 
-  // 🔥 UNC-specific validation
   if (pathType === "UNC") {
     if (!username.trim()) {
       setUsernameError(true);
@@ -163,44 +286,105 @@ const handleSave = () => {
     }
   }
 
-  if (hasError) {
-    setErrorMessage(t("errormsg.incompletedatafields"));
-    setShowErrorDialog(true);
-    return;
+   if (hasError) {
+  setDialog({
+    open: true,
+    type: "Warning",
+    message: t("errormsg.incompletedatafields")
+  });
+  return;
+}
+
+// 🔥 CLEAR OLD ERRORS
+setInstrumentError(false);
+setClientError(false);
+setPathError(false);
+setStructureError(false);
+setUsernameError(false);
+setPasswordError(false);
+setDomainError(false);
+
+// ✅ THEN open audit
+setShowAuditTrail(true);
+
+};
+
+
+const handleAuditSubmit = async (auditPayload) => {
+  try {
+    setLoading(true);
+    setLoadingText(t("common.loading"));
+
+    const isUNCPath = pathType === "UNC";
+
+   const savePayload = {
+  process: "save",
+
+  L101ScheduleID: scheduleId, // ✅ from source path
+  L101TaskID: taskId,         // ✅ from source path
+
+  L101TaskStatus: "D",
+  L101TaskCompleted: 0,
+  L101TaskStart: 0,
+  L101TaskEnd: 1,
+
+  L101TaskDownloadPath: downloadPath,
+  L101UNCStatus: isUNCPath ? 1 : 0,
+  L101StructureType: fileSettingsId,
+  L101ClientID: clientId.trim(),
+  L101TaskFilter: filter,
+
+  L101UNCUserName: isUNCPath ? username : "",
+  L101UNCPassword: isUNCPath ? password : "",
+  L101UNCDomain: isUNCPath ? domain : "",
+
+  L101SiteCode: CF_activeUserdetails().ActiveUserDetails.sSiteCode,
+  bExist: false,
+
+  ...auditPayload,
+  ...CF_activeUserdetails()
+};
+
+    console.log("📦 Save Payload:", savePayload);
+
+    const response = await postData(
+      "Scheduler/DownloadschedulerSave",
+      savePayload
+    );
+    setDialog({
+  open: true,
+  type: "success",
+  message: response?.rtnstring || t("common.savedSuccessfully")
+});
+
+    
+
+    // ✅ CLOSE AUDIT
+    setShowAuditTrail(false);
+
+resetForm();
+  } catch (error) {
+    console.error("❌ Save failed:", error);
+
+    setDialog({
+  open: true,
+  type: "Error",
+  message: error?.message || t("common.saveFailed")
+});
+
+  } finally {
+    setLoading(false);
+    setLoadingText("");
   }
-
-  // ✅ Open audit trail only if valid
-  setShowAuditTrail(true);
 };
 
-  const handleAuditSubmit = (auditPayload) => {
-  const formData = {
-    instrument,
-    clientName,
-    downloadPath,
-    fileSettings,
-    filter,
-    sourcePath,
-    pathType,
-    username,
-    domain
-  };
-
-  console.log("📦 AutoDownload Form Data:", formData);
-  console.log("🛡️ AuditTrail Data:", auditPayload);
-
-  // ✅ CLOSE AUDIT POPUP
-  setShowAuditTrail(false);
-
-  // ✅ CLEAR FORM
-  resetForm();
-};
 
 
   const handleCheck = () => {
     let hasError = false;
-
-    if (!clientName.trim()) {
+    
+  setPathError(false);
+    if (!clientId.trim()) {
       setClientError(true);
       hasError = true;
     }
@@ -211,25 +395,41 @@ const handleSave = () => {
     if (!downloadPath.trim()) {
   setPathError(true);
   hasError = true;
-} else if (!isValidWindowsPath(downloadPath)) {
+} else if (!isValidWindowsPath(downloadPath, pathType)) {
   setPathError(true);
   hasError = true;
-  return;
 }
+
 
     if (hasError) return;
     
     // Open the check modal instead of closing it
     setShowCheckModal(true);
   };
-const isValidWindowsPath = (path) => {
-  const regex = /^[a-zA-Z]:\\(?:[^<>:"/\\|?*\r\n]+\\?)*$/;
-  return regex.test(path.trim());
+const isValidWindowsPath = (path, pathType) => {
+  if (!path) return false;
+
+  const trimmed = path.trim();
+
+  // LOCAL path: C:\Folder\SubFolder
+  const localPathRegex = /^[a-zA-Z]:\\(?:[^<>:"/\\|?*\r\n]+\\?)*$/;
+
+  // UNC path: \\SERVER\Share or \\SERVER\Share\Folder
+  const uncPathRegex = /^\\\\[^<>:"/\\|?*\r\n]+\\[^<>:"/\\|?*\r\n]+(\\[^<>:"/\\|?*\r\n]+)*$/;
+
+  return pathType === "UNC"
+    ? uncPathRegex.test(trimmed)
+    : localPathRegex.test(trimmed);
 };
+
+
+
+
 
   const handlePathTypeChange = (type) => {
     setPathType(type);
-
+    
+  setPathError(false);
     // 🔑 clear ONLY when user switches to LOCAL
     if (type === "LOCAL") {
       setUsername("");
@@ -238,44 +438,57 @@ const isValidWindowsPath = (path) => {
   };
 
   // Handle check modal submission
-  const handleCheckSubmit = async (payload) => {
-    try {
-      setLoading(true);
-      setLoadingText(t("common.checking"));
+const handleCheckSubmit = async (payload) => {
+  try {
+    setLoading(true);
+    setLoadingText(t("common.loading"));
 
-      
-      // Call your API here based on the payload
-      const response = await postData(
-        "Scheduler/checkPath", // Adjust API endpoint
-        {
-          ...payload,
-          ...CF_activeUserdetails(),
-          ApplicationCode: "SDMS"
+    let response;
+
+    // 🔹 SERVER PATH CHECK
+    if (payload.type === "server") {
+      const payload={
+          path: downloadPath,
+          ...CF_activeUserdetails()
         }
+        console.log("payload", payload)
+      response = await postData(
+        "Scheduler/PathChecking",
+        payload
       );
-      
-      // Handle response
-      if (response?.Rtn === "Success") {
-        // Show success message
-        setDialogMessage(t("scheduler.checkSuccess") || "Path check successful");
-        setDialogType("success");
-        setShowDialog(true);
-      } else {
-        // Show error message
-        setDialogMessage(response?.Message || t("scheduler.checkFailed") || "Path check failed");
-        setDialogType("error");
-        setShowDialog(true);
-      }
-    } catch (error) {
-      console.error("Check path failed:", error);
-      setDialogMessage(t("scheduler.checkError") || "An error occurred");
-      setDialogType("error");
-      setShowDialog(true);
-    } finally {
-      setLoading(false);
-      setLoadingText("");
     }
-  };
+
+    // 🔹 CLIENT PATH CHECK
+    if (payload.type === "client") {
+      const payloadrequst={
+          path: downloadPath,
+          pathreference: pathType === "UNC" ? "unc" : "local",
+          sclientname: selectedClient?.label,
+          sclientusername: payload.clientUserName,
+          sclientpassword: payload.clientPassword,
+          ...CF_activeUserdetails()
+        }
+        console.log("payloadrequst", payloadrequst)
+      response = await postData(
+        "Scheduler/ClientPathChecking",
+        payloadrequst
+      );
+    }
+
+    return response; 
+
+  } catch (error) {
+    console.error("❌ Path check failed:", error);
+    return {
+      Rtn: "Failure",
+      Message: t("scheduler.checkError") || "Path check failed"
+    };
+  } finally {
+    setLoading(false);
+    setLoadingText("");
+  }
+};
+
 
   return (
     <div className="bg-white p-8 pt-4">
@@ -295,9 +508,13 @@ const isValidWindowsPath = (path) => {
           </button>
         ) : (
           <button
-            onClick={handleSave}
-            className="flex items-center mb-4 gap-2 rounded bg-blue-500 px-3 py-1.5 text-[#ffffff] font-roboto font-semibold"
-          >
+  onClick={handleSave}
+  disabled={showAuditTrail}
+  className={`flex items-center mb-4 gap-2 rounded px-3 py-1.5
+    ${showAuditTrail ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500"}
+    text-white font-semibold`}
+>
+
             <BsCheck2Square size={18} />
             <span className="text-xs font-medium">
               {t("button.save")}
@@ -319,16 +536,26 @@ const isValidWindowsPath = (path) => {
             </label>
 
             <div className="w-80">
-              <AnimatedDropdown
-                value={instrument}
-                options={["IN001 (IN001)"]}
-                required
-                showError={instrumentError}
-                onChange={(e) => {
-                  setInstrument(e.target.value);
-                  setInstrumentError(false);
-                }}
-              />
+             <AnimatedDropdown
+  value={instrumentId}
+  options={instrumentOptions}
+  required
+  showError={instrumentError}
+  allowFreeInput
+  onChange={(e) => {
+    const newInstrumentId = e.target.value;
+
+    setInstrumentId(newInstrumentId);
+    setInstrumentError(false);
+
+    // 🔥 RESET dependent field
+    setSourcePath("");
+    setSourcePathOptions([]);
+  }}
+/>
+
+
+
             </div>
           </div>
 
@@ -342,20 +569,22 @@ const isValidWindowsPath = (path) => {
               {/* Username */}
               <div>
                 <label className="mb-1 block text-[#405f7d] text-[12px] font-semibold font-roboto">
-                  {t("label.username")}
+                  {t("label.userName")}
                 </label>
-               <input
+              <input
   value={username}
   onChange={(e) => {
+    if (isReadOnlyUNC) return;
     setUsername(e.target.value);
     setUsernameError(false);
   }}
-  disabled={!isUNC}
+  disabled={!isUNC || isReadOnlyUNC}
   className={`w-full border-b text-xs font-semibold
     focus:outline-none
     ${usernameError ? "border-red-500" : "border-gray-400 focus:border-blue-500"}
-    disabled:bg-gray-100`}
- />
+    disabled:bg-gray-100 disabled:cursor-not-allowed`}
+/>
+
 
               </div>
 
@@ -364,19 +593,21 @@ const isValidWindowsPath = (path) => {
                 <label className="mb-1 block text-[#405f7d] text-[12px] font-semibold font-roboto">
                   {t("login.password")}
                 </label>
-                <input
+               <input
   type="password"
   value={password}
   onChange={(e) => {
+    if (isReadOnlyUNC) return;
     setPassword(e.target.value);
     setPasswordError(false);
   }}
-  disabled={!isUNC}
+  disabled={!isUNC || isReadOnlyUNC}
   className={`w-full border-b text-xs
     focus:outline-none
     ${passwordError ? "border-red-500" : "border-gray-400 focus:border-blue-500"}
-    disabled:bg-gray-100`}
- />
+    disabled:bg-gray-100 disabled:cursor-not-allowed`}
+/>
+
 
               </div>
             </div>
@@ -389,11 +620,27 @@ const isValidWindowsPath = (path) => {
             </label>
             <div className="w-80">
               <AnimatedDropdown
-                value={sourcePath}
-                options={["Daily", "Weekly"]}
-                allowFreeInput
-                onChange={(e) => setSourcePath(e.target.value)}
-              />
+  value={sourcePath}
+  options={sourcePathOptions}
+  allowFreeInput
+  onChange={(e) => {
+    const selectedValue = e.target.value; // "TS2:T2"
+
+    setSourcePath(selectedValue);
+
+    if (selectedValue && selectedValue.includes(":")) {
+      const [schId, tId] = selectedValue.split(":");
+
+      setScheduleId(schId); // TS2
+      setTaskId(tId);       // T2
+    } else {
+      setScheduleId("");
+      setTaskId("");
+    }
+  }}
+/>
+
+
             </div>
           </div>
 
@@ -404,17 +651,20 @@ const isValidWindowsPath = (path) => {
             </label>
             <div className="w-80">
               <AnimatedDropdown
-  disabled={!isUNC}
+  disabled={!isUNC || isReadOnlyUNC}
   value={domain}
-  options={["NONE"]}
-  allowFreeInput
-  required
+  options={domainOptions}
+  required={isUNC && !isReadOnlyUNC}
   showError={domainError}
+  allowFreeInput
   onChange={(e) => {
+    if (isReadOnlyUNC) return;
     setDomain(e.target.value);
     setDomainError(false);
   }}
 />
+
+
 
             </div>
           </div>
@@ -431,22 +681,24 @@ const isValidWindowsPath = (path) => {
 
             <div className="w-80">
               <AnimatedDropdown
-                value={clientName}
-                options={["Client A", "Client B"]}
-                required
-                showError={clientError}
-                onChange={(e) => {
-                  setClientName(e.target.value);
-                  setClientError(false);
-                }}
-              />
+  value={clientId}                 // ✅ ID only
+  options={clientOptions}          // ✅ from API
+  required
+  allowFreeInput
+  showError={clientError}
+  onChange={(e) => {
+    setClientId(e.target.value);   // ✅ store ID
+    setClientError(false);
+  }}
+/>
+
             </div>
           </div>
 
           {/* Filter */}
           <div className="w-80">
             <label className="mb-1 block text-[#405f7d] text-[12px] font-semibold font-roboto">
-              {t("label.filter")}
+              {t("button.filter")}
             </label>
             <input
               value={filter}
@@ -472,7 +724,7 @@ const isValidWindowsPath = (path) => {
           {/* Download Path */}
           <div className="md:col-span-2">
             <label className="mb-1 block text-[#405f7d] text-[12px] font-semibold font-roboto">
-              {t("label.downloadpath")}
+              {t("scheduler.downloadpath")}
               <span className="text-red-500">*</span>
             </label>
 
@@ -511,43 +763,42 @@ const isValidWindowsPath = (path) => {
             </label>
             <div className="w-80">
               <AnimatedDropdown
-                value={fileSettings}
-                options={["Original", "File Only"]}
-                required
-                showError={structureError}
-                allowFreeInput
-                onChange={(e) => {
-                  setFileSettings(e.target.value);
-                  setStructureError(false);
-                }}
-              />
+  value={fileSettingsId}          // 👈 O / F
+  options={downloadTypeOptions}   // 👈 [{label,value}]
+  required
+  showError={structureError}
+  allowFreeInput
+  onChange={(e) => {
+    setFileSettingsId(e.target.value); // 👈 O / F
+    setStructureError(false);
+  }}
+/>
+
+
             </div>
           </div>
         </div>
       </div>
-      
-      {showErrorDialog && (
-        <Errordialog
-          type="error"
-          message={errorMessage}
-          onClose={() => setShowErrorDialog(false)}
-        />
-      )}
 
-      {showDialog && (
-        <Errordialog
-          type={dialogType}
-          message={dialogMessage}
-          onClose={() => setShowDialog(false)}
-        />
-      )}
+
+      {dialog.open && (
+  <Errordialog
+    type={dialog.type}
+    message={dialog.message}
+    onClose={() => {
+      setDialog({ open: false, type: "", message: "" });
+    }}
+  />
+)}
+
+
 
       {showCheckModal && (
         <ClientServerCheckModal
           isOpen={showCheckModal}
           onClose={() => setShowCheckModal(false)}
           onSubmit={handleCheckSubmit}
-          clientName={selectedClient?.label || clientName}
+          clientName={selectedClient?.label}
           setLoading={setLoading}
           setLoadingText={setLoadingText}
         />
@@ -560,7 +811,7 @@ const isValidWindowsPath = (path) => {
     actionLabel="Save"
   />
 )}
-
+      <FullPageLoader loading={loading} text={loadingText} />
     </div>
   );
 }
@@ -580,3 +831,4 @@ function Toggle({ label, checked, onChange }) {
     </div>
   );
 }
+

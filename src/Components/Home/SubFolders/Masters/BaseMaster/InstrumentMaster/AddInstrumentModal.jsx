@@ -47,8 +47,8 @@ const AddInstrumentModal = ({
     2: { label: t("masters.webmethod"), value: t("masters.webmethod") },
   };
   const LOCK_TYPE_OPTIONS = [
-    { label: t("masters.automatic"), value: "A" },
-    { label: t("masters.manual"), value: "M" },
+    { label: t("label.automatic"), value: "A" },
+    { label: t("label.manual"), value: "M" },
   ];
 const [fieldErrors, setFieldErrors] = useState({
   instrumentCode: "",
@@ -74,7 +74,7 @@ const [fieldErrors, setFieldErrors] = useState({
   const [form, setForm] = useState(initialForm);
   const showParserInterfacerMsg =
     submitted &&
-    (form.parserType === "WIN_METHOD" || form.parserType === "WEB_METHOD") &&
+    (form.parserType === "masters.winmethod" || form.parserType === "masters.webmethod") &&
     !form.interfacerMapped;
 
   const [commData, setCommData] = useState(null);
@@ -106,7 +106,7 @@ const handleCommSubmit = async (data) => {
   // 🔥 ADD MODE → save immediately, NO audit
   try {
     setLoading(true);
-    setLoadingText("Saving communication settings...");
+    setLoadingText(t("common.loading"));
 
     await postData(
       "basemaster/insertInstrumentCommonSetting",
@@ -199,18 +199,18 @@ const handleCommSubmit = async (data) => {
       // ✅ MSSQL → allow both if enabled
       if (dbType === "mssql") {
         if (interfacerFeature?.L67Status === true) {
-          options.push(PARSER_ORDER_MAP[1]); // WIN_METHOD
+          options.push(PARSER_ORDER_MAP[1]); 
         }
 
         if (webMethodFeature?.L67Status === true) {
-          options.push(PARSER_ORDER_MAP[2]); // WEB_METHOD
+          options.push(PARSER_ORDER_MAP[2]); // masters.webmethod
         }
       }
 
-      // ✅ POSTGRES → ONLY WIN_METHOD if enabledPOSTGRESQL
+      // ✅ POSTGRES → ONLY masters.winmethod if enabledPOSTGRESQL
       else if (dbType === "postgresql") {
         if (interfacerFeature?.L67Status === true) {
-          options.push(PARSER_ORDER_MAP[1]); // WIN_METHOD only
+          options.push(PARSER_ORDER_MAP[1]); // masters.winmethod only
         }
       }
 
@@ -289,10 +289,10 @@ useEffect(() => {
     lockType: inst.sLockType || "A",
     parserType:
       inst.iL11ParserType === 1
-        ? "WIN_METHOD"
+        ? t("masters.winmethod")
         : inst.iL11ParserType === 2
-        ? "WEB_METHOD"
-        : "NONE",
+        ? t("masters.webmethod")
+        : t("masters.none"),
     interfacerMapped: isMapped,
     interfacerInstrument: determineInitialValue(),
     active: Number(inst.iInstrumentStatus) === 1,
@@ -314,7 +314,7 @@ useEffect(() => {
   if (!isSubmitValid()) return;
 
   const isParserNeedsInterfacer =
-    (form.parserType === "WIN_METHOD" || form.parserType === "WEB_METHOD") &&
+    (form.parserType === "masters.winmethod" || form.parserType === "masters.webmethod") &&
     !form.interfacerMapped;
 
   if (isParserNeedsInterfacer) return;
@@ -324,7 +324,7 @@ useEffect(() => {
   if (isAddMode) {
     try {
       setLoading(true);
-      setLoadingText("Adding instrument...");
+      setLoadingText(t("common.loading"));
 
       const response = await postData(
         "basemaster/insertInstrument",
@@ -378,9 +378,9 @@ onClose();
 
         // 🔥 MUST BE NUMBER
         iL11ParserType:
-          finalPayload.parserType === "WIN_METHOD"
+          finalPayload.parserType === "masters.winmethod"
             ? 1
-            : finalPayload.parserType === "WEB_METHOD"
+            : finalPayload.parserType === "masters.webmethod"
             ? 2
             : 0,
 
@@ -416,9 +416,9 @@ onClose();
         sLockType: finalPayload.lockType,
 
         iL11ParserType:
-          finalPayload.parserType === "WIN_METHOD"
+          finalPayload.parserType === "masters.winmethod"
             ? 1
-            : finalPayload.parserType === "WEB_METHOD"
+            : finalPayload.parserType === "masters.webmethod"
             ? 2
             : 0,
 
@@ -457,7 +457,12 @@ const buildInstrumentRequestPayload = (
     IPAddress: commData.IPAddress ?? "",
     Parity: commData.Parity,
     Handshake: commData.Handshake,
-    InstResultSampleIDFrom: commData.ResultSampleIDFrom === "IFACER" ? 0 : 1,
+    InstResultSampleIDFrom: commData.ResultSampleIDFrom === "IFACER"
+    ? 0
+    : commData.ResultSampleIDFrom === "LimsTestOrder"
+    ? 1
+    : 2,
+
     InstrumentDLL: null,
     AllowRetest: 0,
     MiltiTestOrder: 0,
@@ -505,8 +510,8 @@ const buildInstrumentRequestPayload = (
       ISINSTGROUP: -1,
       INSTGROUPID:
         pendingForm.interfacerMapped
-          ? pendingForm.parserType === "WIN_METHOD" ||
-            pendingForm.parserType === "WEB_METHOD"
+          ? pendingForm.parserType === "masters.winmethod" ||
+            pendingForm.parserType === "masters.webmethod"
             ? 20
             : 19
           : -1,
@@ -519,9 +524,9 @@ const buildInstrumentRequestPayload = (
       sInstrumentAliasName: pendingForm.instrumentAlias,
       iInstrumentStatus: pendingForm.active ? 1 : 0,
       iL11ParserType:
-        pendingForm.parserType === "WIN_METHOD"
+        pendingForm.parserType === "masters.winmethod"
           ? 1
-          : pendingForm.parserType === "WEB_METHOD"
+          : pendingForm.parserType === "masters.webmethod"
           ? 2
           : 0,
       sInstrumentModel: pendingForm.instrumentModel,
@@ -553,7 +558,11 @@ const buildInstrumentEditRequestPayload = (
     IPAddress: commData.IPAddress ?? "",
     Parity: commData.Parity,
     Handshake: commData.Handshake,
-    InstResultSampleIDFrom: commData.ResultSampleIDFrom === "IFACER" ? 0 : 1,
+    InstResultSampleIDFrom: commData.ResultSampleIDFrom === "IFACER"
+    ? 0
+    : commData.ResultSampleIDFrom === "LimsTestOrder"
+    ? 1
+    : 2,
     InstrumentDLL: null,
     AllowRetest: 0,
     MiltiTestOrder: 0,
@@ -600,8 +609,8 @@ const buildInstrumentEditRequestPayload = (
       ISINSTGROUP: -1,
       INSTGROUPID:
         pendingForm.interfacerMapped
-          ? pendingForm.parserType === "WIN_METHOD" ||
-            pendingForm.parserType === "WEB_METHOD"
+          ? pendingForm.parserType === "masters.winmethod" ||
+            pendingForm.parserType === "masters.webmethod"
             ? 20
             : 19
           : -1,
@@ -614,9 +623,9 @@ const buildInstrumentEditRequestPayload = (
       sInstrumentAliasName: pendingForm.instrumentAlias,
       iInstrumentStatus: pendingForm.active ? 1 : 0,
       iL11ParserType:
-        pendingForm.parserType === "WIN_METHOD"
+        pendingForm.parserType === "masters.winmethod"
           ? 1
-          : pendingForm.parserType === "WEB_METHOD"
+          : pendingForm.parserType === "masters.webmethod"
           ? 2
           : 0,
       sInstrumentModel: pendingForm.instrumentModel,
@@ -644,7 +653,7 @@ const handleAuditAuthorized = async (auditPayload) => {
 
   try {
     setLoading(true);
-    setLoadingText("Updating instrument...");
+    setLoadingText(t("common.loading"));
 
     // 1️⃣ EDIT instrument
     await postData(
@@ -810,7 +819,7 @@ const getInterfacerDisplayValue = () => {
                   {availableLicense > 0
                     ? `${t("masters.availableLicense")}: ${availableLicense}`
                     : isAddMode
-                    ? "Insufficient License to create instrument"
+                    ? t("masters.insufficientlicensetocreateinstrument")
                     : ""}
                 </label>
               )}
@@ -978,8 +987,7 @@ ${
 
                   {showParserInterfacerMsg && (
                     <div className=" text-[11px] text-red-600 font-roboto">
-                      {t("masters.selectInterfacerMessage") ||
-                        "Enabled the InterFACER Mapped."}
+                      {t("masters.selectInterfacerMessage")}
                     </div>
                   )}
                 </div>
@@ -1094,8 +1102,8 @@ ${
     const isDuplicate = await checkExistingInstrument();
     if (isDuplicate) {
       setFieldErrors({
-        instrumentCode: "Instrument name already exists",
-        instrumentAlias: "Instrument alias already exists",
+        instrumentCode: t("masters.instrumentnamealreadyexists"),
+        instrumentAlias: t("masters.instrumentaliasnamealreadyexists"),
       });
       return;
     }
@@ -1171,7 +1179,7 @@ ${
       {showInterfacerWarning && (
   <Errordialog
     type="confirmation"
-    message="Changes in interfacer instrument , AgaramInterfacer Services will restart. Do you want to continue?"
+    message={t("masters.interfacermappedwithnonmappedinstrumentalertmsg")}
     showCancel={true}
     onConfirm={() => {
       confirmUnmapInterfacer();

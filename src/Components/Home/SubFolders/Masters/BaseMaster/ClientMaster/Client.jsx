@@ -121,7 +121,7 @@ const Client = () => {
   const loadClientGridData = useCallback(async () => {
     try {
       setLoading(true);
-      setLoadingText(t("masters.loadingclientdata"));
+      setLoadingText(t("common.loading"));
 
       const response = await postData(
         "basemaster/getClient",
@@ -236,7 +236,7 @@ const handleAuditSubmit = async (auditData) => {
 
   try {
     setLoading(true);
-    setLoadingText(t("masters.loadingclientdata"));
+    setLoadingText(t("common.loading"));
 
     // 🔒 SAFETY: this function is EDIT ONLY
     if (pendingClientData.mode !== "EDIT") return;
@@ -356,10 +356,10 @@ if (response?.Rtn === "Success") {
         t("statuses.status"),
         t("masters.clienttype"),
         t("masters.ipaddress"),
-        t("masters.createdBy"),
-        t("masters.createdOn"),
-        t("masters.modifiedBy"),
-        t("masters.modifiedOn"),
+        t("label.createdBy"),
+        t("label.createdOn"),
+        t("label.modifiedBy"),
+        t("label.modifiedOn"),
       ],
 
       ActiveUserDetails: buildClientRequest().ActiveUserDetails,
@@ -383,7 +383,7 @@ const handlePrint = () => {
   if (!rows || rows.length === 0) {
     setErrorDialog({
       open: true,
-      message: t("masters.selectRecord"),
+      message: t("masters.selectrecord"),
       type: "information",
     });
     return;
@@ -483,10 +483,10 @@ const handleExport = () => {
     <div className="space-y-2 ">
       <DetailRow label={t("masters.clienttype")} value={row.clientType} />
       <DetailRow label={t("masters.ipaddress")} value={row.ipAddress} />
-      <DetailRow label={t("masters.createdBy")} value={row.createdBy} />
-      <DetailRow label={t("masters.createdOn")} value={row.createdOn} />
-      <DetailRow label={t("masters.modifiedBy")} value={row.modifiedBy} />
-      <DetailRow label={t("masters.modifiedOn")} value={row.modifiedOn} />
+      <DetailRow label={t("label.createdBy")} value={row.createdBy} />
+      <DetailRow label={t("label.createdOn")} value={row.createdOn} />
+      <DetailRow label={t("label.modifiedBy")} value={row.modifiedBy} />
+      <DetailRow label={t("label.modifiedOn")} value={row.modifiedOn} />
       <DetailRow label={t("masters.mappedinstrument")} value={row.mappedInstrument} />
     </div>
   );
@@ -511,7 +511,7 @@ const handleExport = () => {
     if (!selectedRowId) {
       setErrorDialog({
         open: true,
-        message: t("masters.selectRecord"),
+        message: t("masters.selectrecord"),
         type: "information",
       });
       return;
@@ -522,7 +522,7 @@ const handleExport = () => {
     if (!rowToEdit) {
       setErrorDialog({
         open: true,
-        message:t("masters.selectRecord")
+        message:t("masters.selectrecord")
 ,
         type: "information",
       });
@@ -584,7 +584,7 @@ const handleExport = () => {
   if (!editingRow) {
     try {
       setLoading(true);
-      setLoadingText(t("masters.loadingclientdata"));
+      setLoadingText(t("common.loading"));
 
       const requestPayload = buildInsertClientRequest(clientData);
 

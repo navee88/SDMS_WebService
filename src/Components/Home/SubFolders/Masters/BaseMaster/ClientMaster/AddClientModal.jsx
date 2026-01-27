@@ -6,6 +6,7 @@ import useAxios from "../../../../../../Services/servicecall";
 import { CF_decrypt } from "../../../../../Common/encryptiondecryption";
 import AddInstrumentModal from "../InstrumentMaster/AddInstrumentModal";
 import { useTranslation } from "react-i18next";
+import FullPageLoader from "../../../../../Layout/Common/FullPageLoader";
 
 
 const AddClientModal = ({
@@ -14,7 +15,6 @@ const AddClientModal = ({
   onClose,
   onSubmit,
   onReloadUnmapped,
-  clientId,
 }) => {
 
   const nodeRef = useRef(null);
@@ -89,6 +89,8 @@ const [unmappedInstruments, setUnmappedInstruments] = useState([]);
   useEffect(() => {
     const fetchClientTypes = async () => {
       try {
+        setLoading(true);
+        setLoadingText(t("common.loading"));
         const response = await postData(
           "basemaster/getClientMasterType",
           buildClientRequest()
@@ -108,6 +110,9 @@ const [unmappedInstruments, setUnmappedInstruments] = useState([]);
         }
       } catch (err) {
         console.error("Error fetching client types:", err);
+      }finally {
+        setLoading(false);
+        setLoadingText("");
       }
     };
 
@@ -365,6 +370,7 @@ useEffect(() => {
           </div>
         </div>
       </Draggable>
+      <FullPageLoader Loading={loading} text={loadingText} />
       {showInstrumentModal && (
         <AddInstrumentModal
           isOpen={showInstrumentModal}

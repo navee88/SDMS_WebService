@@ -121,7 +121,7 @@ const [pendingRetireRow, setPendingRetireRow] = useState(null);
    const loadInstrumentGrid = async (forceSelectFirst = false, defaultSelectedRowId = null) => {
   try {
     setLoading(true);
-    setLoadingText(t("masters.loadinginstrumentdata"));
+    setLoadingText(t("common.loading"));
 
     const response = await postData(
       "basemaster/getInstrument",
@@ -181,7 +181,7 @@ const [pendingRetireRow, setPendingRetireRow] = useState(null);
 const loadInstrumentForEdit = async (row) => {
   try {
     setLoading(true);
-    setLoadingText("Loading instrument details...");
+    setLoadingText(t("common.loading"));
 
     const response = await postData(
       "basemaster/editGetInstrument",
@@ -217,7 +217,7 @@ useEffect(() => {
   /* ---------------- HANDLE SAVE ---------------- */
 
 const handleSave = async () => {
-  await loadInstrumentGrid(true); // 👈 pass a flag
+  await loadInstrumentGrid(true);
 };
 
 
@@ -237,7 +237,7 @@ const handleRetireAuthorized = async (auditPayload) => {
 
   try {
     setLoading(true);
-    setLoadingText("Retiring instrument...");
+    setLoadingText(t("common.loading"));
 
     const response = await postData(
       "basemaster/RetireInstrument",
@@ -254,11 +254,6 @@ const handleRetireAuthorized = async (auditPayload) => {
 
   } catch (err) {
     console.error("Retire failed", err);
-    setErrorDialog({
-      open: true,
-      message: "Failed to retire instrument",
-      type: "error",
-    });
   } finally {
     setLoading(false);
     setLoadingText("");
@@ -266,10 +261,6 @@ const handleRetireAuthorized = async (auditPayload) => {
     setPendingRetireRow(null);
   }
 };
-
-
-
-
   const handleRetire = (row) => {
     setRowToRetire(row);
     setIsConfirmOpen(true);
@@ -312,18 +303,16 @@ const buildExportRequest = () => ({
     t("masters.instrumentmodel"),
     t("masters.instrumentmake"),
     t("masters.associatedtoclient"),
-    t("masters.createdBy"),
-    t("masters.createdOn"),
-    t("masters.modifiedBy"),
-    t("masters.modifiedOn"),
+    t("label.createdBy"),
+    t("label.createdOn"),
+    t("label.modifiedBy"),
+    t("label.modifiedOn"),
   ],
 
   ActiveUserDetails: buildInstrumentRequest().ActiveUserDetails,
   ApplicationCode: "SDMS",
 });
 
-  /* ---------------- EXPORT FUNCTIONALITY ---------------- */
-  /* ---------------- PRINT FUNCTIONALITY ---------------- */
 
     const [doPrint, setDoPrint] = React.useState(false);
   
@@ -331,7 +320,7 @@ const buildExportRequest = () => ({
     if (!rows || rows.length === 0) {
       setErrorDialog({
         open: true,
-        message: "Select an existing record.",
+        message: t("masters.selectrecord"),
         type: "information",
       });
       return;
@@ -422,10 +411,10 @@ const buildExportRequest = () => ({
         value={row.instrumentMake}
       />
       <DetailRow label={t("masters.associatedtoclient")} value={row.clientName} />
-      <DetailRow label={t("masters.createdBy")} value={row.createdBy} />
-      <DetailRow label={t("masters.createdOn")} value={row.createdOn} />
-      <DetailRow label={t("masters.modifiedBy")} value={row.modifiedBy} />
-      <DetailRow label={t("masters.modifiedOn")} value={row.modifiedOn} />
+      <DetailRow label={t("label.createdBy")} value={row.createdBy} />
+      <DetailRow label={t("label.createdOn")} value={row.createdOn} />
+      <DetailRow label={t("label.modifiedBy")} value={row.modifiedBy} />
+      <DetailRow label={t("label.modifiedOn")} value={row.modifiedOn} />
     </div>
   );
   /* ---------------- RENDER ---------------- */
@@ -526,8 +515,8 @@ const buildExportRequest = () => ({
   <PrintTable
     columns={columns}
     rows={rows}
-    title="Instrument Master"
-    subtitle="View Instrument Configuration Report"
+    title={t("masters.instrumentmaster")}
+    subtitle={t("masters.viewinstrumentconfigurationreport")}
     printRequest={buildPrintRequest()}
     onDone={() => setDoPrint(false)}
   />
@@ -546,7 +535,7 @@ const buildExportRequest = () => ({
 
 {isConfirmOpen && rowToRetire && (
   <Errordialog
-    message="Are you sure you want to retire?"
+    message={t("masters.retireconfirmation")}
     type="confirmation"
     showCancel={true}
     onClose={() => {

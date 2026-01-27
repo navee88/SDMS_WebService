@@ -17,6 +17,8 @@ import PrintTable from "../../../../Layout/Common/PrintTable";
 import { useTranslation } from "react-i18next";
 import { handleExportCommon } from "../../../../Layout/Common/exportService";
 import AuditTrail from "../../../../Layout/Common/AuditTrail";
+import FullPageLoader from "../../../../Layout/Common/FullPageLoader";
+
 
 /* ------------------ MOCK DATA ------------------ */
 const gridData = [
@@ -563,7 +565,7 @@ const handleFilter = () => {
           }
         />
       </div>
-
+          <FullPageLoader loading={loading} text={t("common.loading")}/>
       <GridLayout
   columns={columns}
   data={filteredData}
@@ -593,7 +595,6 @@ const handleFilter = () => {
           isOpen={showAuditTrail}
           onClose={() => setShowAuditTrail(false)}
           onAuthorized={handleAuditSubmit}
-          actionLabel="Authorize"
         />
       )}
 
