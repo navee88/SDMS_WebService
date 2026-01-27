@@ -111,7 +111,7 @@ const handleRefreshClick = () => {
     () => [
       {
         key: "client",
-        label: "List of Client/Server",
+        label: t("scheduler.listofclient/server"),
         enableSearch: true,
         width: 220,
         render: (row) => (
@@ -124,7 +124,7 @@ const handleRefreshClick = () => {
       },
       {
         key: "serviceName",
-        label: "Service Name",
+        label: t("label.serviceName"),
         enableSearch: true,
         width: 280,
         render: (row) => (
@@ -137,7 +137,7 @@ const handleRefreshClick = () => {
       },
       {
         key: "status",
-        label: "Status",
+        label: t("statuses.status"),
         width: 140,
         enableSearch: true,
         render: (row) => (
@@ -157,7 +157,7 @@ const handleRefreshClick = () => {
 useEffect(() => {
   const loadClientServiceMonitor = async () => {
     setLoading(true);
-    setLoadingText("Loading client services...");
+    setLoadingText(t("common.loading"));
 
     try {
       const response = await postData(
@@ -198,7 +198,7 @@ useEffect(() => {
 
 const fetchFilteredGridData = async (client, service) => {
   setLoading(true);
-  setLoadingText("Applying filter...");
+  setLoadingText(t("common.loading"));
 
   try {
     const payload = {
@@ -245,9 +245,9 @@ const fetchFilteredGridData = async (client, service) => {
   /* ------------------ DETAIL PANEL ------------------ */
   const DetailsPanel = ({ row }) => (
     <div className="space-y-4  text-[12px]">
-      <Detail label="Last Modified Date" value={row?.lastModified} />
-      <Detail label="Start DateTime" value={row?.startTime} />
-      <Detail label="Running DateTime" value={row?.runningTime} />
+      <Detail label={t("scheduler.lastmodifieddate")} value={row?.lastModified} />
+      <Detail label={t("scheduler.startdatetime")} value={row?.startTime} />
+      <Detail label={t("scheduler.enddatetime")} value={row?.runningTime} />
     </div>
   );
 

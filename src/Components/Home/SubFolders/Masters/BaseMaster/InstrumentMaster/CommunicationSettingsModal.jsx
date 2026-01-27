@@ -3,12 +3,10 @@ import Draggable from "react-draggable";
 import { FiCheckSquare } from "react-icons/fi";
 import AnimatedDropdown from "../../../../../Layout/Common/AnimatedDropdown";
 import Errordialog from "../../../../../Layout/Common/Errordialog";
-import { createPortal } from "react-dom";
 
 const CommunicationSettingsModal = ({
   isOpen,
   onClose,
-  interfacerInstrument,
   parserType,
   commData,
   onSubmit,

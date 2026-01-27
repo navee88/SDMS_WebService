@@ -5,6 +5,7 @@ import { RiDeleteBin6Line } from "react-icons/ri";
 import { TiExport } from "react-icons/ti";
 import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx"; // Add this import
+import FullPageLoader from "../../../../Layout/Common/FullPageLoader"; // Adjust path
 
 import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
 import Errordialog from "../../../../Layout/Common/Errordialog";
@@ -15,12 +16,14 @@ import useAxios from "../../../../../Services/servicecall";
 import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
 import PrintTable from "../../../../Layout/Common/PrintTable";
 import { handleExportCommon } from "../../../../Layout/Common/exportService";
+import { set } from "zod";
 
 export default function ViewDownloadConfiguration() {
   const { t } = useTranslation();
 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingText, setLoadingText] = useState("");
   const [selectedRow, setSelectedRow] = useState(null);
 
   const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -34,11 +37,31 @@ export default function ViewDownloadConfiguration() {
   const { setAutoConfigData, setActiveTabIndex, setOpenedFromView } =
     useDownloadScheduler();
   const { postData } = useAxios();
+  useEffect(() => {
+  const loadAuditInit = async () => {
+    try {
+      await postData(
+        "Scheduler/viewdownloadschedulerForAudit",
+        {
+          ...CF_activeUserdetails(),
+
+        }
+      );
+      // no state update needed – just backend init
+    } catch (err) {
+      console.error("Audit init failed", err);
+    }
+  };
+
+  loadAuditInit();
+}, []); // ✅ runs ONLY once
+
 
   useEffect(() => {
     const loadDownloadScheduler = async () => {
       try {
         setLoading(true);
+        setLoadingText(t("common.loading"));
 
         const requestPayload = CF_activeUserdetails();
 
@@ -80,6 +103,7 @@ export default function ViewDownloadConfiguration() {
         setShowErrorDialog(true);
       } finally {
         setLoading(false);
+        setLoadingText("");
       }
     };
 
@@ -119,17 +143,17 @@ export default function ViewDownloadConfiguration() {
     })),
 
     HeaderDetails: [
-      "Instrument Name",
-      "Task ID",
-      "Source Path",
-      "UNC Status",
-      "Download Client Name",
-      "Download Path",
-      "Task Status",
-      "Task Filter",
-      "Task Completed",
-      "UNC Username",
-      "UNC Domain",
+      t("scheduler.instrumentname"),
+      t("label.taskId"),
+      t("scheduler.sourcepath"),
+      t("scheduler.uncStatus"),
+      t("scheduler.downloadclientname"),
+      t("scheduler.downloadpath"),
+      t("scheduler.taskStatus"),
+      t("scheduler.taskfilter"),
+      t("scheduler.taskcompleted"),
+      t("scheduler.uncusername"),
+      t("scheduler.uncdomain"),
     ],
 
     AllowKeys: [
@@ -155,7 +179,7 @@ export default function ViewDownloadConfiguration() {
       buildRequest: buildExportRequest,
       postData,
       setLoading,
-      setLoadingText: () => {},
+      setLoadingText,
       setErrorDialog: ({ message, type }) => {
         setErrorMessage(message);
         setShowErrorDialog(true);
@@ -213,7 +237,7 @@ export default function ViewDownloadConfiguration() {
       },
       {
         key: "sourcePath",
-        label: t("label.sourcePath"),
+        label: t("scheduler.sourcepath"),
         width: 200,
         enableSearch: true,
         render: (row) => (
@@ -249,25 +273,30 @@ export default function ViewDownloadConfiguration() {
 
     // Already Active
     if (action === "ACTIVE" && selectedRow.taskStatus === "active") {
-      setErrorMessage(t("Download schedule already in Active status"));
+      setErrorMessage(t("masters.alreadyactivewarning"));
       setShowErrorDialog(true);
       return;
     }
 
     // Already Deactive
     if (action === "INACTIVE" && selectedRow.taskStatus === "deactive") {
-      setErrorMessage(t("Download schedule already in Deactive status"));
+      setErrorMessage(t("masters.alreadydeactivewarning"));
       setShowErrorDialog(true);
       return;
     }
   
-    if (action === "ACTIVE" || action === "INACTIVE" && selectedRow.taskStatus === "retire") {
-  setErrorMessage(t("Selected Download Schedule is Retired! So it cannot be Activated."));
+    if (action === "ACTIVE"  && selectedRow.taskStatus === "retire") {
+  setErrorMessage(t("masters.retiredschedulercannotbeactivated"));
+  setShowErrorDialog(true);
+  return;
+}
+if (action === "INACTIVE"  && selectedRow.taskStatus === "retire") {
+  setErrorMessage(t("masters.retiredschedulercannotbedeactivated"));
   setShowErrorDialog(true);
   return;
 }
 if (action === "RETIRE" && selectedRow.taskStatus === "retire") {
-  setErrorMessage(t("Download Scheduler already in Retired Status"));
+  setErrorMessage(t("masters.alreadyretiredwarning"));
   setShowErrorDialog(true);
   return;
 }
@@ -289,6 +318,8 @@ if (action === "RETIRE" && selectedRow.taskStatus === "retire") {
       </div>
     </div>
   );
+const capitalizeFirst = (str = "") =>
+  str.charAt(0).toUpperCase() + str.slice(1);
 
   const renderUserDetail = (row) => (
     <div className="space-y-3">
@@ -298,12 +329,13 @@ if (action === "RETIRE" && selectedRow.taskStatus === "retire") {
         value={row.downloadPath}
       />
       <DetailRow
-        label={t("label.taskStatus")}
-        value={t(`statuses.${row.taskStatus}`)}
-      />
-      <DetailRow label={t("label.filter")} value={row.taskFilter} />
+  label={t("scheduler.taskStatus")}
+  value={capitalizeFirst(row.taskStatus)}
+/>
+
+      <DetailRow label={t("button.filter")} value={row.taskFilter} />
       <DetailRow label={t("label.comments")} value={row.taskCompleted} />
-      <DetailRow label={t("label.username")} value={row.uncUsername} />
+      <DetailRow label={t("label.userName")} value={row.uncUsername} />
     </div>
   );
 
@@ -311,6 +343,9 @@ if (action === "RETIRE" && selectedRow.taskStatus === "retire") {
 console.log("selected row",selectedRow)
   const handleAuthorized = async (auditPayload) => {
     try {
+      setShowAudit(false);
+      setLoading(true);
+      setLoadingText(t("common.loading"));
       // 🔹 VIEW FLOW
       if (pendingAction === "VIEW") {
         const request = {
@@ -420,8 +455,10 @@ if (response?.Rtn === "Success") {
       setErrorMessage("Action failed");
       setShowErrorDialog(true);
     } finally {
-      setShowAudit(false);
+      
       setPendingAction(null);
+      setLoading(false);
+      setLoadingText("");
     }
   };
 
@@ -452,7 +489,7 @@ if (response?.Rtn === "Success") {
         <div className="flex justify-end pr-5  gap-2 pt-3">
           <ActionButton
             icon={FaFileAlt}
-            label={t("scheduler.view")}
+            label={t("button.view")}
             onClick={() => {
               if (!selectedRow) {
                 setErrorMessage(t("errormsg.incompletedatafields"));
@@ -466,17 +503,17 @@ if (response?.Rtn === "Success") {
 
           <ActionButton
             icon={FaCheck}
-            label={t("scheduler.active")}
+            label={t("button.active")}
             onClick={() => handleAction("ACTIVE")}
           />
           <ActionButton
             icon={MdOutlineThumbDown}
-            label={t("scheduler.deactive")}
+            label={t("button.deactive")}
             onClick={() => handleAction("INACTIVE")}
           />
           <ActionButton
             icon={RiDeleteBin6Line}
-            label={t("scheduler.retire")}
+            label={t("button.retire")}
             onClick={() => handleAction("RETIRE")}
           />
           <ActionButton
@@ -490,14 +527,12 @@ if (response?.Rtn === "Success") {
             onClick={handlePrint}
           />
         </div>
-
+        <div className="z-[999]">
+            <FullPageLoader loading={loading} text={loadingText} />
+            </div>
         {/* SCROLLABLE CONTENT AREA */}
         <div className="flex-1 overflow-auto p-3">
-          {loading ? (
-            <div className="text-center py-10 text-gray-500">
-              {t("login.loadingpasswordpolicy")}
-            </div>
-          ) : (
+         
             <GridLayout
               columns={columns}
               height="100%"
@@ -511,9 +546,7 @@ if (response?.Rtn === "Success") {
                   ? "bg-blue-50 border-l-4 border-blue-600 font-semibold"
                   : ""
               }
-            />
-          )}
-        </div>
+            />        </div>
 
         {/* ERROR DIALOG */}
         {showErrorDialog && (
