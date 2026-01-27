@@ -51,6 +51,13 @@ import EditTask from "../../../Home/SubFolders/Scheduler/ViewEditScheduler/EditT
 import LocalFileDeleteScheduler from "../../../Home/SubFolders/Scheduler/LocalFileDeleteScheduler/LocalFileDeleteScheduler";
 import ServerFileDeleteScheduler from "../../../Home/SubFolders/Scheduler/ServerFileDeleteScheduler/ServerFileDeleteScheduler";
 
+//Added These 4 imports by kirubhakaran on 23-01-2026
+import SchedulerGlobalWrapper from '../../../../Context/SchedulerGlobalWrapper';
+// import { DeactivatedTaskWrapper } from '../../../Home/SubFolders/Scheduler/ViewEditScheduler/DeactivatedTask';
+// import { InstrumentLockTagWrapper } from '../../../Home/SubFolders/LockSettings/InstrumentLockSettings/InstrumentLockTag';
+import DataSchedulerWrapper from '../../../Home/SubFolders/Scheduler/DataScheduler/DataSchedulerWrapper';
+import ActivatedTaskWrapper from '../../../Home/SubFolders/Scheduler/ViewEditScheduler/ActivatedTaskWrapper';
+
 export const tabConfig = {
   //completed
   DataExplorer: {
@@ -64,17 +71,21 @@ export const tabConfig = {
   },
     //completed
   InstrumentLockSettings: {
-    "Instrument Locks and Tags": { content: <InstrumentLockTag /> },
+    "Instrument Locks and Tags": { content: <InstrumentLockTag /> }, //Modified by kirubhakaran on 23-01-2026  chagned from  <InstrumentLockTag /> this to <InstrumentLockTagWrapper />
     "Data": { content: <InstrumentDataPage /> },
     "My Instruments": { content: <MyInstruments /> },
     "Other Instruments": { content: <OtherInstruments /> },
   },
   DataScheduler:{
-    "Data Scheduler": { content: <DataScheduler /> },
+    "Data Scheduler": { content: <SchedulerGlobalWrapper>
+          <DataScheduler />
+        </SchedulerGlobalWrapper> }, //Modified by kirubhakaran on 23-01-2026  chagned from  <DataScheduler /> this to <DataSchedulerWrapper />
   },
   ViewEditScheduler:{
     "Deactivated Task": { content: <DeactivatedTask /> },
-    "Activated Task": { content: <ActivatedTask /> },
+    "Activated Task": { content:  <SchedulerGlobalWrapper>
+                <ActivatedTask />
+            </SchedulerGlobalWrapper> }, //Modified by kirubhakaran on 23-01-2026 changed from <ActivatedTask /> this to <ActivatedTaskWrapper />},
     "Retired Task": { content: <RetiredTask /> },
     "Edit Task": { content: <EditTask /> },
   },

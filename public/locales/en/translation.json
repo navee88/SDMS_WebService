@@ -159,7 +159,6 @@
 		"createdOn": "Created On",
 		"createddate": "Created Date",
 		"modifiedBy": "Modified By",
-		"modifiedOn": "Modified On",
 		"utcModifiedOn": "UTC Modified On",
 		"server":"Server"
 	},
@@ -765,7 +764,6 @@
 		"to": "To",
 		"message": "Message",
 		"databaselogin": "Database Based Login",
-		"complexpasswordpolicy": "Complex Password Policy",
 		"minlength": "Minimum Password Length(Between 4 and 20 Characters)",
 		"maxlength": "Maximum Password Length(Between 4 and 20 Characters)",
 		"history": "Password History(Between 1 and 5 Times)",

@@ -1056,7 +1056,7 @@ const InstrumentLockTag = ({ scheduleData }) => {
         updates.interfaceOrderID = '';
       }
       
-      // ✅ FIX: Auto-select first template for auto-locked instruments
+      // Auto-select first template for auto-locked instruments
       if (response.sLockType === 'A' && templateOptions.length > 0) {
         const firstTemplateValue = templateOptions[0].value;
         updates.template = firstTemplateValue;
@@ -1068,13 +1068,12 @@ const InstrumentLockTag = ({ scheduleData }) => {
       
       setFormData(prev => ({ ...prev, ...updates }));
       
-      // ✅ If template was set (auto-locked or user-locked), return response
+      // If template was set (auto-locked or user-locked), return response
       // The useEffect will automatically load tags for the template
       
       return response;
     }
   } catch (error) {
-    console.error('Error in onChangeInstrumentCombo:', error);
     return null;
   }
 }, [formData.protocolID, isFileNameEnabled, templateOptions]);
@@ -1159,16 +1158,13 @@ const InstrumentLockTag = ({ scheduleData }) => {
       
       setInstrumentOptions(instrumentOptionsData);
       
-      // ✅ CRITICAL FIX: Auto-select and load first instrument
+      // Auto-select and load first instrument
       if (instrumentOptionsData.length > 0) {
         const firstInstrument = instrumentOptionsData[0];
         
-        // Trigger the COMPLETE instrument change flow
-        // This ensures everything loads just like manual selection
         setIsLoading(true);
         
         try {
-          // Step 1: Update instrument in state and clear dependent fields
           setFormData(prev => ({ 
             ...prev, 
             instrument: firstInstrument.value,
@@ -1179,25 +1175,21 @@ const InstrumentLockTag = ({ scheduleData }) => {
             limsSampleID: '',
             limsTestCode: '',
             limsReplicateID: '',
-            template: '', // Clear template - will be set from backend if locked
+            // DO NOT clear template when auto-selecting first instrument
             mergeFileCount: getSessionValue("MergeCount") || '1',
             currentFileCount: '0'
           }));
           
           setErrors(prev => ({ ...prev, instrument: false }));
           
-          // Clear tags and errors
           setTags([]);
           setTagErrors({});
           setPathOptions([]);
           
-          // Step 2: Check if instrument is interface type
           const isInterface = isInterfaceInstrument(firstInstrument.value);
           
-          // Step 3: Load protocol settings
           await loadProtocol(firstInstrument.value);
           
-          // Step 4: Load LIMS orders if interface instrument
           if (isInterface) {
             const interfaceInstId = firstInstrument.value.includes(':') ? 
               parseInt(firstInstrument.value.split(':')[1].trim()) : 0;
@@ -1210,23 +1202,19 @@ const InstrumentLockTag = ({ scheduleData }) => {
             setIsLimsOrderEnabled(false);
           }
           
-          // Step 5: Get instrument lock status and data from backend
           const instrumentData = await onChangeInstrumentCombo(firstInstrument.value);
           
           if (instrumentData) {
             const updates = {};
             
-            // Set current file count
             if (instrumentData.nCurMergeFileNo > 0) {
               updates.currentFileCount = String(instrumentData.nCurMergeFileNo);
             } else {
               updates.currentFileCount = '0';
             }
             
-            // Set merge file count
             const lockedMergeCount = getSessionValue("LockedMergeCount");
             if (instrumentData.sTaskID && lockedMergeCount) {
-              // Instrument is locked, use locked merge count
               updates.mergeFileCount = lockedMergeCount;
             } else if (instrumentData.nMergeFileCount > 0) {
               updates.mergeFileCount = String(instrumentData.nMergeFileCount);
@@ -1235,35 +1223,25 @@ const InstrumentLockTag = ({ scheduleData }) => {
               updates.mergeFileCount = getSessionValue("MergeCount") || '1';
             }
             
-// ✅ CRITICAL: Set template from backend if instrument is locked
-if (instrumentData.sTemplateID && instrumentData.sTaskID) {
-  // Instrument is locked by user, use its template
-  updates.template = instrumentData.sTemplateID;
-  console.log('Auto-loading template from locked instrument:', instrumentData.sTemplateID);
-}
-// ✅ NEW: If auto-locked, use first template (QC)
-else if (instrumentData.sLockType === 'A') {
-  if (templateOptions.length > 0) {
-    const firstTemplateValue = templateOptions[0].value;
-    updates.template = firstTemplateValue;
-    console.log('Auto-locked instrument - loading first template:', firstTemplateValue);
-  }
-}
-            // If instrument is not locked, template remains empty (user must select)
+            // ONLY set template from backend if instrument is locked
+            if (instrumentData.sTemplateID && instrumentData.sTaskID) {
+              updates.template = instrumentData.sTemplateID;
+            }
+            else if (instrumentData.sLockType === 'A') {
+              if (templateOptions.length > 0) {
+                const firstTemplateValue = templateOptions[0].value;
+                updates.template = firstTemplateValue;
+              }
+            }
+            // DO NOT auto-select first template when instrument is not locked
             
             setFormData(prev => ({ ...prev, ...updates }));
             
-            // ✅ If template was set, tags will load automatically via useEffect
-            // The useEffect watching formData.template will trigger fetchTags()
           }
           
-          // Step 6: Load paths for the instrument
           await loadPaths(firstInstrument.value);
           
-          console.log('First instrument auto-loaded:', firstInstrument.value);
-          
         } catch (error) {
-          console.error('Error auto-loading first instrument:', error);
         } finally {
           setIsLoading(false);
         }
@@ -1272,12 +1250,11 @@ else if (instrumentData.sLockType === 'A') {
       setInstrumentOptions([]);
     }
   } catch (error) {
-    console.error('Error loading instruments:', error);
     setInstrumentOptions([]);
     setIsLoading(false);
   }
 }, [loadPaths, loadProtocol, loadLimsOrder, onChangeInstrumentCombo, 
-    isInterfaceInstrument, isLocked, t]);
+    isInterfaceInstrument, isLocked, templateOptions, t]);
 
   const loadClients = useCallback(async () => {
     try {
@@ -1436,12 +1413,8 @@ else if (instrumentData.sLockType === 'A') {
         
         setTemplateOptions(sortedTemplates);
         
-        // ✅ CRITICAL FIX: DO NOT auto-select template
-        // Template should be:
-        // 1. Empty until user selects it OR
-        // 2. Set from backend if instrument is already locked
-        // REMOVED: 
-        // if (sortedTemplates.length > 0) {
+        // REMOVED: Do NOT auto-select first template on initial load
+        // if (!formData.instrument && sortedTemplates.length > 0) {
         //   const firstTemplateValue = sortedTemplates[0].value;
         //   setFormData(prev => ({ ...prev, template: firstTemplateValue }));
         // }
@@ -1451,7 +1424,6 @@ else if (instrumentData.sLockType === 'A') {
       initialLoadDoneRef.current = true;
       
     } catch (error) {
-      console.error('Error loading initial data:', error);
     } finally {
       setIsLoading(false);
     }
@@ -1460,14 +1432,8 @@ else if (instrumentData.sLockType === 'A') {
   loadData();
 }, []);
 
-// ============================================================================
-// FIX #2: Template-Based Tag Loading - Check for Valid Template
-// ============================================================================
-
 useEffect(() => {
-  // This will trigger when template is set from loadInstruments or handleInstrumentChange
   if (formData.template && formData.template.trim() !== '' && formData.instrument) {
-    console.log('Loading tags for template:', formData.template, 'instrument:', formData.instrument);
     fetchTags(formData.template, formData.instrument);
   } else {
     setTags([]);
@@ -1497,7 +1463,6 @@ useEffect(() => {
   const handleInstrumentChange = useCallback(async (value) => {
   setIsLoading(true);
   
-  // ✅ CRITICAL FIX: Reset template when instrument changes
   setFormData(prev => ({ 
     ...prev, 
     instrument: value, 
@@ -1510,12 +1475,13 @@ useEffect(() => {
     limsReplicateID: '',
     mergeFileCount: getSessionValue("MergeCount") || '1',
     currentFileCount: '0'
+    // DO NOT clear template here - keep current template
   }));
   setErrors(prev => ({ ...prev, instrument: false }));
   
   setPathOptions([]);
   
-  // ✅ CRITICAL FIX: Clear tags and errors when instrument changes
+  // Clear tags when instrument changes (they depend on instrument)
   setTags([]);
   setTagErrors({});
   
@@ -1545,7 +1511,6 @@ useEffect(() => {
         }));
       }
       
-      // ✅ CRITICAL FIX: Get instrument data which may include template
       const instrumentData = await onChangeInstrumentCombo(value);
       
       if (instrumentData) {
@@ -1564,30 +1529,26 @@ useEffect(() => {
           updates.mergeFileCount = getSessionValue("MergeCount") || '1';
         }
         
-// ✅ CRITICAL FIX: Set template from backend if instrument is locked
-if (instrumentData.sTemplateID && instrumentData.sTaskID) {
-  // Instrument is locked by user, use its template
-  updates.template = instrumentData.sTemplateID;
-}
-// ✅ NEW: If auto-locked, use first template (QC)
-else if (instrumentData.sLockType === 'A') {
-  if (templateOptions.length > 0) {
-    const firstTemplateValue = templateOptions[0].value;
-    updates.template = firstTemplateValue;
-    console.log('Auto-locked instrument - loading first template:', firstTemplateValue);
-  }
-}
-        // If instrument is not locked, template remains empty (set above)
+        // ONLY set template from backend if instrument is locked
+        if (instrumentData.sTemplateID && instrumentData.sTaskID) {
+          // Instrument is locked by user, use its template
+          updates.template = instrumentData.sTemplateID;
+        }
+        else if (instrumentData.sLockType === 'A') {
+          // Auto-locked instrument - use first template
+          if (templateOptions.length > 0) {
+            const firstTemplateValue = templateOptions[0].value;
+            updates.template = firstTemplateValue;
+          }
+        }
+        // DO NOT auto-select first template when instrument is not locked
+        // Keep whatever template was previously selected (if any)
         
         setFormData(prev => ({ ...prev, ...updates }));
         
-        // ✅ If template was set from backend, tags will load via useEffect
-        // If template is empty, user must select it manually
       }
       
       await loadPaths(value);
-      
-      // Note: Tags will be loaded automatically by useEffect when template is set
       
     } finally {
       setIsLoading(false);
@@ -1627,16 +1588,15 @@ else if (instrumentData.sLockType === 'A') {
     setErrors(prev => ({ ...prev, path: false }));
   }, []);
 
-  const handleTemplateChange = useCallback((value) => {
+const handleTemplateChange = useCallback((value) => {
+  // Simply set the template value - don't auto-select first template
   setFormData(prev => ({ ...prev, template: value }));
   setErrors(prev => ({ ...prev, template: false }));
   
-  // ✅ Clear tags and errors before loading new ones
+  // Clear tags and errors
   setTags([]);
   setTagErrors({});
-  
-  // Tags will be loaded by useEffect that watches formData.template
-}, []);
+}, []); // Remove templateOptions dependency
 
   const handleMergeCountChange = useCallback((value) => {
     const numValue = parseInt(value) || 0;
@@ -1670,7 +1630,6 @@ else if (instrumentData.sLockType === 'A') {
     isValid = false;
   }
   
-  // ✅ CRITICAL FIX: Validate that template is selected
   if (!formData.template || formData.template.trim() === '') {
     newErrors.template = true;
     isValid = false;
@@ -1704,7 +1663,6 @@ else if (instrumentData.sLockType === 'A') {
     }
   }
   
-  // Validate required tags
   for (let i = 0; i < tags.length; i++) {
     if (tags[i].required && !tags[i].value) {
       newTagErrors[i] = true;
@@ -1925,8 +1883,6 @@ const handleUnlockSuccess = useCallback(async (result) => {
   setIsAutoLocked(false);
   setLockedByOtherUser(false);
   
-  // ✅ FIX: Keep the CURRENT template after unlock, just clear tag values
-  // Don't change to first template - keep the current one
   const currentTemplate = formData.template;
   
   setFormData(prev => ({
@@ -1942,25 +1898,24 @@ const handleUnlockSuccess = useCallback(async (result) => {
     limsSampleID: '',
     limsTestCode: '',
     limsReplicateID: '',
-    template: currentTemplate // ✅ Keep current template instead of switching to first
+    template: currentTemplate
   }));
   
   setErrors({});
   setTagErrors({});
   
-  // ✅ Clear tag values but keep the tags structure
   setTags(prev => prev.map(tag => ({
     ...tag,
     value: '',
     valueID: '',
-    options: tag.tagID === 1 ? tag.options : [] // Keep options for first tag if any
+    options: tag.tagID === 1 ? tag.options : []
   })));
   
   showErrorDialogMessage(
     `${instrumentName} ${successMessage}`,
     'success'
   );
-}, [t, formData.template]); // Add formData.template to dependencies
+}, [t, formData.template]);
 
   const prepareUnlockData = useCallback((auditData = null, mergebreak = "true") => {
     const activeUserDetails = getActiveUserDetails();
