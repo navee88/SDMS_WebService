@@ -650,7 +650,7 @@ export default function MyInstrumentsPage() {
   const lockedInstrumentsColumns = useMemo(() => [
     {
       key: 'sInstrumentAliasName',
-      label: t("label.instrument") || "Instrument",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("label.instrument") || "Instrument"}</span>,
       width: 300,
       enableSearch: true,
       render: (row, isSelected) => (
@@ -664,7 +664,7 @@ export default function MyInstrumentsPage() {
     },
     {
       key: 'Status',
-      label: t("statuses.status") || "Status",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{ t("statuses.status") || "Status"}</span>,
       width: 150,
       noFilter: true,
       render: (row) => (
@@ -676,7 +676,7 @@ export default function MyInstrumentsPage() {
     },
     {
       key: 'sTaskSourcePath',
-      label: t("instrumentlocktag.tasksourcepath") || "Task Source Path",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.tasksourcepath") || "Task Source Path"}</span>,
       width: 250,
       enableSearch: true,
       render: (row, isSelected) => (
@@ -687,7 +687,7 @@ export default function MyInstrumentsPage() {
     },
     {
       key: 'sTemplateName',
-      label: t("instrumentlocktag.template") || "Template Name",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{ t("instrumentlocktag.template") || "Template Name"}</span>,
       width: 250,
       enableSearch: true,
       render: (row, isSelected) => (
@@ -701,7 +701,7 @@ export default function MyInstrumentsPage() {
   const filesColumns = useMemo(() => [
     {
       key: 'ActualFileName',
-      label: t("instrumentlocktag.filename") || "File Name",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.filename") || "File Name"}</span>,
       width: 400,
       enableSearch: true,
       render: (row, isSelected) => (
@@ -715,7 +715,7 @@ export default function MyInstrumentsPage() {
     },
     {
       key: 'Upload Status',
-      label: t("instrumentlocktag.uploadstatus") || "Upload Status",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{ t("instrumentlocktag.uploadstatus") || "Upload Status"}</span>,
       width: 200,
       noFilter: true,
       render: (row) => {
@@ -733,7 +733,7 @@ export default function MyInstrumentsPage() {
     },
     {
       key: 'Client Name',
-      label: "Client Name",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{ t("label.clientName") || "Client Name"}</span>,
       width: 400,
       enableSearch: true,
       render: (row, isSelected) => (

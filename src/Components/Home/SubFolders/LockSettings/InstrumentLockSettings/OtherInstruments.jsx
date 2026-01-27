@@ -45,7 +45,7 @@ const PrimaryButton = ({
       {loading ? (
         <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-[#2883FE]"></div>
       ) : (
-        Icon && <Icon className="w-3.5 h-3.5" />
+        Icon && <Icon className="w-5 h-3.5 font-bold" />
       )}
       <span>{label}</span>
     </button>
@@ -307,11 +307,10 @@ export default function OthersInstrumentsPage() {
     }
   };
 
-  // Memoized column definitions for locked instruments grid
   const lockedInstrumentsColumns = useMemo(() => [
     {
       key: 'sInstrumentAliasName',
-      label: t("label.instrument") || "Instrument",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("label.instrument") || "Instrument"}</span>,
       width: 200,
       enableSearch: true,
       render: (row, isSelected) => (
@@ -323,7 +322,7 @@ export default function OthersInstrumentsPage() {
     },
     {
       key: 'sUsername',
-      label: t("instrumentlocktag.lockeduser") || "Locked User",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.lockeduser") || "Locked User"}</span>,
       width: 150,
       enableSearch: true,
       render: (row, isSelected) => (
@@ -336,7 +335,7 @@ export default function OthersInstrumentsPage() {
     },
     {
       key: 'sCreatedOn',
-      label: t("instrumentlocktag.LockedOn") || "Locked On",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.LockedOn") || "Locked On"}</span>,
       width: 150,
       enableSearch: true,
       render: (row, isSelected) => (
@@ -349,7 +348,7 @@ export default function OthersInstrumentsPage() {
     },
     {
       key: 'sTaskSourcePath',
-      label: t("instrumentlocktag.tasksourcepath") || "Task Source Path",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.tasksourcepath") || "Task Source Path"}</span>,
       width: 250,
       enableSearch: true,
       render: (row, isSelected) => (
@@ -362,7 +361,7 @@ export default function OthersInstrumentsPage() {
     },
     {
       key: 'sTemplateName',
-      label: t("instrumentlocktag.templateName") || "Template Name",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.templateName") || "Template Name"}</span>,
       width: 200,
       enableSearch: true,
       render: (row, isSelected) => (
@@ -379,7 +378,7 @@ export default function OthersInstrumentsPage() {
   const filesColumns = useMemo(() => [
     {
       key: 'ActualFileName',
-      label: t("instrumentlocktag.filename") || "File Name",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.filename") || "File Name"}</span>,
       width: 400,
       enableSearch: true,
       render: (row, isSelected) => (
@@ -391,7 +390,7 @@ export default function OthersInstrumentsPage() {
     },
     {
       key: 'Upload Status',
-      label: t("instrumentlocktag.uploadstatus") || "Upload Status",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("instrumentlocktag.uploadstatus") || "Upload Status"}</span>,
       width: 150,
       noFilter: true,
       render: (row) => {
@@ -410,7 +409,7 @@ export default function OthersInstrumentsPage() {
     },
     {
       key: 'Client Name',
-      label: t("label.clientName") || "Client Name",
+      label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t("label.clientName") || "Client Name"}</span>,
       width: 400,
       enableSearch: true,
       render: (row, isSelected) => (
@@ -445,7 +444,7 @@ export default function OthersInstrumentsPage() {
             <h3 className="text-xs font-bold text-[#405f7d]">
               {t("instrumentlocktag.lockedinstrumentdetails")}
             </h3>
-            <PrimaryButton 
+            <PrimaryButton className="mt-2"
               onClick={handleRefreshInstruments}
               icon={RefreshCw}
               label={t("button.refresh") || "Refresh"}

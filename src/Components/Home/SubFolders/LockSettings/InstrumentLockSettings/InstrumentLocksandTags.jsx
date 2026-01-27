@@ -974,95 +974,110 @@ const InstrumentLockTag = ({ scheduleData }) => {
   }, [t]);
 
   const onChangeInstrumentCombo = useCallback(async (instrumentId) => {
-    try {
-      const nLLProStatus = 0;
-      const nProtocolStatus = parseInt(formData.protocolID) || 0;
-      const nProtocolStatusfile = isFileNameEnabled ? 101 : 0;
+  try {
+    const nLLProStatus = 0;
+    const nProtocolStatus = parseInt(formData.protocolID) || 0;
+    const nProtocolStatusfile = isFileNameEnabled ? 101 : 0;
+    
+    const response = await makeAjaxCall(endpoints.onChangeInstrumentCombo, {
+      sInstrumentID: instrumentId,
+      nLLProStatus: nLLProStatus,
+      nProtocolStatus: nProtocolStatus,
+      nProtocolStatusfile: nProtocolStatusfile
+    }, "SelectPathFileUSerTemplate");
+    
+    if (response) {
+      const activeUserDetails = getActiveUserDetails();
+      const currentUserId = activeUserDetails.sUserID || activeUserDetails.ActiveUserDetails?.sUserID;
       
-      const response = await makeAjaxCall(endpoints.onChangeInstrumentCombo, {
-        sInstrumentID: instrumentId,
-        nLLProStatus: nLLProStatus,
-        nProtocolStatus: nProtocolStatus,
-        nProtocolStatusfile: nProtocolStatusfile
-      }, "SelectPathFileUSerTemplate");
-      
-      if (response) {
-        const activeUserDetails = getActiveUserDetails();
-        const currentUserId = activeUserDetails.sUserID || activeUserDetails.ActiveUserDetails?.sUserID;
+      // Handle lock status
+      if (response.sLockType === 'A') {
+        setIsAutoLocked(true);
+        setIsLocked(true);
+        setLockedByOtherUser(false);
+      } else if (response.sUserID) {
+        setIsLocked(true);
+        setIsAutoLocked(false);
         
-        if (response.sLockType === 'A') {
-          setIsAutoLocked(true);
-          setIsLocked(true);
+        const responseUserId = response.sUserID ? response.sUserID.trim() : '';
+        
+        if (responseUserId === currentUserId) {
           setLockedByOtherUser(false);
-        } else if (response.sUserID) {
-          setIsLocked(true);
-          setIsAutoLocked(false);
-          
-          const responseUserId = response.sUserID ? response.sUserID.trim() : '';
-          
-          if (responseUserId === currentUserId) {
-            setLockedByOtherUser(false);
-          } else {
-            setLockedByOtherUser(true);
-          }
         } else {
-          setIsLocked(false);
-          setIsAutoLocked(false);
-          setLockedByOtherUser(false);
+          setLockedByOtherUser(true);
         }
-          
-          const updates = {};
-          
-          if (response.sFileName) {
-            updates.fileName = response.sFileName;
-          }
-          
-          if (response.nCurMergeFileNo > 0) {
-            updates.currentFileCount = String(response.nCurMergeFileNo);
-          } else {
-            updates.currentFileCount = '0';
-          }
-          
-          if (response.nMergeFileCount > 0) {
-            updates.mergeFileCount = String(response.nMergeFileCount);
-            setSessionValue("LockedMergeCount", String(response.nMergeFileCount));
-          } else if (response.sTaskID != null) {
-            const lockedMergeCount = getSessionValue("LockedMergeCount");
-            if (lockedMergeCount) {
-              updates.mergeFileCount = lockedMergeCount;
-            } else {
-              updates.mergeFileCount = getSessionValue("MergeCount") || '1';
-            }
-          } else {
-            updates.mergeFileCount = getSessionValue("MergeCount") || '1';
-          }
-          
-          if (response.nAutoUnlock) {
-            updates.unlockAfterCapture = true;
-          } else {
-            updates.unlockAfterCapture = false;
-          }
-          
-          if (response.sLockID) {
-            updates.lockID = response.sLockID;
-          } else {
-            updates.lockID = '';
-          }
-          
-          if (response.nInterFaceOrderID) {
-            updates.interfaceOrderID = String(response.nInterFaceOrderID);
-          } else {
-            updates.interfaceOrderID = '';
-          }
-          
-          setFormData(prev => ({ ...prev, ...updates }));
-          
-          return response;
+      } else {
+        setIsLocked(false);
+        setIsAutoLocked(false);
+        setLockedByOtherUser(false);
+      }
+      
+      const updates = {};
+      
+      if (response.sFileName) {
+        updates.fileName = response.sFileName;
+      }
+      
+      if (response.nCurMergeFileNo > 0) {
+        updates.currentFileCount = String(response.nCurMergeFileNo);
+      } else {
+        updates.currentFileCount = '0';
+      }
+      
+      if (response.nMergeFileCount > 0) {
+        updates.mergeFileCount = String(response.nMergeFileCount);
+        setSessionValue("LockedMergeCount", String(response.nMergeFileCount));
+      } else if (response.sTaskID != null) {
+        const lockedMergeCount = getSessionValue("LockedMergeCount");
+        if (lockedMergeCount) {
+          updates.mergeFileCount = lockedMergeCount;
+        } else {
+          updates.mergeFileCount = getSessionValue("MergeCount") || '1';
         }
-    } catch (error) {
-      return null;
+      } else {
+        updates.mergeFileCount = getSessionValue("MergeCount") || '1';
+      }
+      
+      if (response.nAutoUnlock) {
+        updates.unlockAfterCapture = true;
+      } else {
+        updates.unlockAfterCapture = false;
+      }
+      
+      if (response.sLockID) {
+        updates.lockID = response.sLockID;
+      } else {
+        updates.lockID = '';
+      }
+      
+      if (response.nInterFaceOrderID) {
+        updates.interfaceOrderID = String(response.nInterFaceOrderID);
+      } else {
+        updates.interfaceOrderID = '';
+      }
+      
+      // ✅ FIX: Auto-select first template for auto-locked instruments
+      if (response.sLockType === 'A' && templateOptions.length > 0) {
+        const firstTemplateValue = templateOptions[0].value;
+        updates.template = firstTemplateValue;
+      } else if (response.sTemplateID) {
+        // For user-locked instruments, use the template they used
+        updates.template = response.sTemplateID;
+      }
+      // If not locked, template remains empty
+      
+      setFormData(prev => ({ ...prev, ...updates }));
+      
+      // ✅ If template was set (auto-locked or user-locked), return response
+      // The useEffect will automatically load tags for the template
+      
+      return response;
     }
-  }, [formData.protocolID, isFileNameEnabled, t]);
+  } catch (error) {
+    console.error('Error in onChangeInstrumentCombo:', error);
+    return null;
+  }
+}, [formData.protocolID, isFileNameEnabled, templateOptions]);
 
   const loadPaths = useCallback(async (instrumentId) => {
     try {
@@ -1113,44 +1128,76 @@ const InstrumentLockTag = ({ scheduleData }) => {
   }, [formData.template, fetchTags, t]);
 
   const loadInstruments = useCallback(async (clientId) => {
-    try {
-      let endpoint = endpoints.lockInstrumentCombo;
-      let requestBody = {
-        sClientID: clientId,
-        sScheduleID: ""
-      };
+  try {
+    let endpoint = endpoints.lockInstrumentCombo;
+    let requestBody = {
+      sClientID: clientId,
+      sScheduleID: ""
+    };
+    
+    if (getDeactiveScheduleDataRef.current) {
+      const scheduleData = getDeactiveScheduleDataRef.current;
+      const scheduleId = scheduleData.L13ScheduleID;
+      const taskType = scheduleData.TaskType;
       
-      if (getDeactiveScheduleDataRef.current) {
-        const scheduleData = getDeactiveScheduleDataRef.current;
-        const scheduleId = scheduleData.L13ScheduleID;
-        const taskType = scheduleData.TaskType;
-        
-        if (taskType === "ScheduleCreation") {
-          endpoint = endpoints.lockActiveParsingInstrumentCombo;
-        } else {
-          endpoint = endpoints.lockDeactiveParsingInstrumentCombo;
-        }
-        requestBody.sScheduleID = scheduleId;
+      if (taskType === "ScheduleCreation") {
+        endpoint = endpoints.lockActiveParsingInstrumentCombo;
+      } else {
+        endpoint = endpoints.lockDeactiveParsingInstrumentCombo;
       }
+      requestBody.sScheduleID = scheduleId;
+    }
+    
+    const response = await makeAjaxCall(endpoint, requestBody);
+    
+    if (Array.isArray(response) && response.length > 0) {
+      const instrumentOptionsData = response.map(instrument => ({
+        value: instrument.L11InstrumentID ? instrument.L11InstrumentID.trim() : '',
+        label: instrument.L11InstrumentAliasName || t('instrumentlocktag.unknowninstrument'),
+        originalItem: instrument
+      }));
       
-      const response = await makeAjaxCall(endpoint, requestBody);
+      setInstrumentOptions(instrumentOptionsData);
       
-      if (Array.isArray(response) && response.length > 0) {
-        const instrumentOptionsData = response.map(instrument => ({
-          value: instrument.L11InstrumentID ? instrument.L11InstrumentID.trim() : '',
-          label: instrument.L11InstrumentAliasName || t('instrumentlocktag.unknowninstrument'),
-          originalItem: instrument
-        }));
+      // ✅ CRITICAL FIX: Auto-select and load first instrument
+      if (instrumentOptionsData.length > 0) {
+        const firstInstrument = instrumentOptionsData[0];
         
-        setInstrumentOptions(instrumentOptionsData);
+        // Trigger the COMPLETE instrument change flow
+        // This ensures everything loads just like manual selection
+        setIsLoading(true);
         
-        if (instrumentOptionsData.length > 0) {
-          const firstInstrument = instrumentOptionsData[0];
-          setFormData(prev => ({ ...prev, instrument: firstInstrument.value }));
+        try {
+          // Step 1: Update instrument in state and clear dependent fields
+          setFormData(prev => ({ 
+            ...prev, 
+            instrument: firstInstrument.value,
+            path: '',
+            fileName: '',
+            limsOrder: '',
+            limsOrderID: '',
+            limsSampleID: '',
+            limsTestCode: '',
+            limsReplicateID: '',
+            template: '', // Clear template - will be set from backend if locked
+            mergeFileCount: getSessionValue("MergeCount") || '1',
+            currentFileCount: '0'
+          }));
           
+          setErrors(prev => ({ ...prev, instrument: false }));
+          
+          // Clear tags and errors
+          setTags([]);
+          setTagErrors({});
+          setPathOptions([]);
+          
+          // Step 2: Check if instrument is interface type
+          const isInterface = isInterfaceInstrument(firstInstrument.value);
+          
+          // Step 3: Load protocol settings
           await loadProtocol(firstInstrument.value);
           
-          const isInterface = isInterfaceInstrument(firstInstrument.value);
+          // Step 4: Load LIMS orders if interface instrument
           if (isInterface) {
             const interfaceInstId = firstInstrument.value.includes(':') ? 
               parseInt(firstInstrument.value.split(':')[1].trim()) : 0;
@@ -1158,18 +1205,79 @@ const InstrumentLockTag = ({ scheduleData }) => {
             if (interfaceInstId > 0) {
               await loadLimsOrder(interfaceInstId);
             }
+          } else {
+            setLimsOrderOptions([]);
+            setIsLimsOrderEnabled(false);
           }
           
-          await onChangeInstrumentCombo(firstInstrument.value);
+          // Step 5: Get instrument lock status and data from backend
+          const instrumentData = await onChangeInstrumentCombo(firstInstrument.value);
+          
+          if (instrumentData) {
+            const updates = {};
+            
+            // Set current file count
+            if (instrumentData.nCurMergeFileNo > 0) {
+              updates.currentFileCount = String(instrumentData.nCurMergeFileNo);
+            } else {
+              updates.currentFileCount = '0';
+            }
+            
+            // Set merge file count
+            const lockedMergeCount = getSessionValue("LockedMergeCount");
+            if (instrumentData.sTaskID && lockedMergeCount) {
+              // Instrument is locked, use locked merge count
+              updates.mergeFileCount = lockedMergeCount;
+            } else if (instrumentData.nMergeFileCount > 0) {
+              updates.mergeFileCount = String(instrumentData.nMergeFileCount);
+              setSessionValue("LockedMergeCount", String(instrumentData.nMergeFileCount));
+            } else {
+              updates.mergeFileCount = getSessionValue("MergeCount") || '1';
+            }
+            
+// ✅ CRITICAL: Set template from backend if instrument is locked
+if (instrumentData.sTemplateID && instrumentData.sTaskID) {
+  // Instrument is locked by user, use its template
+  updates.template = instrumentData.sTemplateID;
+  console.log('Auto-loading template from locked instrument:', instrumentData.sTemplateID);
+}
+// ✅ NEW: If auto-locked, use first template (QC)
+else if (instrumentData.sLockType === 'A') {
+  if (templateOptions.length > 0) {
+    const firstTemplateValue = templateOptions[0].value;
+    updates.template = firstTemplateValue;
+    console.log('Auto-locked instrument - loading first template:', firstTemplateValue);
+  }
+}
+            // If instrument is not locked, template remains empty (user must select)
+            
+            setFormData(prev => ({ ...prev, ...updates }));
+            
+            // ✅ If template was set, tags will load automatically via useEffect
+            // The useEffect watching formData.template will trigger fetchTags()
+          }
+          
+          // Step 6: Load paths for the instrument
           await loadPaths(firstInstrument.value);
+          
+          console.log('First instrument auto-loaded:', firstInstrument.value);
+          
+        } catch (error) {
+          console.error('Error auto-loading first instrument:', error);
+        } finally {
+          setIsLoading(false);
         }
-      } else {
-        setInstrumentOptions([]);
       }
-    } catch (error) {
+    } else {
       setInstrumentOptions([]);
     }
-  }, [loadPaths, loadProtocol, loadLimsOrder, onChangeInstrumentCombo, isInterfaceInstrument, t]);
+  } catch (error) {
+    console.error('Error loading instruments:', error);
+    setInstrumentOptions([]);
+    setIsLoading(false);
+  }
+}, [loadPaths, loadProtocol, loadLimsOrder, onChangeInstrumentCombo, 
+    isInterfaceInstrument, isLocked, t]);
 
   const loadClients = useCallback(async () => {
     try {
@@ -1285,75 +1393,86 @@ const InstrumentLockTag = ({ scheduleData }) => {
   const showFullPageLoader = isLoading || isSubmitting || isLoadingTags || isLoadingOptions;
   
   useEffect(() => {
-    if (initialLoadDoneRef.current) return;
+  if (initialLoadDoneRef.current) return;
+  
+  const loadData = async () => {
+    setIsLoading(true);
     
-    const loadData = async () => {
-      setIsLoading(true);
+    try {
+      await checkMergeAndAutoUnlockSettings();
+      await loadUsers();
       
-      try {
-        await checkMergeAndAutoUnlockSettings();
-        await loadUsers();
+      const activeUserDetails = getActiveUserDetails();
+      const templateResponse = await makeAjaxCall(endpoints.lockTemplateCombo, {
+        ActiveUserDetails: activeUserDetails,
+        ApplicationCode: "SDMS"
+      });
+      
+      if (Array.isArray(templateResponse) && templateResponse.length > 0) {
+        const templates = templateResponse
+          .map(template => ({
+            value: String(template.sTemplateID || '').trim(),
+            label: String(template.sTemplateName || '').trim()
+          }))
+          .filter(template => template.value && template.label && template.value !== 'undefined');
         
-        const activeUserDetails = getActiveUserDetails();
-        const templateResponse = await makeAjaxCall(endpoints.lockTemplateCombo, {
-          ActiveUserDetails: activeUserDetails,
-          ApplicationCode: "SDMS"
+        const order = ['QC', 'Calibration', 'Method Development', 'Project'];
+        const sortedTemplates = templates.sort((a, b) => {
+          const labelA = a.label || '';
+          const labelB = b.label || '';
+          
+          const indexA = order.findIndex(pattern => labelA.includes(pattern));
+          const indexB = order.findIndex(pattern => labelB.includes(pattern));
+          
+          if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+          }
+          
+          if (indexA !== -1) return -1;
+          if (indexB !== -1) return 1;
+          
+          return labelA.localeCompare(labelB);
         });
         
-        if (Array.isArray(templateResponse) && templateResponse.length > 0) {
-          const templates = templateResponse
-            .map(template => ({
-              value: String(template.sTemplateID || '').trim(),
-              label: String(template.sTemplateName || '').trim()
-            }))
-            .filter(template => template.value && template.label && template.value !== 'undefined');
-          
-          const order = ['QC', 'Calibration', 'Method Development', 'Project'];
-          const sortedTemplates = templates.sort((a, b) => {
-            const labelA = a.label || '';
-            const labelB = b.label || '';
-            
-            const indexA = order.findIndex(pattern => labelA.includes(pattern));
-            const indexB = order.findIndex(pattern => labelB.includes(pattern));
-            
-            if (indexA !== -1 && indexB !== -1) {
-              return indexA - indexB;
-            }
-            
-            if (indexA !== -1) return -1;
-            if (indexB !== -1) return 1;
-            
-            return labelA.localeCompare(labelB);
-          });
-          
-          setTemplateOptions(sortedTemplates);
-          
-          if (sortedTemplates.length > 0) {
-            const firstTemplateValue = sortedTemplates[0].value;
-            setFormData(prev => ({ ...prev, template: firstTemplateValue }));
-          }
-        }
+        setTemplateOptions(sortedTemplates);
         
-        await loadClients();
-        initialLoadDoneRef.current = true;
-        
-      } catch (error) {
-        // Silent error handling
-      } finally {
-        setIsLoading(false);
+        // ✅ CRITICAL FIX: DO NOT auto-select template
+        // Template should be:
+        // 1. Empty until user selects it OR
+        // 2. Set from backend if instrument is already locked
+        // REMOVED: 
+        // if (sortedTemplates.length > 0) {
+        //   const firstTemplateValue = sortedTemplates[0].value;
+        //   setFormData(prev => ({ ...prev, template: firstTemplateValue }));
+        // }
       }
-    };
-    
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    if (formData.template && formData.instrument) {
-      fetchTags(formData.template, formData.instrument);
-    } else {
-      setTags([]);
+      
+      await loadClients();
+      initialLoadDoneRef.current = true;
+      
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [formData.template, formData.instrument, fetchTags]);
+  };
+  
+  loadData();
+}, []);
+
+// ============================================================================
+// FIX #2: Template-Based Tag Loading - Check for Valid Template
+// ============================================================================
+
+useEffect(() => {
+  // This will trigger when template is set from loadInstruments or handleInstrumentChange
+  if (formData.template && formData.template.trim() !== '' && formData.instrument) {
+    console.log('Loading tags for template:', formData.template, 'instrument:', formData.instrument);
+    fetchTags(formData.template, formData.instrument);
+  } else {
+    setTags([]);
+  }
+}, [formData.template, formData.instrument, fetchTags]);
 
   const handleClientChange = useCallback(async (value) => {
     setFormData(prev => ({ ...prev, client: value, instrument: '', path: '', fileName: '', limsOrder: '' }));
@@ -1376,75 +1495,108 @@ const InstrumentLockTag = ({ scheduleData }) => {
   }, [loadInstruments]);
 
   const handleInstrumentChange = useCallback(async (value) => {
-    setIsLoading(true);
-    
-    setFormData(prev => ({ 
-      ...prev, 
-      instrument: value, 
-      path: '', 
-      fileName: '', 
-      limsOrder: '',
-      mergeFileCount: getSessionValue("MergeCount") || '1',
-      currentFileCount: '0'
-    }));
-    setErrors(prev => ({ ...prev, instrument: false }));
-    
-    setPathOptions([]);
-    setTags([]);
-    setTagErrors({});
-    
-    if (value) {
-      try {
-        const isInterface = isInterfaceInstrument(value);
+  setIsLoading(true);
+  
+  // ✅ CRITICAL FIX: Reset template when instrument changes
+  setFormData(prev => ({ 
+    ...prev, 
+    instrument: value, 
+    path: '', 
+    fileName: '', 
+    limsOrder: '',
+    limsOrderID: '',
+    limsSampleID: '',
+    limsTestCode: '',
+    limsReplicateID: '',
+    mergeFileCount: getSessionValue("MergeCount") || '1',
+    currentFileCount: '0'
+  }));
+  setErrors(prev => ({ ...prev, instrument: false }));
+  
+  setPathOptions([]);
+  
+  // ✅ CRITICAL FIX: Clear tags and errors when instrument changes
+  setTags([]);
+  setTagErrors({});
+  
+  if (value) {
+    try {
+      const isInterface = isInterfaceInstrument(value);
+      
+      await loadProtocol(value);
+      
+      if (isInterface) {
+        const interfaceInstId = value.includes(':') ? 
+          parseInt(value.split(':')[1].trim()) : 0;
         
-        await loadProtocol(value);
-        
-        if (isInterface) {
-          const interfaceInstId = value.includes(':') ? 
-            parseInt(value.split(':')[1].trim()) : 0;
-          
-          if (interfaceInstId > 0) {
-            await loadLimsOrder(interfaceInstId);
-          }
-        } else {
-          setLimsOrderOptions([]);
-          setIsLimsOrderEnabled(false);
-          setFormData(prev => ({ ...prev, limsOrder: '' }));
+        if (interfaceInstId > 0) {
+          await loadLimsOrder(interfaceInstId);
         }
-        
-        const instrumentData = await onChangeInstrumentCombo(value);
-        
-        if (instrumentData) {
-          const updates = {};
-          
-          if (instrumentData.nCurMergeFileNo > 0) {
-            updates.currentFileCount = String(instrumentData.nCurMergeFileNo);
-          } else {
-            updates.currentFileCount = '0';
-          }
-          
-          const lockedMergeCount = getSessionValue("LockedMergeCount");
-          if (isLocked && lockedMergeCount) {
-            updates.mergeFileCount = lockedMergeCount;
-          } else {
-            updates.mergeFileCount = getSessionValue("MergeCount") || '1';
-          }
-          
-          setFormData(prev => ({ ...prev, ...updates }));
-        }
-        
-        await loadPaths(value);
-        
-        if (formData.template) {
-          fetchTags(formData.template, value);
-        }
-      } finally {
-        setIsLoading(false);
+      } else {
+        setLimsOrderOptions([]);
+        setIsLimsOrderEnabled(false);
+        setFormData(prev => ({ 
+          ...prev, 
+          limsOrder: '',
+          limsOrderID: '',
+          limsSampleID: '',
+          limsTestCode: '',
+          limsReplicateID: ''
+        }));
       }
-    } else {
+      
+      // ✅ CRITICAL FIX: Get instrument data which may include template
+      const instrumentData = await onChangeInstrumentCombo(value);
+      
+      if (instrumentData) {
+        const updates = {};
+        
+        if (instrumentData.nCurMergeFileNo > 0) {
+          updates.currentFileCount = String(instrumentData.nCurMergeFileNo);
+        } else {
+          updates.currentFileCount = '0';
+        }
+        
+        const lockedMergeCount = getSessionValue("LockedMergeCount");
+        if (isLocked && lockedMergeCount) {
+          updates.mergeFileCount = lockedMergeCount;
+        } else {
+          updates.mergeFileCount = getSessionValue("MergeCount") || '1';
+        }
+        
+// ✅ CRITICAL FIX: Set template from backend if instrument is locked
+if (instrumentData.sTemplateID && instrumentData.sTaskID) {
+  // Instrument is locked by user, use its template
+  updates.template = instrumentData.sTemplateID;
+}
+// ✅ NEW: If auto-locked, use first template (QC)
+else if (instrumentData.sLockType === 'A') {
+  if (templateOptions.length > 0) {
+    const firstTemplateValue = templateOptions[0].value;
+    updates.template = firstTemplateValue;
+    console.log('Auto-locked instrument - loading first template:', firstTemplateValue);
+  }
+}
+        // If instrument is not locked, template remains empty (set above)
+        
+        setFormData(prev => ({ ...prev, ...updates }));
+        
+        // ✅ If template was set from backend, tags will load via useEffect
+        // If template is empty, user must select it manually
+      }
+      
+      await loadPaths(value);
+      
+      // Note: Tags will be loaded automatically by useEffect when template is set
+      
+    } finally {
       setIsLoading(false);
     }
-  }, [loadPaths, formData.template, fetchTags, loadProtocol, loadLimsOrder, onChangeInstrumentCombo, isInterfaceInstrument, isLocked]);
+  } else {
+    setIsLoading(false);
+  }
+}, [loadPaths, loadProtocol, loadLimsOrder, onChangeInstrumentCombo, 
+    isInterfaceInstrument, isLocked, templateOptions, t]);
 
   useEffect(() => {
     if (formData.instrument) {
@@ -1476,14 +1628,15 @@ const InstrumentLockTag = ({ scheduleData }) => {
   }, []);
 
   const handleTemplateChange = useCallback((value) => {
-    setFormData(prev => ({ ...prev, template: value }));
-    setErrors(prev => ({ ...prev, template: false }));
-    
-    if (formData.instrument) {
-      setIsLoadingTags(true);
-      fetchTags(value, formData.instrument);
-    }
-  }, [formData.instrument, fetchTags]);
+  setFormData(prev => ({ ...prev, template: value }));
+  setErrors(prev => ({ ...prev, template: false }));
+  
+  // ✅ Clear tags and errors before loading new ones
+  setTags([]);
+  setTagErrors({});
+  
+  // Tags will be loaded by useEffect that watches formData.template
+}, []);
 
   const handleMergeCountChange = useCallback((value) => {
     const numValue = parseInt(value) || 0;
@@ -1503,64 +1656,67 @@ const InstrumentLockTag = ({ scheduleData }) => {
   }, [t]);
 
   const validateFormForLock = useCallback(() => {
-    const newErrors = {};
-    const newTagErrors = {};
-    let isValid = true;
-    
-    if (!formData.instrument) {
-      newErrors.instrument = true;
+  const newErrors = {};
+  const newTagErrors = {};
+  let isValid = true;
+  
+  if (!formData.instrument) {
+    newErrors.instrument = true;
+    isValid = false;
+  }
+  
+  if (!formData.path) {
+    newErrors.path = true;
+    isValid = false;
+  }
+  
+  // ✅ CRITICAL FIX: Validate that template is selected
+  if (!formData.template || formData.template.trim() === '') {
+    newErrors.template = true;
+    isValid = false;
+  }
+  
+  const isInterface = isInterfaceInstrument(formData.instrument);
+  
+  if (isInterface) {
+    if (isFileNameEnabled && !formData.fileName) {
+      newErrors.fileName = true;
       isValid = false;
     }
     
-    if (!formData.path) {
-      newErrors.path = true;
+    const mergeNum = parseInt(formData.mergeFileCount) || 0;
+    const currentNum = parseInt(formData.currentFileCount) || 0;
+    
+    if (mergeNum > 10000) {
+      newErrors.mergeFileCount = t('instrumentlocktag.mergecountexceed');
       isValid = false;
     }
     
-    if (!formData.template) {
-      newErrors.template = true;
+    if (mergeNum < currentNum) {
+      newErrors.mergeFileCount = t('instrumentlocktag.mergecountnotlessthancurrent', 
+        { count: formData.currentFileCount });
       isValid = false;
     }
     
-    const isInterface = isInterfaceInstrument(formData.instrument);
-    
-    if (isInterface) {
-      if (isFileNameEnabled && !formData.fileName) {
-        newErrors.fileName = true;
-        isValid = false;
-      }
-      
-      const mergeNum = parseInt(formData.mergeFileCount) || 0;
-      const currentNum = parseInt(formData.currentFileCount) || 0;
-      
-      if (mergeNum > 10000) {
-        newErrors.mergeFileCount = t('instrumentlocktag.mergecountexceed');
-        isValid = false;
-      }
-      
-      if (mergeNum < currentNum) {
-        newErrors.mergeFileCount = t('instrumentlocktag.mergecountnotlessthancurrent', { count: formData.currentFileCount });
-        isValid = false;
-      }
-      
-      if (isLimsOrderEnabled && !formData.limsOrder) {
-        newErrors.limsOrder = true;
-        isValid = false;
-      }
+    if (isLimsOrderEnabled && !formData.limsOrder) {
+      newErrors.limsOrder = true;
+      isValid = false;
     }
-    
-    for (let i = 0; i < tags.length; i++) {
-      if (tags[i].required && !tags[i].value) {
-        newTagErrors[i] = true;
-        isValid = false;
-      }
+  }
+  
+  // Validate required tags
+  for (let i = 0; i < tags.length; i++) {
+    if (tags[i].required && !tags[i].value) {
+      newTagErrors[i] = true;
+      isValid = false;
     }
-    
-    setErrors(newErrors);
-    setTagErrors(newTagErrors);
-    
-    return isValid;
-  }, [formData, tags, isFileNameEnabled, isLimsOrderEnabled, isInterfaceInstrument, t]);
+  }
+  
+  setErrors(newErrors);
+  setTagErrors(newTagErrors);
+  
+  return isValid;
+}, [formData, tags, isFileNameEnabled, isLimsOrderEnabled, isInterfaceInstrument, t]);
 
   const prepareLockData = useCallback((auditData = null, validationType = "CheckAndInsert") => {
     const activeUserDetails = getActiveUserDetails();
@@ -1761,32 +1917,50 @@ const InstrumentLockTag = ({ scheduleData }) => {
     }
   };
 
-  const handleUnlockSuccess = useCallback(async (result) => {
-    const successMessage = result?.oResObj?.sInformation || t('instrumentlocktag.instrumentunlockedsuccessfully');
-    const instrumentName = result?.oResObj?.sInstrument || t('label.instrument');
-    
-    setIsLocked(false);
-    setIsAutoLocked(false);
-    setLockedByOtherUser(false);
-    
-    setFormData(prev => ({
-      ...prev,
-      fileName: '',
-      mergeFileCount: getSessionValue("MergeCount") || '1',
-      currentFileCount: '0',
-      lockID: '',
-      interfaceOrderID: '',
-      unlockAfterCapture: false
-    }));
-    
-    setErrors({});
-    setTagErrors({});
-    
-    showErrorDialogMessage(
-      `${instrumentName} ${successMessage}`,
-      'success'
-    );
-  }, [t]);
+const handleUnlockSuccess = useCallback(async (result) => {
+  const successMessage = result?.oResObj?.sInformation || t('instrumentlocktag.instrumentunlockedsuccessfully');
+  const instrumentName = result?.oResObj?.sInstrument || t('label.instrument');
+  
+  setIsLocked(false);
+  setIsAutoLocked(false);
+  setLockedByOtherUser(false);
+  
+  // ✅ FIX: Keep the CURRENT template after unlock, just clear tag values
+  // Don't change to first template - keep the current one
+  const currentTemplate = formData.template;
+  
+  setFormData(prev => ({
+    ...prev,
+    fileName: '',
+    mergeFileCount: getSessionValue("MergeCount") || '1',
+    currentFileCount: '0',
+    lockID: '',
+    interfaceOrderID: '',
+    unlockAfterCapture: false,
+    limsOrder: '',
+    limsOrderID: '',
+    limsSampleID: '',
+    limsTestCode: '',
+    limsReplicateID: '',
+    template: currentTemplate // ✅ Keep current template instead of switching to first
+  }));
+  
+  setErrors({});
+  setTagErrors({});
+  
+  // ✅ Clear tag values but keep the tags structure
+  setTags(prev => prev.map(tag => ({
+    ...tag,
+    value: '',
+    valueID: '',
+    options: tag.tagID === 1 ? tag.options : [] // Keep options for first tag if any
+  })));
+  
+  showErrorDialogMessage(
+    `${instrumentName} ${successMessage}`,
+    'success'
+  );
+}, [t, formData.template]); // Add formData.template to dependencies
 
   const prepareUnlockData = useCallback((auditData = null, mergebreak = "true") => {
     const activeUserDetails = getActiveUserDetails();
@@ -2151,7 +2325,7 @@ const InstrumentLockTag = ({ scheduleData }) => {
         template: false,
         mergeCount: true,
         unlockCheckbox: true,
-        tags: true,
+        tags: false,
         lockButton: true,
         unlockButton: true
       };
@@ -2162,7 +2336,7 @@ const InstrumentLockTag = ({ scheduleData }) => {
         client: false,
         instrument: false,
         path: true,
-        limsOrder: true,
+        limsOrder: false,
         fileName: false,
         template: true,
         mergeCount: false,
@@ -2392,32 +2566,34 @@ const InstrumentLockTag = ({ scheduleData }) => {
       </div>
       
       <div className="flex justify-end gap-2 ml-4 mr-4 mt-3 pt-5 border-t border-gray-200">
-        <button
-          onClick={isLocked && !lockedByOtherUser ? handleUpdate : handleLock}
-          disabled={getFieldDisabledState.lockButton || showFullPageLoader}
-          className={`flex items-center gap-1 px-2.5 py-2 transition-all text-xs font-bold rounded shadow-xs whitespace-nowrap font-roboto
-            ${getFieldDisabledState.lockButton || showFullPageLoader
-              ? 'bg-[#2885fe7e] text-white cursor-not-allowed'
-              : 'bg-[#2883FE] text-white hover:bg-[#2883FE] hover:scale-90'}
-          `}
-        >
-          {isLocked && !lockedByOtherUser ? <UpdateIcon /> : <LockIcon />}
-          <span>{isLocked && !lockedByOtherUser ? t('button.update') : t('button.lock')}</span>
-        </button>
+  <button
+    onClick={isLocked && !lockedByOtherUser && !isAutoLocked ? handleUpdate : handleLock}
+    disabled={getFieldDisabledState.lockButton || showFullPageLoader}
+    className={`flex items-center gap-1 px-2.5 py-2 transition-all text-xs font-bold rounded shadow-xs whitespace-nowrap font-roboto
+      ${getFieldDisabledState.lockButton || showFullPageLoader
+        ? 'bg-[#2885fe7e] text-white cursor-not-allowed'
+        : 'bg-[#2883FE] text-white hover:bg-[#2883FE] hover:scale-90'}
+    `}
+  >
+    {isLocked && !lockedByOtherUser && !isAutoLocked ? <UpdateIcon /> : <LockIcon />}
+    <span>
+      {isLocked && !lockedByOtherUser && !isAutoLocked ? t('button.update') : t('button.lock')}
+    </span>
+  </button>
 
-        <button
-          onClick={handleUnlock}
-          disabled={getFieldDisabledState.unlockButton || showFullPageLoader}
-          className={`flex items-center gap-1 px-2.5 py-2 transition-all text-xs font-bold rounded shadow-xs whitespace-nowrap font-roboto
-            ${getFieldDisabledState.unlockButton || showFullPageLoader
-              ? 'bg-[#2885fe7e] text-white cursor-not-allowed'
-              : 'bg-[#2883FE] text-white hover:bg-[#2883FE] hover:scale-90'}
-          `}
-        >
-          <UnlockIcon />
-          <span>{t('button.unlock')}</span>
-        </button>
-      </div>
+  <button
+    onClick={handleUnlock}
+    disabled={getFieldDisabledState.unlockButton || showFullPageLoader}
+    className={`flex items-center gap-1 px-2.5 py-2 transition-all text-xs font-bold rounded shadow-xs whitespace-nowrap font-roboto
+      ${getFieldDisabledState.unlockButton || showFullPageLoader
+        ? 'bg-[#2885fe7e] text-white cursor-not-allowed'
+        : 'bg-[#2883FE] text-white hover:bg-[#2883FE] hover:scale-90'}
+    `}
+  >
+    <UnlockIcon />
+    <span>{t('button.unlock')}</span>
+  </button>
+</div>
 
       <AuditTrail
         isOpen={showAuditTrail}

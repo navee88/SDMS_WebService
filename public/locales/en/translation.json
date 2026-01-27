@@ -399,7 +399,7 @@
 		"instrumentupdated": "Instrument Updated",
 		"tagName": "Tag Name",
 		"tagValue": "Tag Value",
-		"noTagValue": "No Tag Values",
+		"noTagValue": "No Data to Display",
 		"interfacerinstrumentisnotconnected": "Interfacer Instrument is not connected. Are you sure that you want to proceed to lock the instrument?"
 	},
 	"scheduler": {

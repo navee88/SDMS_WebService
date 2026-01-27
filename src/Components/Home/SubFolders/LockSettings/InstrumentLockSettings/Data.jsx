@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshCw, FileText } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import * as XLSX from "xlsx";
-import { useInstrumentLock } from '../../../../../Context/InstrumentLockContext'; // ADD THIS IMPORT
+import { useInstrumentLock } from '../../../../../Context/InstrumentLockContext';
 
 // Components
 import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import Errordialog from "../../../../Layout/Common/Errordialog";
-import FullPageLoader from "../../../../Layout/Common/FullPageLoader"; // Added import
+import FullPageLoader from "../../../../Layout/Common/FullPageLoader";
 
 // Services
 import servicecall from '../../../../../Services/servicecall';
@@ -45,10 +45,6 @@ const FileViewer = ({ src }) => {
   useEffect(() => {
     if (!src) return;
 
-    setError(false);
-    setData(null);
-    setBlobUrl(null);
-
     const loadFile = async () => {
       try {
         const cleanSrc = src.split("#")[0].split("?")[0];
@@ -56,9 +52,6 @@ const FileViewer = ({ src }) => {
         
         try {
           decryptedUrl = CF_decrypt(cleanSrc);
-          if (!decryptedUrl || decryptedUrl === cleanSrc) {
-            decryptedUrl = cleanSrc;
-          }
         } catch {
           decryptedUrl = cleanSrc;
         }
@@ -112,11 +105,11 @@ const FileViewer = ({ src }) => {
     setData(text);
   };
 
-  if (!src) return <EmptyState message="No file selected" />;
-  if (error) return <EmptyState message="Unable to load file" />;
-  if (!blobUrl) return <EmptyState message="Loading file..." />;
+  if (!src) return null;
+  if (error) return null;
+  if (!blobUrl) return null;
 
-  // PDF - hide toolbar using embed tag
+  // PDF
   if (ext === "pdf") {
     return (
       <embed 
@@ -134,12 +127,32 @@ const FileViewer = ({ src }) => {
 
   // CSV / Excel Table
   if (["csv", "xls", "xlsx"].includes(ext) && data) {
-    return <TablePreview data={data} />;
+    return (
+      <div className="overflow-auto max-h-[200px] border border-gray-300">
+        <table className="w-full text-sm border-collapse">
+          <tbody>
+            {data.map((row, i) => (
+              <tr key={i}>
+                {row.map((cell, j) => (
+                  <td key={j} className="border border-gray-200 px-2 py-1">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   }
 
   // Text / XML / JSON
   if (["txt", "xml", "json"].includes(ext)) {
-    return <TextPreview content={data} />;
+    return (
+      <pre className="p-2 max-h-[200px] overflow-auto bg-white text-[13px] font-mono break-words">
+        {data}
+      </pre>
+    );
   }
 
   // Video
@@ -152,7 +165,7 @@ const FileViewer = ({ src }) => {
     return <audio controls src={blobUrl} className="w-full" />;
   }
 
-  // Fallback → Download ANY file
+  // Fallback
   return (
     <div className="flex items-center justify-center h-[200px]">
       <a href={blobUrl} download className="text-blue-600 underline">
@@ -162,46 +175,12 @@ const FileViewer = ({ src }) => {
   );
 };
 
-const TextPreview = ({ content }) => (
-  <pre className="p-2 max-h-[200px] overflow-auto bg-white text-[13px] font-mono break-words">
-    {content}
-  </pre>
-);
-
-const TablePreview = ({ data }) => (
-  <div className="overflow-auto max-h-[200px] border border-gray-300">
-    <table className="w-full text-sm border-collapse">
-      <tbody>
-        {data.map((row, i) => (
-          <tr key={i}>
-            {row.map((cell, j) => (
-              <td key={j} className="border border-gray-200 px-2 py-1">
-                {cell}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
-
-const EmptyState = ({ message }) => (
-  <div className="flex flex-col items-center justify-center h-[200px] text-gray-400 bg-white">
-  </div>
-);
-
-const PrimaryButton = ({ icon: Icon, label, disabled, onClick, className = "", variant = "primary", loading = false }) => {
-  const baseStyles = "flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed";
-  const variants = {
-    primary: "bg-[#f0f2f5] text-[#2883fe] ",
-  };
-  
+const PrimaryButton = ({ icon: Icon, label, disabled, onClick, className = "", loading = false }) => {
   return (
     <button
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${baseStyles} ${variants[variant]} ${className}`}
+      className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-[#f0f2f5] text-[#2883fe] ${className}`}
     >
       {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : Icon && <Icon className="w-4 h-4" />}
       <span>{label}</span>
@@ -213,7 +192,7 @@ const PrimaryButton = ({ icon: Icon, label, disabled, onClick, className = "", v
 
 export default function InstrumentDataPage() {
   const { t } = useTranslation();
-    const { navigationData, clearNavigationData } = useInstrumentLock(); // ADD THIS
+  const { navigationData, clearNavigationData } = useInstrumentLock();
   const { postData } = servicecall();
 
   // State management
@@ -225,7 +204,6 @@ export default function InstrumentDataPage() {
   const [selectedMergeRow, setSelectedMergeRow] = useState(null);
   const [selectedNullRow, setSelectedNullRow] = useState(null);
   const [fileViewerSrc, setFileViewerSrc] = useState("");
-  const [supportedExtensions, setSupportedExtensions] = useState([]);
   const [oldRawDataID, setOldRawDataID] = useState(" ");
   const [mergeDataContent, setMergeDataContent] = useState("");
   const [parsedData, setParsedData] = useState([]);
@@ -234,14 +212,21 @@ export default function InstrumentDataPage() {
   const [mergedFiles, setMergedFiles] = useState([]);
   const [fileInformation, setFileInformation] = useState([]);
   const [nullData, setNullData] = useState([]);
+  const [featureStatus, setFeatureStatus] = useState(false);
+  const [showInstrumentTags, setShowInstrumentTags] = useState(true);
   
-  // Full page loader state
+  // Auto-loaded data
+  const [autoSelectedFile, setAutoSelectedFile] = useState(null);
+  const [autoSelectedMergeRow, setAutoSelectedMergeRow] = useState(null);
+  const [autoLoadedMergeData, setAutoLoadedMergeData] = useState("");
+  const [autoLoadedFileTags, setAutoLoadedFileTags] = useState([]);
+  const [autoLoadedParsedData, setAutoLoadedParsedData] = useState([]);
+  
+  // Loaders
   const [fullPageLoading, setFullPageLoading] = useState(false);
-  
   const [isLoading, setIsLoading] = useState({
     template: false,
     instruments: false,
-    instrumentTags: false,
     mergedFiles: false,
     fileInformation: false,
     nullData: false,
@@ -251,23 +236,14 @@ export default function InstrumentDataPage() {
     parsedData: false
   });
   
-  const [featureStatus, setFeatureStatus] = useState(false);
-  const [showInstrumentTags, setShowInstrumentTags] = useState(true);
-  
+  // Dialogs
   const [infoDialog, setInfoDialog] = useState({
     open: false,
     message: "",
     type: "information"
   });
 
-  // Auto-loaded data
-  const [autoSelectedFile, setAutoSelectedFile] = useState(null);
-  const [autoSelectedMergeRow, setAutoSelectedMergeRow] = useState(null);
-  const [autoLoadedMergeData, setAutoLoadedMergeData] = useState("");
-  const [autoLoadedFileTags, setAutoLoadedFileTags] = useState([]);
-  const [autoLoadedParsedData, setAutoLoadedParsedData] = useState([]);
-
-  // Ref for auto-refresh timer
+  // Refs
   const autoRefreshTimerRef = useRef(null);
 
   // Dialog functions
@@ -279,14 +255,150 @@ export default function InstrumentDataPage() {
     setInfoDialog(prev => ({ ...prev, open: false }));
   }, []);
 
-  // Function to make API call
+  // API call wrapper
   const makeAPICall = useCallback(async (url, passObjDet) => {
     const userDetailsData = CF_activeUserdetails();
     const reqObj = { ...passObjDet, ...userDetailsData };
     return await postData(url, reqObj);
   }, [postData]);
 
-  // Auto-refresh for merge files
+  // Load merge file data
+  const loadMergeFileData = async (row, isAutoLoad = false) => {
+    setIsLoading(prev => ({ ...prev, mergeData: true }));
+    
+    try {
+      const passObjDet = {
+        nRawData: row.sRawDataID,
+        LockID: row.sLockID,
+        nSequenceNo: row.nSequenceNo,
+        nMergeFileCount: row.nMergeFileCount,
+        nInstrumentID: row.nInstrumentID
+      };
+      
+      const response = await makeAPICall("InstrumentLock/MergeFileDatas", passObjDet);
+      
+      if (response) {
+        if (response.NullDataStatus === "Created") {
+          showInfoDialog((response.CreatedList || "") + " " + (response.Message || ""), "warning");
+        } else {
+          let mergeContent = "";
+          if (response.MergeData) {
+            try {
+              mergeContent = atob(response.MergeData);
+            } catch {
+              mergeContent = response.MergeData;
+            }
+          } else if (response.InstData && Array.isArray(response.InstData)) {
+            const decodedData = response.InstData.map(item => 
+              item.sInstrumentData ? (() => { try { return atob(item.sInstrumentData); } catch { return item.sInstrumentData; } })() : item
+            );
+            mergeContent = decodedData.join('\n');
+          }
+          
+          if (oldRawDataID === row.sRawDataID || oldRawDataID === " ") {
+            setOldRawDataID(row.sRawDataID);
+            if (isAutoLoad) {
+              if (!autoLoadedMergeData) setAutoLoadedMergeData(mergeContent);
+            } else {
+              if (!mergeDataContent) setMergeDataContent(mergeContent);
+            }
+          } else {
+            setOldRawDataID(row.sRawDataID);
+            if (isAutoLoad) setAutoLoadedMergeData(mergeContent);
+            else setMergeDataContent(mergeContent);
+          }
+        }
+      }
+    } catch {
+      showInfoDialog("Failed to load merge file data", "information");
+    } finally {
+      setIsLoading(prev => ({ ...prev, mergeData: false }));
+    }
+  };
+
+  // Load file data
+  const loadFileData = async (file, isAutoLoad = false) => {
+    setFileViewerSrc("");
+    
+    try {
+      // Load file viewer
+      setIsLoading(prev => ({ ...prev, fileViewer: true }));
+      const passObjDet = {
+        sRecordNo: file.Reference,
+        sTaskID: file["Task ID"],
+        sUploadStatus: file["Upload Status"]?.trim(),
+        sBrowserURL: window.location.origin
+      };
+      
+      const viewerResponse = await makeAPICall("InstrumentLock/InterFaceInstrumentFileDownLoad", passObjDet);
+      
+      if (viewerResponse) {
+        if (viewerResponse.Rtn?.toLowerCase() === "failed") {
+          showInfoDialog(viewerResponse.Message || "Failed to load file", "warning");
+        } else if (viewerResponse.Rtn?.toLowerCase() === "success" && viewerResponse.ServerDataViewURL) {
+          let urlPath = viewerResponse.ServerDataViewURL;
+          if (!urlPath.includes('#')) urlPath += '#toolbar=0&navpanes=0';
+          setFileViewerSrc(urlPath);
+        }
+      }
+    } catch {
+      showInfoDialog("Failed to load file", "information");
+    } finally {
+      setIsLoading(prev => ({ ...prev, fileViewer: false }));
+    }
+    
+    // Load file tags
+    setIsLoading(prev => ({ ...prev, fileTags: true }));
+    try {
+      const passObjDet = {
+        sRecordNo: file.Reference,
+        sTaskID: file["Task ID"],
+        sFileName: file["File Name"]
+      };
+      
+      const tagsResponse = await makeAPICall("InstrumentLock/LoadCategoryValueForFiles", passObjDet);
+      
+      if (tagsResponse && Array.isArray(tagsResponse)) {
+        if (isAutoLoad) setAutoLoadedFileTags(tagsResponse);
+        else setFileTags(tagsResponse);
+      } else {
+        if (isAutoLoad) setAutoLoadedFileTags([]);
+        else setFileTags([]);
+      }
+    } catch {
+      if (isAutoLoad) setAutoLoadedFileTags([]);
+      else setFileTags([]);
+    } finally {
+      setIsLoading(prev => ({ ...prev, fileTags: false }));
+    }
+    
+    // Load parsed data
+    setIsLoading(prev => ({ ...prev, parsedData: true }));
+    try {
+      const passObjDet = {
+        sRecordNo: file.Reference,
+        sTaskID: file["Task ID"],
+        sFileName: file["File Name"]
+      };
+      
+      const parsedResponse = await makeAPICall("InstrumentLock/getParsedDataDetails", passObjDet);
+      
+      if (parsedResponse && Array.isArray(parsedResponse)) {
+        if (isAutoLoad) setAutoLoadedParsedData(parsedResponse);
+        else setParsedData(parsedResponse);
+      } else {
+        if (isAutoLoad) setAutoLoadedParsedData([]);
+        else setParsedData([]);
+      }
+    } catch {
+      if (isAutoLoad) setAutoLoadedParsedData([]);
+      else setParsedData([]);
+    } finally {
+      setIsLoading(prev => ({ ...prev, parsedData: false }));
+    }
+  };
+
+  // Timer management
   const setupAutoRefreshTimer = useCallback((mergeCount) => {
     if (autoRefreshTimerRef.current) {
       clearInterval(autoRefreshTimerRef.current);
@@ -313,22 +425,15 @@ export default function InstrumentDataPage() {
                 await loadMergeFileData(firstMergeRow, true);
               }
             }
-          } catch (error) {
-            console.error("Auto-refresh error:", error);
+          } catch {
+            // Silent fail for auto-refresh
           }
         }
       }, 1000);
     }
-  }, [selectedInstrument, instrument, selectedMergeRow, autoSelectedMergeRow, makeAPICall]);
+  }, [selectedInstrument, instrument, selectedMergeRow, autoSelectedMergeRow, makeAPICall, loadMergeFileData]);
 
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (autoRefreshTimerRef.current) {
-        clearInterval(autoRefreshTimerRef.current);
-      }
-    };
-  }, []);
+  // Load instrument data
   const loadInstrumentData = useCallback(async (instrumentData) => {
     if (!instrumentData || !instrumentData.originalItem) return;
     
@@ -382,7 +487,7 @@ export default function InstrumentDataPage() {
             setSelectedMergeRow(null);
             setAutoLoadedMergeData("");
           }
-        } catch (error) {
+        } catch {
           showInfoDialog("Failed to load merged files", "information");
           setMergedFiles([]);
           setAutoSelectedMergeRow(null);
@@ -425,7 +530,7 @@ export default function InstrumentDataPage() {
             setAutoLoadedFileTags([]);
             setAutoLoadedParsedData([]);
           }
-        } catch (error) {
+        } catch {
           setFileInformation([]);
           setAutoSelectedFile(null);
           setSelectedFile(null);
@@ -436,10 +541,21 @@ export default function InstrumentDataPage() {
         }
       }
 
-    } catch (error) {
+    } catch {
       showInfoDialog("Failed to load instrument data", "information");
     }
-  }, [makeAPICall, showInstrumentTags, showInfoDialog, setupAutoRefreshTimer]);
+  }, [makeAPICall, showInstrumentTags, showInfoDialog, setupAutoRefreshTimer, loadMergeFileData, loadFileData]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (autoRefreshTimerRef.current) {
+        clearInterval(autoRefreshTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Handle instrument change
   const handleInstrumentChange = useCallback(async (value) => {
     setFullPageLoading(true);
     
@@ -479,43 +595,29 @@ export default function InstrumentDataPage() {
     setFullPageLoading(false);
   }, [instruments, loadInstrumentData]);
 
+  // Navigation data handler
   useEffect(() => {
-  console.log('Navigation data changed:', navigationData);
-  console.log('Current instruments list:', instruments);
-  
-  if (navigationData.autoSelectInstrument && navigationData.instrumentId) {
-    // Clean the instrument ID for comparison
-    const targetInstrumentId = navigationData.instrumentId.trim();
-    console.log('Looking for instrument with ID:', targetInstrumentId);
-    
-    // Find the instrument in the list
-    const selectedInst = instruments.find(inst => {
-      const instId = inst.value || inst.originalItem?.sInstrumentID || '';
-      const cleanInstId = instId.toString().trim();
-      console.log('Comparing:', cleanInstId, 'with', targetInstrumentId);
-      return cleanInstId === targetInstrumentId;
-    });
-    
-    console.log('Found instrument:', selectedInst);
-    
-    if (selectedInst) {
-      // Use setTimeout to ensure component is fully mounted
-      const timer = setTimeout(() => {
-        console.log('Auto-selecting instrument:', selectedInst.value);
-        handleInstrumentChange(selectedInst.value);
-        // Clear navigation data after selection
-        clearNavigationData();
-      }, 100);
+    if (navigationData.autoSelectInstrument && navigationData.instrumentId) {
+      const targetInstrumentId = navigationData.instrumentId.trim();
+      const selectedInst = instruments.find(inst => {
+        const instId = inst.value || inst.originalItem?.sInstrumentID || '';
+        return instId.toString().trim() === targetInstrumentId;
+      });
       
-      return () => clearTimeout(timer);
-    } else {
-      console.log('Instrument not found in list');
-      clearNavigationData();
+      if (selectedInst) {
+        const timer = setTimeout(() => {
+          handleInstrumentChange(selectedInst.value);
+          clearNavigationData();
+        }, 100);
+        
+        return () => clearTimeout(timer);
+      } else {
+        clearNavigationData();
+      }
     }
-  }
-}, [navigationData, instruments, handleInstrumentChange, clearNavigationData]);
+  }, [navigationData, instruments, handleInstrumentChange, clearNavigationData]);
 
-  // 1. Fetch Template Validation on component mount with full page loader
+  // Initialize on mount
   useEffect(() => {
     const loadTemplateValidation = async () => {
       setIsLoading(prev => ({ ...prev, template: true }));
@@ -527,25 +629,11 @@ export default function InstrumentDataPage() {
           const status = data[0]?.L67Status ?? false;
           setFeatureStatus(status);
           setShowInstrumentTags(!status);
-          
-          let extensions = [];
-          if (data[1] && data[1].sFileExtensionList) {
-            extensions = data[1].sFileExtensionList.split(",").map(ext => ext.trim().toLowerCase());
-          }
-          
-          if (extensions.length > 0) {
-            setSupportedExtensions(extensions);
-          } else {
-            setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
-          }
-          
           await loadInstruments(status);
         } else {
-          setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
           showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
         }
-      } catch (error) {
-        setSupportedExtensions(["pdf", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png"]);
+      } catch {
         showInfoDialog("Failed to load template validation", "information");
       } finally {
         setIsLoading(prev => ({ ...prev, template: false }));
@@ -585,14 +673,13 @@ export default function InstrumentDataPage() {
         } else {
           setInstrument("");
           setSelectedInstrument(null);
-          setInstruments([]);
         }
       } else {
         setInstruments([]);
         setInstrument("");
         setSelectedInstrument(null);
       }
-    } catch (error) {
+    } catch {
       setInstruments([]);
       setInstrument("");
       setSelectedInstrument(null);
@@ -602,144 +689,7 @@ export default function InstrumentDataPage() {
     }
   };
 
-  
-
-  // Function to load merge file data
-  const loadMergeFileData = async (row, isAutoLoad = false) => {
-    setIsLoading(prev => ({ ...prev, mergeData: true }));
-    
-    try {
-      const passObjDet = {
-        nRawData: row.sRawDataID,
-        LockID: row.sLockID,
-        nSequenceNo: row.nSequenceNo,
-        nMergeFileCount: row.nMergeFileCount,
-        nInstrumentID: row.nInstrumentID
-      };
-      
-      const response = await makeAPICall("InstrumentLock/MergeFileDatas", passObjDet);
-      
-      if (response) {
-        if (response.NullDataStatus === "Created") {
-          showInfoDialog((response.CreatedList || "") + " " + (response.Message || ""), "warning");
-        } else {
-          let mergeContent = "";
-          if (response.MergeData) {
-            try {
-              mergeContent = atob(response.MergeData);
-            } catch {
-              mergeContent = response.MergeData;
-            }
-          } else if (response.InstData && Array.isArray(response.InstData)) {
-            const decodedData = response.InstData.map(item => 
-              item.sInstrumentData ? (() => { try { return atob(item.sInstrumentData); } catch { return item.sInstrumentData; } })() : item
-            );
-            mergeContent = decodedData.join('\n');
-          }
-          
-          if (oldRawDataID === row.sRawDataID || oldRawDataID === " ") {
-            setOldRawDataID(row.sRawDataID);
-            if (isAutoLoad) {
-              if (!autoLoadedMergeData) setAutoLoadedMergeData(mergeContent);
-            } else {
-              if (!mergeDataContent) setMergeDataContent(mergeContent);
-            }
-          } else {
-            setOldRawDataID(row.sRawDataID);
-            if (isAutoLoad) setAutoLoadedMergeData(mergeContent);
-            else setMergeDataContent(mergeContent);
-          }
-        }
-      }
-    } catch (error) {
-      showInfoDialog("Failed to load merge file data", "information");
-    } finally {
-      setIsLoading(prev => ({ ...prev, mergeData: false }));
-    }
-  };
-
-  // Function to load file data
-  const loadFileData = async (file, isAutoLoad = false) => {
-    setFileViewerSrc("");
-    
-    try {
-      // Load file viewer
-      setIsLoading(prev => ({ ...prev, fileViewer: true }));
-      const passObjDet = {
-        sRecordNo: file.Reference,
-        sTaskID: file["Task ID"],
-        sUploadStatus: file["Upload Status"]?.trim(),
-        sBrowserURL: window.location.origin
-      };
-      
-      const viewerResponse = await makeAPICall("InstrumentLock/InterFaceInstrumentFileDownLoad", passObjDet);
-      
-      if (viewerResponse) {
-        if (viewerResponse.Rtn?.toLowerCase() === "failed") {
-          showInfoDialog(viewerResponse.Message || "Failed to load file", "warning");
-        } else if (viewerResponse.Rtn?.toLowerCase() === "success" && viewerResponse.ServerDataViewURL) {
-          let urlPath = viewerResponse.ServerDataViewURL;
-          if (!urlPath.includes('#')) urlPath += '#toolbar=0&navpanes=0';
-          setFileViewerSrc(urlPath);
-        }
-      }
-    } catch (error) {
-      showInfoDialog("Failed to load file", "information");
-    } finally {
-      setIsLoading(prev => ({ ...prev, fileViewer: false }));
-    }
-    
-    // Load file tags
-    setIsLoading(prev => ({ ...prev, fileTags: true }));
-    try {
-      const passObjDet = {
-        sRecordNo: file.Reference,
-        sTaskID: file["Task ID"],
-        sFileName: file["File Name"]
-      };
-      
-      const tagsResponse = await makeAPICall("InstrumentLock/LoadCategoryValueForFiles", passObjDet);
-      
-      if (tagsResponse && Array.isArray(tagsResponse)) {
-        if (isAutoLoad) setAutoLoadedFileTags(tagsResponse);
-        else setFileTags(tagsResponse);
-      } else {
-        if (isAutoLoad) setAutoLoadedFileTags([]);
-        else setFileTags([]);
-      }
-    } catch (error) {
-      if (isAutoLoad) setAutoLoadedFileTags([]);
-      else setFileTags([]);
-    } finally {
-      setIsLoading(prev => ({ ...prev, fileTags: false }));
-    }
-    
-    // Load parsed data
-    setIsLoading(prev => ({ ...prev, parsedData: true }));
-    try {
-      const passObjDet = {
-        sRecordNo: file.Reference,
-        sTaskID: file["Task ID"],
-        sFileName: file["File Name"]
-      };
-      
-      const parsedResponse = await makeAPICall("InstrumentLock/getParsedDataDetails", passObjDet);
-      
-      if (parsedResponse && Array.isArray(parsedResponse)) {
-        if (isAutoLoad) setAutoLoadedParsedData(parsedResponse);
-        else setParsedData(parsedResponse);
-      } else {
-        if (isAutoLoad) setAutoLoadedParsedData([]);
-        else setParsedData([]);
-      }
-    } catch (error) {
-      if (isAutoLoad) setAutoLoadedParsedData([]);
-      else setParsedData([]);
-    } finally {
-      setIsLoading(prev => ({ ...prev, parsedData: false }));
-    }
-  };
-
+  // Refresh handlers
   const handleRefreshMergedFiles = useCallback(async () => {
     if (!selectedInstrument || !instrument) {
       showInfoDialog("Please select an instrument first", "information");
@@ -778,7 +728,7 @@ export default function InstrumentDataPage() {
         setSelectedMergeRow(null);
         setAutoLoadedMergeData("");
       }
-    } catch (error) {
+    } catch {
       showInfoDialog("Failed to refresh data", "information");
       setMergedFiles([]);
       setAutoSelectedMergeRow(null);
@@ -789,56 +739,6 @@ export default function InstrumentDataPage() {
       setFullPageLoading(false);
     }
   }, [selectedInstrument, instrument, makeAPICall, showInfoDialog, loadMergeFileData, setupAutoRefreshTimer]);
-
-  
-
-  // Load null data when tab changes to "null"
-  useEffect(() => {
-    const loadNullData = async () => {
-      if (tab === "null") {
-        if (!selectedInstrument) {
-          showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
-          return;
-        }
-        
-        if (selectedInstrument?.nInterInstrumentID && selectedInstrument?.sLockID) {
-          setIsLoading(prev => ({ ...prev, nullData: true }));
-          try {
-            const passObjDet = {
-              nInterfaceInstID: selectedInstrument.nInterInstrumentID,
-              sLockID: selectedInstrument.sLockID
-            };
-            
-            const nullDataResponse = await makeAPICall("InstrumentLock/FetchNullDataBasedOnInstrument", passObjDet);
-            if (nullDataResponse && Array.isArray(nullDataResponse)) setNullData(nullDataResponse);
-          } catch (error) {
-            showInfoDialog("Failed to load null data", "information");
-          } finally {
-            setIsLoading(prev => ({ ...prev, nullData: false }));
-          }
-        }
-      }
-    };
-
-    loadNullData();
-  }, [tab, selectedInstrument, makeAPICall, showInfoDialog, t]);
-
-  // Handle file selection
-  const handleFileSelect = useCallback(async (file) => {
-    setSelectedFile(file);
-    await loadFileData(file, false);
-  }, [loadFileData]);
-
-  // Handle merge row selection
-  const handleMergeRowSelect = useCallback(async (row) => {
-    setSelectedMergeRow(row);
-    await loadMergeFileData(row, false);
-  }, [loadMergeFileData]);
-
-  // Handle null data row selection
-  const handleNullRowSelect = useCallback((row) => {
-    setSelectedNullRow(row);
-  }, []);
 
   const handleRefreshFileInfo = useCallback(async () => {
     if (!selectedInstrument) {
@@ -877,7 +777,7 @@ export default function InstrumentDataPage() {
         setAutoLoadedFileTags([]);
         setAutoLoadedParsedData([]);
       }
-    } catch (error) {
+    } catch {
       showInfoDialog("Failed to refresh data", "information");
       setFileInformation([]);
       setAutoSelectedFile(null);
@@ -906,7 +806,7 @@ export default function InstrumentDataPage() {
       
       const nullDataResponse = await makeAPICall("InstrumentLock/FetchNullDataBasedOnInstrument", passObjDet);
       if (nullDataResponse && Array.isArray(nullDataResponse)) setNullData(nullDataResponse);
-    } catch (error) {
+    } catch {
       showInfoDialog("Failed to refresh data", "information");
     } finally {
       setIsLoading(prev => ({ ...prev, nullData: false }));
@@ -914,7 +814,52 @@ export default function InstrumentDataPage() {
     }
   }, [selectedInstrument, makeAPICall, showInfoDialog, t]);
 
-  // Handle null data acknowledgement
+  // Null data handler
+  useEffect(() => {
+    const loadNullData = async () => {
+      if (tab === "null") {
+        if (!selectedInstrument) {
+          showInfoDialog(t("instrumentlocktag.noinstrumentsfound") || "No instruments found", "information");
+          return;
+        }
+        
+        if (selectedInstrument?.nInterInstrumentID && selectedInstrument?.sLockID) {
+          setIsLoading(prev => ({ ...prev, nullData: true }));
+          try {
+            const passObjDet = {
+              nInterfaceInstID: selectedInstrument.nInterInstrumentID,
+              sLockID: selectedInstrument.sLockID
+            };
+            
+            const nullDataResponse = await makeAPICall("InstrumentLock/FetchNullDataBasedOnInstrument", passObjDet);
+            if (nullDataResponse && Array.isArray(nullDataResponse)) setNullData(nullDataResponse);
+          } catch {
+            showInfoDialog("Failed to load null data", "information");
+          } finally {
+            setIsLoading(prev => ({ ...prev, nullData: false }));
+          }
+        }
+      }
+    };
+
+    loadNullData();
+  }, [tab, selectedInstrument, makeAPICall, showInfoDialog, t]);
+
+  // Event handlers
+  const handleFileSelect = useCallback(async (file) => {
+    setSelectedFile(file);
+    await loadFileData(file, false);
+  }, [loadFileData]);
+
+  const handleMergeRowSelect = useCallback(async (row) => {
+    setSelectedMergeRow(row);
+    await loadMergeFileData(row, false);
+  }, [loadMergeFileData]);
+
+  const handleNullRowSelect = useCallback((row) => {
+    setSelectedNullRow(row);
+  }, []);
+
   const handleNullDataAcknowledgement = useCallback(async () => {
     if (!selectedNullRow) {
       showInfoDialog(t("instrumentlocktag.norecordsfound") || "No Records Found", "information");
@@ -938,14 +883,13 @@ export default function InstrumentDataPage() {
         handleRefreshNullData();
       }
       
-    } catch (error) {
+    } catch {
       showInfoDialog("Failed to acknowledge null data", "information");
     } finally {
       setFullPageLoading(false);
     }
   }, [makeAPICall, selectedNullRow, showInfoDialog, t, handleRefreshNullData]);
 
-  // Handle tab change
   const handleTabChange = useCallback((newTab) => {
     setTab(newTab);
     setSelectedNullRow(null);
@@ -955,7 +899,7 @@ export default function InstrumentDataPage() {
     }
   }, [selectedInstrument, showInfoDialog, t]);
 
-  // Format parsed data for InfoBox
+  // Data formatters
   const formattedParsedData = useMemo(() => {
     const dataToUse = parsedData.length > 0 ? parsedData : autoLoadedParsedData;
     return (dataToUse || []).map(item => {
@@ -977,18 +921,15 @@ export default function InstrumentDataPage() {
     });
   }, [parsedData, autoLoadedParsedData]);
 
-  // Format file tags for InfoBox
   const formattedFileTags = useMemo(() => {
     const tagsToUse = fileTags.length > 0 ? fileTags : autoLoadedFileTags;
     return (tagsToUse || []).map(tag => ({ Category: tag.Category || "", Value: tag.Value || "" }));
   }, [fileTags, autoLoadedFileTags]);
 
-  // Format instrument tags for InfoBox
   const formattedInstrumentTags = useMemo(() => {
     return (instrumentTags || []).map(tag => ({ Category: tag.Category || "", Value: tag.Value || "" }));
   }, [instrumentTags]);
 
-  // Determine which merge data to display
   const displayedMergeData = useMemo(() => mergeDataContent || autoLoadedMergeData, [mergeDataContent, autoLoadedMergeData]);
 
   // Column definitions
@@ -1114,18 +1055,14 @@ export default function InstrumentDataPage() {
     }
   ], [t]);
 
-  // Format data for grids
+  // Grid data
   const mergeRows = useMemo(() => (mergedFiles || []).map((item, index) => ({ ...item, id: item.sRawDataID || `merge-${index}` })), [mergedFiles]);
   const nullRows = useMemo(() => (nullData || []).map((item, index) => ({ ...item, id: item.sRawDataID || `null-${index}` })), [nullData]);
   const files = useMemo(() => (fileInformation || []).map((item, index) => ({ ...item, id: item.Reference || `file-${index}` })), [fileInformation]);
 
   return (
     <div className="font-roboto flex flex-col space-y-2 px-4 relative">
-      {/* Full Page Loader */}
-      <FullPageLoader 
-        loading={fullPageLoading} 
-        text="Loading data..." 
-      />
+      <FullPageLoader loading={fullPageLoading} text="Loading data..." />
       
       {infoDialog.open && <Errordialog message={infoDialog.message} type={infoDialog.type} onClose={closeInfoDialog} />}
       
@@ -1186,7 +1123,7 @@ export default function InstrumentDataPage() {
                 loading={isLoading.mergedFiles}
               />
             </div>
-            <div className=" overflow-hidden -m-2">
+            <div className="overflow-hidden -m-2">
               <GridLayout
                 columns={mergeColumns}
                 data={mergeRows}
@@ -1204,7 +1141,6 @@ export default function InstrumentDataPage() {
               <PrimaryButton 
                 label={t("instrumentlocktag.proceedacknowledgement")}
                 onClick={handleNullDataAcknowledgement}
-                variant="primary"
               />
               <PrimaryButton 
                 icon={RefreshCw}
@@ -1213,7 +1149,7 @@ export default function InstrumentDataPage() {
                 loading={isLoading.nullData}
               />
             </div>
-            <div className="overflow-hidden  -m-2">
+            <div className="overflow-hidden -m-2">
               <GridLayout
                 columns={nullDataColumns}
                 data={nullRows}
@@ -1289,7 +1225,7 @@ export default function InstrumentDataPage() {
       {/* File Raw Data Viewer */}
       <div className="mb-4">
         <h3 className="text-xs font-bold text-[#4a6fa5] mb-2">{t("instrumentlocktag.filerawdata")}</h3>
-        <div className="bg-white min-h-[200px] ">
+        <div className="bg-white min-h-[200px]">
           <FileViewer src={fileViewerSrc} />
         </div>
       </div>
