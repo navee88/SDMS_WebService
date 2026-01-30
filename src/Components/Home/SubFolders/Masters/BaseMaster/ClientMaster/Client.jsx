@@ -567,6 +567,7 @@ const handleExport = () => {
         renderDetailPanel={renderDetailPanel}
         getRowClassName={(row) => (row.id === selectedRowId ? "font-bold" : "")}
         onRowClick={(row) => setSelectedRowId(row.id)}
+        externalSelectedId={selectedRowId}
       />
       </div>
 

@@ -494,6 +494,7 @@ const buildExportRequest = () => ({
           renderDetailPanel={() =>
             selectedRow ? renderDetailPanel(selectedRow) : null
           }
+          externalSelectedId={selectedRowId}
         />
       </div>
 
