@@ -8,7 +8,6 @@ import AddInstrumentModal from "../InstrumentMaster/AddInstrumentModal";
 import { useTranslation } from "react-i18next";
 import FullPageLoader from "../../../../../Layout/Common/FullPageLoader";
 
-
 const AddClientModal = ({
   initialData,
   allInstruments = [],
@@ -16,19 +15,15 @@ const AddClientModal = ({
   onSubmit,
   onReloadUnmapped,
 }) => {
-
   const nodeRef = useRef(null);
 
   const [submitted, setSubmitted] = useState(false);
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-const [loadingText, setLoadingText] = useState("");
-
+  const [loadingText, setLoadingText] = useState("");
 
   const { postData } = useAxios();
-
-
 
   const getSessionValue = (key) => {
     const value = sessionStorage.getItem(key);
@@ -78,10 +73,10 @@ const [loadingText, setLoadingText] = useState("");
 
   const [clientTypes, setClientTypes] = useState([]);
   const [instrumentSearch, setInstrumentSearch] = useState("");
-   const [selectedInstruments, setSelectedInstruments] = useState(
-  initialData?.selectedInstruments || []
-);
-const [unmappedInstruments, setUnmappedInstruments] = useState([]);
+  const [selectedInstruments, setSelectedInstruments] = useState(
+    initialData?.selectedInstruments || [],
+  );
+  const [unmappedInstruments, setUnmappedInstruments] = useState([]);
 
   const isAddMode = !initialData;
 
@@ -93,7 +88,7 @@ const [unmappedInstruments, setUnmappedInstruments] = useState([]);
         setLoadingText(t("common.loading"));
         const response = await postData(
           "basemaster/getClientMasterType",
-          buildClientRequest()
+          buildClientRequest(),
         );
 
         if (Array.isArray(response)) {
@@ -110,7 +105,7 @@ const [unmappedInstruments, setUnmappedInstruments] = useState([]);
         }
       } catch (err) {
         console.error("Error fetching client types:", err);
-      }finally {
+      } finally {
         setLoading(false);
         setLoadingText("");
       }
@@ -125,13 +120,18 @@ const [unmappedInstruments, setUnmappedInstruments] = useState([]);
     }
   }, [initialData]);
 
+  const [instrumentList, setInstrumentList] = useState(allInstruments);
+
+  useEffect(() => {
+    setInstrumentList(allInstruments);
+  }, [allInstruments]);
   const filteredInstruments = useMemo(() => {
-    return allInstruments.filter((inst) =>
+    return instrumentList.filter((inst) =>
       inst.sInstrumentName
         .toLowerCase()
-        .includes(instrumentSearch.toLowerCase())
+        .includes(instrumentSearch.toLowerCase()),
     );
-  }, [instrumentSearch, allInstruments]);
+  }, [instrumentSearch, instrumentList]);
 
   const handleSubmit = () => {
     setSubmitted(true);
@@ -140,7 +140,7 @@ const [unmappedInstruments, setUnmappedInstruments] = useState([]);
       return;
     }
     const selectedClientType = clientTypes.find(
-      (ct) => ct.name === form.clientType
+      (ct) => ct.name === form.clientType,
     );
 
     onSubmit({
@@ -156,25 +156,23 @@ const [unmappedInstruments, setUnmappedInstruments] = useState([]);
     setSubmitted(false);
     onClose();
   };
-useEffect(() => {
-  if (initialData) {
-    const unmapped = allInstruments
-      .filter(
-        (inst) =>
-          !initialData.selectedInstruments?.some(
-            (sel) => sel.sInstrumentID === inst.sInstrumentID
-          )
-      )
-      .map((i) => ({
-        sInstrumentID: i.sInstrumentID.trim(),
-        sInstrumentName: i.sInstrumentName.split("(")[0].trim(),
-      }));
+  useEffect(() => {
+    if (initialData) {
+      const unmapped = allInstruments
+        .filter(
+          (inst) =>
+            !initialData.selectedInstruments?.some(
+              (sel) => sel.sInstrumentID === inst.sInstrumentID,
+            ),
+        )
+        .map((i) => ({
+          sInstrumentID: i.sInstrumentID.trim(),
+          sInstrumentName: i.sInstrumentName.split("(")[0].trim(),
+        }));
 
-    setUnmappedInstruments(unmapped);
-  }
-}, [initialData, allInstruments]);
-
-
+      setUnmappedInstruments(unmapped);
+    }
+  }, [initialData, allInstruments]);
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 ">
@@ -207,7 +205,8 @@ useEffect(() => {
             <div className="w-[300px] space-y-4">
               <div>
                 <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  {t("label.clientName")}<span className="text-red-500">*</span>
+                  {t("label.clientName")}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -227,7 +226,8 @@ useEffect(() => {
 
               <div>
                 <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  {t("masters.clientaliasname")} <span className="text-red-500">*</span>
+                  {t("masters.clientaliasname")}{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -248,7 +248,8 @@ useEffect(() => {
               <AnimatedDropdown
                 label={
                   <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                    {t("masters.clienttype")} <span className="text-red-500">*</span>
+                    {t("masters.clienttype")}{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                 }
                 name="clientType"
@@ -264,7 +265,7 @@ useEffect(() => {
             {/* CHECKBOXES */}
             <div className="flex gap-12 ">
               <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
-               {t("statuses.active")}
+                {t("statuses.active")}
                 <input
                   type="checkbox"
                   checked={form.active}
@@ -321,18 +322,18 @@ useEffect(() => {
                         <input
                           type="checkbox"
                           checked={selectedInstruments.some(
-                            (i) => i.sInstrumentID === inst.sInstrumentID
+                            (i) => i.sInstrumentID === inst.sInstrumentID,
                           )}
                           onChange={() =>
                             setSelectedInstruments((prev) =>
                               prev.some(
-                                (i) => i.sInstrumentID === inst.sInstrumentID
+                                (i) => i.sInstrumentID === inst.sInstrumentID,
                               )
                                 ? prev.filter(
                                     (i) =>
-                                      i.sInstrumentID !== inst.sInstrumentID
+                                      i.sInstrumentID !== inst.sInstrumentID,
                                   )
-                                : [...prev, inst]
+                                : [...prev, inst],
                             )
                           }
                         />
@@ -375,17 +376,17 @@ useEffect(() => {
         <AddInstrumentModal
           isOpen={showInstrumentModal}
           onClose={() => setShowInstrumentModal(false)}
-          clientId = {initialData?.id}
+          clientId={initialData?.id}
           onSave={async () => {
-    setShowInstrumentModal(false);
+            setShowInstrumentModal(false);
 
-    // 🔥 RELOAD FROM API (source of truth)
-    if (onReloadUnmapped) {
-      await onReloadUnmapped();
-    }
-  }}
-  setLoading={setLoading}
-  setLoadingText={setLoadingText}
+            if (onReloadUnmapped) {
+              const updated = await onReloadUnmapped();
+              setInstrumentList(updated); // 🔥 IMMEDIATE UI UPDATE
+            }
+          }}
+          setLoading={setLoading}
+          setLoadingText={setLoadingText}
         />
       )}
     </div>
