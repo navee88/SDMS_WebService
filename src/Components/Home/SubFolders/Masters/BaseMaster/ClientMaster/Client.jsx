@@ -166,17 +166,20 @@ const Client = () => {
     );
 
     if (Array.isArray(response)) {
-      setUnmappedInstruments(
-        response.map((inst) => ({
-          sInstrumentID: inst.sInstrumentID.trim(),
-          sInstrumentName: inst.sInstrumentName.trim(),
-        }))
-      );
+      const mapped = response.map((inst) => ({
+        sInstrumentID: inst.sInstrumentID.trim(),
+        sInstrumentName: inst.sInstrumentName.trim(),
+      }));
+
+      setUnmappedInstruments(mapped);
+      return mapped; // 🔥 IMPORTANT
     }
   } catch (err) {
-    console.error("Error fetching unmapped instruments:", err);
+    console.error(err);
+    return [];
   }
 }, [postData, buildClientRequest]);
+
 
   useEffect(() => {
   loadUnmappedInstruments();
