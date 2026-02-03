@@ -1,90 +1,280 @@
+// export const BDC_BindChildGrid = (data) => {
+//   if (!data || !Array.isArray(data) || data.length === 0) {
+//     return { columns: [], formattedData: [] };
+//   }
+
+//   const dateFields = [
+//       "TransactionDate", "screatedtimestamp", "UpLoad Date", 
+//       "sCreatedOn", "CreatedOn", "RefTimestamp", "CaptureDate"
+//   ];
+
+//   const firstRow = data[0];
+//   const dynamicColumns = Object.keys(firstRow).map((key) => {
+//     const isDate = dateFields.includes(key);
+    
+//     return {
+//       key: key,            
+//       label: key,          
+//       width: 150,          
+//       isDate: isDate,      
+//       sortable: true
+//     };
+//   });
+
+//   const formattedData = data.map((row, index) => ({
+//     ...row,
+//     _gridId: row.sServerID || row.id || `row-${index}` 
+//   }));
+
+//   return { 
+//       columns: dynamicColumns, 
+//       formattedData: formattedData 
+//   };
+// };
+
+
+// Common/GridHelpers.js (or wherever you keep this)
+
 export const BDC_BindChildGrid = (data) => {
-  // 1. Handle Empty Data safely
   if (!data || !Array.isArray(data) || data.length === 0) {
     return { columns: [], formattedData: [] };
   }
 
-  // 2. Identify Date Fields (Add more if needed)
   const dateFields = [
       "TransactionDate", "screatedtimestamp", "UpLoad Date", 
-      "sCreatedOn", "CreatedOn", "RefTimestamp", "CaptureDate"
+      "sCreatedOn", "CreatedOn", "RefTimestamp", "CaptureDate", "dCreatedOn", "dModifiedOn"
   ];
 
-  // 3. Generate Columns Dynamically from the first row
   const firstRow = data[0];
+  
+  // Create generic columns from data keys
   const dynamicColumns = Object.keys(firstRow).map((key) => {
     const isDate = dateFields.includes(key);
     
+    // Hide ID columns by default if needed, or keep them visible
+    const isHidden = key.toLowerCase().includes("id") && key !== "sServerID"; 
+
     return {
-      key: key,            // Field name for access
-      label: key,          // Header text
-      width: 150,          // Default width
-      isDate: isDate,      // For date formatting in UI
-      sortable: true
+      key: key,            
+      label: key, // You might want a helper to format "sServerName" -> "Server Name"          
+      width: 150,          
+      isDate: isDate,      
+      sortable: true,
+      hidden: isHidden // Optional: hide technical ID columns
     };
   });
 
-  // 4. Create Unique IDs for React (Polyfill)
   const formattedData = data.map((row, index) => ({
     ...row,
-    // Try to find a unique ID, otherwise use index
-    _gridId: row.sServerID || row.id || `row-${index}` 
+    // Added sFTPID here because your Edit logic likely needs it
+    _gridId: row.sFTPID || row.sServerID || row.id || `row-${index}` 
   }));
 
-  // 5. Return the package expected by the Component
   return { 
       columns: dynamicColumns, 
       formattedData: formattedData 
   };
 };
 
+// export const BDC_BindChildCombobox = (data, config = {}) => {
+//   if (!data || !Array.isArray(data) || data.length === 0) {
+//     return { 
+//         options: [], 
+//         defaultSelected: null, 
+//         hasData: false 
+//     };
+//   }
+
+//   const firstRow = data[0];
+//   const keys = Object.keys(firstRow);
+//   const findKey = (patterns) => keys.find(k => patterns.some(p => new RegExp(p, 'i').test(k)));
+
+//   const labelKey = config.labelKey || 
+//                    findKey(['name', 'desc', 'text', 'description', 'label', 'alias']) || 
+//                    keys[1] || 
+//                    keys[0];  
+
+//   const valueKey = config.valueKey || 
+//                    findKey(['id', 'code', 'value', 'key']) || 
+//                    keys[0];   
+
+//   const formattedOptions = data.map((row, index) => {
+//     return {
+//       ...row,                         
+//       label: String(row[labelKey]),   
+//       value: row[valueKey],           
+//       _key: `opt-${index}`            
+//     };
+//   });
+
+//   const defaultSelected = formattedOptions.length > 0 ? formattedOptions[0].value : null;
+
+//   return { 
+//       options: formattedOptions, 
+//       defaultSelected: defaultSelected,
+//       hasData: true 
+//   };
+// };
+
 
 export const BDC_BindChildCombobox = (data, config = {}) => {
-  // 1. Handle Empty/Null Data safely
   if (!data || !Array.isArray(data) || data.length === 0) {
-    return { 
-        options: [], 
-        defaultSelected: null, 
-        hasData: false 
+    return {
+      options: [],
+      defaultSelected: null,
+      hasData: false,
     };
   }
 
-  // 2. Identify Label and Value keys dynamically
-  // We check the first row to detect keys if they aren't provided in config.
-  const firstRow = data[0];
+  const MAX_SAFE_OPTIONS = 4000; // ← prevent memory + render explosion
+
+  let workingData = data;
+  let isTruncated = false;
+
+  if (data.length > MAX_SAFE_OPTIONS) {
+    workingData = data.slice(0, MAX_SAFE_OPTIONS);
+    isTruncated = true;
+    console.warn(
+      `BDC_BindChildCombobox: Truncated from ${data.length} to ${MAX_SAFE_OPTIONS} items`
+    );
+  }
+
+  const firstRow = workingData[0];
+  if (!firstRow || typeof firstRow !== 'object') {
+    return { options: [], defaultSelected: null, hasData: false };
+  }
+
   const keys = Object.keys(firstRow);
 
-  // Helper regex matcher
-  const findKey = (patterns) => keys.find(k => patterns.some(p => new RegExp(p, 'i').test(k)));
+  const findBestKey = (patterns) =>
+    keys.find(k => patterns.some(p => new RegExp(p, 'i').test(k)));
 
-  // Strategy: Config -> Common Patterns -> Fallback Indices
-  const labelKey = config.labelKey || 
-                   findKey(['name', 'desc', 'text', 'description', 'label', 'alias']) || 
-                   keys[1] || // Fallback to 2nd column (often name)
-                   keys[0];   // Fallback to 1st column
+  // More patterns = more chance to find something meaningful
+  const labelKey =
+    config.labelKey ||
+    findBestKey([
+      'name', 'description', 'desc', 'text', 'label', 'alias', 'title',
+      'display', 'fullname', 'displayname', 'sname'
+    ]) ||
+    keys[1] ||
+    keys[0];
 
-  const valueKey = config.valueKey || 
-                   findKey(['id', 'code', 'value', 'key']) || 
-                   keys[0];   // Fallback to 1st column (often ID)
+  const valueKey =
+    config.valueKey ||
+    findBestKey([
+      'id', 'code', 'value', 'key', 'uuid', 'number', 'no',
+      'sno', 'sid', 'scode', 'userid'
+    ]) ||
+    keys[0];
 
-  // 3. Map Data to Standardized Format
-  const formattedOptions = data.map((row, index) => {
+  const formattedOptions = workingData.map((row, index) => {
+    let label = row[labelKey];
+
+    // Very defensive label fallback
+    if (label === undefined || label === null || label === '') {
+      label = row[valueKey] ?? `Item ${index + 1}`;
+    }
+
     return {
-      ...row,                         // Keep original data accessible
-      label: String(row[labelKey]),   // Standardized UI label
-      value: row[valueKey],           // Standardized Logic value
-      _key: `opt-${index}`            // React-friendly unique key
+      ...row, // keep original data for later use
+      label: String(label),
+      value: row[valueKey] ?? `auto-val-${index}`,
+      _key: `opt-${index}`,
     };
   });
 
-  // 4. Determine Default Selection
-  // Mimics legacy logic: `selectedIndex: 0` if data exists
-  const defaultSelected = formattedOptions.length > 0 ? formattedOptions[0].value : null;
-
-  // 5. Return the package
-  return { 
-      options: formattedOptions, 
-      defaultSelected: defaultSelected,
-      hasData: true 
+  return {
+    options: formattedOptions,
+    defaultSelected: formattedOptions.length > 0 ? formattedOptions[0].value : null,
+    hasData: formattedOptions.length > 0,
+    truncated: isTruncated,
+    originalCount: data.length,     // useful for UI warning: "Showing first 4000 of 12000"
   };
+};
+
+
+
+// export function buildTreeData(data, {
+//   idKey = "id",
+//   parentKey = "parentid",
+//   textKey = "text"
+// } = {}) {
+
+//   if (!Array.isArray(data) || data.length === 0) return [];
+
+//   const map = {};
+//   const tree = [];
+
+//   // Create lookup map
+//   data.forEach(item => {
+//     map[item[idKey]] = {
+//       label: item[textKey],
+//       value: item[idKey],
+//       items: []
+//     };
+//   });
+
+//   // Build hierarchy
+//   data.forEach(item => {
+//     const parentId = item[parentKey];
+//     if (parentId && map[parentId]) {
+//       map[parentId].items.push(map[item[idKey]]);
+//     } else {
+//       tree.push(map[item[idKey]]);
+//     }
+//   });
+
+//   return tree;
+// }
+
+
+export const BDC_BindChildTree = ({
+  dataResponse,
+  treeRef,
+  textField = "text",
+  idField = "id",
+  parentField = "parentid",
+  autoSelect = false,
+  onClearChild
+}) => {
+
+  if (!treeRef?.current) return;
+
+  if (!Array.isArray(dataResponse) || dataResponse.length === 0) {
+    treeRef.current.clear();
+    onClearChild?.();
+    return;
+  }
+
+  const map = Object.create(null);
+  const treeData = [];
+
+  for (let i = 0; i < dataResponse.length; i++) {
+    const item = dataResponse[i];
+    map[item[idField]] = {
+      label: item[textField],
+      value: item[idField],
+      items: []
+    };
+  }
+
+  for (let i = 0; i < dataResponse.length; i++) {
+    const item = dataResponse[i];
+    const parentId = item[parentField];
+
+    if (parentId != null && map[parentId]) {
+      map[parentId].items.push(map[item[idField]]);
+    } else {
+      treeData.push(map[item[idField]]);
+    }
+  }
+
+  treeRef.current.source(treeData);
+
+  if (autoSelect) {
+    const items = treeRef.current.getItems();
+    if (items?.length) {
+      treeRef.current.selectItem(items[0]);
+    }
+  }
 };
