@@ -31,6 +31,7 @@ export default function ViewDownloadConfiguration() {
   const [showPrint, setShowPrint] = useState(false); // ✅ ADD THIS
   const [pendingAction, setPendingAction] = useState(null); // ACTIVE / INACTIVE
   const [showConfirm, setShowConfirm] = useState(false);
+  const [errorDialogType, setErrorDialogType] = useState("warning"); // or "information"
 
   /* ---------- AUDIT POPUP ---------- */
   const [showAudit, setShowAudit] = useState(false);
@@ -196,6 +197,7 @@ export default function ViewDownloadConfiguration() {
   const handlePrint = () => {
     if (!data || data.length === 0) {
       setErrorMessage(t("errormsg.noresultsfound"));
+      setErrorDialogType("information")
       setShowErrorDialog(true);
       return;
     }
@@ -266,37 +268,38 @@ export default function ViewDownloadConfiguration() {
   const handleAction = (action) => {
     console.log("action",action)
     if (!selectedRow) {
-      setErrorMessage(t("errormsg.incompletedatafields"));
-      setShowErrorDialog(true);
-      return;
-    }
+                setErrorMessage(t("masters.selectrecord"));
+                setErrorDialogType("information")
+                setShowErrorDialog(true);
+                return;
+              }
 
     // Already Active
     if (action === "ACTIVE" && selectedRow.taskStatus === "active") {
-      setErrorMessage(t("masters.alreadyactivewarning"));
+      setErrorMessage(t("scheduler.downloadschedulealreadyactivestatus"));
       setShowErrorDialog(true);
       return;
     }
 
     // Already Deactive
     if (action === "INACTIVE" && selectedRow.taskStatus === "deactive") {
-      setErrorMessage(t("masters.alreadydeactivewarning"));
+      setErrorMessage(t("scheduler.downloadschedulealreadydeactivestatus"));
       setShowErrorDialog(true);
       return;
     }
   
     if (action === "ACTIVE"  && selectedRow.taskStatus === "retire") {
-  setErrorMessage(t("masters.retiredschedulercannotbeactivated"));
+  setErrorMessage(t("scheduler.selecteddownloadscheduleisretiredsoitcannotbeactivated"));
   setShowErrorDialog(true);
   return;
 }
 if (action === "INACTIVE"  && selectedRow.taskStatus === "retire") {
-  setErrorMessage(t("masters.retiredschedulercannotbedeactivated"));
+  setErrorMessage(t("scheduler.selecteddownloadscheduleisretiredsoitcannotbedeactivated"));
   setShowErrorDialog(true);
   return;
 }
 if (action === "RETIRE" && selectedRow.taskStatus === "retire") {
-  setErrorMessage(t("masters.alreadyretiredwarning"));
+  setErrorMessage(t("scheduler.downloadscheduleralreadyinretiredstatus"));
   setShowErrorDialog(true);
   return;
 }
@@ -492,7 +495,7 @@ if (response?.Rtn === "Success") {
             label={t("button.view")}
             onClick={() => {
               if (!selectedRow) {
-                setErrorMessage(t("errormsg.incompletedatafields"));
+                setErrorMessage(t("masters.selectrecord"));
                 setShowErrorDialog(true);
                 return;
               }
@@ -551,7 +554,7 @@ if (response?.Rtn === "Success") {
         {/* ERROR DIALOG */}
         {showErrorDialog && (
           <Errordialog
-            type="warning"
+            type={errorDialogType}
             message={errorMessage}
             onClose={() => setShowErrorDialog(false)}
           />
@@ -560,8 +563,8 @@ if (response?.Rtn === "Success") {
           <PrintTable
             columns={columns}
             rows={data}
-            title="Download Configuration"
-            subtitle="View Download Scheduler"
+            title={t("scheduler.downloadscheduler")}
+            subtitle={t("scheduler.viewdownloadscheduler")}
             printRequest={printRequest}
             onDone={() => setShowPrint(false)}
           />
@@ -571,11 +574,11 @@ if (response?.Rtn === "Success") {
             type="confirmation"
             message={
   pendingAction === "ACTIVE"
-    ? t("Are you sure you want to activate this task?")
+    ? t("scheduler.confirmActivate")
     : pendingAction === "INACTIVE"
-    ? t("Are you sure you want to deactivate this task?")
+    ? t("scheduler.confirmDeactivate")
     : pendingAction === "RETIRE"
-    ? t("Are you sure you want to retire this task?")
+    ? t("scheduler.confirmRetire")
     : ""
 }
 

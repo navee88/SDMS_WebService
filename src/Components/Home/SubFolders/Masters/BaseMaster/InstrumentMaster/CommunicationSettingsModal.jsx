@@ -3,7 +3,7 @@ import Draggable from "react-draggable";
 import { FiCheckSquare } from "react-icons/fi";
 import AnimatedDropdown from "../../../../../Layout/Common/AnimatedDropdown";
 import Errordialog from "../../../../../Layout/Common/Errordialog";
-
+import { useTranslation } from "react-i18next";
 const CommunicationSettingsModal = ({
   isOpen,
   onClose,
@@ -92,8 +92,8 @@ const CommunicationSettingsModal = ({
         return {};
     }
   };
-
-  // Helper function to check if field is required based on communication type
+  const { t } = useTranslation();
+  
   const isFieldRequiredForCommType = (fieldName, commType) => {
     switch (commType) {
       case 1: // RS232
@@ -275,7 +275,7 @@ const CommunicationSettingsModal = ({
         handShake: 1,
         terminationIdle: "5",
         resultSampleIdFrom: "IFACER",
-        conversionType: 0, // Changed from 1 to 0
+        conversionType: 1, // Changed from 1 to 0
       };
 
       setForm(clearedForm);
@@ -384,7 +384,8 @@ const CommunicationSettingsModal = ({
                 className="text-[#0e5bca] text-[18px]"
                 style={{ fontFamily: "Helvetica Neue, Arial, sans-serif" }}
               >
-                Communication Settings
+                {t("masters.commsettings")}
+
               </label>
               <button onClick={handleClose} className="text-gray-400 text-xl">
                 ×
@@ -396,7 +397,7 @@ const CommunicationSettingsModal = ({
               {/* Common Fields */}
               <div>
                 <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  Comm. Type
+                  {t("masters.commtype")}
                 </label>
                 <AnimatedDropdown
                   name="commType"
@@ -413,7 +414,7 @@ const CommunicationSettingsModal = ({
                 <>
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      Parity
+                      {t("masters.parity")}
                     </label>
                     <AnimatedDropdown
                       name="parity"
@@ -427,7 +428,7 @@ const CommunicationSettingsModal = ({
                   </div>
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      IP Address
+                      {t("masters.ipaddress")}
                     </label>
                     <input
                       name="ip"
@@ -442,7 +443,7 @@ const CommunicationSettingsModal = ({
                   </div>
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      Stop Bits
+                      {t("masters.stopbits")}
                     </label>
                     <AnimatedDropdown
                       name="stopBits"
@@ -456,7 +457,7 @@ const CommunicationSettingsModal = ({
                   </div>
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      TCP Port Number
+                      {t("masters.tcpportnumber")}
                     </label>
                     <input
                       name="tcp"
@@ -471,7 +472,7 @@ const CommunicationSettingsModal = ({
                   </div>
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      Data Bits
+                      {t("masters.databits")}
                     </label>
                     <input
                       name="dataBits"
@@ -487,7 +488,7 @@ const CommunicationSettingsModal = ({
 
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      COM Port Number
+                      {t("masters.comportnumber")}
                     </label>
                     <input
                       name="com"
@@ -502,7 +503,7 @@ const CommunicationSettingsModal = ({
                   </div>
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      Hand Shake
+                      {t("masters.handshake")}
                     </label>
                     <AnimatedDropdown
                       name="handShake"
@@ -517,7 +518,7 @@ const CommunicationSettingsModal = ({
 
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      Baud Rate
+                      {t("masters.baudrate")}
                     </label>
                     <input
                       name="baud"
@@ -538,7 +539,7 @@ const CommunicationSettingsModal = ({
                 <>
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      Channel Number
+                      {t("masters.channelnumber")}
                     </label>
                     <input
                       name="channelNumber"
@@ -553,7 +554,7 @@ const CommunicationSettingsModal = ({
                   </div>
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      IP Address
+                      {t("masters.ipaddress")}
                     </label>
                     <input
                       name="ip"
@@ -568,7 +569,7 @@ const CommunicationSettingsModal = ({
                   </div>
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      Minimum Data Point
+                      {t("masters.minimumdatapoint")}
                     </label>
                     <input
                       name="minDataPoint"
@@ -584,7 +585,7 @@ const CommunicationSettingsModal = ({
 
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      TCP Port Number
+                      {t("masters.tcpportnumber")}
                     </label>
                     <input
                       name="tcp"
@@ -599,7 +600,7 @@ const CommunicationSettingsModal = ({
                   </div>
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      Maximum Data Point
+                      {t("masters.maximumdatapoint")}
                     </label>
                     <input
                       name="maxDataPoint"
@@ -615,7 +616,7 @@ const CommunicationSettingsModal = ({
 
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      Minimum Current
+                      {t("masters.minimumcurrent")}
                     </label>
                     <input
                       name="minCurrent"
@@ -630,7 +631,7 @@ const CommunicationSettingsModal = ({
                   </div>
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      Conversion Type
+                      {t("masters.conversiontype")}
                     </label>
                     <AnimatedDropdown
                       name="conversionType"
@@ -644,7 +645,7 @@ const CommunicationSettingsModal = ({
                   </div>
                   <div>
                     <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                      Maximum Current
+                      {t("masters.maximumcurrent")}
                     </label>
                     <input
                       name="maxCurrent"
@@ -663,7 +664,7 @@ const CommunicationSettingsModal = ({
               {/* Common Termination Field */}
               <div>
                 <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  Termination Idle Seconds
+                  {t("masters.terminationidlesecs")}
                 </label>
                 <input
                   name="terminationIdle"
@@ -679,7 +680,7 @@ const CommunicationSettingsModal = ({
               {showResultSampleId && (
                 <div>
                   <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                    Result Sample ID From
+                    {t("masters.resultsampleidfrom")}
                   </label>
                   <AnimatedDropdown
                     name="resultSampleIdFrom"
@@ -702,14 +703,14 @@ const CommunicationSettingsModal = ({
                 className="bg-[#2883fe] text-white px-4 py-1 rounded text-[12px] font-bold flex items-center gap-1"
               >
                 <FiCheckSquare />
-                Submit
+                {t("button.submit")}
               </button>
 
               <button
                 onClick={handleClose}
                 className="border px-4 py-1 rounded text-[12px]"
               >
-                Close
+                {t("button.close")}
               </button>
             </div>
           </div>

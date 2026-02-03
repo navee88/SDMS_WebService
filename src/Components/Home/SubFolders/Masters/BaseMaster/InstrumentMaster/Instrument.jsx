@@ -517,7 +517,7 @@ const buildExportRequest = () => ({
     columns={columns}
     rows={rows}
     title={t("masters.instrumentmaster")}
-    subtitle={t("masters.viewinstrumentconfigurationreport")}
+    subtitle={t("masters.instrumentdata")}
     printRequest={buildPrintRequest()}
     onDone={() => setDoPrint(false)}
   />
@@ -536,7 +536,7 @@ const buildExportRequest = () => ({
 
 {isConfirmOpen && rowToRetire && (
   <Errordialog
-    message={t("masters.retireconfirmation")}
+    message={t("masters.doyouwanttoretiretheinstrument")}
     type="confirmation"
     showCancel={true}
     onClose={() => {

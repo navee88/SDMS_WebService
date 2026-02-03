@@ -7,7 +7,6 @@ import { TiExport } from "react-icons/ti";
 import { MdPrint } from "react-icons/md";
 import { FaRegCircleCheck } from "react-icons/fa6";
 import { FaCheck } from "react-icons/fa";
-import * as XLSX from "xlsx";
 import useAxios from "../../../../../Services/servicecall";
 import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
 import GridLayout from "../../../../Layout/Common/Home/Grid/GridLayout";
@@ -18,34 +17,6 @@ import { useTranslation } from "react-i18next";
 import { handleExportCommon } from "../../../../Layout/Common/exportService";
 import AuditTrail from "../../../../Layout/Common/AuditTrail";
 import FullPageLoader from "../../../../Layout/Common/FullPageLoader";
-
-
-/* ------------------ MOCK DATA ------------------ */
-const gridData = [
-  {
-    id: 1,
-    fileName: "sample_report_001.pdf",
-    clientName: "AGD54",
-    sourcePath: "D:\\SDMS\\files\\sample_report_001.pdf",
-    uploadOn: "2025-12-01",
-    modifiedOn: "2025-12-05",
-    deletedOn: "2025-12-18",
-    fileVersion: "v1.0",
-    authorized: false,
-  },
-  {
-    id: 2,
-    fileName: "analysis_data.xlsx",
-    clientName: "AGD55",
-    sourcePath: "D:\\SDMS\\files\\analysis_data.xlsx",
-    uploadOn: "2025-11-20",
-    modifiedOn: "2025-11-22",
-    deletedOn: "2025-12-10",
-    fileVersion: "v2.1",
-    authorized: true,
-  },
-];
-
 /* ------------------ HELPERS ------------------ */
 const formatDate = (date) => date.toISOString().split("T")[0];
 const todayStr = formatDate(new Date());
@@ -65,6 +36,11 @@ export default function ServerFileDeleteScheduler() {
     message: "",
     onConfirm: null,
   });
+  const [infoDialog, setInfoDialog] = useState({
+      open: false,
+      message: "",
+      type: "information", // information | warning | error
+    });
   const [showAuditTrail, setShowAuditTrail] = useState(false);
   const [externalSelectedId, setExternalSelectedId] = useState(null);
 
@@ -73,7 +49,7 @@ export default function ServerFileDeleteScheduler() {
   const [client, setClient] = useState(""); // CLIENT ID
   const selectedClient = clientOptions.find((opt) => opt.value === client);
 
-  const [duration, setDuration] = useState("Current Date");
+  const [duration, setDuration] = useState(t("label.currentDate"));
   const [selectedRow, setSelectedRow] = useState(gridData[0]);
 
   const [customFrom, setCustomFrom] = useState("");
@@ -153,6 +129,20 @@ export default function ServerFileDeleteScheduler() {
     loadClientAndGrid();
     callAuditTrail();
   }, []);
+   const handleApiResponse = (response) => {
+    if (!response || response.Rtn !== "Success") {
+      setInfoDialog({
+        open: true,
+        message:
+          response?.Message?.sInstrumentName ||
+          response?.Message ||
+          t("common.operationfailed"),
+        type: response?.Rtn || "Error",
+      });
+      return false; // ⛔ stop caller flow
+    }
+    return true; // ✅ success
+  };
 
   /* ------------------ GRID COLUMNS ------------------ */
   const columns = useMemo(
@@ -171,7 +161,7 @@ export default function ServerFileDeleteScheduler() {
       },
       {
         key: "fileName",
-        label: t("label.fileName"),
+        label: t("instrumentlocktag.filename"),
         width: 270,
         enableSearch: true,
         render: (row) => (
@@ -243,9 +233,9 @@ export default function ServerFileDeleteScheduler() {
       ],
       HeaderDetails: [
         t("label.select"),
-        t("label.fileName"),
+        t("instrumentlocktag.filename"),
         t("label.clientName"),
-        t("label.sourcePath"),
+        t("scheduler.sourcepath"),
         t("label.uploadOn"),
         t("label.deletionmarkedon"),
         t("label.versionNo"),
@@ -260,13 +250,13 @@ export default function ServerFileDeleteScheduler() {
     let fromDate = new Date(today);
 
     switch (duration) {
-      case "Last 7 Days":
+      case t("label.last7Days"):
         fromDate.setDate(today.getDate() - 7);
         break;
-      case "Last 30 Days":
+      case t("label.last30Days"):
         fromDate.setDate(today.getDate() - 30);
         break;
-      case "Last 1 Year":
+      case t("label.last1Year"):
         fromDate.setFullYear(today.getFullYear() - 1);
         break;
       default:
@@ -279,7 +269,7 @@ export default function ServerFileDeleteScheduler() {
     };
   };
 
-  const isCustomDate = duration === "Custom Date";
+  const isCustomDate = duration === t("label.customDate");
   const autoDates = getFromToDates(duration);
   const from = isCustomDate ? customFrom : autoDates.from;
   const to = isCustomDate ? customTo : autoDates.to;
@@ -360,7 +350,18 @@ const handleFilter = () => {
   });
   };
   /* ------------------ SELECT ALL ------------------ */
+    const isAllSelected =
+  filteredData.length > 0 &&
+  filteredData.every((row) => row.selected);
   const handleSelectAll = () => {
+    if (!selectedRow) {
+      setInfoDialog({
+        open: true,
+        message: t("errormsg.noresultsfound"),
+        type: "information",
+      });
+      return;
+    }
     const allSelected = filteredData.every((r) => r.selected);
     const updatedData = filteredData.map((r) => ({
       ...r,
@@ -372,7 +373,14 @@ const handleFilter = () => {
   /* ------------------ AUTHORIZE ------------------ */
   const handleAuthorize = () => {
     const selectedRows = filteredData.filter((row) => row.selected);
-    if (selectedRows.length === 0) return;
+    if (!selectedRow) {
+      setInfoDialog({
+        open: true,
+        message: t("masters.selectrecord"),
+        type: "information",
+      });
+      return;
+    }
     setShowAuditTrail(true);
   };
   const handleAuditSubmit = async (auditData) => {
@@ -406,6 +414,7 @@ const handleFilter = () => {
         setFilteredData(remaining);
         setSelectedRow(remaining[0] || null);
       }
+      if (!handleApiResponse(response)) return;
     } catch (err) {
       console.error("Authorization failed", err);
     } finally {
@@ -417,7 +426,7 @@ const handleFilter = () => {
   /* ------------------ DETAILS PANEL ------------------ */
   const DetailsPanel = ({ row }) => (
     <div className=" text-[12px] space-y-3">
-      <Detail label={t("label.sourcePath")} value={row?.sourcePath} />
+      <Detail label={t("scheduler.sourcepath")} value={row?.sourcePath} />
       <Detail label={t("label.uploadOn")} value={row?.uploadOn} />
       <Detail label={t("label.deletionmarkedon")} value={row?.deletedOn} />
       <Detail label={t("label.versionNo")} value={row?.fileVersion} />
@@ -454,16 +463,16 @@ const handleFilter = () => {
                 <AnimatedDropdown
                   value={duration}
                   options={[
-                    "Current Date",
-                    "Last 7 Days",
-                    "Last 30 Days",
-                    "Last 1 Year",
-                    "Custom Date",
+                    t("label.currentDate"),
+                    t("label.last7Days"),
+                    t("label.last30Days"),
+                    t("label.last1Year"),
+                    t("label.customDate"),
                   ]}
                   onChange={(e) => {
                     const val = e.target.value;
                     setDuration(val);
-                    if (val === "Custom Date") {
+                    if (val === t("label.customDate")) {
                       setCustomFrom(todayStr);
                       setCustomTo(todayStr);
                     } else {
@@ -536,7 +545,11 @@ const handleFilter = () => {
       <div className="flex justify-end gap-2 p-4 pb-0">
         <ActionButton
           icon={FaCheck}
-          label={t("usermanagement.selectall")}
+          label={
+            isAllSelected
+              ? t("scheduler.unselectall")
+              : t("usermanagement.selectall")
+          }
           onClick={handleSelectAll}
         />
         <ActionButton
@@ -550,20 +563,22 @@ const handleFilter = () => {
           onClick={handlePrint}
         />
         <ActionButton
-          icon={TiExport}
-          label={t("button.export")}
-          onClick={() =>
-            handleExportCommon({
-              rows: filteredData,
-              buildRequest: buildExportRequest,
-              postData,
-              setLoading: () => {},
-              setLoadingText: () => {},
-              setErrorDialog: setDialog,
-              t,
-            })
-          }
-        />
+  icon={TiExport}
+  label={t("button.export")}
+  onClick={() =>
+    handleExportCommon({
+      rows: filteredData,
+      buildRequest: buildExportRequest,
+      postData,
+      setLoading: () => {},
+      setLoadingText: () => {},
+    setErrorDialog: setDialog,
+     setErrorDialog: setInfoDialog, // ✅ FIX
+      t,
+    })
+  }
+/>
+
       </div>
           <FullPageLoader loading={loading} text={t("common.loading")}/>
       <GridLayout
@@ -582,8 +597,8 @@ const handleFilter = () => {
 
       {showPrint && (
         <PrintTable
-          title="Server File Delete Scheduler"
-          subtitle="Files Pending Deletion"
+          title={t("scheduler.serverfiledeletescheduler")}
+          subtitle={t("scheduler.filespendingdeletion")}
           columns={columns}
           rows={filteredData}
           printRequest={buildPrintRequest()}
@@ -605,6 +620,13 @@ const handleFilter = () => {
           onClose={() => setShowDialog(false)}
         />
       )}
+      {infoDialog.open && (
+                    <Errordialog
+                      type="information"
+                      message={infoDialog.message}
+                      onClose={() => setInfoDialog({ open: false, message: "" })}
+                    />
+                  )}
     </div>
   );
 }

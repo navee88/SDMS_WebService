@@ -8,15 +8,13 @@ const EditParserKeyModal = ({
   onClose,
   onSave,
   initialData = null,
-  isMethodSetupContext
+  isMethodSetupContext,
 }) => {
-
   const { t } = useTranslation();
   const nodeRef = useRef(null);
   const [submitted, setSubmitted] = useState(false);
   const [apiError, setApiError] = useState("");
 
-  
   const initialForm = {
     elnMethodName: "",
     parsingKey: "",
@@ -31,40 +29,35 @@ const EditParserKeyModal = ({
         elnMethodName: initialData.elnmethodname || "",
         parsingKey: initialData.parsingkey || "",
         usePdfToCsv: initialData.usePdfToCsv === "CSV",
-
       });
     }
   }, [isOpen, initialData]);
 
-const handleClose = () => {
-  setSubmitted(false);
-  setApiError("");
-  setForm(initialForm);
-  onClose();
-};
+  const handleClose = () => {
+    setSubmitted(false);
+    setApiError("");
+    setForm(initialForm);
+    onClose();
+  };
 
+  const handleSubmit = () => {
+    setSubmitted(true);
+    setApiError("");
 
-const handleSubmit = () => {
-  setSubmitted(true);
-  setApiError("");
-
-  onSave(
-    {
-      ...form,
-      parsingKey: form.parsingKey?.trim() || ""
-    },
-    setApiError,
-    onClose
-  );
-};
-
-
+    onSave(
+      {
+        ...form,
+        parsingKey: form.parsingKey?.trim() || "",
+      },
+      setApiError,
+      onClose,
+    );
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-start justify-center pt-10 z-50">
-
       <Draggable nodeRef={nodeRef} handle=".modal-header" bounds="parent">
         <div
           ref={nodeRef}
@@ -76,7 +69,7 @@ const handleSubmit = () => {
               className="text-[#0e5bca] text-[18px]"
               style={{ fontFamily: "Helvetica Neue, Arial, sans-serif" }}
             >
-              Edit Parser Key
+              {t("scheduler.editparserkey")}
             </label>
             <button
               onClick={handleClose}
@@ -92,25 +85,25 @@ const handleSubmit = () => {
               {/* ELN Method Name */}
               <div>
                 <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  ELN Method Name
+                  {t("scheduler.elnmethodname")}
                   <span className="text-red-500">*</span>
                 </label>
                 <input
-  type="text"
-  name="elnMethodName"
-  value={form.elnMethodName}
-  disabled
-  className={`
+                  type="text"
+                  name="elnMethodName"
+                  value={form.elnMethodName}
+                  disabled
+                  className={`
     w-full bg-gray-100 pb-1 text-[12px] font-semibold outline-none
     border-b-2 border-gray-300 cursor-not-allowed
   `}
-/>
+                />
               </div>
 
               {/* Parsing Key */}
               <div>
                 <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                  Parsing Key
+                  {t("scheduler.parsingkey")}
                   <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -123,40 +116,36 @@ const handleSubmit = () => {
                   className="
                     w-full bg-transparent pb-1 text-[12px] font-semibold outline-none
                     border-b-2 border-gray-300"
-                    
                 />
                 {apiError && (
-  <div className="text-[11px] flex text-red-600 font-roboto mt-1">
-   The Parser Key is already active for instrument → Group → Method: {apiError}
-  </div>
-)}
-
+                  <div className="text-[11px] flex text-red-600 font-roboto mt-1">
+                    {t("scheduler.parserkeyerror")} {apiError}
+                  </div>
+                )}
               </div>
 
               {/* Use PDF to CSV Checkbox */}
               <div className="flex items-center gap-2">
-               
                 <label
                   htmlFor="usePdfToCsv"
                   className="text-[#405f7d] text-[12px] font-bold font-roboto"
                 >
-                  Use PDF to CSV
+                  {t("scheduler.usepdftocsv")}
                 </label>
                 <input
-  type="checkbox"
-  id="usePdfToCsv"
-  checked={form.usePdfToCsv}
-  disabled={!isMethodSetupContext}
-  onChange={(e) =>
-    setForm({ ...form, usePdfToCsv: e.target.checked })
-  }
-  className={`w-4 h-4 cursor-not-allowed  ${
-    !isMethodSetupContext
-      ? "cursor-not-allowed  opacity-100"
-      : "cursor-pointer"
-  }`}
-/>
-
+                  type="checkbox"
+                  id="usePdfToCsv"
+                  checked={form.usePdfToCsv}
+                  disabled={!isMethodSetupContext}
+                  onChange={(e) =>
+                    setForm({ ...form, usePdfToCsv: e.target.checked })
+                  }
+                  className={`w-4 h-4 cursor-not-allowed  ${
+                    !isMethodSetupContext
+                      ? "cursor-not-allowed  opacity-100"
+                      : "cursor-pointer"
+                  }`}
+                />
               </div>
             </div>
           </div>
@@ -168,14 +157,14 @@ const handleSubmit = () => {
               className="flex items-center gap-1 px-[12px] text-white py-[6px] rounded text-[11px] font-bold shadow-sm bg-[#2883fe]"
             >
               <FiCheckSquare className="w-4 h-4" />
-              Submit
+              {t("button.submit")}
             </button>
 
             <button
               onClick={handleClose}
               className="border px-[12px] py-[6px] rounded text-[11px] text-[#8092a4] font-bold"
             >
-              Close
+              {t("button.close")}
             </button>
           </div>
         </div>

@@ -22,7 +22,7 @@ export const handleExportCommon = async ({
   }
   try {
     setLoading(true);
-    setLoadingText(t("scheduler.loading"));
+    setLoadingText(t("common.loading"));
 
 
     const requestPayload = buildRequest();

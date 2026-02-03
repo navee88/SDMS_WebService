@@ -40,9 +40,14 @@ export default function LocalFileDeleteScheduler() {
     message: "",
     onConfirm: null,
   });
+   const [infoDialog, setInfoDialog] = useState({
+      open: false,
+      message: "",
+      type: "information", // information | warning | error
+    });
   const [showAuditTrail, setShowAuditTrail] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
-  const [duration, setDuration] = useState("Current Date");
+  const [duration, setDuration] = useState(t("label.currentDate"));
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [dialogMessage, setDialogMessage] = useState("");
@@ -128,7 +133,7 @@ export default function LocalFileDeleteScheduler() {
       },
       {
         key: "fileName",
-        label: t("label.fileName"),
+        label: t("instrumentlocktag.filename"),
         width: 270,
         enableSearch: true,
         render: (row) => (
@@ -197,7 +202,7 @@ export default function LocalFileDeleteScheduler() {
       ],
       HeaderDetails: [
         t("label.select"),
-        t("label.fileName"),
+        t("instrumentlocktag.filename"),
         t("label.clientName"),
         t("label.sourcePath"),
         t("label.uploadOn"),
@@ -214,14 +219,30 @@ export default function LocalFileDeleteScheduler() {
     ...CF_activeUserdetails(),
   });
   const handlePrint = () => {
-    if (!filteredData || filteredData.length === 0) {
-      setDialogMessage(t("errormsg.noresultsfound"));
-      setDialogType("information");
-      setShowDialog(true);
+    if (!selectedRow) {
+      setInfoDialog({
+        open: true,
+        message: t("errormsg.noresultsfound"),
+        type: "information",
+      });
       return;
     }
 
     setShowPrint(true);
+  };
+   const handleApiResponse = (response) => {
+    if (!response || response.Rtn !== "Success") {
+      setInfoDialog({
+        open: true,
+        message:
+          response?.Message?.sInstrumentName ||
+          response?.Message ||
+          t("common.operationfailed"),
+        type: response?.Rtn || "Error",
+      });
+      return false; // ⛔ stop caller flow
+    }
+    return true; // ✅ success
   };
 
   const getFromToDates = (duration) => {
@@ -229,13 +250,13 @@ export default function LocalFileDeleteScheduler() {
     let fromDate = new Date(today);
 
     switch (duration) {
-      case "Last 7 Days":
+      case t("label.last7Days"):
         fromDate.setDate(today.getDate() - 7);
         break;
-      case "Last 30 Days":
+      case t("label.last30Days"):
         fromDate.setDate(today.getDate() - 30);
         break;
-      case "Last 1 Year":
+      case t("label.last1Year"):
         fromDate.setFullYear(today.getFullYear() - 1);
         break;
       default:
@@ -248,7 +269,7 @@ export default function LocalFileDeleteScheduler() {
     };
   };
 
-  const isCustomDate = duration === "Custom Date";
+  const isCustomDate = duration === t("label.customDate");
   const autoDates = getFromToDates(duration);
   const from = isCustomDate ? customFrom : autoDates.from;
   const to = isCustomDate ? customTo : autoDates.to;
@@ -286,7 +307,6 @@ export default function LocalFileDeleteScheduler() {
         sFromDate: toDDMMYYYY(fromDate),
         sToDate: toDDMMYYYY(toDate),
         ...CF_activeUserdetails(),
-        ApplicationCode: "SDMS",
       }
     );
 
@@ -320,7 +340,19 @@ export default function LocalFileDeleteScheduler() {
   };
 
   /* ------------------ SELECT ALL ------------------ */
+  const isAllSelected =
+  filteredData.length > 0 &&
+  filteredData.every((row) => row.selected);
+
   const handleSelectAll = () => {
+    if (!selectedRow) {
+      setInfoDialog({
+        open: true,
+        message: t("errormsg.noresultsfound"),
+        type: "information",
+      });
+      return;
+    }
     const allSelected = filteredData.every((r) => r.selected);
     const updatedData = filteredData.map((r) => ({
       ...r,
@@ -332,7 +364,15 @@ export default function LocalFileDeleteScheduler() {
   /* ------------------ AUTHORIZE ------------------ */
   const handleAuthorize = () => {
     const selectedRows = filteredData.filter((row) => row.selected);
-    if (selectedRows.length === 0) return;
+    
+    if (!selectedRow) {
+      setInfoDialog({
+        open: true,
+        message: t("masters.selectrecord"),
+        type: "information",
+      });
+      return;
+    }
     setShowAuditTrail(true);
   };
 
@@ -354,7 +394,6 @@ export default function LocalFileDeleteScheduler() {
       sFromDate: toDDMMYYYY(from),
       sToDate: toDDMMYYYY(to),
       ...auditData,
-      ApplicationCode: "SDMS",
       ...CF_activeUserdetails(),
     };
 
@@ -368,6 +407,8 @@ export default function LocalFileDeleteScheduler() {
       setFilteredData(remaining);
       setSelectedRow(remaining[0] || null);
     }
+    if (!handleApiResponse(response)) return;
+
   } catch (err) {
     console.error("Authorization failed", err);
   } finally {
@@ -417,16 +458,16 @@ export default function LocalFileDeleteScheduler() {
                 <AnimatedDropdown
                   value={duration}
                   options={[
-                    "Current Date",
-                    "Last 7 Days",
-                    "Last 30 Days",
-                    "Last 1 Year",
-                    "Custom Date",
+                    t("label.currentDate"),
+                    t("label.last7Days"),
+                    t("label.last30Days"),
+                    t("label.last1Year"),
+                    t("label.customDate"),
                   ]}
                   onChange={(e) => {
                     const val = e.target.value;
                     setDuration(val);
-                    if (val === "Custom Date") {
+                    if (val === t("label.customDate")) {
                       setCustomFrom(todayStr);
                       setCustomTo(todayStr);
                     } else {
@@ -497,10 +538,15 @@ export default function LocalFileDeleteScheduler() {
       {/* ---------------- ACTION BUTTONS ---------------- */}
       <div className="flex justify-end gap-2 p-4 pb-0">
         <ActionButton
-          icon={FaCheck}
-          label={t("usermanagement.selectall")}
-          onClick={handleSelectAll}
-        />
+  icon={FaCheck}
+  label={
+    isAllSelected
+      ? t("scheduler.unselectall")
+      : t("usermanagement.selectall")
+  }
+  onClick={handleSelectAll}
+/>
+
         <ActionButton
           icon={FaRegCircleCheck}
           label={t("button.authorize")}
@@ -545,8 +591,8 @@ export default function LocalFileDeleteScheduler() {
       />
       {showPrint && (
         <PrintTable
-          title="Local File Delete Scheduler"
-          subtitle="Files Pending Deletion"
+          title={t("scheduler.localfiledeletescheduler")}
+          subtitle={t("scheduler.filespendingdeletion")}
           columns={columns}
           rows={filteredData}
           printRequest={buildPrintRequest()}
@@ -572,6 +618,13 @@ export default function LocalFileDeleteScheduler() {
           }
         />
       )}
+      {infoDialog.open && (
+              <Errordialog
+                type="information"
+                message={infoDialog.message}
+                onClose={() => setInfoDialog({ open: false, message: "" })}
+              />
+            )}
     </div>
   );
 }
