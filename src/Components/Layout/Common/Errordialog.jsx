@@ -213,7 +213,8 @@ function Errordialog({
   onConfirm,
   confirmButtonColor,
   reverseButtons = false,
-  customButtons = null 
+  customButtons = null,
+  titleTextColor = "text-white" 
 }) {
   const { t, i18n } = useTranslation();
   const isTranslationKey = i18n.exists(message);
@@ -288,7 +289,7 @@ function Errordialog({
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
       <div className="bg-white rounded-md shadow-lg w-[550px]">
         <div
-          className={`${headerColor} text-white font-roboto font-semibold text-lg px-5 py-4 rounded-t-md flex items-center gap-2 transition-all duration-500`}
+          className={`${headerColor} ${titleTextColor} font-roboto font-semibold text-lg px-5 py-4 rounded-t-md flex items-center gap-2 transition-all duration-500`}
         >
           {title}
         </div>
@@ -306,9 +307,6 @@ function Errordialog({
 
         </div>
         
-        
-
-
         <div className="flex justify-end font-roboto border-t px-5 py-3 gap-3">
           {buttonsToRender.map((btn, index) => {
             // Check if the text provided is a key in your en.json/locales
