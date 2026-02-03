@@ -6,116 +6,164 @@ import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown';
 import AnimatedInput from '../../../../Layout/Common/AnimatedInput';
 import AuditTrail from '../../../../Layout/Common/AuditTrail';
 
-// Services
 import servicecall from "../../../../../Services/servicecall";
 import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
 import { AR_ajaxCall } from "./Common/AR_ajaxCall";
 
 // --- CONFIGURATION MAPPING ---
 const SERVER_CONFIG = {
-    "AzureBlob": { hasRegion: false, hasServerName: true, disableServerName: true, hasUsername: true, hasPassword: true, hasTomcat: false },
-    "AmazonS3_Credential": { hasRegion: true, fetchRegions: true, hasServerName: false, hasUsername: true, hasPassword: true, hasTomcat: false },
-    "AmazonS3-Credential": { hasRegion: true, fetchRegions: true, hasServerName: false, hasUsername: true, hasPassword: true, hasTomcat: false },
-    "AmazonS3_EC2": { hasRegion: true, fetchRegions: true, hasServerName: false, hasUsername: false, hasPassword: false, hasTomcat: false },
-    "AmazonS3-EC2": { hasRegion: true, fetchRegions: true, hasServerName: false, hasUsername: false, hasPassword: false, hasTomcat: false },
-    "FTP": { hasRegion: false, hasServerName: true, hasUsername: true, hasPassword: true, hasTomcat: true },
-    "SFTP": { hasRegion: false, hasServerName: true, hasUsername: true, hasPassword: true, hasTomcat: true },
-    "DEFAULT": { hasRegion: false, hasServerName: true, hasUsername: true, hasPassword: true, hasTomcat: false }
+  "AzureBlob": { hasRegion: false, hasServerName: true, disableServerName: true, hasUsername: true, hasPassword: true, hasTomcat: false },
+  "AmazonS3_Credential": { hasRegion: true, fetchRegions: true, hasServerName: false, hasUsername: true, hasPassword: true, hasTomcat: false },
+  "AmazonS3-Credential": { hasRegion: true, fetchRegions: true, hasServerName: false, hasUsername: true, hasPassword: true, hasTomcat: false },
+  "AmazonS3_EC2": { hasRegion: true, fetchRegions: true, hasServerName: false, hasUsername: false, hasPassword: false, hasTomcat: false },
+  "AmazonS3-EC2": { hasRegion: true, fetchRegions: true, hasServerName: false, hasUsername: false, hasPassword: false, hasTomcat: false },
+  "FTP": { hasRegion: false, hasServerName: true, hasUsername: true, hasPassword: true, hasTomcat: true },
+  "SFTP": { hasRegion: false, hasServerName: true, hasUsername: true, hasPassword: true, hasTomcat: true },
+  "DEFAULT": { hasRegion: false, hasServerName: true, hasUsername: true, hasPassword: true, hasTomcat: false }
 };
 
-/* ------------------ API FETCH FUNCTIONS ------------------ */
+const ENDPOINT_TYPES = ['AzureBlob', 'AmazonS3_Credential', 'AmazonS3-Credential', 'AmazonS3_EC2', 'AmazonS3-EC2'];
 
+const fieldMapping = {
+  sServerName: 'serverNameIp',
+  sServerUserName: 'username',
+  sServerPassword: 'password',
+  sServerID: 'serverId',
+  sServerDesc: 'serverDesc',
+  sRegionID: 'region',
+  sServerTypeName: 'serverType'
+};
+
+/* ---------------- API HELPERS ---------------- */
 const fetchServerTypesAPI = async ({ postData }) => {
-    const userDetailsData = CF_activeUserdetails();
-    const reqObj = { ...userDetailsData };
-    const response = await postData("ftp/getServerMasterType", reqObj);
-    return AR_ajaxCall(response, "combo", { labelKey: 'sServerTypeName', valueKey: 'sServerTypeName' });
+  const reqObj = CF_activeUserdetails();
+  const response = await postData("ftp/getServerMasterType", reqObj);
+  return AR_ajaxCall(response, "combo", {
+    labelKey: 'sServerTypeName',
+    valueKey: 'sServerTypeID'
+  });
 };
 
 const fetchS3RegionsAPI = async ({ postData }) => {
-    const userDetailsData = CF_activeUserdetails();
-    const reqObj = { ...userDetailsData };
-    const response = await postData("ftp/getS3Region", reqObj);
-    
-    return AR_ajaxCall(response, "combo", { 
-        labelKey: 'sRegionvalue', 
-        valueKey: 'sRegionID' 
-    }); 
+  const reqObj = CF_activeUserdetails();
+  const response = await postData("ftp/getS3Region", reqObj);
+  return AR_ajaxCall(response, "combo", {
+    labelKey: 'sRegionvalue',
+    valueKey: 'sRegionID'
+  });
 };
 
-// --- NEW: Fetch Single Server Details for Edit ---
 const fetchServerDetailsAPI = async ({ postData, serverId }) => {
-    const userDetailsData = CF_activeUserdetails();
-    const reqObj = { 
-        ...userDetailsData, 
-        sServerID: serverId 
-    };
-    const response = await postData("ftp/editGetServerMaster", reqObj);
-    return response?.ServerMaster || null;
+  const userDetailsData = CF_activeUserdetails();
+  const reqObj = { ...userDetailsData, sServerID: serverId };
+  const response = await postData("ftp/editGetServerMaster", reqObj);
+  return response?.ServerMaster || null;
 };
 
-/* ------------------ MAIN COMPONENT ------------------ */
-
-const ServerConfigForm = ({ editServerId, onSubmit, onClose, isEditMode }) => {
+/* ---------------- MAIN ---------------- */
+const ServerConfigForm = ({ editServerId, onSubmit, onClose, isEditMode = false }) => {
   const { postData } = servicecall();
 
-  // --- 1. Queries ---
-
-  // A. Get Server Types
-  const { data: serverTypeOptions = [] } = useQuery({
-      queryKey: ['serverTypes'],
-      queryFn: () => fetchServerTypesAPI({ postData }).then(res => res.options || []),
-      staleTime: 30 * 60 * 1000 
-  });
-
-  // B. Get Server Details (Only runs in Edit Mode)
-  const { data: serverDetails, isLoading: isLoadingDetails } = useQuery({
-      queryKey: ['serverDetails', editServerId],
-      queryFn: () => fetchServerDetailsAPI({ postData, serverId: editServerId }),
-      enabled: isEditMode && !!editServerId, 
-      staleTime: 0 
-  });
-
-  const [shouldFetchRegions, setShouldFetchRegions] = useState(false);
-  
-  // C. Get Regions (Conditional)
-  const { data: regionOptions = [] } = useQuery({
-      queryKey: ['s3Regions'],
-      queryFn: () => fetchS3RegionsAPI({ postData }).then(res => res.options || []),
-      enabled: shouldFetchRegions, 
-      staleTime: 30 * 60 * 1000
-  });
-
-  // --- 2. State Management ---
-  const defaultState = {
-    serverType: 'FTP',
+  const [formData, setFormData] = useState({
+    serverType: '', 
     serverId: '',
+    serverDesc: '',
+    serverTypeId: '',
     serverNameIp: '',
     username: '',
     password: '',
-    region: '', 
+    region: '',
     isTomcatSame: false,
     isActive: false
-  };
-
-  const [formData, setFormData] = useState(defaultState);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showAuditTrail, setShowAuditTrail] = useState(false);
-  const [showError, setShowError] = useState(false);
-  const [fieldVisibility, setFieldVisibility] = useState({
-      serverName: true, username: true, password: true, region: false, tomcatCheckbox: true, serverNameDisabled: false
   });
 
-  // --- 3. Effects ---
+  const [apiErrors, setApiErrors] = useState({});
+  const [showError, setShowError] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [shouldFetchRegions, setShouldFetchRegions] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAuditTrail, setShowAuditTrail] = useState(false);
+  const [fieldVisibility, setFieldVisibility] = useState({});
 
-  // Initialize Data when serverDetails arrives (Edit Mode) or Reset (Add Mode)
+  /* ---------------- QUERIES ---------------- */
+  const { data: serverTypeOptions = [] } = useQuery({
+    queryKey: ['serverTypes'],
+    queryFn: () => fetchServerTypesAPI({ postData }).then(r => r.options || [])
+  });
+
+  const { data: serverDetails, isLoading: isLoadingDetails } = useQuery({
+    queryKey: ['serverDetails', editServerId],
+    queryFn: () => fetchServerDetailsAPI({ postData, serverId: editServerId }),
+    enabled: isEditMode && !!editServerId, 
+    staleTime: 0 
+  });
+
+  const { data: regionOptions = [] } = useQuery({
+    queryKey: ['s3Regions'],
+    queryFn: () => fetchS3RegionsAPI({ postData }).then(r => r.options || []),
+    enabled: shouldFetchRegions
+  });
+
+  /* ---------------- HELPERS ---------------- */
+  const parseApiError = (response) => {
+    if (response?.Message && typeof response.Message === 'object') {
+      const apiKey = Object.keys(response.Message)[0];
+      return {
+        fieldKey: fieldMapping[apiKey] || apiKey,
+        errorMsg: response.Message[apiKey]
+      };
+    }
+    return { fieldKey: 'serverId', errorMsg: response?.Message || 'Operation failed' };
+  };
+
+  const handleServerTypeLogic = (typeName, isInitialLoad = false) => {
+    const cleanType = (typeName || "").trim();
+    const config = SERVER_CONFIG[cleanType] || SERVER_CONFIG.DEFAULT;
+    setShouldFetchRegions(config.fetchRegions || false);
+    
+    if (!isInitialLoad && serverTypeOptions.length > 0) {
+      const selectedOption = serverTypeOptions.find(opt => opt.label === cleanType);
+      if (ENDPOINT_TYPES.includes(cleanType) && selectedOption?.sServerEndpoint) {
+        setFormData(prev => ({ ...prev, serverNameIp: selectedOption.sServerEndpoint }));
+      } else {
+        setFormData(prev => ({ ...prev, serverNameIp: '' }));
+      }
+    }
+    
+    setFieldVisibility({
+      hasRegion: config.hasRegion || false,
+      hasServerName: config.hasServerName !== false,
+      disableServerName: config.disableServerName || false,
+      hasUsername: config.hasUsername !== false,
+      hasPassword: config.hasPassword !== false,
+      hasTomcat: config.hasTomcat !== false
+    });
+  };
+
+  /* ---------------- EFFECTS ---------------- */
+  
+  // Auto-select first index on load for Add Mode
+  useEffect(() => {
+    if (!isEditMode && serverTypeOptions.length > 0 && !formData.serverType) {
+      const firstType = serverTypeOptions[0];
+      setFormData(prev => ({ 
+        ...prev, 
+        serverType: firstType.value,
+        serverTypeId: firstType.value 
+      }));
+      handleServerTypeLogic(firstType.label, false);
+    }
+  }, [serverTypeOptions, isEditMode]);
+
   useEffect(() => {
     if (isEditMode && serverDetails) {
-      const type = serverDetails.sServerTypeName || 'FTP';
-      
+      const typeName = serverDetails.sServerTypeName || 'FTP';
+      const typeId = serverDetails.sServerTypeID || '';
       setFormData({
-        serverType: type,
-        serverId: serverDetails.sServerDesc || '', 
+        serverType: typeId,
+        serverId: serverDetails.sServerID || '',
+        serverDesc: serverDetails.sServerDesc || '',
+        serverTypeId: typeId,
         serverNameIp: serverDetails.sServerName || '',
         username: serverDetails.sServerUserName || '',
         password: serverDetails.sServerPassword || '',
@@ -123,57 +171,35 @@ const ServerConfigForm = ({ editServerId, onSubmit, onClose, isEditMode }) => {
         isTomcatSame: serverDetails.isTomcatFTPSameServer === true,
         isActive: serverDetails.iServerStatus === 1
       });
-
-      handleServerTypeLogic(type, true); 
-
-    } else if (!isEditMode) {
-      setFormData(defaultState);
-      handleServerTypeLogic('FTP'); 
+      handleServerTypeLogic(typeName, true);
     }
   }, [serverDetails, isEditMode]);
 
-  // Auto-Select Region if options available and current is invalid
-  useEffect(() => {
-      if (regionOptions && regionOptions.length > 0) {
-          const currentRegionValid = regionOptions.some(opt => opt.value === formData.region);
-          
-          if (!formData.region || !currentRegionValid) {
-              setFormData(prev => ({ ...prev, region: regionOptions[0].value }));
-          }
-      }
-  }, [regionOptions]); 
-
-  // --- 4. Logic Handlers ---
-
-  const handleServerTypeLogic = (type, isInitialLoad = false) => {
-      const cleanType = (type || "").trim();
-      const config = SERVER_CONFIG[cleanType] || SERVER_CONFIG["DEFAULT"];
-
-      setFieldVisibility({
-          serverName: config.hasServerName,
-          username: config.hasUsername,
-          password: config.hasPassword,
-          region: config.hasRegion,
-          tomcatCheckbox: config.hasTomcat,
-          serverNameDisabled: config.disableServerName || false
-      });
-
-      setShouldFetchRegions(config.fetchRegions || false);
-
-      if (!isInitialLoad) {
-          const selectedOption = serverTypeOptions.find(opt => opt.value === cleanType);
-          if (selectedOption?.sServerEndpoint) {
-              setFormData(prev => ({ ...prev, serverNameIp: selectedOption.sServerEndpoint }));
-          } else {
-              setFormData(prev => ({ ...prev, serverNameIp: '' }));
-          }
-      }
-  };
-
+  /* ---------------- HANDLERS ---------------- */
   const handleChange = (name, value) => {
+    if (name === 'serverType') {
+      const selectedOption = serverTypeOptions.find(opt => String(opt.value) === String(value));
+      setFormData(prev => ({
+        ...prev,
+        serverType: value,
+        serverTypeId: value,
+        serverId: '',
+        serverNameIp: '',
+        username: '',
+        password: '',
+        region: ''
+      }));
+      handleServerTypeLogic(selectedOption?.label || '', false);
+      setApiErrors({});
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (showError) setShowError(false);
-    if (name === 'serverType') handleServerTypeLogic(value);
+    if (apiErrors[name]) {
+      const newErrors = { ...apiErrors };
+      delete newErrors[name];
+      setApiErrors(newErrors);
+    }
   };
 
   const handleCheckboxChange = (e) => {
@@ -181,187 +207,233 @@ const ServerConfigForm = ({ editServerId, onSubmit, onClose, isEditMode }) => {
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
-  const handleInitialSubmit = (e) => {
-    e.preventDefault();
-    let isValid = true;
-    if (!formData.serverId.trim()) isValid = false;
-    if (fieldVisibility.serverName && !formData.serverNameIp.trim()) isValid = false;
-    if (fieldVisibility.username && !formData.username.trim()) isValid = false;
-    if (fieldVisibility.password && !formData.password.trim()) isValid = false;
-    if (fieldVisibility.region && !formData.region) isValid = false; 
+  const validateForm = () => {
+    const errors = {};
+    if (!formData.serverId?.trim()) errors.serverId = "Required";
+    if (fieldVisibility.hasServerName && !formData.serverNameIp?.trim()) errors.serverNameIp = "Required";
+    if (fieldVisibility.hasUsername && !formData.username?.trim()) errors.username = "Required";
+    if (fieldVisibility.hasPassword && !formData.password?.trim()) errors.password = "Required";
+    return errors;
+  };
 
-    if (!isValid) {
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    const clientErrors = validateForm();
+    if (Object.keys(clientErrors).length) {
+      setApiErrors(clientErrors);
       setShowError(true);
       return;
     }
-    setShowError(false);
-    setShowAuditTrail(true);
+
+    setIsSubmitting(true);
+    setApiErrors({});
+    try {
+      const selectedType = serverTypeOptions.find(opt => opt.value === formData.serverType);
+      const payload = {
+        ...CF_activeUserdetails(),
+        ServerMaster: {
+          sServerTypeName: selectedType?.label || '',
+          sServerTypeID: formData.serverTypeId,     
+          sServerDesc: formData.serverId,          
+          sServerName: formData.serverNameIp,
+          sServerUserName: formData.username,
+          sServerPassword: formData.password,
+          sRegion: formData.region,
+          isTomcatFTPSameServer: formData.isTomcatSame ? 1 : 0,
+          iServerStatus: formData.isActive ? 1 : 0
+        }
+      };
+
+      const response = await postData("ftp/insertServerMaster", payload);
+      if (response?.Rtn === "Success") {
+        onSubmit({ ...formData });
+        onClose();
+      } else {
+        const { fieldKey, errorMsg } = parseApiError(response);
+        setApiErrors({ [fieldKey]: errorMsg });
+        setShowError(true);
+      }
+    } catch (err) {
+      setApiErrors({ serverId: "Network error occurred." });
+      setShowError(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleAuditSubmit = (auditData) => {
-    const finalData = { ...formData, auditRemarks: auditData };
-    onSubmit(finalData);
-    setShowAuditTrail(false);
-    setShowError(false);
+  const handleAuditSubmit = async (auditPayload) => {
+    try {
+      const selectedType = serverTypeOptions.find(opt => opt.value === formData.serverType);
+      const payload = {
+        ...CF_activeUserdetails(),
+        ServerMaster: {
+          sServerTypeName: selectedType?.label || '',
+          sServerTypeID: formData.serverTypeId,     
+          sServerDesc: formData.serverDesc,          
+          sServerName: formData.serverNameIp,
+          sServerUserName: formData.username,
+          sServerPassword: formData.password,
+          sServerID: formData.serverId,             
+          sRegion: formData.region,
+          isTomcatFTPSameServer: formData.isTomcatSame ? 1 : 0,
+          iServerStatus: formData.isActive ? 1 : 0
+        },
+        AuditTrailValues: auditPayload.AuditTrailValues
+      };
+
+      const response = await postData("ftp/editServerMaster", payload);
+      if (response?.Rtn === "Success") {
+        onSubmit({ ...formData, isEditMode: true });
+        onClose();
+      } else {
+        const { fieldKey, errorMsg } = parseApiError(response);
+        setApiErrors({ [fieldKey]: errorMsg });
+        setShowError(true);
+        setShowAuditTrail(false);
+      }
+    } catch (err) {
+      setApiErrors({ serverId: "Failed to update." });
+      setShowError(true);
+    }
   };
 
-  const handleAuditClose = () => setShowAuditTrail(false);
-
-  // Loading State
   if (isEditMode && isLoadingDetails) {
-    return (
-        <div className="flex items-center justify-center h-48">
-             <div className="text-gray-500 font-semibold animate-pulse">Loading Server Details...</div>
-        </div>
-    );
+    return <div className="p-10 text-center animate-pulse">Loading Server Details...</div>;
   }
 
   return (
     <>
-      <form onSubmit={handleInitialSubmit} className="space-y-6 pt-2 text-sm">
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center gap-3">
+             <div className="w-10 h-10 border-4 border-t-blue-600 border-blue-100 rounded-full animate-spin"></div>
+             <p className="font-medium text-gray-700">Processing Request...</p>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={isEditMode ? (e) => { e.preventDefault(); setShowAuditTrail(true); } : handleAddSubmit} className="space-y-6 pt-2">
         
-        {/* 1. Server Type - Disabled in Edit Mode */}
-        {/* Added div wrapper to handle cursor-not-allowed when disabled */}
         <div className={`w-[65%] ${isEditMode ? 'cursor-not-allowed opacity-75' : ''}`}>
           <AnimatedDropdown
-              label="Server Type"
-              name="serverType"
-              value={formData.serverType}
-              options={serverTypeOptions.map(opt => opt.value)} 
-              onChange={(e) => handleChange("serverType", e.target.value)}
-              isSearchable={false}
-              required
-              showError={showError}
-              disabled={isEditMode} /* Disable prop passed here */
+            label="Server Type"
+            name="serverType"
+            value={formData.serverType}
+            options={serverTypeOptions} 
+            onChange={(e) => handleChange("serverType", e.target.value)}
+            disabled={isEditMode}
+            required
+            showError={showError}
+            errorMessage={apiErrors.serverType}
           />
         </div>
 
-        {/* 3.b Region - MOVED HERE */}
-        {fieldVisibility.region && (
-            <div className="w-[65%]">
-            <AnimatedDropdown
-                label="Region"
-                name="region"
-                value={formData.region}
-                options={regionOptions.map(opt => opt.value)} 
-                onChange={(e) => handleChange("region", e.target.value)}
-                required
-                showError={showError}
-                placeholder="Select Region"
-            />
-            </div>
-        )}
-
-        {/* 2. Server ID */}
         <div className="w-[65%]">
           <AnimatedInput
-              label="Server ID"
-              name="serverId"
-              value={formData.serverId}
-              onChange={(e) => handleChange("serverId", e.target.value)}
-              disabled={isEditMode}
-              required
-              showError={showError}
+            label="Server ID"
+            name="serverId"
+            value={isEditMode ? (formData.serverDesc || formData.serverId) : formData.serverId} 
+            onChange={(e) => handleChange("serverId", e.target.value)}
+            disabled={isEditMode}
+            required
+            showError={showError}
+            errorMessage={apiErrors.serverId}
           />
         </div>
 
-        {/* 3. Server Name/IP */}
-        {fieldVisibility.serverName && (
-            <div className="w-[65%]">
+        {fieldVisibility.hasServerName && (
+          <div className="w-[65%]">
             <AnimatedInput
-                label="Server Name/IP"
-                name="serverNameIp"
-                value={formData.serverNameIp}
-                onChange={(e) => handleChange("serverNameIp", e.target.value)}
-                required
-                disabled={fieldVisibility.serverNameDisabled} 
-                showError={showError}
+              label="Server Name/IP"
+              name="serverNameIp"
+              value={formData.serverNameIp}
+              onChange={(e) => handleChange("serverNameIp", e.target.value)}
+              disabled={fieldVisibility.disableServerName}
+              required
+              showError={showError}
+              errorMessage={apiErrors.serverNameIp}
             />
-            </div>
+          </div>
         )}
 
-        {/* 4. Username */}
-        {fieldVisibility.username && (
-            <div className="w-[65%]">
+        {fieldVisibility.hasUsername && (
+          <div className="w-[65%]">
             <AnimatedInput
-                label="Server Username"
-                name="username"
-                value={formData.username}
-                onChange={(e) => handleChange("username", e.target.value)}
-                required
-                showError={showError}
+              label="Server Username"
+              name="username"
+              value={formData.username}
+              onChange={(e) => handleChange("username", e.target.value)}
+              required
+              showError={showError}
+              errorMessage={apiErrors.username}
             />
-            </div>
+          </div>
         )}
 
-        {/* 5. Password */}
-        {fieldVisibility.password && (
-            <div className="w-[65%] relative">
+        {fieldVisibility.hasPassword && (
+          <div className="w-[65%] relative">
             <AnimatedInput
-                label="Server Password"
-                name="password"
-                value={formData.password}
-                onChange={(e) => handleChange("password", e.target.value)}
-                required
-                showError={showError}
-                type={showPassword ? "text" : "password"} 
+              label="Server Password"
+              name="password"
+              value={formData.password}
+              onChange={(e) => handleChange("password", e.target.value)}
+              type={showPassword ? "text" : "password"}
+              required
+              showError={showError}
+              errorMessage={apiErrors.password}
             />
-            <button 
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-7 text-gray-400 hover:text-gray-600 z-10"
-            >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-7 text-gray-400">
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
-            </div>
+          </div>
         )}
 
-        {/* Checkboxes */}
-        <div className="space-y-3 pt-2">
-            {fieldVisibility.tomcatCheckbox && (
-                <div className="flex items-center gap-2">
-                    <label className="font-semibold text-gray-700">Is Tomcat and FTP located in Same Server</label>
-                    <input 
-                      type="checkbox" 
-                      name="isTomcatSame"
-                      checked={formData.isTomcatSame}
-                      onChange={handleCheckboxChange}
-                      className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 cursor-pointer" 
-                    />
-                </div>
-            )}
+        {/* --- TOMCAT CHECKBOX --- */}
+        {fieldVisibility.hasTomcat && (
+          <div className="flex items-center gap-2 pt-2">
+            <label className="font-semibold text-gray-700 text-[14px]">Is Tomcat and FTP located in Same Server</label>
+            <input 
+              type="checkbox" 
+              name="isTomcatSame"
+              className="w-3.5 h-3.5 text-blue-600 rounded cursor-pointer"
+              checked={formData.isTomcatSame}
+              onChange={handleCheckboxChange}
+            />
+          </div>
+        )}
 
-            <div className="flex items-center gap-2">
-                <label className="font-semibold text-gray-700">Active</label>
-                <input 
-                  type="checkbox" 
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={handleCheckboxChange}
-                  className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 cursor-pointer" 
-                />
-            </div>
+        {/* --- ACTIVE CHECKBOX --- */}
+        <div className="flex items-center gap-2 pt-2">
+          <label className="font-semibold text-gray-700 text-[14px]">Active</label>
+          <input 
+            type="checkbox" 
+            name="isActive"
+            className="w-3.5 h-3.5 text-blue-600 rounded cursor-pointer"
+            checked={formData.isActive}
+            onChange={handleCheckboxChange}
+          />
         </div>
 
-        {/* Footer Buttons */}
-        <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 mt-2">
-          <button type="submit" className="btn-actionprimary transition-all hover:scale-95 hover:rounded-md">
-            <span>Submit</span>
+        <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
+          <button type="submit" 
+          className="btn-actionprimary px-6 py-2 rounded-lg font-medium transition-transform hover:scale-95"
+          >
+            {isEditMode ? 'Update Server' : 'Create Server'}
           </button>
-          <button type="button" onClick={onClose} className="btn-actionsecondary transition-all hover:scale-95 hover:rounded-md">
-            Close
+          <button type="button" onClick={onClose} 
+            className="btn-actionsecondary transition-all hover:scale-95 hover:rounded-md disabled:opacity-50 px-6 py-2 font-medium rounded-lg"
+          >
+            Cancel
           </button>
         </div>
       </form>
 
-      {/* Audit Trail */}
       {showAuditTrail && (
         <AuditTrail 
           isOpen={showAuditTrail}
-          onClose={handleAuditClose}
+          onClose={() => setShowAuditTrail(false)}
           onAuthorized={handleAuditSubmit}
-          actionLabel={isEditMode ? "Update" : "Create"}
-          defaultReason={isEditMode ? "Updated" : "Created"}
+          actionLabel="Update"
         />
       )}
     </>
