@@ -20,9 +20,8 @@ const AddInstrumentModal = ({
   setLoading,
   setLoadingText,
   selectedRow,
-  selectedRowId,        // ✅ pass selected row ID
-  loadInstrumentGrid,   // ✅ pass reload function
-   
+  selectedRowId, // ✅ pass selected row ID
+  loadInstrumentGrid, // ✅ pass reload function
 }) => {
   const { t } = useTranslation();
   const [showCommSettings, setShowCommSettings] = useState(false);
@@ -40,6 +39,11 @@ const AddInstrumentModal = ({
   const isAddMode = mode === "add";
   const isEditMode = mode === "edit";
   const hasInsufficientLicense = isAddMode && availableLicense < 1;
+  const [infoDialog, setInfoDialog] = useState({
+    open: false,
+    message: "",
+    type: "information", // information | warning | error
+  });
 
   const PARSER_ORDER_MAP = {
     0: { label: t("masters.none"), value: t("masters.none") },
@@ -50,10 +54,10 @@ const AddInstrumentModal = ({
     { label: t("label.automatic"), value: "A" },
     { label: t("label.manual"), value: "M" },
   ];
-const [fieldErrors, setFieldErrors] = useState({
-  instrumentCode: "",
-  instrumentAlias: "",
-});
+  const [fieldErrors, setFieldErrors] = useState({
+    instrumentCode: "",
+    instrumentAlias: "",
+  });
 
   const nodeRef = useRef(null);
   const [submitted, setSubmitted] = useState(false);
@@ -74,300 +78,329 @@ const [fieldErrors, setFieldErrors] = useState({
   const [form, setForm] = useState(initialForm);
   const showParserInterfacerMsg =
     submitted &&
-    (form.parserType === "masters.winmethod" || form.parserType === "masters.webmethod") &&
+    (form.parserType === t("masters.winmethod") ||
+      form.parserType === t("masters.webmethod")) &&
     !form.interfacerMapped;
 
   const [commData, setCommData] = useState(null);
-useEffect(() => {
-  if (!isOpen) {
-    setForm(initialForm);
-    setSubmitted(false);
-
-
-    setShowCommSettings(false);
-    setShowAuditTrail(false);
-        setCommData(null);
-            setPendingForm(null);
-  }
-}, [isOpen, mode]);
-
-
-
-const handleCommSubmit = async (data) => {
-  setCommData(data);
-
-  // 🔥 EDIT MODE → go to audit first
-  if (isEditMode) {
-    setPendingForm({ ...form });
-    setShowAuditTrail(true);
-    return; // ⛔ Stop here - don't call API yet
-  }
-
-  // 🔥 ADD MODE → save immediately, NO audit
-  try {
-    setLoading(true);
-    setLoadingText(t("common.loading"));
-
-    await postData(
-      "basemaster/insertInstrumentCommonSetting",
-      buildInstrumentRequestPayload(form, data)
-    );
-    // ✅ CLOSE BOTH POPUPS
-    setShowCommSettings(false);
-    onSave?.();     // 🔥 notify parent to reload grid
-    onClose();      // 🔥 close AddInstrumentModal
-  } catch (err) {
-    console.error("Comm settings save failed", err);
-  } finally {
-    setLoading(false);
-    setLoadingText("");
-  }
-};
-
-
-  const getSessionValue = (key) => {
-      const value = sessionStorage.getItem(key);
-
-      // ✅ 1. key missing
-      if (!value) return "";
-
-      // ✅ 2. already plain text (NOT encrypted)
-      if (!value.includes("=") && value.length < 40) {
-        return value;
-      }
-
-      // ✅ 3. encrypted value
-      try {
-        return CF_decrypt(value);
-      } catch (e) {
-        console.warn(`Decrypt skipped for ${key}`);
-        return value;
-      }
-    };
-    const getActiveUserDetails = () => ({
-  sUserDomainName: getSessionValue("sDomainName"),
-  sSessionID: getSessionValue("sSessionID"),
-  sUserID: getSessionValue("sUserID"),
-  sTimeZoneID: getSessionValue("sTimeZoneID") + "<~>true",
-  sApplicationName: "SDMS",
-  sdbtype: getSessionValue("sdbtype"),
-  sUsername: getSessionValue("sUsername"),
-  sSiteCode: getSessionValue("sSiteCode"),
-  sCategories: getSessionValue("sCategories"),
-  sUserGroupID: getSessionValue("sUserGroupID"),
-  sUserStatus: "",
-  sTenantID: "",
-});
-
-    const buildDropdownRequest = (instrumentId) => ({
-      ActiveUserDetails: getActiveUserDetails(), 
-      sInstrumentID: instrumentId || "",
-      ApplicationCode: "SDMS",
-    });
-
-   const loadDropdowns = async () => {
-  try {
-    
-    const instrumentId =
-      mode === "edit"
-        ? initialData?.Instrument?.sInstrumentID
-        : "";
-
-    const res = await postData(
-      "basemaster/getMapInstrumentBasedDataFillValues",
-      buildDropdownRequest(instrumentId)
-    );
-
-    // ✅ Available license
-    setAvailableLicense(res.AvailableLicense || 0);
-    // ✅ Parser Type dropdown (from Feature)
-    if (Array.isArray(res.Feature)) {
-      const options = [
-        PARSER_ORDER_MAP[0], // 👈 NONE always
-      ];
-
-      const interfacerFeature = res.Feature.find(
-        (f) => f.L67Enum === "INTERFACER_SETTINGS"
-      );
-
-      const webMethodFeature = res.Feature.find(
-        (f) => f.L67Enum === "WEBMETHOD_INTERFACER"
-      );
-
-      const dbType = getSessionValue("sdbtype")?.toLowerCase();
-
-      // ✅ MSSQL → allow both if enabled
-      if (dbType === "mssql") {
-        if (interfacerFeature?.L67Status === true) {
-          options.push(PARSER_ORDER_MAP[1]); 
-        }
-
-        if (webMethodFeature?.L67Status === true) {
-          options.push(PARSER_ORDER_MAP[2]); // masters.webmethod
-        }
-      }
-
-      // ✅ POSTGRES → ONLY masters.winmethod if enabledPOSTGRESQL
-      else if (dbType === "postgresql") {
-        if (interfacerFeature?.L67Status === true) {
-          options.push(PARSER_ORDER_MAP[1]); // masters.winmethod only
-        }
-      }
-
-      setParserOptions(options);
-    }
-
-    // ✅ Interfacer Instrument dropdown
-    if (Array.isArray(res.InterfacerInstrument)) {
-      const interfacerList = res.InterfacerInstrument.map((item) => ({
-  label: item.InstrumentName,
-  value: String(item.INSTRUMENTID), // ✅ STRING
-}));
-
-
-      // ⭐ ADD mode: Show "Create New" option
-      if (isAddMode) {
-        setInterfacerOptions([
-          { label: "Create New", value: "-2" }, // ✅ STRING
-          ...interfacerList,
-        ]);
-      } else {
-        // ⭐ EDIT mode: Do NOT show "Create New" option
-        setInterfacerOptions(interfacerList);
-      }
-    }
-  } catch (err) {
-    console.error("Dropdown load failed", err);
-  }
-};
-
   useEffect(() => {
-    if (!isOpen) return;
-    
+    if (!isOpen) {
+      setForm(initialForm);
+      setSubmitted(false);
 
-    loadDropdowns();
-  }, [isOpen]);
-
-
-  // ✅ preload data for EDIT
-// ✅ preload data for EDIT
-// ✅ preload data for EDIT
-// ✅ preload data for EDIT
-// ✅ preload data for EDIT
-useEffect(() => {
-  if (!isOpen || mode !== "edit" || !initialData?.Instrument) return;
-
-  const inst = initialData.Instrument;
-  const isMapped = inst.iInterfaceStatus === 1;
-  
-  // Get the saved interfacer ID
-  const savedInterfacerId = String(initialData.iInterfacerInstID);
-
-  
-  const determineInitialValue = () => {
-    if (!isMapped) return "";
-    
-    if (savedInterfacerId && interfacerOptions.length > 0) {
-      // Check if saved value exists in options
-      const existsInOptions = interfacerOptions.some(opt => opt.value === savedInterfacerId);
-      if (existsInOptions) {
-        return savedInterfacerId;
-      }
-      // If saved value doesn't exist in options, use first option
-      return interfacerOptions[0].value;
+      setShowCommSettings(false);
+      setShowAuditTrail(false);
+      setCommData(null);
+      setPendingForm(null);
     }
-    
-    // If no saved value or no options, return first option or empty
-    return interfacerOptions.length > 0 ? interfacerOptions[0].value : "";
-  };
+  }, [isOpen, mode]);
 
-  setForm({
-    instrumentCode: inst.sInstrumentName || "",
-    instrumentAlias: inst.sInstrumentAliasName || "",
-    instrumentModel: inst.sInstrumentModel || "",
-    instrumentMake: inst.sInstrumentMake || "",
-    lockType: inst.sLockType || "A",
-    parserType:
-      inst.iL11ParserType === 1
-        ? t("masters.winmethod")
-        : inst.iL11ParserType === 2
-        ? t("masters.webmethod")
-        : t("masters.none"),
-    interfacerMapped: isMapped,
-    interfacerInstrument: determineInitialValue(),
-    active: Number(inst.iInstrumentStatus) === 1,
-  });
+  const handleCommSubmit = async (data) => {
+    setCommData(data);
 
-  setOriginalInterfacerMapped(isMapped);
-  setSubmitted(false);
-}, [isOpen, mode, initialData, interfacerOptions]);
+    // 🔥 EDIT MODE → go to audit first
+    if (isEditMode) {
+      setPendingForm({ ...form });
+      setShowAuditTrail(true);
+      return; // ⛔ Stop here - don't call API yet
+    }
 
-useEffect(() => {
-  if (!isOpen) {
-    setFieldErrors({ instrumentCode: "", instrumentAlias: "" });
-  }
-}, [isOpen]);
-
-  const handleSubmit = async () => {
-  setSubmitted(true);
-
-  if (!isSubmitValid()) return;
-
-  const isParserNeedsInterfacer =
-    (form.parserType === "masters.winmethod" || form.parserType === "masters.webmethod") &&
-    !form.interfacerMapped;
-
-  if (isParserNeedsInterfacer) return;
-
-
-  // 🔥 ADD MODE → INSERT FIRST
-  if (isAddMode) {
+    // 🔥 ADD MODE → save immediately, NO audit
     try {
       setLoading(true);
       setLoadingText(t("common.loading"));
 
       const response = await postData(
-        "basemaster/insertInstrument",
-        buildInsertInstrumentPayload(form, {})
+        "basemaster/insertInstrumentCommonSetting",
+        buildInstrumentRequestPayload(form, data),
       );
-
-      // 🔴 Server validation
-      if (response?.Rtn === "Warning" && response?.Message) {
-        setFieldErrors({
-          instrumentCode: response.Message.sInstrumentName || "",
-          instrumentAlias: response.Message.sInstrumentAliasName || "",
-        });
-        return;
-      }
-
-      if (response?.Rtn !== "Success") {
-        throw new Error("Insert Instrument failed");
-      }
-
-      // ✅ INSERT SUCCESS → now open AuditTrail
-// ✅ correct
-setPendingForm({ ...form });
-onSave?.();   // 🔥 notify parent
-onClose();
-
+      if (!handleApiResponse(response)) return;
+      // ✅ CLOSE BOTH POPUPS
+      setShowCommSettings(false);
+      onSave?.(); // 🔥 notify parent to reload grid
+      onClose(); // 🔥 close AddInstrumentModal
     } catch (err) {
-      console.error("Insert failed", err);
+      console.error("Comm settings save failed", err);
     } finally {
       setLoading(false);
       setLoadingText("");
     }
+  };
 
-    return; // ⛔ stop here for ADD
-  }
+  const getSessionValue = (key) => {
+    const value = sessionStorage.getItem(key);
 
-  // 🔥 EDIT MODE → OLD FLOW (Audit first)
-  setPendingForm(form);
-  setShowAuditTrail(true);
-};
+    // ✅ 1. key missing
+    if (!value) return "";
 
+    // ✅ 2. already plain text (NOT encrypted)
+    if (!value.includes("=") && value.length < 40) {
+      return value;
+    }
+
+    // ✅ 3. encrypted value
+    try {
+      return CF_decrypt(value);
+    } catch (e) {
+      console.warn(`Decrypt skipped for ${key}`);
+      return value;
+    }
+  };
+  const getActiveUserDetails = () => ({
+    sUserDomainName: getSessionValue("sDomainName"),
+    sSessionID: getSessionValue("sSessionID"),
+    sUserID: getSessionValue("sUserID"),
+    sTimeZoneID: getSessionValue("sTimeZoneID") + "<~>true",
+    sApplicationName: "SDMS",
+    sdbtype: getSessionValue("sdbtype"),
+    sUsername: getSessionValue("sUsername"),
+    sSiteCode: getSessionValue("sSiteCode"),
+    sCategories: getSessionValue("sCategories"),
+    sUserGroupID: getSessionValue("sUserGroupID"),
+    sUserStatus: "",
+    sTenantID: "",
+  });
+
+  const buildDropdownRequest = (instrumentId) => ({
+    ActiveUserDetails: getActiveUserDetails(),
+    sInstrumentID: instrumentId || "",
+    ApplicationCode: "SDMS",
+  });
+
+  const loadDropdowns = async () => {
+    try {
+      const instrumentId =
+        mode === "edit" ? initialData?.Instrument?.sInstrumentID : "";
+
+      const res = await postData(
+        "basemaster/getMapInstrumentBasedDataFillValues",
+        buildDropdownRequest(instrumentId),
+      );
+
+      // ✅ Available license
+      setAvailableLicense(res.AvailableLicense || 0);
+
+      // ✅ Parser Type dropdown (from Feature)
+      if (Array.isArray(res.Feature)) {
+        const options = [
+          PARSER_ORDER_MAP[0], // 👈 NONE always
+        ];
+
+        const interfacerFeature = res.Feature.find(
+          (f) => f.L67Enum === "INTERFACER_SETTINGS",
+        );
+
+        const webMethodFeature = res.Feature.find(
+          (f) => f.L67Enum === "WEBMETHOD_INTERFACER",
+        );
+
+        const dbType = getSessionValue("sdbtype")?.toLowerCase();
+
+        // ✅ MSSQL → allow both if enabled
+        if (dbType === "mssql") {
+          if (interfacerFeature?.L67Status === true) {
+            options.push(PARSER_ORDER_MAP[1]);
+          }
+
+          if (webMethodFeature?.L67Status === true) {
+            options.push(PARSER_ORDER_MAP[2]); // masters.webmethod
+          }
+        }
+
+        // ✅ POSTGRES → ONLY masters.winmethod if enabledPOSTGRESQL
+        else if (dbType === "postgresql") {
+          if (interfacerFeature?.L67Status === true) {
+            options.push(PARSER_ORDER_MAP[1]); // masters.winmethod only
+          }
+        }
+
+        setParserOptions(options);
+      }
+
+      // ✅ Interfacer Instrument dropdown
+      if (Array.isArray(res.InterfacerInstrument)) {
+        const interfacerList = res.InterfacerInstrument.map((item) => ({
+          label: item.InstrumentName,
+          value: String(item.INSTRUMENTID), // ✅ STRING
+        }));
+
+        // 🔥 ADD mode: Always show "Create New" option
+        if (isAddMode) {
+          setInterfacerOptions([
+            { label: "Create New", value: "-2" }, // ✅ STRING
+            ...interfacerList,
+          ]);
+        } else {
+          // 🔥 EDIT mode: Check iInterfacerInstID from response
+          const interfacerId = initialData?.iInterfacerInstID;
+
+          // If iInterfacerInstID is 0, null, or undefined, show "Create New"
+          if (
+            interfacerId === 0 ||
+            interfacerId === null ||
+            interfacerId === undefined
+          ) {
+            setInterfacerOptions([
+              { label: "Create New", value: "-2" }, // ✅ STRING
+              ...interfacerList,
+            ]);
+          } else {
+            // If iInterfacerInstID has a value, DON'T show "Create New"
+            setInterfacerOptions(interfacerList);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Dropdown load failed", err);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    loadDropdowns();
+  }, [isOpen]);
+
+  // ✅ preload data for EDIT
+  // ✅ preload data for EDIT
+  // ✅ preload data for EDIT
+  // ✅ preload data for EDIT
+  // ✅ preload data for EDIT
+  // ✅ preload data for EDIT
+  useEffect(() => {
+    if (!isOpen || mode !== "edit" || !initialData?.Instrument) return;
+
+    const inst = initialData.Instrument;
+    const isMapped = inst.iInterfaceStatus === 1;
+
+    // Get the saved interfacer ID from response
+    const savedInterfacerId = String(initialData.iInterfacerInstID || "0");
+
+    const determineInitialValue = () => {
+      if (!isMapped) return "";
+
+      // 🔥 If saved interfacer ID is 0, use "Create New" (-2)
+      if (
+        savedInterfacerId === "0" ||
+        savedInterfacerId === "null" ||
+        savedInterfacerId === ""
+      ) {
+        return "-2";
+      }
+
+      // 🔥 Check if saved value exists in options
+      if (savedInterfacerId && interfacerOptions.length > 0) {
+        const existsInOptions = interfacerOptions.some(
+          (opt) => opt.value === savedInterfacerId,
+        );
+        if (existsInOptions) {
+          return savedInterfacerId;
+        }
+
+        // 🔥 If not exists and "Create New" is available, use it
+        const hasCreateNew = interfacerOptions.some(
+          (opt) => opt.value === "-2",
+        );
+        if (hasCreateNew) {
+          return "-2";
+        }
+
+        // 🔥 Otherwise use first available option
+        return interfacerOptions.length > 0 ? interfacerOptions[0].value : "";
+      }
+
+      // 🔥 Default to "Create New" if available, otherwise first option
+      const hasCreateNew = interfacerOptions.some((opt) => opt.value === "-2");
+      if (hasCreateNew) {
+        return "-2";
+      }
+      return interfacerOptions.length > 0 ? interfacerOptions[0].value : "";
+    };
+
+    setForm({
+      instrumentCode: inst.sInstrumentName || "",
+      instrumentAlias: inst.sInstrumentAliasName || "",
+      instrumentModel: inst.sInstrumentModel || "",
+      instrumentMake: inst.sInstrumentMake || "",
+      lockType: inst.sLockType || "A",
+      parserType:
+        inst.iL11ParserType === 1
+          ? t("masters.winmethod")
+          : inst.iL11ParserType === 2
+            ? t("masters.webmethod")
+            : t("masters.none"),
+      interfacerMapped: isMapped,
+      interfacerInstrument: determineInitialValue(),
+      active: Number(inst.iInstrumentStatus) === 1,
+    });
+
+    setOriginalInterfacerMapped(isMapped);
+    setSubmitted(false);
+  }, [isOpen, mode, initialData, interfacerOptions]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setFieldErrors({ instrumentCode: "", instrumentAlias: "" });
+    }
+  }, [isOpen]);
+
+  const handleSubmit = async () => {
+    setSubmitted(true);
+
+    if (!isSubmitValid()) return;
+
+    const isParserNeedsInterfacer =
+      (form.parserType === t("masters.winmethod") ||
+        form.parserType === t("masters.webmethod")) &&
+      !form.interfacerMapped;
+
+    if (isParserNeedsInterfacer) return;
+
+    // 🔥 ADD MODE → INSERT FIRST
+    if (isAddMode) {
+      try {
+        setLoading(true);
+        setLoadingText(t("common.loading"));
+
+        const response = await postData(
+          "basemaster/insertInstrument",
+          buildInsertInstrumentPayload(form, {}),
+        );
+
+        // 🔴 Server validation
+        if (response?.Rtn === "Warning" && response?.Message) {
+          setFieldErrors({
+            instrumentCode: response.Message.sInstrumentName || "",
+            instrumentAlias: response.Message.sInstrumentAliasName || "",
+          });
+          return;
+        }
+        if (!handleApiResponse(response)) return;
+        if (response?.Rtn !== "Success") {
+          throw new Error("Insert Instrument failed");
+        }
+
+        // ✅ INSERT SUCCESS → now open AuditTrail
+        // ✅ correct
+        setPendingForm({ ...form });
+        onSave?.(); // 🔥 notify parent
+        onClose();
+      } catch (err) {
+        console.error("Insert failed", err);
+      } finally {
+        setLoading(false);
+        setLoadingText("");
+      }
+
+      return; // ⛔ stop here for ADD
+    }
+
+    // 🔥 EDIT MODE → OLD FLOW (Audit first)
+    setPendingForm(form);
+    setShowAuditTrail(true);
+  };
 
   const buildInsertInstrumentPayload = (finalPayload, auditPayload) => {
-      
     return {
       Instrument: {
         sInstrumentName: finalPayload.instrumentCode,
@@ -378,11 +411,11 @@ onClose();
 
         // 🔥 MUST BE NUMBER
         iL11ParserType:
-          finalPayload.parserType === "masters.winmethod"
+          finalPayload.parserType === t("masters.winmethod")
             ? 1
-            : finalPayload.parserType === "masters.webmethod"
-            ? 2
-            : 0,
+            : finalPayload.parserType === t("masters.webmethod")
+              ? 2
+              : 0,
 
         // 🔥 MUST BE NUMBER
         iInterfaceStatus: finalPayload.interfacerMapped ? 1 : 0,
@@ -396,7 +429,7 @@ onClose();
       // 🔥 REQUIRED
       sActionType: "Insert_Normal_Instrument",
 
-      ActiveUserDetails: getActiveUserDetails(), 
+      ActiveUserDetails: getActiveUserDetails(),
 
       ApplicationCode: "SDMS",
     };
@@ -404,7 +437,7 @@ onClose();
   const buildEditInstrumentPayload = (
     finalPayload,
     auditPayload,
-    initialData
+    initialData,
   ) => {
     return {
       Instrument: {
@@ -416,308 +449,341 @@ onClose();
         sLockType: finalPayload.lockType,
 
         iL11ParserType:
-          finalPayload.parserType === "masters.winmethod"
+          finalPayload.parserType === t("masters.winmethod")
             ? 1
-            : finalPayload.parserType === "masters.webmethod"
-            ? 2
-            : 0,
+            : finalPayload.parserType === t("masters.webmethod")
+              ? 2
+              : 0,
 
         iInterfaceStatus: finalPayload.interfacerMapped ? 1 : 0,
         iInstrumentStatus: finalPayload.active ? 1 : 0,
       },
 
       AuditTrailValues: auditPayload.AuditTrailValues,
-      ActiveUserDetails: getActiveUserDetails(), 
+      ActiveUserDetails: getActiveUserDetails(),
 
       ApplicationCode: "SDMS",
     };
   };
-// Helper function to convert conversion type ID to name
-const getConversionTypeName = (conversionTypeId) => {
-  switch (conversionTypeId) {
-    case 0: return "NONE";
-    case 1: return "Temperature_Celcius";
-    case 2: return "Temperature_Farenheit";
-    default: return "NONE";
-  }
-};
-
-const buildInstrumentRequestPayload = (
-  pendingForm,
-  commData,
-) => {
-  // Base CommonSetting for all communication types
-  const baseCommonSetting = {
-    StopBits: commData.StopBits,
-    TerminationIdleSecs: commData.TerminationIdleSecs,
-    TCPPortNumber: Number(commData.TCPPortNumber) ?? 0,
-    Baudrate: Number(commData.Baudrate) ?? 0,
-    Databits: Number(commData.Databits) ?? 0,
-    COMPortNumber: Number(commData?.COMPortNumber) ?? 0,
-    IPAddress: commData.IPAddress ?? "",
-    Parity: commData.Parity,
-    Handshake: commData.Handshake,
-    InstResultSampleIDFrom: commData.ResultSampleIDFrom === "IFACER"
-    ? 0
-    : commData.ResultSampleIDFrom === "LimsTestOrder"
-    ? 1
-    : 2,
-
-    InstrumentDLL: null,
-    AllowRetest: 0,
-    MiltiTestOrder: 0,
-    InstrumentID: 0,
-    IdleTimetoDisconnect: -1,
-    AutoReconnectInterval: -1,
-    AutoOrderInterval: -1,
-    ImportFileWatcherPath: null,
-    CheckSumCALC: 0,
-    TestBased: -1,
-    MiltiSampleResult: 0,
-    HostComputerIP: "",
-    LimsTestOrder: 0,
+  // Helper function to convert conversion type ID to name
+  const getConversionTypeName = (conversionTypeId) => {
+    switch (conversionTypeId) {
+      case 0:
+        return "NONE";
+      case 1:
+        return "Temperature_Celcius";
+      case 2:
+        return "Temperature_Farenheit";
+      default:
+        return "NONE";
+    }
   };
-  
 
-  // If it's ICPMODBUS (commType 5), add additional fields
-  const isICPModbus = commData.COMMUNICATIONTYPE === 4; // Note: 0-based, so 4 means 5-1
+  const buildInstrumentRequestPayload = (pendingForm, commData) => {
+    // Base CommonSetting for all communication types
+    const baseCommonSetting = {
+      StopBits: commData.StopBits,
+      TerminationIdleSecs: commData.TerminationIdleSecs,
+      TCPPortNumber: Number(commData.TCPPortNumber) ?? 0,
+      Baudrate: Number(commData.Baudrate) ?? 0,
+      Databits: Number(commData.Databits) ?? 0,
+      COMPortNumber: Number(commData?.COMPortNumber) ?? 0,
+      IPAddress: commData.IPAddress ?? "",
+      Parity: commData.Parity,
+      Handshake: commData.Handshake,
+      InstResultSampleIDFrom:
+        commData.ResultSampleIDFrom === "IFACER"
+          ? 0
+          : commData.ResultSampleIDFrom === "LimsTestOrder"
+            ? 1
+            : 2,
 
-  if (isICPModbus) {
-    baseCommonSetting.nMinimumCurrent = commData.MIN_CURRENT || "0";
-    baseCommonSetting.nMaximumCurrent = commData.MAX_CURRENT || "0";
-    baseCommonSetting.nChannelNumber = commData.CHANNEL_NUMBER || "0";
-    baseCommonSetting.nMinimumDataPoint = commData.MIN_DATAPOINT || "0";
-    baseCommonSetting.nMaximumDataPoint = commData.MAX_DATAPOINT || "0";
-    baseCommonSetting.sConversionType = getConversionTypeName(commData.CONVERSION_TYPE);
-    
-    // Set COM port and baud to 0 for ICPMODBUS if not provided
-    if (!baseCommonSetting.COMPortNumber) baseCommonSetting.COMPortNumber = "0";
-    if (!baseCommonSetting.Baudrate) baseCommonSetting.Baudrate = "0";
-    if (!baseCommonSetting.Databits) baseCommonSetting.Databits = "0";
-  }
+      InstrumentDLL: null,
+      AllowRetest: 0,
+      MiltiTestOrder: 0,
+      InstrumentID: 0,
+      IdleTimetoDisconnect: -1,
+      AutoReconnectInterval: -1,
+      AutoOrderInterval: -1,
+      ImportFileWatcherPath: null,
+      CheckSumCALC: 0,
+      TestBased: -1,
+      MiltiSampleResult: 0,
+      HostComputerIP: "",
+      LimsTestOrder: 0,
+    };
 
-  return {
-    InstrumentList: {
-      INSTRUMENTID: 0,
-      LABNUMBER: "1",
-      ACTIVE: pendingForm.active ? 1 : 0,
-      SERIALNUMBER: "1",
-      LIMSCOMMTYPE: -1,
-      PROTOCOLID: 1,
-      COMMUNICATIONTYPE: commData.COMMUNICATIONTYPE,
-      MODEL: pendingForm.instrumentModel,
-      MANUFACTURER: pendingForm.instrumentMake,
-      ISINSTGROUP: -1,
-      INSTGROUPID:
-        pendingForm.interfacerMapped
-          ? pendingForm.parserType === "masters.winmethod" ||
-            pendingForm.parserType === "masters.webmethod"
+    // If it's ICPMODBUS (commType 5), add additional fields
+    const isICPModbus = commData.COMMUNICATIONTYPE === 4; // Note: 0-based, so 4 means 5-1
+
+    if (isICPModbus) {
+      baseCommonSetting.nMinimumCurrent = commData.MIN_CURRENT || "0";
+      baseCommonSetting.nMaximumCurrent = commData.MAX_CURRENT || "0";
+      baseCommonSetting.nChannelNumber = commData.CHANNEL_NUMBER || "0";
+      baseCommonSetting.nMinimumDataPoint = commData.MIN_DATAPOINT || "0";
+      baseCommonSetting.nMaximumDataPoint = commData.MAX_DATAPOINT || "0";
+      baseCommonSetting.sConversionType = getConversionTypeName(
+        commData.CONVERSION_TYPE,
+      );
+
+      // Set COM port and baud to 0 for ICPMODBUS if not provided
+      if (!baseCommonSetting.COMPortNumber)
+        baseCommonSetting.COMPortNumber = "0";
+      if (!baseCommonSetting.Baudrate) baseCommonSetting.Baudrate = "0";
+      if (!baseCommonSetting.Databits) baseCommonSetting.Databits = "0";
+    }
+
+    return {
+      InstrumentList: {
+        INSTRUMENTID: 0,
+        LABNUMBER: "1",
+        ACTIVE: pendingForm.active ? 1 : 0,
+        SERIALNUMBER: "1",
+        LIMSCOMMTYPE: -1,
+        PROTOCOLID: 1,
+        COMMUNICATIONTYPE: commData.COMMUNICATIONTYPE,
+        MODEL: pendingForm.instrumentModel,
+        MANUFACTURER: pendingForm.instrumentMake,
+        ISINSTGROUP: -1,
+        INSTGROUPID: pendingForm.interfacerMapped
+          ? pendingForm.parserType === t("masters.winmethod") ||
+            pendingForm.parserType === t("masters.webmethod")
             ? 20
             : 19
           : -1,
-      INSTCODE: pendingForm.instrumentCode,
-    },
-    sClientID:clientId || "",
-    Instrument: {
-      sInstrumentID: "",
-      sInstrumentName: pendingForm.instrumentCode,
-      sInstrumentAliasName: pendingForm.instrumentAlias,
-      iInstrumentStatus: pendingForm.active ? 1 : 0,
-      iL11ParserType:
-        pendingForm.parserType === "masters.winmethod"
-          ? 1
-          : pendingForm.parserType === "masters.webmethod"
-          ? 2
-          : 0,
-      sInstrumentModel: pendingForm.instrumentModel,
-      sInstrumentMake: pendingForm.instrumentMake,
-      iInterfaceStatus: pendingForm.interfacerMapped ? 1 : 0,
-      sLockType: pendingForm.lockType,
-    },
+        INSTCODE: pendingForm.instrumentCode,
+      },
+      sClientID: clientId || "",
+      Instrument: {
+        sInstrumentID: "",
+        sInstrumentName: pendingForm.instrumentCode,
+        sInstrumentAliasName: pendingForm.instrumentAlias,
+        iInstrumentStatus: pendingForm.active ? 1 : 0,
+        iL11ParserType:
+          pendingForm.parserType === t("masters.winmethod")
+            ? 1
+            : pendingForm.parserType === t("masters.webmethod")
+              ? 2
+              : 0,
+        sInstrumentModel: pendingForm.instrumentModel,
+        sInstrumentMake: pendingForm.instrumentMake,
+        iInterfaceStatus: pendingForm.interfacerMapped ? 1 : 0,
+        sLockType: pendingForm.lockType,
+      },
 
-    CommonSetting: baseCommonSetting,
+      CommonSetting: baseCommonSetting,
 
-    ActiveUserDetails: getActiveUserDetails(),
-    ApplicationCode: "SDMS",
-  };
-};
-
-const buildInstrumentEditRequestPayload = (
-  pendingForm,
-  commData,
-  auditPayload,
-) => {
-  // Base CommonSetting for all communication types
-  const baseCommonSetting = {
-    StopBits: commData.StopBits,
-    TerminationIdleSecs: commData.TerminationIdleSecs,
-    TCPPortNumber: Number(commData.TCPPortNumber) ?? 0,
-    Baudrate: Number(commData.Baudrate) ?? 0,
-    Databits: Number(commData.Databits) ?? 0,
-    COMPortNumber: Number(commData?.COMPortNumber) ?? 0,
-    IPAddress: commData.IPAddress ?? "",
-    Parity: commData.Parity,
-    Handshake: commData.Handshake,
-    InstResultSampleIDFrom: commData.ResultSampleIDFrom === "IFACER"
-    ? 0
-    : commData.ResultSampleIDFrom === "LimsTestOrder"
-    ? 1
-    : 2,
-    InstrumentDLL: null,
-    AllowRetest: 0,
-    MiltiTestOrder: 0,
-    InstrumentID: Number(pendingForm.interfacerInstrument),
-    IdleTimetoDisconnect: -1,
-    AutoReconnectInterval: -1,
-    AutoOrderInterval: -1,
-    ImportFileWatcherPath: null,
-    CheckSumCALC: 0,
-    TestBased: -1,
-    MiltiSampleResult: 0,
-    HostComputerIP: "",
-    LimsTestOrder: 0,
+      ActiveUserDetails: getActiveUserDetails(),
+      ApplicationCode: "SDMS",
+    };
   };
 
-  // If it's ICPMODBUS (commType 5), add additional fields
-  const isICPModbus = commData.COMMUNICATIONTYPE === 4; // Note: 0-based, so 4 means 5-1
+  const buildInstrumentEditRequestPayload = (
+    pendingForm,
+    commData,
+    auditPayload,
+  ) => {
+    // Base CommonSetting for all communication types
+    const baseCommonSetting = {
+      StopBits: commData.StopBits,
+      TerminationIdleSecs: commData.TerminationIdleSecs,
+      TCPPortNumber: Number(commData.TCPPortNumber) ?? 0,
+      Baudrate: Number(commData.Baudrate) ?? 0,
+      Databits: Number(commData.Databits) ?? 0,
+      COMPortNumber: Number(commData?.COMPortNumber) ?? 0,
+      IPAddress: commData.IPAddress ?? "",
+      Parity: commData.Parity,
+      Handshake: commData.Handshake,
+      InstResultSampleIDFrom:
+        commData.ResultSampleIDFrom === "IFACER"
+          ? 0
+          : commData.ResultSampleIDFrom === "LimsTestOrder"
+            ? 1
+            : 2,
+      InstrumentDLL: null,
+      AllowRetest: 0,
+      MiltiTestOrder: 0,
+      InstrumentID:
+        Number(pendingForm.interfacerInstrument) === -2
+          ? 0
+          : Number(pendingForm.interfacerInstrument),
+      IdleTimetoDisconnect: -1,
+      AutoReconnectInterval: -1,
+      AutoOrderInterval: -1,
+      ImportFileWatcherPath: null,
+      CheckSumCALC: 0,
+      TestBased: -1,
+      MiltiSampleResult: 0,
+      HostComputerIP: "",
+      LimsTestOrder: 0,
+    };
 
-  if (isICPModbus) {
-    baseCommonSetting.nMinimumCurrent = commData.MIN_CURRENT || "0";
-    baseCommonSetting.nMaximumCurrent = commData.MAX_CURRENT || "0";
-    baseCommonSetting.nChannelNumber = commData.CHANNEL_NUMBER || "0";
-    baseCommonSetting.nMinimumDataPoint = commData.MIN_DATAPOINT || "0";
-    baseCommonSetting.nMaximumDataPoint = commData.MAX_DATAPOINT || "0";
-    baseCommonSetting.sConversionType = getConversionTypeName(commData.CONVERSION_TYPE);
-    
-    // Set COM port and baud to 0 for ICPMODBUS if not provided
-    if (!baseCommonSetting.COMPortNumber) baseCommonSetting.COMPortNumber = "0";
-    if (!baseCommonSetting.Baudrate) baseCommonSetting.Baudrate = "0";
-    if (!baseCommonSetting.Databits) baseCommonSetting.Databits = "0";
-  }
+    // If it's ICPMODBUS (commType 5), add additional fields
+    const isICPModbus = commData.COMMUNICATIONTYPE === 4; // Note: 0-based, so 4 means 5-1
 
-  return {
-    InstrumentList: {
-      INSTRUMENTID: Number(pendingForm.interfacerInstrument),
-      LABNUMBER: "1",
-      ACTIVE: pendingForm.active ? 1 : 0,
-      SERIALNUMBER: "1",
-      LIMSCOMMTYPE: -1,
-      PROTOCOLID: 1,
-      COMMUNICATIONTYPE: commData.COMMUNICATIONTYPE,
-      MODEL: pendingForm.instrumentModel,
-      MANUFACTURER: pendingForm.instrumentMake,
-      ISINSTGROUP: -1,
-      INSTGROUPID:
-        pendingForm.interfacerMapped
-          ? pendingForm.parserType === "masters.winmethod" ||
-            pendingForm.parserType === "masters.webmethod"
+    if (isICPModbus) {
+      baseCommonSetting.nMinimumCurrent = commData.MIN_CURRENT || "0";
+      baseCommonSetting.nMaximumCurrent = commData.MAX_CURRENT || "0";
+      baseCommonSetting.nChannelNumber = commData.CHANNEL_NUMBER || "0";
+      baseCommonSetting.nMinimumDataPoint = commData.MIN_DATAPOINT || "0";
+      baseCommonSetting.nMaximumDataPoint = commData.MAX_DATAPOINT || "0";
+      baseCommonSetting.sConversionType = getConversionTypeName(
+        commData.CONVERSION_TYPE,
+      );
+
+      // Set COM port and baud to 0 for ICPMODBUS if not provided
+      if (!baseCommonSetting.COMPortNumber)
+        baseCommonSetting.COMPortNumber = "0";
+      if (!baseCommonSetting.Baudrate) baseCommonSetting.Baudrate = "0";
+      if (!baseCommonSetting.Databits) baseCommonSetting.Databits = "0";
+    }
+
+    return {
+      InstrumentList: {
+        INSTRUMENTID:
+          Number(pendingForm.interfacerInstrument) === -2
+            ? 0
+            : Number(pendingForm.interfacerInstrument),
+        LABNUMBER: "1",
+        ACTIVE: pendingForm.active ? 1 : 0,
+        SERIALNUMBER: "1",
+        LIMSCOMMTYPE: -1,
+        PROTOCOLID: 1,
+        COMMUNICATIONTYPE: commData.COMMUNICATIONTYPE,
+        MODEL: pendingForm.instrumentModel,
+        MANUFACTURER: pendingForm.instrumentMake,
+        ISINSTGROUP: -1,
+        INSTGROUPID: pendingForm.interfacerMapped
+          ? pendingForm.parserType === t("masters.winmethod") ||
+            pendingForm.parserType === t("masters.webmethod")
             ? 20
             : 19
           : -1,
-      INSTCODE: pendingForm.instrumentCode,
-    },
+        INSTCODE: pendingForm.instrumentCode,
+      },
 
-    Instrument: {
-      sInstrumentID: initialData?.Instrument?.sInstrumentID || "",
-      sInstrumentName: pendingForm.instrumentCode,
-      sInstrumentAliasName: pendingForm.instrumentAlias,
-      iInstrumentStatus: pendingForm.active ? 1 : 0,
-      iL11ParserType:
-        pendingForm.parserType === "masters.winmethod"
-          ? 1
-          : pendingForm.parserType === "masters.webmethod"
-          ? 2
-          : 0,
-      sInstrumentModel: pendingForm.instrumentModel,
-      sInstrumentMake: pendingForm.instrumentMake,
-      iInterfaceStatus: pendingForm.interfacerMapped ? 1 : 0,
-      sLockType: pendingForm.lockType,
-    },
+      Instrument: {
+        sInstrumentID: initialData?.Instrument?.sInstrumentID || "",
+        sInstrumentName: pendingForm.instrumentCode,
+        sInstrumentAliasName: pendingForm.instrumentAlias,
+        iInstrumentStatus: pendingForm.active ? 1 : 0,
+        iL11ParserType:
+          pendingForm.parserType === t("masters.winmethod")
+            ? 1
+            : pendingForm.parserType === t("masters.webmethod")
+              ? 2
+              : 0,
+        sInstrumentModel: pendingForm.instrumentModel,
+        sInstrumentMake: pendingForm.instrumentMake,
+        iInterfaceStatus: pendingForm.interfacerMapped ? 1 : 0,
+        sLockType: pendingForm.lockType,
+      },
 
-    CommonSetting: baseCommonSetting,
-    AuditTrailValues: auditPayload?.AuditTrailValues,
-    ActiveUserDetails: getActiveUserDetails(),
-    ApplicationCode: "SDMS",
+      CommonSetting: baseCommonSetting,
+      AuditTrailValues: auditPayload?.AuditTrailValues,
+      ActiveUserDetails: getActiveUserDetails(),
+      ApplicationCode: "SDMS",
+    };
   };
-};
+  const handleApiResponse = (response) => {
+    if (!response || response.Rtn !== "Success") {
+      setInfoDialog({
+        open: true,
+        message:
+          response?.Message?.sInstrumentName ||
+          response?.Message ||
+          t("common.operationfailed"),
+        type: response?.Rtn || "Error",
+      });
+      return false; // ⛔ stop caller flow
+    }
+    return true; // ✅ success
+  };
 
+  const handleAuditAuthorized = async (auditPayload) => {
+    setShowAuditTrail(false);
 
+    if (!pendingForm) return;
 
+    const previousRowId = selectedRowId; // 🔥 store current selection
 
-const handleAuditAuthorized = async (auditPayload) => {
-  setShowAuditTrail(false);
+    try {
+      setLoading(true);
+      setLoadingText(t("common.loading"));
 
-  if (!pendingForm) return;
+      // 1️⃣ EDIT instrument
+      const editResponse = await postData(
+        "basemaster/editInstrument",
+        buildEditInstrumentPayload(pendingForm, auditPayload, initialData),
+      );
 
-  const previousRowId = selectedRowId; // 🔥 store current selection
+      if (!handleApiResponse(editResponse)) return;
 
-  try {
-    setLoading(true);
-    setLoadingText(t("common.loading"));
+      // 2️⃣ 🔥 EDIT COMMUNICATION SETTINGS (only if interfacerMapped is true)
+      if (pendingForm.interfacerMapped && commData) {
+        const response = await postData(
+          "basemaster/insertInstrumentCommonSetting",
+          buildInstrumentEditRequestPayload(
+            pendingForm,
+            commData,
+            auditPayload,
+          ),
+        );
+        console.log(
+          "communication settings",
+          buildInstrumentEditRequestPayload(
+            pendingForm,
+            commData,
+            auditPayload,
+          ),
+        );
+        if (!handleApiResponse(response)) return;
+      }
 
-    // 1️⃣ EDIT instrument
-    await postData(
-      "basemaster/editInstrument",
-      buildEditInstrumentPayload(pendingForm, auditPayload, initialData)
+      // ✅ reload grid but keep previous selection
+
+      // ✅ CLOSE BOTH POPUPS
+    } catch (err) {
+      console.error("Edit save failed", err);
+    } finally {
+      setCommData(null);
+      setPendingForm(null);
+      await loadInstrumentGrid(false, previousRowId);
+      setShowCommSettings(false);
+      onClose();
+      setLoading(false);
+      setLoadingText("");
+    }
+  };
+
+  const checkExistingInstrument = async () => {
+    const payload = {
+      Instrument: {
+        sInstrumentName: form.instrumentCode,
+        sInstrumentAliasName: form.instrumentAlias,
+        sInstrumentID: "", // 🔥 always empty for ADD
+      },
+      ActiveUserDetails: getActiveUserDetails(),
+
+      ApplicationCode: "SDMS",
+    };
+
+    const res = await postData(
+      "basemaster/checkingExistingInstrument",
+      payload,
     );
 
-    // 2️⃣ 🔥 EDIT COMMUNICATION SETTINGS (only if interfacerMapped is true)
-    if (pendingForm.interfacerMapped && commData) {
-      await postData(
-        "basemaster/insertInstrumentCommonSetting",
-        buildInstrumentEditRequestPayload(pendingForm, commData, auditPayload)
-      );
-    }
-    console.log("communication settings",buildInstrumentEditRequestPayload(pendingForm, commData, auditPayload))
-    // ✅ reload grid but keep previous selection
-    await loadInstrumentGrid(false, previousRowId);
-
-    // ✅ CLOSE BOTH POPUPS
-    setShowCommSettings(false);
-    onClose();
-  } catch (err) {
-    console.error("Edit save failed", err);
-  } finally {
-    setCommData(null);
-    setPendingForm(null);
-    setLoading(false);
-    setLoadingText("");
-  }
-};
-
-const checkExistingInstrument = async () => {
-  const payload = {
-    Instrument: {
-      sInstrumentName: form.instrumentCode,
-      sInstrumentAliasName: form.instrumentAlias,
-      sInstrumentID: "", // 🔥 always empty for ADD
-    },
-     ActiveUserDetails: getActiveUserDetails(), 
-      
-    ApplicationCode: "SDMS",
+    return Array.isArray(res) && res.length > 0;
   };
-
-  const res = await postData(
-    "basemaster/checkingExistingInstrument",
-    payload
-  );
-
-  return Array.isArray(res) && res.length > 0;
-};
-const getInstrumentCommSettings = async (instrumentId) => {
-  const res = await postData(
-    "basemaster/getInstrumentBasedSetting",
-    {
+  const getInstrumentCommSettings = async (instrumentId) => {
+    const res = await postData("basemaster/getInstrumentBasedSetting", {
       INSTRUMENTID: instrumentId,
       ActiveUserDetails: getActiveUserDetails(),
       ApplicationCode: "SDMS",
-    }
-  );
+    });
 
-  return Array.isArray(res) && res.length > 0 ? res[0] : null;
-};
-
-
+    return Array.isArray(res) && res.length > 0 ? res[0] : null;
+  };
 
   const confirmUnmapInterfacer = () => {
     setForm((prev) => ({
@@ -744,33 +810,46 @@ const getInstrumentCommSettings = async (instrumentId) => {
     );
   };
   // Helper function to get the display value for interfacerInstrument
-// Helper function to get the display value for interfacerInstrument
-// Helper function to get the display value for interfacerInstrument
-const getInterfacerDisplayValue = () => {
-  if (!form.interfacerMapped) return "";
-  
-  // For ADD mode, just return the form value
-  if (isAddMode) {
-    return form.interfacerInstrument;
-  }
-  
-  // For EDIT mode
-  if (form.interfacerInstrument) {
-    // Check if the current value exists in options
-    const existsInOptions = interfacerOptions.some(opt => opt.value === form.interfacerInstrument);
-    
-    if (existsInOptions) {
-      // If exists, return it
+  // Helper function to get the display value for interfacerInstrument
+  // Helper function to get the display value for interfacerInstrument
+  const getInterfacerDisplayValue = () => {
+    if (!form.interfacerMapped) return "";
+
+    // For ADD mode, just return the form value
+    if (isAddMode) {
       return form.interfacerInstrument;
-    } else {
-      // If not exists, return first option's value
-      return interfacerOptions.length > 0 ? interfacerOptions[0].value : "";
     }
-  }
-  
-  // If no value, return first option
-  return interfacerOptions.length > 0 ? interfacerOptions[0].value : "";
-};
+
+    // For EDIT mode
+    if (form.interfacerInstrument) {
+      // Check if the current value exists in options
+      const existsInOptions = interfacerOptions.some(
+        (opt) => opt.value === form.interfacerInstrument,
+      );
+
+      if (existsInOptions) {
+        // If exists, return it
+        return form.interfacerInstrument;
+      } else {
+        // If not exists, check if "Create New" is available
+        const hasCreateNew = interfacerOptions.some(
+          (opt) => opt.value === "-2",
+        );
+        if (hasCreateNew) {
+          return "-2";
+        }
+        // Otherwise use first option
+        return interfacerOptions.length > 0 ? interfacerOptions[0].value : "";
+      }
+    }
+
+    // If no value, check for "Create New" first, then first option
+    const hasCreateNew = interfacerOptions.some((opt) => opt.value === "-2");
+    if (hasCreateNew) {
+      return "-2";
+    }
+    return interfacerOptions.length > 0 ? interfacerOptions[0].value : "";
+  };
 
   if (!isOpen) return null;
 
@@ -794,12 +873,12 @@ const getInterfacerDisplayValue = () => {
               </label>
               <button
                 onClick={() => {
-                   setSubmitted(false);
-  setForm(initialForm);
-  setCommData(null);
-  setPendingForm(null);
-    setShowCommSettings(false);
-  onClose();
+                  setSubmitted(false);
+                  setForm(initialForm);
+                  setCommData(null);
+                  setPendingForm(null);
+                  setShowCommSettings(false);
+                  onClose();
                 }}
                 className="text-gray-300 text-[20px] font-bold "
               >
@@ -819,8 +898,8 @@ const getInterfacerDisplayValue = () => {
                   {availableLicense > 0
                     ? `${t("masters.availableLicense")}: ${availableLicense}`
                     : isAddMode
-                    ? t("masters.insufficientlicensetocreateinstrument")
-                    : ""}
+                      ? t("masters.insufficientlicensetocreateinstrument")
+                      : ""}
                 </label>
               )}
 
@@ -831,30 +910,36 @@ const getInterfacerDisplayValue = () => {
                     <span className="text-red-500">*</span>
                   </label>
                   <input
-  type="text"
-  name="instrumentCode"
-  value={form.instrumentCode}
-  onChange={(e) => {
-    setForm({ ...form, instrumentCode: e.target.value });
-    setFieldErrors((prev) => ({ ...prev, instrumentCode: "" }));
-  }}
-  className={`
+                    type="text"
+                    name="instrumentCode"
+                    value={form.instrumentCode}
+                    disabled={isEditMode} // 🔥 THIS LINE
+                    onChange={(e) => {
+                      if (isEditMode) return; // extra safety
+                      setForm({ ...form, instrumentCode: e.target.value });
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        instrumentCode: "",
+                      }));
+                    }}
+                    className={`
     w-full bg-transparent pb-1 text-[12px] font-semibold outline-none
     border-b-2
     ${
-      submitted && (!form.instrumentCode || fieldErrors.instrumentCode)
-        ? "border-red-500"
-        : "border-gray-300"
+      isEditMode
+        ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
+        : submitted && (!form.instrumentCode || fieldErrors.instrumentCode)
+          ? "border-red-500"
+          : "border-gray-300"
     }
   `}
-/>
+                  />
 
-{fieldErrors.instrumentCode && (
-  <div className="text-[11px] text-red-600 font-roboto">
-    {fieldErrors.instrumentCode}
-  </div>
-)}
-
+                  {fieldErrors.instrumentCode && (
+                    <div className="text-[11px] text-red-600 font-roboto">
+                      {fieldErrors.instrumentCode}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -863,14 +948,17 @@ const getInterfacerDisplayValue = () => {
                     <span className="text-red-500">*</span>
                   </label>
                   <input
-  type="text"
-  name="instrumentAlias"
-  value={form.instrumentAlias}
-  onChange={(e) => {
-    setForm({ ...form, instrumentAlias: e.target.value });
-    setFieldErrors((prev) => ({ ...prev, instrumentAlias: "" }));
-  }}
-  className={`
+                    type="text"
+                    name="instrumentAlias"
+                    value={form.instrumentAlias}
+                    onChange={(e) => {
+                      setForm({ ...form, instrumentAlias: e.target.value });
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        instrumentAlias: "",
+                      }));
+                    }}
+                    className={`
     w-full bg-transparent pb-1 text-[12px] font-semibold outline-none
     border-b-2
     ${
@@ -879,14 +967,13 @@ const getInterfacerDisplayValue = () => {
         : "border-gray-300"
     }
   `}
-/>
+                  />
 
-{fieldErrors.instrumentAlias && (
-  <div className="text-[11px] text-red-600 font-roboto">
-    {fieldErrors.instrumentAlias}
-  </div>
-)}
-
+                  {fieldErrors.instrumentAlias && (
+                    <div className="text-[11px] text-red-600 font-roboto">
+                      {fieldErrors.instrumentAlias}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -994,55 +1081,78 @@ ${
 
                 {/* Checkboxes */}
                 <div className="flex gap-8">
-                <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
-  {t("masters.interfacerMapped")}
-  <input
-    type="checkbox"
-    checked={form.interfacerMapped}
-    onChange={(e) => {
-      const checked = e.target.checked;
+                  <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
+                    {t("masters.interfacerMapped")}
+                    <input
+                      type="checkbox"
+                      checked={form.interfacerMapped}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
 
-      // ✅ EDIT MODE + was originally checked + user tries to uncheck
-      if (
-        isEditMode &&
-        originalInterfacerMapped &&
-        !checked
-      ) {
-        setShowInterfacerWarning(true);
-        return;
-      }
+                        // ✅ EDIT MODE + was originally checked + user tries to uncheck
+                        if (
+                          isEditMode &&
+                          originalInterfacerMapped &&
+                          !checked
+                        ) {
+                          setShowInterfacerWarning(true);
+                          return;
+                        }
 
-      if (checked) {
-        if (isAddMode) {
-          // ADD mode: Default to "Create New" (-2)
-          setForm({
-            ...form,
-            interfacerMapped: checked,
-            interfacerInstrument: "-2",
+                        if (checked) {
+                          let defaultInstrumentValue = "";
 
-          });
-        } else {
-          // EDIT mode: Use first available option
-          const firstOptionValue = interfacerOptions.length > 0 
-            ? interfacerOptions[0].value 
-            : "";
-          setForm({
-            ...form,
-            interfacerMapped: checked,
-            interfacerInstrument: firstOptionValue,
-          });
-        }
-      } else {
-        // When unchecking
-        setForm({
-          ...form,
-          interfacerMapped: checked,
-          interfacerInstrument: "",
-        });
-      }
-    }}
-  />
-</label>
+                          if (isAddMode) {
+                            // ADD mode: Default to "Create New" (-2)
+                            defaultInstrumentValue = "-2";
+                          } else {
+                            // EDIT mode: Check iInterfacerInstID from response
+                            const savedInterfacerId = String(
+                              initialData?.iInterfacerInstID || "0",
+                            );
+
+                            if (
+                              savedInterfacerId === "0" ||
+                              savedInterfacerId === "null" ||
+                              savedInterfacerId === ""
+                            ) {
+                              // No existing interfacer, use "Create New" if available
+                              defaultInstrumentValue = interfacerOptions.some(
+                                (opt) => opt.value === "-2",
+                              )
+                                ? "-2"
+                                : interfacerOptions.length > 0
+                                  ? interfacerOptions[0].value
+                                  : "";
+                            } else {
+                              // Has existing interfacer, try to use it
+                              const existsInOptions = interfacerOptions.some(
+                                (opt) => opt.value === savedInterfacerId,
+                              );
+                              defaultInstrumentValue = existsInOptions
+                                ? savedInterfacerId
+                                : interfacerOptions.length > 0
+                                  ? interfacerOptions[0].value
+                                  : "";
+                            }
+                          }
+
+                          setForm({
+                            ...form,
+                            interfacerMapped: checked,
+                            interfacerInstrument: defaultInstrumentValue,
+                          });
+                        } else {
+                          // When unchecking
+                          setForm({
+                            ...form,
+                            interfacerMapped: checked,
+                            interfacerInstrument: "",
+                          });
+                        }
+                      }}
+                    />
+                  </label>
 
                   <label className="flex items-center gap-2 text-[#405f7d] text-[12px] font-bold font-roboto">
                     {t("statuses.active")}
@@ -1059,32 +1169,29 @@ ${
                   </label>
                 </div>
 
-{form.interfacerMapped && (
-  <div>
-    <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-      {t("masters.interfacerInstrument")}
-      <span className="text-red-500">*</span>
-    </label>
-    <AnimatedDropdown
-      name="interfacerInstrument"
-      value={getInterfacerDisplayValue()}
-      options={interfacerOptions}
-      displayKey="label"
-      valueKey="value"
-      onChange={(e) =>
-  setForm({
-    ...form,
-    interfacerInstrument: e.target.value, // 🔥 keep as STRING
-  })
-}
-
-
-      required
-      showError={submitted}
-    />
-  
-  </div>
-)}
+                {form.interfacerMapped && (
+                  <div>
+                    <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
+                      {t("masters.interfacerInstrument")}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <AnimatedDropdown
+                      name="interfacerInstrument"
+                      value={getInterfacerDisplayValue()}
+                      options={interfacerOptions}
+                      displayKey="label"
+                      valueKey="value"
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          interfacerInstrument: e.target.value, // 🔥 keep as STRING
+                        })
+                      }
+                      required
+                      showError={submitted}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1093,36 +1200,38 @@ ${
               {form.interfacerMapped && (
                 <button
                   onClick={async () => {
-  setSubmitted(true);
+                    setSubmitted(true);
 
-  if (!isCommSettingsValid()) return;
+                    if (!isCommSettingsValid()) return;
 
-  // ADD MODE duplicate check
-  if (isAddMode) {
-    const isDuplicate = await checkExistingInstrument();
-    if (isDuplicate) {
-      setFieldErrors({
-        instrumentCode: t("masters.instrumentnamealreadyexists"),
-        instrumentAlias: t("masters.instrumentaliasnamealreadyexists"),
-      });
-      return;
-    }
-  }
+                    // ADD MODE duplicate check
+                    if (isAddMode) {
+                      const isDuplicate = await checkExistingInstrument();
+                      if (isDuplicate) {
+                        setFieldErrors({
+                          instrumentCode: t(
+                            "masters.instrumentnamealreadyexists",
+                          ),
+                          instrumentAlias: t(
+                            "masters.instrumentaliasnamealreadyexists",
+                          ),
+                        });
+                        return;
+                      }
+                    }
 
-  let commSettings = null;
+                    let commSettings = null;
 
-  if (form.interfacerInstrument !== -2) {
-    commSettings = await getInstrumentCommSettings(
-      form.interfacerInstrument
-    );
-  }
+                    if (form.interfacerInstrument !== -2) {
+                      commSettings = await getInstrumentCommSettings(
+                        form.interfacerInstrument,
+                      );
+                    }
 
-  setCommData(commSettings);
-  setPendingForm(form);
-  setShowCommSettings(true);
-}}
-
-
+                    setCommData(commSettings);
+                    setPendingForm(form);
+                    setShowCommSettings(true);
+                  }}
                   className="flex items-center gap-1 px-[12px] py-[6px] rounded text-[11px] font-bold shadow-sm bg-[#2883fe] text-white"
                 >
                   <IoIosSettings className="w-4 h-4" />
@@ -1158,17 +1267,15 @@ ${
         </Draggable>
       </div>
       <CommunicationSettingsModal
-  isOpen={showCommSettings}
-  interfacerInstrument={form.interfacerInstrument}
-  parserType={form.parserType}
-  instrumentData={pendingForm}
-  commData={commData}      
-  onSubmit={handleCommSubmit}
-  selectedRow={selectedRow}
-  onClose={() => setShowCommSettings(false)}
-/>
-
-
+        isOpen={showCommSettings}
+        interfacerInstrument={form.interfacerInstrument}
+        parserType={form.parserType}
+        instrumentData={pendingForm}
+        commData={commData}
+        onSubmit={handleCommSubmit}
+        selectedRow={selectedRow}
+        onClose={() => setShowCommSettings(false)}
+      />
 
       <AuditTrail
         isOpen={showAuditTrail}
@@ -1177,19 +1284,25 @@ ${
         actionLabel={mode === "edit" ? "Update" : "Submit"}
       />
       {showInterfacerWarning && (
-  <Errordialog
-    type="confirmation"
-    message={t("masters.interfacermappedwithnonmappedinstrumentalertmsg")}
-    showCancel={true}
-    onConfirm={() => {
-      confirmUnmapInterfacer();
-    }}
-    onCancel={() => {
-      setShowInterfacerWarning(false);
-    }}
-  />
-)}
-
+        <Errordialog
+          type="confirmation"
+          message={t("masters.interfacermappedwithnonmappedinstrumentalertmsg")}
+          showCancel={true}
+          onConfirm={() => {
+            confirmUnmapInterfacer();
+          }}
+          onCancel={() => {
+            setShowInterfacerWarning(false);
+          }}
+        />
+      )}
+      {infoDialog.open && (
+        <Errordialog
+          type="information"
+          message={infoDialog.message}
+          onClose={() => setInfoDialog({ open: false, message: "" })}
+        />
+      )}
     </>
   );
 };
