@@ -203,6 +203,7 @@ import { useTranslation } from "react-i18next";
 
 function Errordialog({
   message,
+  subMessage = "",
   type = "",
   onClose,
   showCancel = false,
@@ -217,6 +218,9 @@ function Errordialog({
   const { t, i18n } = useTranslation();
   const isTranslationKey = i18n.exists(message);
   const displayMessage = isTranslationKey ? t(message) : message;
+
+  const isSubMessageKey = subMessage && i18n.exists(subMessage);
+  const displaySubMessage = isSubMessageKey ? t(subMessage) : subMessage;
 
   let headerColor = "";
   let title = "";
@@ -293,7 +297,17 @@ function Errordialog({
           <p className="text-gray-700 font-semibold font-roboto text-[18px] leading-relaxed">
             {displayMessage}
           </p>
+
+        {displaySubMessage && (
+            <p className="text-gray-500 font-normal font-roboto text-[14px] mt-3 leading-relaxed">
+              {displaySubMessage}
+            </p>
+          )}
+
         </div>
+        
+        
+
 
         <div className="flex justify-end font-roboto border-t px-5 py-3 gap-3">
           {buttonsToRender.map((btn, index) => {
