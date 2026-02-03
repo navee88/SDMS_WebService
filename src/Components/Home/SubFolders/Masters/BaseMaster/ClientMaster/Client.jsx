@@ -34,6 +34,7 @@ const Client = () => {
     type: "information",
   });
 
+
   const [unmappedInstruments, setUnmappedInstruments] = useState([]);
 
   const [showAuditTrail, setShowAuditTrail] = useState(false);
@@ -306,13 +307,15 @@ if (response?.Rtn === "Success") {
 
         // 3️⃣ Set edit form data
         setEditingRow({
-          id: row.id,
-          clientName: response.Client.sClientName.trim(),
-          clientAlias: response.Client.sClientAliasName.trim(),
-          status: response.Client.iStatus === 1 ? "Active" : "Inactive",
-          selectedInstruments: initiallySelected,
-          allInstruments: normalizedInstruments,
-        });
+  id: row.id,
+  clientName: response.Client.sClientName.trim(),
+  clientAlias: response.Client.sClientAliasName.trim(),
+  status: response.Client.iStatus === 1 ? "Active" : "Inactive",
+  clientTypeID: response.Client.sClientTypeID.trim(), // ✅ ADD THIS
+  selectedInstruments: initiallySelected,
+  allInstruments: normalizedInstruments,
+});
+
 
         setShowModal(true);
       }
@@ -584,7 +587,6 @@ const handleExport = () => {
           onReloadUnmapped={loadUnmappedInstruments}  
 
           onSubmit={async (clientData) => {
-  // 🟢 ADD MODE → call API immediately
   if (!editingRow) {
     try {
       setLoading(true);
@@ -601,24 +603,19 @@ const handleExport = () => {
         mappedInstrumentCache.current = {};
         await loadClientGridData();
         setSelectedRowId(null);
-      } else {
-        setErrorDialog({
-          open: true,
-          message: response?.Message?.sClientName || "Insert failed",
-          type: response?.Rtn === "Warning" ? "warning" : "error",
-        });
       }
+
+      return response; // 🔥 IMPORTANT
     } catch (err) {
       console.error("Insert error:", err);
+      return { Rtn: "Error" };
     } finally {
       setLoading(false);
       setLoadingText("");
     }
-
-    return; // 🔴 IMPORTANT: DO NOT open audit trail
   }
 
-  // 🔵 EDIT MODE → go to audit
+  // EDIT MODE → audit
   setPendingClientData({
     ...clientData,
     mode: "EDIT",
@@ -629,14 +626,15 @@ const handleExport = () => {
   setShowAuditTrail(true);
 }}
 
+
         />
       )}
       {doPrint && (
   <PrintTable
     columns={columns}
     rows={rows}
-  title={t("label.client")}
-  subtitle={t("masters.client")}
+  title={t("masters.clientmaster")}
+  subtitle={t("masters.clientdata")}
 
     printRequest={buildPrintRequest()}
     onDone={() => setDoPrint(false)}

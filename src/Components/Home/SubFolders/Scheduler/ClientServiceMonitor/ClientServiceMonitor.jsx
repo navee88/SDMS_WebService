@@ -247,7 +247,7 @@ const fetchFilteredGridData = async (client, service) => {
     <div className="space-y-4  text-[12px]">
       <Detail label={t("scheduler.lastmodifieddate")} value={row?.lastModified} />
       <Detail label={t("scheduler.startdatetime")} value={row?.startTime} />
-      <Detail label={t("scheduler.enddatetime")} value={row?.runningTime} />
+      <Detail label={t("scheduler.runningdatetime")} value={row?.runningTime} />
     </div>
   );
 

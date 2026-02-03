@@ -22,6 +22,10 @@ const AddClientModal = ({
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
+    const [fieldErrors, setFieldErrors] = useState({
+    clientName: "",
+    clientAlias: "",
+  });
 
   const { postData } = useAxios();
 
@@ -66,7 +70,7 @@ const AddClientModal = ({
   const [form, setForm] = useState({
     clientName: initialData?.clientName || "",
     clientAlias: initialData?.clientAlias || "",
-    clientType: initialData?.clientType || "",
+    clientTypeId: initialData?.clientTypeID || "",
     active: initialData?.status === "Active" || false,
     gatewayClient: false,
   });
@@ -93,9 +97,10 @@ const AddClientModal = ({
 
         if (Array.isArray(response)) {
           const types = response.map((ct) => ({
-            id: ct.sClientTypeID.trim(),
-            name: ct.sClientTypeName.trim(),
-          }));
+  id: ct.sClientTypeID.trim(),
+  name: ct.sClientTypeName.trim(),
+}));
+
 
           setClientTypes(types);
 
@@ -133,29 +138,36 @@ const AddClientModal = ({
     );
   }, [instrumentSearch, instrumentList]);
 
-  const handleSubmit = () => {
-    setSubmitted(true);
+  const handleSubmit = async () => {
+  setSubmitted(true);
 
-    if (!form.clientName || !form.clientAlias || !form.clientType) {
-      return;
-    }
-    const selectedClientType = clientTypes.find(
-      (ct) => ct.name === form.clientType,
-    );
+  if (!form.clientName || !form.clientAlias || !form.clientType) {
+    return;
+  }
+  const response = await onSubmit({
+    clientName: form.clientName,
+    clientAlias: form.clientAlias,
+    status: form.active ? "Active" : "Deactive",
+    clientTypeID: form.clientTypeId,
+    gatewayClient: form.gatewayClient,
+    selectedInstruments,
+  });
 
-    onSubmit({
-      clientName: form.clientName,
-      clientAlias: form.clientAlias,
-      status: form.active ? "Active" : "Deactive",
-      clientType: selectedClientType?.name, // UI / Grid
-      clientTypeID: selectedClientType?.id, // 🔥 API
-      gatewayClient: form.gatewayClient,
-      selectedInstruments,
+  // 🔥 HANDLE BACKEND FIELD ERRORS HERE
+  if (response?.Rtn === "Warning" && response?.Message) {
+    setFieldErrors({
+      clientName: response.Message.sClientName || "",
+      clientAlias: response.Message.sClientAliasName || "",
     });
+    return; // ❌ DO NOT CLOSE MODAL
+  }
 
+  if (response?.Rtn === "Success") {
     setSubmitted(false);
-    onClose();
-  };
+    onClose(); // ✅ close only on success
+  }
+};
+
   useEffect(() => {
     if (initialData) {
       const unmapped = allInstruments
@@ -209,19 +221,33 @@ const AddClientModal = ({
                   <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text"
-                  name="clientName"
-                  value={form.clientName}
-                  onChange={(e) =>
-                    setForm({ ...form, clientName: e.target.value })
-                  }
-                  className={`
-      w-full bg-transparent pb-1 text-[12px] font-semibold outline-none font-['Verdana'] text-[#555]
-      border-b-2 
-      ${submitted && !form.clientName ? "border-red-500" : "border-gray-300"}
-      focus:border-blue-500
-    `}
-                />
+  type="text"
+  name="clientName"
+  value={form.clientName}
+  disabled={!isAddMode}   // ✅ disable in EDIT mode
+  onChange={(e) => {
+    setForm({ ...form, clientName: e.target.value });
+    setFieldErrors((prev) => ({ ...prev, clientName: "" }));
+  }}
+  className={`
+    w-full bg-transparent pb-1 text-[12px] font-semibold outline-none
+    border-b-2
+    ${
+      submitted && !form.clientName || fieldErrors.clientName
+        ? "border-red-500"
+        : "border-gray-300"
+    }
+    focus:border-blue-500
+    ${!isAddMode ? "cursor-not-allowed text-gray-400" : ""}
+  `}
+/>
+
+{fieldErrors.clientName && (
+  <p className="text-red-500 text-[11px] ">
+    {fieldErrors.clientName}
+  </p>
+)}
+
               </div>
 
               <div>
@@ -230,36 +256,48 @@ const AddClientModal = ({
                   <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text"
-                  name="clientAlias"
-                  value={form.clientAlias}
-                  onChange={(e) =>
-                    setForm({ ...form, clientAlias: e.target.value })
-                  }
-                  className={`
-      w-full bg-transparent pb-1 text-[12px] font-semibold outline-none font-['Verdana'] text-[#555]
-      border-b-2
-      ${submitted && !form.clientAlias ? "border-red-500" : "border-gray-300"}
-      focus:border-blue-500
-    `}
-                />
+  type="text"
+  name="clientAlias"
+  value={form.clientAlias}
+  onChange={(e) => {
+    setForm({ ...form, clientAlias: e.target.value });
+    setFieldErrors((prev) => ({ ...prev, clientAlias: "" }));
+  }}
+  className={`
+    w-full bg-transparent pb-1 text-[12px] font-semibold outline-none
+    border-b-2
+    ${
+      submitted && !form.clientAlias || fieldErrors.clientAlias
+        ? "border-red-500"
+        : "border-gray-300"
+    }
+    focus:border-blue-500
+  `}
+/>
+{fieldErrors.clientAlias && (
+  <p className="text-red-500 text-[11px]">
+    {fieldErrors.clientAlias}
+  </p>
+)}
+
               </div>
 
               <AnimatedDropdown
-                label={
-                  <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
-                    {t("masters.clienttype")}{" "}
-                    <span className="text-red-500">*</span>
-                  </label>
-                }
-                name="clientType"
-                value={form.clientType}
-                allowFreeInput
-                options={clientTypes.map((ct) => ct.name)}
-                onChange={(e) =>
-                  setForm({ ...form, clientType: e.target.value })
-                }
-              />
+  label={
+    <label className="block text-[#405f7d] text-[12px] font-bold font-roboto">
+      {t("masters.clienttype")} <span className="text-red-500">*</span>
+    </label>
+  }
+  value={form.clientTypeId}                 // ✅ ID
+  options={clientTypes.map((ct) => ({
+    label: ct.name,
+    value: ct.id,
+  }))}
+  onChange={(e) =>
+    setForm({ ...form, clientTypeId: e.target.value })
+  }
+/>
+
             </div>
 
             {/* CHECKBOXES */}

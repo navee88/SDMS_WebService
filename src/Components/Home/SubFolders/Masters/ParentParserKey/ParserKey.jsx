@@ -5,6 +5,9 @@ import { FaEdit } from "react-icons/fa";
 import EditParserKeyModal from "./EditParserKeyModal"; // Import from separate file
 import useAxios from "../../../../../Services/servicecall";
 import CF_activeUserdetails from "../../../../../Services/activeUserdetails";
+import { useTranslation } from "react-i18next";
+import FullPageLoader from "../../../../Layout/Common/FullPageLoader";
+import { fi } from "zod/v4/locales";
 
 
 /* ---------------- DETAIL ROW ---------------- */
@@ -34,10 +37,13 @@ const ActionButton = ({ icon: Icon, label, onClick }) => (
 const ParserKey = () => {
 const [rows, setRows] = useState([]);
 const [selectedRowId, setSelectedRowId] = useState(null);
+  const { t } = useTranslation();
 
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isMethodSetupContext, setIsMethodSetupContext] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("");
 
 
   /* ---------------- GRID COLUMNS WITH CORRECT STRUCTURE ---------------- */
@@ -45,6 +51,8 @@ const [selectedRowId, setSelectedRowId] = useState(null);
 
 const loadParserKeyGrid = async () => {
   try {
+    setLoading(true);
+    setLoadingText(t("common.loading"));
     const requestPayload = {
       sActionType: "View",
       ...CF_activeUserdetails()
@@ -83,6 +91,10 @@ const loadParserKeyGrid = async () => {
     console.error("ParserKey load failed", error);
     setShowErrorDialog(true);
   }
+  finally {
+    setLoading(false);
+    setLoadingText("");
+  }
 };
 
 useEffect(() => {
@@ -93,7 +105,7 @@ useEffect(() => {
     () => [
       {
         key: "elninstrumentcode",
-        label: "ELN Instrument Code",
+        label: t("scheduler.elninstrumentcode"),
         width: 140,
         enableSearch: true,
         render: (row) => (
@@ -109,7 +121,7 @@ useEffect(() => {
       },
       {
         key: "elnmethodgroup",
-        label: "ELN Method Group",
+        label: t("scheduler.elnmethodgroup"),
         width: 140,
         enableSearch: true,
         render: (row) => (
@@ -125,7 +137,7 @@ useEffect(() => {
       },
       {
         key: "elnmethodname",
-        label: "ELN Method Name",
+        label: t("scheduler.elnmethodname"),
         width: 140,
         enableSearch: true,
         render: (row) => (
@@ -141,7 +153,7 @@ useEffect(() => {
       },
       {
         key: "parsingkey",
-        label: "Parsing Key",
+        label: t("scheduler.parsingkey"),
         width: 140,
         enableSearch: true,
         render: (row) => (
@@ -174,6 +186,8 @@ useEffect(() => {
   /* ---------------- HANDLE SAVE ---------------- */
 const handleSave = async (form, setApiError, closeModal) => {
   try {
+    setLoading(true);
+    setLoadingText(t("common.loading"));
     const requestPayload = {
       MethodGroup: selectedRow?.elnmethodgroup,
       FileConvert: form.usePdfToCsv ? "CSV" : "",
@@ -231,6 +245,10 @@ const handleSave = async (form, setApiError, closeModal) => {
     console.error("Update ParserKey failed", err);
     setApiError("Something went wrong while updating Parser Key");
   }
+  finally {
+    setLoading(false);
+    setLoadingText("");
+  }
 };
 
 
@@ -238,9 +256,9 @@ const handleSave = async (form, setApiError, closeModal) => {
   /* ---------------- DETAIL PANEL ---------------- */
 const renderDetailPanel = (row) => (
   <div className="space-y-3 p-4">
-    <DetailRow label="Created On" value={row.createdOn} />
-    <DetailRow label="Modified On" value={row.modifiedOn} />
-    <DetailRow label="File Convert" value={row.usePdfToCsv || "-"} />
+    <DetailRow label={t("label.createdOn")} value={row.createdOn} />
+    <DetailRow label={t("label.modifiedOn")} value={row.modifiedOn} />
+    <DetailRow label={t("label.fileConvert")} value={row.usePdfToCsv || "-"} />
   </div>
 );
 
@@ -251,11 +269,11 @@ const renderDetailPanel = (row) => (
       <div className="flex justify-end p-2">
         <ActionButton
           icon={FaEdit}
-          label="Edit"
+          label={t("button.edit")}
           onClick={handleEditClick}
         />
       </div>
-
+      <FullPageLoader loading={loading} text={loadingText} />
       {/* GRID */}
       <div className="flex-1 overflow-hidden">
         <GridLayout
@@ -289,7 +307,7 @@ const renderDetailPanel = (row) => (
       {showErrorDialog && (
         <Errordialog
           type="information"
-          message="Select an existing record."
+          message={t("masters.selectrecord")}
           onClose={() => setShowErrorDialog(false)}
         />
       )}

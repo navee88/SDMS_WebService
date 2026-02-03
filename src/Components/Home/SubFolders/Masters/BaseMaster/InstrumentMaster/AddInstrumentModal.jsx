@@ -23,6 +23,7 @@ const AddInstrumentModal = ({
   selectedRowId, // ✅ pass selected row ID
   loadInstrumentGrid, // ✅ pass reload function
 }) => {
+  console.log("selectedRow in AddInstrumentModal:", selectedRow);
   const { t } = useTranslation();
   const [showCommSettings, setShowCommSettings] = useState(false);
   const { postData } = useAxios();
@@ -46,9 +47,9 @@ const AddInstrumentModal = ({
   });
 
   const PARSER_ORDER_MAP = {
-    0: { label: t("masters.none"), value: t("masters.none") },
-    1: { label: t("masters.winmethod"), value: t("masters.winmethod") },
-    2: { label: t("masters.webmethod"), value: t("masters.webmethod") },
+    0: { label: "NONE", value: "NONE" },
+    1: { label: "WIN_METHOD", value: "WIN_METHOD" },
+    2: { label: "WEB_METHOD", value: "WEB_METHOD" },
   };
   const LOCK_TYPE_OPTIONS = [
     { label: t("label.automatic"), value: "A" },
@@ -78,8 +79,8 @@ const AddInstrumentModal = ({
   const [form, setForm] = useState(initialForm);
   const showParserInterfacerMsg =
     submitted &&
-    (form.parserType === t("masters.winmethod") ||
-      form.parserType === t("masters.webmethod")) &&
+    (form.parserType === "WIN_METHOD" ||
+      form.parserType === "WEB_METHOD") &&
     !form.interfacerMapped;
 
   const [commData, setCommData] = useState(null);
@@ -325,10 +326,10 @@ const AddInstrumentModal = ({
       lockType: inst.sLockType || "A",
       parserType:
         inst.iL11ParserType === 1
-          ? t("masters.winmethod")
+          ? "WIN_METHOD"
           : inst.iL11ParserType === 2
-            ? t("masters.webmethod")
-            : t("masters.none"),
+            ? "WEB_METHOD"
+            : "NONE",
       interfacerMapped: isMapped,
       interfacerInstrument: determineInitialValue(),
       active: Number(inst.iInstrumentStatus) === 1,
@@ -350,8 +351,8 @@ const AddInstrumentModal = ({
     if (!isSubmitValid()) return;
 
     const isParserNeedsInterfacer =
-      (form.parserType === t("masters.winmethod") ||
-        form.parserType === t("masters.webmethod")) &&
+      (form.parserType === "WIN_METHOD" ||
+        form.parserType === "WEB_METHOD") &&
       !form.interfacerMapped;
 
     if (isParserNeedsInterfacer) return;
@@ -396,6 +397,15 @@ const AddInstrumentModal = ({
     }
 
     // 🔥 EDIT MODE → OLD FLOW (Audit first)
+    if (
+                          isEditMode &&
+                          originalInterfacerMapped &&
+                          !form.interfacerMapped&&selectedRow?.clientName !=="-"
+                        ) {
+                          setShowInterfacerWarning(true);
+                          
+                          return;
+                        }
     setPendingForm(form);
     setShowAuditTrail(true);
   };
@@ -411,9 +421,9 @@ const AddInstrumentModal = ({
 
         // 🔥 MUST BE NUMBER
         iL11ParserType:
-          finalPayload.parserType === t("masters.winmethod")
+          finalPayload.parserType === "WIN_METHOD"
             ? 1
-            : finalPayload.parserType === t("masters.webmethod")
+            : finalPayload.parserType === "WEB_METHOD"
               ? 2
               : 0,
 
@@ -449,9 +459,9 @@ const AddInstrumentModal = ({
         sLockType: finalPayload.lockType,
 
         iL11ParserType:
-          finalPayload.parserType === t("masters.winmethod")
+          finalPayload.parserType === "WIN_METHOD"
             ? 1
-            : finalPayload.parserType === t("masters.webmethod")
+            : finalPayload.parserType === "WEB_METHOD"
               ? 2
               : 0,
 
@@ -546,8 +556,8 @@ const AddInstrumentModal = ({
         MANUFACTURER: pendingForm.instrumentMake,
         ISINSTGROUP: -1,
         INSTGROUPID: pendingForm.interfacerMapped
-          ? pendingForm.parserType === t("masters.winmethod") ||
-            pendingForm.parserType === t("masters.webmethod")
+          ? pendingForm.parserType === "WIN_METHOD" ||
+            pendingForm.parserType === "WEB_METHOD"
             ? 20
             : 19
           : -1,
@@ -560,9 +570,9 @@ const AddInstrumentModal = ({
         sInstrumentAliasName: pendingForm.instrumentAlias,
         iInstrumentStatus: pendingForm.active ? 1 : 0,
         iL11ParserType:
-          pendingForm.parserType === t("masters.winmethod")
+          pendingForm.parserType === "WIN_METHOD"
             ? 1
-            : pendingForm.parserType === t("masters.webmethod")
+            : pendingForm.parserType === "WEB_METHOD"
               ? 2
               : 0,
         sInstrumentModel: pendingForm.instrumentModel,
@@ -654,8 +664,8 @@ const AddInstrumentModal = ({
         MANUFACTURER: pendingForm.instrumentMake,
         ISINSTGROUP: -1,
         INSTGROUPID: pendingForm.interfacerMapped
-          ? pendingForm.parserType === t("masters.winmethod") ||
-            pendingForm.parserType === t("masters.webmethod")
+          ? pendingForm.parserType === "WIN_METHOD" ||
+            pendingForm.parserType === "WEB_METHOD"
             ? 20
             : 19
           : -1,
@@ -668,9 +678,9 @@ const AddInstrumentModal = ({
         sInstrumentAliasName: pendingForm.instrumentAlias,
         iInstrumentStatus: pendingForm.active ? 1 : 0,
         iL11ParserType:
-          pendingForm.parserType === t("masters.winmethod")
+          pendingForm.parserType === "WIN_METHOD"
             ? 1
-            : pendingForm.parserType === t("masters.webmethod")
+            : pendingForm.parserType === "WEB_METHOD"
               ? 2
               : 0,
         sInstrumentModel: pendingForm.instrumentModel,
@@ -701,27 +711,35 @@ const AddInstrumentModal = ({
   };
 
   const handleAuditAuthorized = async (auditPayload) => {
-    setShowAuditTrail(false);
+  setShowAuditTrail(false);
 
-    if (!pendingForm) return;
+  if (!pendingForm) return;
 
-    const previousRowId = selectedRowId; // 🔥 store current selection
+  const previousRowId = selectedRowId; // 🔥 store current selection
 
-    try {
-      setLoading(true);
-      setLoadingText(t("common.loading"));
+  try {
+    setLoading(true);
+    setLoadingText(t("common.loading"));
 
-      // 1️⃣ EDIT instrument
+    // Check if this is a basic instrument edit OR communication settings edit
+    const isBasicEdit = !commData; // No communication data means basic edit
+    const isCommEdit = !!commData; // Has communication data means comm settings edit
+    
+    if (isBasicEdit) {
+      // 1️⃣ EDIT basic instrument info ONLY
       const editResponse = await postData(
         "basemaster/editInstrument",
         buildEditInstrumentPayload(pendingForm, auditPayload, initialData),
       );
 
-      if (!handleApiResponse(editResponse)) return;
-
-      // 2️⃣ 🔥 EDIT COMMUNICATION SETTINGS (only if interfacerMapped is true)
-      if (pendingForm.interfacerMapped && commData) {
-        const response = await postData(
+      if (!handleApiResponse(editResponse)) {
+        return; // Stop on error
+      }
+      
+    } else if (isCommEdit) {
+      // 2️⃣ EDIT communication settings ONLY (when interfacerMapped is true)
+      if (pendingForm.interfacerMapped) {
+        const commResponse = await postData(
           "basemaster/insertInstrumentCommonSetting",
           buildInstrumentEditRequestPayload(
             pendingForm,
@@ -729,32 +747,27 @@ const AddInstrumentModal = ({
             auditPayload,
           ),
         );
-        console.log(
-          "communication settings",
-          buildInstrumentEditRequestPayload(
-            pendingForm,
-            commData,
-            auditPayload,
-          ),
-        );
-        if (!handleApiResponse(response)) return;
+        
+        if (!handleApiResponse(commResponse)) {
+          return; // Stop on error
+        }
       }
-
-      // ✅ reload grid but keep previous selection
-
-      // ✅ CLOSE BOTH POPUPS
-    } catch (err) {
-      console.error("Edit save failed", err);
-    } finally {
-      setCommData(null);
-      setPendingForm(null);
-      await loadInstrumentGrid(false, previousRowId);
-      setShowCommSettings(false);
-      onClose();
-      setLoading(false);
-      setLoadingText("");
     }
-  };
+
+    // ✅ SUCCESS - close popups
+    setCommData(null);
+    setPendingForm(null);
+    await loadInstrumentGrid(false, previousRowId);
+    setShowCommSettings(false);
+    onClose(); // ✅ ONLY close on success
+    
+  } catch (err) {
+    console.error("Edit save failed", err);
+  } finally {
+    setLoading(false);
+    setLoadingText("");
+  }
+};
 
   const checkExistingInstrument = async () => {
     const payload = {
@@ -793,6 +806,8 @@ const AddInstrumentModal = ({
     }));
 
     setShowInterfacerWarning(false);
+    setPendingForm(form);
+    setShowAuditTrail(true);
   };
 
   // Submit validation (ONLY 2 fields)
@@ -1090,14 +1105,7 @@ ${
                         const checked = e.target.checked;
 
                         // ✅ EDIT MODE + was originally checked + user tries to uncheck
-                        if (
-                          isEditMode &&
-                          originalInterfacerMapped &&
-                          !checked
-                        ) {
-                          setShowInterfacerWarning(true);
-                          return;
-                        }
+                        
 
                         if (checked) {
                           let defaultInstrumentValue = "";
