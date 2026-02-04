@@ -1,16 +1,1153 @@
+// import { useState, useMemo, useEffect, useCallback } from 'react';
+// import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
+// import { useTranslation } from 'react-i18next';
+// import { useNavigate } from "react-router-dom";
+// import Errordialog from '../../../../Layout/Common/Errordialog';
+// import CustomPopup from '../../../../Layout/Common/Popup';
+// import PrintTable from '../../../../Layout/Common/PrintTable';
+// import { useSchedulerNavigation } from '../../../../../Context/SchedulerNavigationContext';
+// import servicecall from '../../../../../Services/servicecall';
+// import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
+// import { handleExportCommon } from '../../../../Layout/Common/exportService';
+// import FullPageLoader from '../../../../Layout/Common/FullPageLoader';
+
+// const DeactivedTask = ({ navigationData }) => {
+//     const [schedulerData, setSchedulerData] = useState([]);
+//     const [selectedScheduler, setSelectedScheduler] = useState(null);
+//     const [selectedRowId, setSelectedRowId] = useState(null);
+//     const [loading, setLoading] = useState(true);
+//     const [infoDialog, setInfoDialog] = useState({
+//         open: false,
+//         scheduler: "",
+//         type: "information"
+//     });
+//     const [activePopup, setActivePopup] = useState(null);
+//     const [auditTrailData, setAuditTrailData] = useState({
+//         username: "Administrator",
+//         password: "",
+//         reason: "",
+//         comments: ""
+//     });
+//     const [importModalOpen, setImportModalOpen] = useState(false);
+//     const [importFile, setImportFile] = useState(null);
+//     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+//     const [doPrint, setDoPrint] = useState(false);
+//     const [loadingText, setLoadingText] = useState("");
+
+//     const [confirmDialogData, setConfirmDialogData] = useState({
+//         title: "",
+//         message: "",
+//         onConfirm: null,
+//         actionType: "" // "activate" or "retire"
+//     });
+//     const { t } = useTranslation('scheduler');
+
+//     // API service
+//     const { postData } = servicecall();
+
+//     // Navigation context
+//     const { getSubmissionData, clearNavigation } = useSchedulerNavigation();
+//     const [highlightScheduleId, setHighlightScheduleId] = useState(null);
+//     const [shouldScrollToSchedule, setShouldScrollToSchedule] = useState(false);
+//     const navigate = useNavigate();
+
+//     // API endpoints
+//     const endpoints = {
+//         deactiveSchedulerView: "Scheduler/DeactiveSchedulerView",
+//         deactiveSchedulerViewGrid: "Scheduler/DeactiveSchedulerViewgrid",
+//         deactiveSchedulerActivate: "Scheduler/DeactiveSchedulerActiveBtnClick",
+//         deactiveSchedulerRetire: "Scheduler/DeactiveSchedulerRetireBtnClick",
+//         exportData: "basemaster/exportDataFile",
+//         checkManualTask: "Scheduler/CheckManualTaskForScheduler",
+//         viewSchedule: "Scheduler/DataSchedulerSave"
+//     };
+
+//     // Get active user details
+//     const getActiveUserDetails = useCallback(() => {
+//         const userDetails = CF_activeUserdetails();
+//         return userDetails.ActiveUserDetails || {};
+//     }, []);
+
+//     // Prepare API request body
+//     const prepareRequestBody = useCallback((additionalData = {}) => {
+//         const baseData = {
+//             ApplicationCode: "SDMS",
+//             ActiveUserDetails: getActiveUserDetails(),
+//             ...additionalData
+//         };
+//         return baseData;
+//     }, [getActiveUserDetails]);
+
+//     // Info Dialog Functions
+//     const showInfoDialog = useCallback((scheduler, type = "information") => {
+//         setInfoDialog({
+//             open: true,
+//             scheduler,
+//             type
+//         });
+//     }, []);
+
+//     const closeInfoDialog = useCallback(() => {
+//         setInfoDialog(prev => ({
+//             ...prev,
+//             open: false
+//         }));
+//     }, []);
+
+//     // Make API call
+//     const makeApiCall = useCallback(async (url, data, processName) => {
+//         try {
+//             const response = await postData(url, data);
+
+//             if (!response) {
+//                 throw new Error('No response from server');
+//             }
+
+//             if (response.Rtn && response.Rtn.toLowerCase() === 'error') {
+//                 throw new Error(response.Message || response.ErrorMessage || 'API error');
+//             }
+
+//             return response;
+//         } catch (error) {
+//             console.error(`${processName} error:`, error);
+//             showInfoDialog(error.message || `${t('scheduler.apiError')}`, "error");
+//             throw error;
+//         }
+//     }, [postData, t, showInfoDialog]);
+
+//     // Fetch deactivated scheduler data
+//     // Replace the current fetchDeactivatedSchedulerData function with this:
+// const fetchDeactivatedSchedulerData = useCallback(async (showLoader = true) => {
+//     if (showLoader) {
+//         setLoading(true);
+//     }
+
+//     try {
+//         // First call: DeactiveSchedulerView (initial load)
+//         const initialRequestData = prepareRequestBody();
+//         const initialResponse = await makeApiCall(
+//             endpoints.deactiveSchedulerView, 
+//             initialRequestData, 
+//             "DeactiveSchedulerInitialView"
+//         );
+
+//         // Second call: DeactiveSchedulerViewgrid (grid data)
+//         const gridRequestData = prepareRequestBody();
+//         const gridResponse = await makeApiCall(
+//             endpoints.deactiveSchedulerViewGrid, 
+//             gridRequestData, 
+//             "FetchDeactivatedSchedulerGrid"
+//         );
+
+//         if (gridResponse && Array.isArray(gridResponse)) {
+//             // Transform the API response
+//             const transformedData = gridResponse.map(item => ({
+//                 id: item.L13ScheduleID?.trim() || Math.random().toString(),
+//                 L11InstrumentAliasName: item.L11InstrumentAliasName || item.L11InstrumentName || "",
+//                 L13ScheduleID: item.L13ScheduleID?.trim() || "",
+//                 L06ClientName: item.L06ClientName || "",
+//                 L09FTPAliasName: item.L09FTPAliasName || "",
+//                 L13LiveArchive: item.L13LiveArchive || false,
+//                 L13TaskName: item.L13TaskName || "",
+//                 L13SourcePath: item.L13SourcePath || "",
+//                 L52TaskCompleted: item.L52TaskCompleted || "",
+//                 EmpowerStatus: item.EmpowerStatus || "",
+//                 L13UNCStatus: item.L13UNCStatus || false,
+//                 TaskStatus: item.TaskStatus || "Deactivated",
+//                 ClientStatus: item.ClientStatus || "Active",
+//                 InstrumentStatus: item.InstrumentStatus || "Active",
+//                 StartDate: item.StartDate || "",
+//                 UTCStartDate: item.UTCStartDate || "",
+//                 EndDate: item.EndDate,
+//                 UTCEndDate: item.UTCEndDate,
+//                 TriggerTime: item.TriggerTime || "",
+//                 UTCTriggerTime: item.UTCTriggerTime || "",
+//                 ScheduleMode: item.ScheduleMode,
+//                 NextScheduleDate: item.NextScheduleDate,
+//                 UTCNextScheduleDate: item.UTCNextScheduleDate,
+//                 LastScheduleDateTime: item.LastScheduleDateTime || "",
+//                 UTCLastScheduleDateTime: item.UTCLastScheduleDateTime,
+//                 CreatedBy: item.CreatedBy || "",
+//                 CreatedDate: item.CreatedDate || "",
+//                 UTCCreatedDate: item.UTCCreatedDate || "",
+//                 ModifiedBy: item.ModifiedBy,
+//                 ModifiedDate: item.ModifiedDate,
+//                 UTCModifiedDate: item.UTCModifiedDate,
+//                 // Additional fields from API
+//                 L52TaskID: item.L52TaskID || "",
+//                 L13TaskID: item.L13ScheduleID?.trim() || "",
+//                 L11InstrumentName: item.L11InstrumentName || "",
+//                 L13InstrumentMappingID: item.L13InstrumentMappingID || ""
+//             }));
+
+//             setSchedulerData(transformedData);
+
+//             // If we have a highlight schedule ID, select it
+//             if (highlightScheduleId && shouldScrollToSchedule) {
+//                 const scheduleToSelect = transformedData.find(item => 
+//                     item.L13ScheduleID === highlightScheduleId
+//                 );
+
+//                 if (scheduleToSelect) {
+//                     setSelectedScheduler(scheduleToSelect);
+//                     setSelectedRowId(scheduleToSelect.id);
+//                 }
+//                 setShouldScrollToSchedule(false);
+//             }
+
+//             // Auto-select first row if none selected
+//             if (transformedData.length > 0 && !selectedRowId) {
+//                 setSelectedScheduler(transformedData[0]);
+//                 setSelectedRowId(transformedData[0].id);
+//             }
+//         } else {
+//             setSchedulerData([]);
+//         }
+//     } catch (error) {
+//         console.error('Failed to fetch deactivated scheduler data:', error);
+//         showInfoDialog(t('scheduler.failedToLoadData'), "error");
+//         setSchedulerData([]);
+//     } finally {
+//         if (showLoader) {
+//             setLoading(false);
+//         }
+//     }
+// }, [makeApiCall, prepareRequestBody, highlightScheduleId, shouldScrollToSchedule, t, showInfoDialog]); 
+
+//     // Show custom confirmation dialog
+//     const showConfirmation = useCallback((title, message, onConfirm, actionType) => {
+//         setConfirmDialogData({
+//             title,
+//             message,
+//             onConfirm,
+//             actionType
+//         });
+//         setShowConfirmDialog(true);
+//     }, []);
+
+//     // Handle activate action
+//     const handleActivateConfirm = useCallback(async () => {
+//         if (!selectedScheduler) return;
+
+//         try {
+//             // First check for manual tasks
+//             const checkRequestData = prepareRequestBody({
+//                 sTaskID: selectedScheduler.L13ScheduleID,
+//                 sTaskStatus: selectedScheduler.TaskStatus,
+//                 sPathTaskID: selectedScheduler.L52TaskID,
+//                 sInstrumentMappingID: selectedScheduler.L13InstrumentMappingID || ""
+//             });
+
+//             const checkResponse = await makeApiCall(
+//                 endpoints.checkManualTask,
+//                 checkRequestData,
+//                 "CheckManualTask"
+//             );
+
+//             if (checkResponse && checkResponse.nTaskCount !== undefined) {
+//                 const alertText = checkResponse.nTaskCount === 1 
+//                     ? t('scheduler.confirmActivate')
+//                     : t('scheduler.confirmActivateWithManual');
+
+//                 // Store the selected scheduler data for the audit trail
+//                 const activateData = {
+//                     sInstrumentName: selectedScheduler.L11InstrumentName,
+//                     sTaskID: selectedScheduler.L13ScheduleID,
+//                     sTaskStatus: selectedScheduler.TaskStatus,
+//                     sEmpowerStatus: selectedScheduler.EmpowerStatus,
+//                     sTaskName: selectedScheduler.L13TaskName,
+//                     sSourcePath: selectedScheduler.L13SourcePath,
+//                     sPathTaskID: selectedScheduler.L52TaskID
+//                 };
+
+//                 // Show custom confirmation dialog
+//                 showConfirmation(
+//                     t('scheduler.confirmation'),
+//                     alertText,
+//                     () => {
+//                         // Check if audit trail is required and show the popup
+//                         setAuditTrailData(prev => ({
+//                             ...prev,
+//                             username: getActiveUserDetails().sUsername || "Administrator"
+//                         }));
+
+//                         // Show the audit trail popup
+//                         setActivePopup("Activate Task");
+
+//                         // Store the data for later use
+//                         sessionStorage.setItem('pendingActivateData', JSON.stringify(activateData));
+//                     },
+//                     "activate"
+//                 );
+//             }
+//         } catch (error) {
+//             console.error('Activate check failed:', error);
+//             showInfoDialog(t('scheduler.activateFailed'), "error");
+//         }
+//     }, [selectedScheduler, makeApiCall, prepareRequestBody, t, getActiveUserDetails, showConfirmation, showInfoDialog]);
+
+//     // Handle retire action
+//     const handleRetireConfirm = useCallback(async () => {
+//         if (!selectedScheduler) return;
+
+//         try {
+//             // First check for manual tasks (if needed)
+//             const checkRequestData = prepareRequestBody({
+//                 sTaskID: selectedScheduler.L13ScheduleID,
+//                 sTaskStatus: selectedScheduler.TaskStatus,
+//                 sPathTaskID: selectedScheduler.L52TaskID
+//             });
+
+//             const checkResponse = await makeApiCall(
+//                 endpoints.checkManualTask,
+//                 checkRequestData,
+//                 "CheckManualTask"
+//             );
+
+//             if (checkResponse && checkResponse.nTaskCount !== undefined) {
+//                 const alertText = checkResponse.nTaskCount === 1 
+//                     ? t('scheduler.confirmRetire')
+//                     : t('scheduler.confirmRetireWithManual');
+
+//                 // Store the selected scheduler data for the audit trail
+//                 const retireData = {
+//                     sClientName: selectedScheduler.L06ClientName,
+//                     sTaskID: selectedScheduler.L13ScheduleID,
+//                     sTaskStatus: selectedScheduler.TaskStatus,
+//                     sEmpowerStatus: selectedScheduler.EmpowerStatus,
+//                     sTaskName: selectedScheduler.L13TaskName,
+//                     sSourcePath: selectedScheduler.L13SourcePath,
+//                     sPathTaskID: selectedScheduler.L52TaskID
+//                 };
+
+//                 // Show custom confirmation dialog
+//                 showConfirmation(
+//                     t('scheduler.confirmation'),
+//                     alertText,
+//                     () => {
+//                         // Check if audit trail is required
+//                         setAuditTrailData(prev => ({
+//                             ...prev,
+//                             username: getActiveUserDetails().sUsername || "Administrator"
+//                         }));
+
+//                         // Show the audit trail popup
+//                         setActivePopup("Retire Task");
+
+//                         // Store the data for later use
+//                         sessionStorage.setItem('pendingRetireData', JSON.stringify(retireData));
+//                     },
+//                     "retire"
+//                 );
+//             }
+//         } catch (error) {
+//             console.error('Retire check failed:', error);
+//             showInfoDialog(t('scheduler.retireFailed'), "error");
+//         }
+//     }, [selectedScheduler, makeApiCall, prepareRequestBody, t, getActiveUserDetails, showConfirmation, showInfoDialog]);
+
+//     // Add a function to handle the actual activate/retire after audit trail
+//     const handleAuditSubmit = useCallback(async () => {
+//         if (!auditTrailData.password || !auditTrailData.reason || !auditTrailData.comments) {
+//             showInfoDialog(t('scheduler.fillAllAuditFields'), "warning");
+//             return;
+//         }
+
+//         try {
+//             let endpoint, requestData, pendingDataKey;
+
+//             if (activePopup === "Activate Task") {
+//                 endpoint = endpoints.deactiveSchedulerActivate;
+//                 pendingDataKey = 'pendingActivateData';
+//             } else {
+//                 endpoint = endpoints.deactiveSchedulerRetire;
+//                 pendingDataKey = 'pendingRetireData';
+//             }
+
+//             // Get the stored data
+//             const storedData = sessionStorage.getItem(pendingDataKey);
+//             if (!storedData) {
+//                 showInfoDialog(t('scheduler.noPendingAction'), "error");
+//                 setActivePopup(null);
+//                 return;
+//             }
+
+//             const actionData = JSON.parse(storedData);
+
+//             // Prepare the full request with audit trail
+//             const fullRequestData = prepareRequestBody({
+//                 ...actionData,
+//                 AuditTrailValues: {
+//                     sUsername: auditTrailData.username,
+//                     sPassword: auditTrailData.password,
+//                     sReason: auditTrailData.reason,
+//                     sComments: auditTrailData.comments
+//                 }
+//             });
+
+//             const response = await makeApiCall(
+//                 endpoint,
+//                 fullRequestData,
+//                 activePopup === "Activate Task" ? "ActivateSchedule" : "RetireSchedule"
+//             );
+
+//             // Check if audit trail login failed
+//             if (response && response.AuditTrailLogin === false) {
+//                 showInfoDialog(response.LoginFailedMsg || t('scheduler.auditTrailLoginFailed'), "error");
+//                 return;
+//             }
+
+//             if (response && response.Rtn && response.Rtn.toLowerCase() === 'success') {
+//                 showInfoDialog(
+//                     activePopup === "Activate Task" 
+//                         ? t('scheduler.taskActivatedSuccess') 
+//                         : t('scheduler.taskRetiredSuccess'), 
+//                     "success"
+//                 );
+
+//                 // Refresh the data
+//                 await fetchDeactivatedSchedulerData(true);
+
+//                 // Clear stored data
+//                 sessionStorage.removeItem(pendingDataKey);
+//                 setActivePopup(null);
+//                 setAuditTrailData({
+//                     username: getActiveUserDetails().sUsername || "Administrator",
+//                     password: "",
+//                     reason: "",
+//                     comments: ""
+//                 });
+//             } else {
+//                 showInfoDialog(
+//                     response?.Message || response?.returnMsg || t('scheduler.actionFailed'),
+//                     "error"
+//                 );
+//             }
+
+//         } catch (error) {
+//             console.error('Audit submit failed:', error);
+//             showInfoDialog(t('scheduler.actionFailed'), "error");
+//         }
+//     }, [activePopup, auditTrailData, makeApiCall, prepareRequestBody, t, fetchDeactivatedSchedulerData, getActiveUserDetails, showInfoDialog]);
+
+//     // Update the activate and retire click handlers
+//     const handleActivateClick = useCallback(() => {
+//         if (!selectedScheduler) {
+//             showInfoDialog(t('scheduler.selectRecord'), "warning");
+//             return;
+//         }
+//         // Show confirmation first, then audit trail if confirmed
+//         handleActivateConfirm();
+//     }, [selectedScheduler, showInfoDialog, t, handleActivateConfirm]);
+
+//     const handleRetireClick = useCallback(() => {
+//         if (!selectedScheduler) {
+//             showInfoDialog(t('scheduler.selectRecord'), "warning");
+//             return;
+//         }
+//         // Show confirmation first, then audit trail if confirmed
+//         handleRetireConfirm();
+//     }, [selectedScheduler, showInfoDialog, t, handleRetireConfirm]);
+
+//     // Handle confirm dialog actions
+//     const handleConfirmDialogClose = useCallback(() => {
+//         setShowConfirmDialog(false);
+//         setConfirmDialogData({
+//             title: "",
+//             message: "",
+//             onConfirm: null,
+//             actionType: ""
+//         });
+//     }, []);
+
+//     const handleConfirmDialogConfirm = useCallback(() => {
+//         if (confirmDialogData.onConfirm) {
+//             confirmDialogData.onConfirm();
+//         }
+//         handleConfirmDialogClose();
+//     }, [confirmDialogData, handleConfirmDialogClose]);
+
+//     // Build export request
+//     const buildExportRequest = useCallback(() => {
+//         const allRows = schedulerData.map(item => ({
+//             ...item,
+//             L13LiveArchive: item.L13LiveArchive ? "✓" : ""
+//         }));
+
+//         const headerDetails = [
+//             t('label.taskId'),
+//             t('scheduler.clientName'),
+//             t('scheduler.storageName'),
+//             t('scheduler.liveArchive'),
+//             t('label.taskName'),
+//             t('label.instrument'),
+//             t('scheduler.sourcePath'),
+//             t('scheduler.firstCycleStatus'),
+//             t('scheduler.empowerStatus'),
+//             t('scheduler.uncStatus'),
+//             t('scheduler.taskStatus'),
+//             t('scheduler.startDate'),
+//             t('scheduler.endDate'),
+//             t('scheduler.triggerTime'),
+//             t('scheduler.scheduleMode'),
+//             t('scheduler.nextScheduleDateTime'),
+//             t('scheduler.lastScheduleDateTime'),
+//             t('label.createdBy'),
+//             t('label.createdOn'),
+//             t('label.modifiedBy'),
+//             t('label.modifiedOn')
+//         ];
+
+//         const allowKeys = [
+//             "L13ScheduleID",
+//             "L06ClientName",
+//             "L09FTPAliasName",
+//             "L13LiveArchive",
+//             "L13TaskName",
+//             "L11InstrumentAliasName",
+//             "L13SourcePath",
+//             "L52TaskCompleted",
+//             "EmpowerStatus",
+//             "L13UNCStatus",
+//             "TaskStatus",
+//             "StartDate",
+//             "EndDate",
+//             "TriggerTime",
+//             "ScheduleMode",
+//             "NextScheduleDate",
+//             "LastScheduleDateTime",
+//             "CreatedBy",
+//             "CreatedDate",
+//             "ModifiedBy",
+//             "ModifiedDate"
+//         ];
+
+//         return {
+//             sFileName: "DeactiveScheduler",
+//             AllRows: allRows,
+//             HeaderDetails: headerDetails,
+//             AllowKeys: allowKeys,
+//             sBrowserURL: window.location.origin,
+//             ActiveUserDetails: prepareRequestBody().ActiveUserDetails,
+//             ApplicationCode: "SDMS"
+//         };
+//     }, [schedulerData, t, prepareRequestBody]);
+
+//     // Handle export - using the common export service
+//     const handleExportClick = useCallback(() => {
+//         if (schedulerData.length === 0) {
+//             showInfoDialog(t('scheduler.noRecordsToExport'), "warning");
+//             return;
+//         }
+
+//         handleExportCommon({
+//             rows: schedulerData,
+//             buildRequest: buildExportRequest,
+//             postData,
+//             setLoading,
+//             setLoadingText: (text) => {/* You might want to add loadingText state */},
+//             setErrorDialog: ({ open, message, type }) => {
+//                 showInfoDialog(message, type);
+//             },
+//             t
+//         });
+//     }, [schedulerData, buildExportRequest, postData, showInfoDialog, t]);
+
+//     // Handle print
+//     const handlePrintClick = useCallback(() => {
+//         if (!schedulerData || schedulerData.length === 0) {
+//             showInfoDialog(t('scheduler.selectRecord'), "information");
+//             return;
+//         }
+
+//         setDoPrint(true);
+//     }, [schedulerData, showInfoDialog, t]);
+
+//     // Build print request
+//     const buildPrintRequest = useCallback(() => ({
+//         sModuleName: "Deactivated Scheduler",
+//         ActiveUserDetails: prepareRequestBody().ActiveUserDetails,
+//         ApplicationCode: "SDMS",
+//     }), [prepareRequestBody]);
+
+//     // MODIFY THIS useEffect TO HANDLE BOTH PROP AND CONTEXT:
+//     useEffect(() => {
+//         console.log('=== DeactivatedTask useEffect triggered ===');
+//         console.log('Navigation data from props:', navigationData);
+//         console.log('Context submission data:', getSubmissionData());
+
+//         let scheduleId = null;
+//         let scheduleData = null;
+
+//         // Priority 1: Check props passed from parent (tab system)
+//         if (navigationData && navigationData.scheduleId) {
+//             console.log('=== Received navigation data via props ===');
+//             console.log('Schedule ID:', navigationData.scheduleId);
+//             scheduleId = navigationData.scheduleId;
+//             scheduleData = navigationData;
+//         }
+//         // Priority 2: Check context (legacy navigation)
+//         else {
+//             const submissionData = getSubmissionData();
+//             console.log('Submission data from context:', submissionData);
+
+//             if (submissionData && submissionData.targetTab === 'Deactivated Task') {
+//                 console.log('=== Navigating from context to DeactivatedTask ===');
+//                 console.log('Schedule ID:', submissionData.data?.scheduleId);
+//                 scheduleId = submissionData.data?.scheduleId;
+//                 scheduleData = submissionData.data;
+//                 clearNavigation();
+//             }
+//         }
+
+//         if (scheduleId) {
+//             setHighlightScheduleId(scheduleId);
+//             setShouldScrollToSchedule(true);
+//         }
+
+//         // Fetch data (calls both endpoints)
+//         fetchDeactivatedSchedulerData(true);
+//     }, [navigationData, getSubmissionData, clearNavigation, fetchDeactivatedSchedulerData]);
+
+//     // MODIFY THIS useEffect TO HANDLE HIGHLIGHTING:
+//     useEffect(() => {
+//         if (shouldScrollToSchedule && highlightScheduleId && schedulerData.length > 0) {
+//             // Find the row with the schedule ID
+//             const scheduleRow = schedulerData.find(item =>
+//                 item.L13ScheduleID === highlightScheduleId
+//             );
+
+//             if (scheduleRow) {
+//                 // Select and highlight the row
+//                 setSelectedScheduler(scheduleRow);
+//                 setSelectedRowId(scheduleRow.id);
+
+//                 // Show success message
+//                 showInfoDialog(`Schedule ${highlightScheduleId} deactivated successfully!`, "success");
+
+//                 console.log('Auto-selected schedule:', highlightScheduleId);
+//             }
+
+//             setShouldScrollToSchedule(false);
+//         }
+//     }, [schedulerData, highlightScheduleId, shouldScrollToSchedule, showInfoDialog]);
+
+//     // Replace the current handleRowSelect function with this:
+// const handleRowSelect = useCallback((row) => {
+//     setSelectedScheduler(row);
+//     setSelectedRowId(row.id);
+// }, []);
+
+//     // MODIFIED handleViewClick 
+//     const handleViewClick = useCallback(() => {
+//         if (!selectedScheduler) {
+//             showInfoDialog(t('scheduler.selectRecordToView'), "warning");
+//             return;
+//         }
+//         // In tab system, you might want to switch to edit tab or show modal
+//         showInfoDialog(`Viewing schedule ${selectedScheduler.L13ScheduleID}`, "information");
+//     }, [selectedScheduler, showInfoDialog, t]);
+
+//     const handlePopupClose = useCallback(() => {
+//         setActivePopup(null);
+//         setAuditTrailData({
+//             username: "Administrator",
+//             password: "",
+//             reason: "",
+//             comments: ""
+//         });
+//     }, []);
+
+//     const columns = useMemo(() => [
+//         {
+//             key: 'L11InstrumentAliasName',
+//             label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t('label.instrument')}</span>,
+//             width: 150,
+//             enableSearch: true,
+//             render: (row, isSelected) => (
+//                 <div 
+//                     className={`text-[12px] font-['Verdana'] truncate text-gray-700 cursor-pointer ${isSelected ? 'font-bold' : ''}`}
+//                     onClick={() => handleRowSelect(row)}
+//                 >
+//                     {row.L11InstrumentAliasName}
+//                 </div>
+//             )
+//         },
+//         {
+//             key: 'L13ScheduleID',
+//             label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t('label.taskId')}</span>,
+//             width: 100,
+//             enableSearch: true,
+//             render: (row, isSelected) => (
+//                 <div 
+//                     className={`text-[12px] font-['Verdana'] truncate text-gray-700 cursor-pointer ${isSelected ? 'font-bold' : ''}`}
+//                     onClick={() => handleRowSelect(row)}
+//                 >
+//                     {row.L13ScheduleID}
+//                 </div>
+//             )
+//         },
+//         {
+//             key: 'L06ClientName',
+//             label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t('scheduler.clientName')}</span>,
+//             width: 130,
+//             enableSearch: true,
+//             render: (row, isSelected) => (
+//                 <div 
+//                     className={`text-[12px] font-['Verdana'] truncate text-gray-700 cursor-pointer ${isSelected ? 'font-bold' : ''}`}
+//                     onClick={() => handleRowSelect(row)}
+//                 >
+//                     {row.L06ClientName}
+//                 </div>
+//             )
+//         },
+//         {
+//             key: 'L09FTPAliasName',
+//             label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t('scheduler.storageName')}</span>,
+//             width: 140,
+//             enableSearch: true,
+//             render: (row, isSelected) => (
+//                 <div 
+//                     className={`text-[12px] font-['Verdana'] truncate text-gray-700 cursor-pointer ${isSelected ? 'font-bold' : ''}`}
+//                     onClick={() => handleRowSelect(row)}
+//                 >
+//                     {row.L09FTPAliasName}
+//                 </div>
+//             )
+//         },
+//         {
+//             key: 'L13LiveArchive',
+//             label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{t('scheduler.liveArchive')}</span>,
+//             width: 140,
+//             enableSearch: true,
+//             render: (row, isSelected) => (
+//                 <div 
+//                     className={`text-[12px] font-['Verdana'] truncate text-gray-700 cursor-pointer text-center ${isSelected ? 'font-bold' : ''}`}
+//                     onClick={() => handleRowSelect(row)}
+//                 >
+//                     {row.L13LiveArchive ? "✓" : ""}
+//                 </div>
+//             )
+//         }
+//     ], [t, handleRowSelect]);
+
+//     const renderSchedulerDetail = useCallback((scheduler) => (
+//         <div className="flex flex-col gap-3.5 font-roboto text-[12px] font-semibold">
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('label.taskName')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.L13TaskName}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.sourcepath')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.L13SourcePath}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.firstCycleStatus')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.L52TaskCompleted}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.empowerStatus')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.EmpowerStatus}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.uncStatus')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.L13UNCStatus ? t('button.yes') : t('button.no')}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.taskStatus')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.TaskStatus}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.clientstatus')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.ClientStatus}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.instrumentstatus')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.InstrumentStatus}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.startDate')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.StartDate}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.endDate')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.EndDate || t('scheduler.notSet')}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.triggerTime')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.TriggerTime}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.scheduleMode')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.ScheduleMode || t('scheduler.notSet')}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.nextScheduleDateTime')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.NextScheduleDate || t('scheduler.notSet')}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('scheduler.lastScheduleDateTime')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.LastScheduleDateTime || t('scheduler.notSet')}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('label.createdBy')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.CreatedBy}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('label.createdOn')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.CreatedDate}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('label.modifiedBy')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.ModifiedBy || t('scheduler.notSet')}
+//                 </div>
+//             </div>
+//             <div className="flex items-center">
+//                 <div className="w-2/5 font-bold text-gray-600">
+//                     {t('label.modifiedOn')}
+//                 </div>
+//                 <div className="w-3/5 text-gray-800">
+//                     {scheduler.ModifiedDate || t('scheduler.notSet')}
+//                 </div>
+//             </div>
+//         </div>
+//     ), [t]);
+
+
+
+//     const ActionButton = ({ iconClass, label, disabled, onClick, variant = "default" }) => (
+//         <button
+//             onClick={onClick}
+//             disabled={disabled}
+//             className={`
+//                 flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold rounded border-none 
+//                 transition-all duration-200 whitespace-nowrap hover:scale-[0.98] hover:opacity-90
+//                 ${disabled 
+//                     ? variant === 'primary'
+//                     ? 'bg-[#f0f2f5] text-white cursor-not-allowed'
+//                     : 'bg-[#f0f2f5] text-[#2883fe] cursor-not-allowed'
+//                     : variant === 'primary'
+//                         ? 'bg-[#f0f2f5] text-white hover:bg-blue-700'
+//                         : variant === 'danger'
+//                             ? 'bg-red-500 text-white hover:bg-red-600'
+//                             : 'bg-[#f0f2f5] text-[#2883fe] hover:bg-gray-100'
+//                 }
+//             `}
+//         >
+//             {iconClass && <i className={iconClass}></i>}
+//             <span>{label}</span>
+//         </button>
+//     );
+
+//     return (
+//         <div className="flex flex-col font-roboto bg-white w-full h-[80vh] overflow-hidden relative">
+//            <FullPageLoader 
+//     loading={loading} 
+//     text={loadingText || t('common.loading')} 
+// />
+
+//             {infoDialog.open && (
+//                 <Errordialog
+//                     message={infoDialog.scheduler}
+//                     type={infoDialog.type}
+//                     onClose={closeInfoDialog}
+//                 />
+//             )}
+
+//             {/* Confirmation Dialog */}
+//             {showConfirmDialog && (
+//                 <Errordialog
+//                     message={confirmDialogData.message}
+//                     type="confirmation"
+//                     onClose={handleConfirmDialogClose}
+//                     onConfirm={handleConfirmDialogConfirm}
+//                     okText={t('button.yes')}
+//                     cancelText={t('button.no')}
+//                 />
+//             )}
+
+//             {/* Top Action Buttons - EXACT eJQuery Icons */}
+//             <div className="flex justify-end pr-5 gap-2 pt-3">
+//                 <ActionButton
+//                     iconClass="fa fa-eye"
+//                     label={t('button.view')}
+//                     onClick={handleViewClick}
+//                     disabled={!selectedScheduler}
+//                 />
+//                 <ActionButton
+//                     iconClass="fa fa-check"
+//                     label={t('button.activate')}
+//                     onClick={handleActivateClick}
+//                     disabled={!selectedScheduler}
+//                 />
+//                 <ActionButton
+//                     iconClass="fa fa-ban"
+//                     label={t('button.retire')}
+//                     onClick={handleRetireClick}
+//                     disabled={!selectedScheduler}
+//                 />
+//                 <ActionButton
+//                     iconClass="glyphicon glyphicon-export"
+//                     label={t('button.export')}
+//                     onClick={handleExportClick}
+//                     disabled={schedulerData.length === 0}
+//                 />
+//                 <ActionButton
+//                     iconClass="glyphicon glyphicon-print"
+//                     label={t('button.print')}
+//                     onClick={handlePrintClick}
+//                     disabled={schedulerData.length === 0}
+//                 />
+//             </div>
+
+//             {/* Main Grid - Same as Activated Task */}
+//             <div className="flex-1 overflow-auto min-h-0 w-full p-1">
+//     <GridLayout
+//         columns={columns}
+//         height="100%"
+//         detailPanelWidth="46%"
+//         data={schedulerData}
+//         getRowId={(row) => row.id}
+//         renderDetailPanel={renderSchedulerDetail}
+//         onRowClick={handleRowSelect}
+//         rowClassName={(row) =>
+//             row.id === selectedRowId
+//                 ? "bg-blue-50 border-l-4 border-blue-600 font-semibold"
+//                 : ""
+//         }
+//     />
+// </div>
+
+//             {/* Print Table */}
+//             {doPrint && (
+//                 <PrintTable
+//                     data={schedulerData}
+//                     columns={[
+//                         { key: 'L13ScheduleID', label: t('label.taskId') },
+//                         { key: 'L06ClientName', label: t('scheduler.clientName') },
+//                         { key: 'L09FTPAliasName', label: t('scheduler.storageName') },
+//                         { key: 'L13LiveArchive', label: t('scheduler.liveArchive') },
+//                         { key: 'L13TaskName', label: t('label.taskName') },
+//                         { key: 'L11InstrumentAliasName', label: t('label.instrument') },
+//                         { key: 'L13SourcePath', label: t('scheduler.sourcepath') },
+//                         { key: 'L52TaskCompleted', label: t('scheduler.firstCycleStatus') },
+//                         { key: 'EmpowerStatus', label: t('scheduler.empowerStatus') },
+//                         { key: 'L13UNCStatus', label: t('scheduler.uncStatus') },
+//                         { key: 'TaskStatus', label: t('scheduler.taskStatus') },
+//                         { key: 'StartDate', label: t('scheduler.startDate') },
+//                         { key: 'EndDate', label: t('scheduler.endDate') },
+//                         { key: 'TriggerTime', label: t('scheduler.triggerTime') },
+//                         { key: 'ScheduleMode', label: t('scheduler.scheduleMode') },
+//                         { key: 'NextScheduleDate', label: t('scheduler.nextScheduleDateTime') },
+//                         { key: 'LastScheduleDateTime', label: t('scheduler.lastScheduleDateTime') },
+//                         { key: 'CreatedBy', label: t('label.createdBy') },
+//                         { key: 'CreatedDate', label: t('label.createdOn') },
+//                         { key: 'ModifiedBy', label: t('label.modifiedBy') },
+//                         { key: 'ModifiedDate', label: t('label.modifiedOn') }
+//                     ]}
+//                     rows={schedulerData} // ADD THIS
+//                     title={t('scheduler.deactivatedScheduler')}
+//                     onClose={() => setDoPrint(false)}
+//                     printRequest={buildPrintRequest()}
+//                 />
+//             )}
+
+//             {/* Activate/Retire Popup */}
+//             {activePopup && (
+//                 <CustomPopup
+//                     isOpen={!!activePopup}
+//                     onClose={handlePopupClose}
+//                     title={activePopup === "Activate Task" ? t('scheduler.activateTask') : t('scheduler.retireTask')}
+//                     content={
+//                         <div className="flex flex-col gap-1 p-1">
+//                             {/* Audit trail form */}
+//                             <div className="flex flex-col">
+//                                 <label className="text-[12px] font-roboto font-semibold text-gray-700">
+//                                     {t('scheduler.username')} <span className="text-red-500">*</span>
+//                                 </label>
+//                                 <input
+//                                     type="text"
+//                                     value={auditTrailData.username}
+//                                     disabled
+//                                     className="w-full text-[12px] outline-none border-gray-300 bg-gray-50 p-2 rounded"
+//                                 />
+//                             </div>
+
+//                             <div className="flex flex-col">
+//                                 <label className="text-[12px] font-roboto font-semibold text-gray-700">
+//                                     {t('scheduler.password')} <span className="text-red-500">*</span>
+//                                 </label>
+//                                 <input
+//                                     type="password"
+//                                     value={auditTrailData.password}
+//                                     onChange={(e) => setAuditTrailData(prev => ({ ...prev, password: e.target.value }))}
+//                                     className="w-full text-[12px] outline-none border-gray-300 p-2 rounded"
+//                                     placeholder={t('scheduler.enterPassword')}
+//                                 />
+//                             </div>
+
+//                             <div className="flex flex-col">
+//                                 <label className="text-[12px] font-roboto font-semibold text-gray-700">
+//                                     {t('scheduler.reason')} <span className="text-red-500">*</span>
+//                                 </label>
+//                                 <select
+//                                     value={auditTrailData.reason}
+//                                     onChange={(e) => setAuditTrailData(prev => ({ ...prev, reason: e.target.value }))}
+//                                     className="w-full text-[12px] outline-none border-gray-300 p-2 rounded"
+//                                 >
+//                                     <option value="">{t('scheduler.selectReason')}</option>
+//                                     {activePopup === "Activate Task" ? (
+//                                         <>
+//                                             <option value="Activated">{t('scheduler.activated')}</option>
+//                                             <option value="Reactivated">{t('scheduler.reactivated')}</option>
+//                                         </>
+//                                     ) : (
+//                                         <>
+//                                             <option value="Retired">{t('scheduler.retired')}</option>
+//                                             <option value="Decommissioned">{t('scheduler.decommissioned')}</option>
+//                                             <option value="Replaced">{t('scheduler.replaced')}</option>
+//                                         </>
+//                                     )}
+//                                 </select>
+//                             </div>
+
+//                             <div className="flex flex-col">
+//                                 <label className="text-[12px] font-roboto font-semibold text-gray-700">
+//                                     {t('scheduler.comments')} <span className="text-red-500">*</span>
+//                                 </label>
+//                                 <textarea
+//                                     rows={3}
+//                                     value={auditTrailData.comments}
+//                                     onChange={(e) => setAuditTrailData(prev => ({ ...prev, comments: e.target.value }))}
+//                                     className="w-full text-[12px] outline-none border-gray-300 p-2 rounded resize-none"
+//                                     placeholder={t('scheduler.enterComments')}
+//                                 />
+//                             </div>
+
+//                             <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200">
+//                                 <button
+//                                     onClick={handleAuditSubmit}
+//                                     className="flex items-center gap-1 px-2 py-1 text-[12px] font-roboto font-semibold text-white border-none rounded cursor-pointer"
+//                                     style={{ 
+//                                         backgroundColor: activePopup === "Activate Task" ? '#3b82f6' : '#ef4444' 
+//                                     }}
+//                                 >
+//                                     {activePopup === "Activate Task" ? (
+//                                         <>
+//                                             <i className="fa fa-check"></i> {t('scheduler.submit')}
+//                                         </>
+//                                     ) : (
+//                                         <>
+//                                             <i className="fa fa-ban"></i> {t('scheduler.retire')}
+//                                         </>
+//                                     )}
+//                                 </button>
+//                                 <button
+//                                     onClick={handlePopupClose}
+//                                     className="px-2.5 py-2 text-[12px] font-roboto font-semibold text-gray-600 bg-white border border-gray-300 rounded cursor-pointer hover:bg-gray-50"
+//                                 >
+//                                     {t('button.close')}
+//                                 </button>
+//                             </div>
+//                         </div>
+//                     }
+//                     size="md"
+//                 />
+//             )}
+//         </div>
+//     );
+// };
+
+// export default DeactivedTask;
+
+
+
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Eye, Check, Ban, Download, Printer } from 'lucide-react';
 import GridLayout from '../../../../Layout/Common/Home/Grid/GridLayout';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from "react-router-dom";
 import Errordialog from '../../../../Layout/Common/Errordialog';
 import CustomPopup from '../../../../Layout/Common/Popup';
+import PrintTable from '../../../../Layout/Common/PrintTable';
+import { useSchedulerNavigation } from '../../../../../Context/SchedulerNavigationContext';
+import servicecall from '../../../../../Services/servicecall';
+import CF_activeUserdetails from '../../../../../Services/activeUserdetails';
+import { handleExportCommon } from '../../../../Layout/Common/exportService';
+import FullPageLoader from '../../../../Layout/Common/FullPageLoader';
+import AuditTrail from '../../../../Layout/Common/AuditTrail';
 
-const DeactivedTask = () => {
+const DeactivedTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
     const [schedulerData, setSchedulerData] = useState([]);
     const [selectedScheduler, setSelectedScheduler] = useState(null);
-    const [selectedRowId, setSelectedRowId] = useState(null);
+    const [selectedRowId, setSelectedRowId] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [loadingText, setLoadingText] = useState("");
     const [infoDialog, setInfoDialog] = useState({
         open: false,
         message: "",
@@ -23,86 +1160,20 @@ const DeactivedTask = () => {
         reason: "",
         comments: ""
     });
-    const { t } = useTranslation('scheduler');
-    const navigate = useNavigate();
+    const [importModalOpen, setImportModalOpen] = useState(false);
+    const [importFile, setImportFile] = useState(null);
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const [doPrint, setDoPrint] = useState(false);
 
-    // Mock data - replace with API call
-    const mockSchedulerData = [
-        {
-            id: 1,
-            L11InstrumentAliasName: "CU-Summary1 (CU-Summary1)",
-            L13ScheduleID: "SCH-001",
-            L06ClientName: "DESKTOP-CU9J5T2",
-            L09FTPAliasName: "FTP-Alias-1",
-            L13LiveArchive: true,
-            L13TaskName: "Daily Backup Task",
-            L13SourcePath: "/path/to/source",
-            L52TaskCompleted: "Completed",
-            EmpowerStatus: "Active",
-            L13UNCStatus: false,
-            TaskStatus: "Deactivated",
-            ClientStatus: "Active",
-            InstrumentStatus: "Active",
-            StartDate: "2024-01-15 10:00",
-            UTCStartDate: "2024-01-15 08:00",
-            EndDate: null,
-            UTCEndDate: null,
-            TriggerTime: "10:00:00",
-            UTCTriggerTime: "08:00:00",
-            ScheduleMode: "Daily",
-            NextScheduleDate: "2024-03-20 10:00",
-            UTCNextScheduleDate: "2024-03-20 08:00",
-            LastScheduleDateTime: "2024-03-19 10:00",
-            UTCLastScheduleDateTime: "2024-03-19 08:00",
-            CreatedBy: "Admin",
-            CreatedDate: "2024-01-10 09:00",
-            UTCCreatedDate: "2024-01-10 07:00",
-            ModifiedBy: "Admin",
-            ModifiedDate: "2024-01-12 11:00",
-            UTCModifiedDate: "2024-01-12 09:00"
-        },
-        {
-            id: 2,
-            L11InstrumentAliasName: "MU-Summary1 (MU-Summary1)",
-            L13ScheduleID: "SCH-002",
-            L06ClientName: "DESKTOP-MU9J5T2",
-            L09FTPAliasName: "FTP-Alias-2",
-            L13LiveArchive: false,
-            L13TaskName: "Weekly Backup Task",
-            L13SourcePath: "/another/path",
-            L52TaskCompleted: "In Progress",
-            EmpowerStatus: "Inactive",
-            L13UNCStatus: true,
-            TaskStatus: "Deactivated",
-            ClientStatus: "Inactive",
-            InstrumentStatus: "Maintenance",
-            StartDate: "2024-02-01 09:00",
-            UTCStartDate: "2024-02-01 07:00",
-            EndDate: "2024-12-31 18:00",
-            UTCEndDate: "2024-12-31 16:00",
-            TriggerTime: "09:00:00",
-            UTCTriggerTime: "07:00:00",
-            ScheduleMode: "Weekly",
-            NextScheduleDate: "2024-03-27 09:00",
-            UTCNextScheduleDate: "2024-03-27 07:00",
-            LastScheduleDateTime: "2024-03-20 09:00",
-            UTCLastScheduleDateTime: "2024-03-20 07:00",
-            CreatedBy: "Admin",
-            CreatedDate: "2024-01-20 10:00",
-            UTCCreatedDate: "2024-01-20 08:00",
-            ModifiedBy: "User",
-            ModifiedDate: "2024-02-15 14:00",
-            UTCModifiedDate: "2024-02-15 12:00"
-        }
-    ];
-
-    useEffect(() => {
-        setLoading(true);
-        setTimeout(() => {
-            setSchedulerData(mockSchedulerData);
-            setLoading(false);
-        }, 500);
-    }, []);
+    // Get navigation functions from context
+    const {
+        navigateToTab,
+        navigateFromDeactivatedToInstrumentLock,
+        navigateToDataScheduler,
+        navigateFromDeactivatedToActivatedTask,
+        navigateWithinDeactivatedTask,
+        clearNavigation
+    } = useSchedulerNavigation();
 
     const showInfoDialog = useCallback((message, type = "information") => {
         setInfoDialog({
@@ -112,12 +1183,929 @@ const DeactivedTask = () => {
         });
     }, []);
 
+    const getActiveUserDetails = useCallback(() => {
+        const userDetails = CF_activeUserdetails();
+        return userDetails.ActiveUserDetails || {};
+    }, []);
+
+    const { postData } = servicecall();
+    const { t } = useTranslation('scheduler');
+
+    const makeApiCall = useCallback(async (url, data, processName) => {
+        try {
+            const response = await postData(url, data);
+
+            if (!response) {
+                throw new Error('No response from server');
+            }
+
+            if (response.Rtn && response.Rtn.toLowerCase() === 'error') {
+                throw new Error(response.Message || response.ErrorMessage || 'API error');
+            }
+
+            return response;
+        } catch (error) {
+            console.error(`${processName} error:`, error);
+            showInfoDialog(error.message || `${t('scheduler.apiError')}`, "error");
+            throw error;
+        }
+    }, [postData, t, showInfoDialog]);
+
+    const prepareRequestBody = useCallback((additionalData = {}) => {
+        const baseData = {
+            ApplicationCode: "SDMS",
+            ActiveUserDetails: getActiveUserDetails(),
+            ...additionalData
+        };
+        return baseData;
+    }, [getActiveUserDetails]);
+
+    const [confirmDialogData, setConfirmDialogData] = useState({
+        title: "",
+        message: "",
+        onConfirm: null,
+        actionType: ""
+    });
+
+    // Audit trail state
+    const [showAudit, setShowAudit] = useState(false);
+    const [pendingAction, setPendingAction] = useState(null);
+    const [pendingActionData, setPendingActionData] = useState(null);
+    const [auditTrailRights, setAuditTrailRights] = useState({
+        activate: 0,
+        retire: 0
+    });
+
+    const { getSubmissionData } = useSchedulerNavigation();
+    const [highlightScheduleId, setHighlightScheduleId] = useState(null);
+    const [shouldScrollToSchedule, setShouldScrollToSchedule] = useState(false);
+
+    const endpoints = {
+        deactiveSchedulerView: "Scheduler/DeactiveSchedulerView",
+        deactiveSchedulerViewGrid: "Scheduler/DeactiveSchedulerViewgrid",
+        deactiveSchedulerActivate: "Scheduler/DeactiveSchedulerActiveBtnClick",
+        deactiveSchedulerRetire: "Scheduler/DeactiveSchedulerRetireBtnClick",
+        exportData: "basemaster/exportDataFile",
+        importScheduler: "Scheduler/importSchedulerDataFile",
+        importTemplate: "Scheduler/ImportTemplateFileData",
+        checkManualTask: "Scheduler/CheckManualTaskForScheduler",
+        viewSchedule: "Scheduler/DataSchedulerSave"
+    };
+
+    const fetchDeactivatedSchedulerData = useCallback(async () => {
+        setLoading(true);
+        setLoadingText(t('common.loading'));
+        try {
+            const initialRequestData = prepareRequestBody();
+            const initialResponse = await makeApiCall(
+                endpoints.deactiveSchedulerView,
+                initialRequestData,
+                "DeactiveSchedulerInitialView"
+            );
+
+            const gridRequestData = prepareRequestBody();
+            const gridResponse = await makeApiCall(
+                endpoints.deactiveSchedulerViewGrid,
+                gridRequestData,
+                "FetchDeactivatedSchedulerGrid"
+            );
+
+            if (gridResponse && Array.isArray(gridResponse)) {
+                const transformedData = gridResponse.map(item => ({
+                    id: item.L13ScheduleID?.trim() || '',
+                    L11InstrumentAliasName: item.L11InstrumentAliasName || item.L11InstrumentName || "",
+                    L13ScheduleID: item.L13ScheduleID?.trim() || '',
+                    L06ClientName: item.L06ClientName || "",
+                    L09FTPAliasName: item.L09FTPAliasName || "",
+                    L13LiveArchive: item.L13LiveArchive || false,
+                    L13TaskName: item.L13TaskName || "",
+                    L13SourcePath: item.L13SourcePath || "",
+                    L52TaskCompleted: item.L52TaskCompleted || "",
+                    EmpowerStatus: item.EmpowerStatus || "",
+                    L13UNCStatus: item.L13UNCStatus || false,
+                    TaskStatus: item.TaskStatus || "Deactivated",
+                    ClientStatus: item.ClientStatus || "Active",
+                    InstrumentStatus: item.InstrumentStatus || "Active",
+                    StartDate: item.StartDate || "",
+                    UTCStartDate: item.UTCStartDate || "",
+                    EndDate: item.EndDate,
+                    UTCEndDate: item.UTCEndDate,
+                    TriggerTime: item.TriggerTime || "",
+                    UTCTriggerTime: item.UTCTriggerTime || "",
+                    ScheduleMode: item.ScheduleMode,
+                    NextScheduleDate: item.NextScheduleDate,
+                    UTCNextScheduleDate: item.UTCNextScheduleDate,
+                    LastScheduleDateTime: item.LastScheduleDateTime || "",
+                    UTCLastScheduleDateTime: item.UTCLastScheduleDateTime,
+                    CreatedBy: item.CreatedBy || "",
+                    CreatedDate: item.CreatedDate || "",
+                    UTCCreatedDate: item.UTCCreatedDate || "",
+                    ModifiedBy: item.ModifiedBy,
+                    ModifiedDate: item.ModifiedDate,
+                    UTCModifiedDate: item.UTCModifiedDate,
+                    L52TaskID: item.L52TaskID || "",
+                    L13TaskID: item.L13ScheduleID?.trim() || '',
+                    L12InstrumentMappingID: item.L12InstrumentMappingID || item.L13InstrumentMappingID || '',
+                    L11InstrumentID: item.L11InstrumentID || '',
+                    L13InstrumentMappingID: item.L13InstrumentMappingID || item.L12InstrumentMappingID || ''
+                }));
+
+                setSchedulerData(transformedData);
+
+                // Auto-select the first row if data exists
+                if (transformedData.length > 0 && !highlightScheduleId) {
+                    const firstRow = transformedData[0];
+                    setSelectedScheduler(firstRow);
+                    setSelectedRowId(firstRow.id);
+                    console.log('Auto-selected first row:', firstRow.id);
+                }
+
+                // Handle navigation highlighting if applicable
+                if (highlightScheduleId && shouldScrollToSchedule) {
+                    const scheduleToSelect = transformedData.find(item =>
+                        item.L13ScheduleID === highlightScheduleId
+                    );
+
+                    if (scheduleToSelect) {
+                        setSelectedScheduler(scheduleToSelect);
+                        setSelectedRowId(scheduleToSelect.id);
+                    }
+                    setShouldScrollToSchedule(false);
+                }
+            } else {
+                setSchedulerData([]);
+                setSelectedScheduler(null);
+                setSelectedRowId(0);
+            }
+        } catch (error) {
+            console.error('Failed to fetch deactivated scheduler data:', error);
+            setSchedulerData([]);
+            setSelectedScheduler(null);
+            setSelectedRowId(0);
+        } finally {
+            setLoading(false);
+            setLoadingText("");
+        }
+    }, [makeApiCall, prepareRequestBody, highlightScheduleId, shouldScrollToSchedule, t]);
+
+    const handleViewSchedule = useCallback(async () => {
+        if (!selectedScheduler) return;
+
+        try {
+            setLoading(true);
+            setLoadingText(t('common.loading'));
+
+            const viewRequestData = prepareRequestBody({
+                L13TaskID: selectedScheduler.L13ScheduleID,
+                bExist: true,
+                process: ""
+            });
+
+            console.log('📤 Sending View request:', viewRequestData);
+
+            const response = await makeApiCall(
+                endpoints.viewSchedule,
+                viewRequestData,
+                "ViewSchedule"
+            );
+
+            console.log('📥 View API Response:', response);
+
+            if (response && (response.ViewDatas || response.ViewLoad)) {
+                console.log('✅ View data received, navigating to Data Scheduler...');
+
+                const navigationPayload = {
+                    viewMode: true,
+                    isEdit: true,
+                    scheduleId: selectedScheduler.L13ScheduleID,
+                    viewData: response,
+                    timestamp: Date.now(),
+                    fromDeactivatedTask: true,
+                    sourceComponent: 'DeactivatedTask',
+                    sourceTab: 'Deactivated Task'
+                };
+
+                // Use the new navigation function
+                if (navigateToDataScheduler) {
+                    navigateToDataScheduler(navigationPayload);
+                } else if (navigateToTab) {
+                    navigateToTab('Scheduler', 'Data Scheduler', navigationPayload);
+                }
+
+            } else {
+                const errorMsg = response?.Message ||
+                    response?.returnMsg ||
+                    t('scheduler.viewFailed');
+                console.error('❌ View API failed:', errorMsg);
+                showInfoDialog(errorMsg, "error");
+            }
+        } catch (error) {
+            console.error('❌ View schedule error:', error);
+            showInfoDialog(t('scheduler.viewFailed'), "error");
+        } finally {
+            setLoading(false);
+            setLoadingText("");
+        }
+    }, [selectedScheduler, makeApiCall, prepareRequestBody, t,
+        navigateToDataScheduler, navigateToTab, showInfoDialog]);
+
+    const executeActivate = useCallback(async (actionData, auditTrailValues = null) => {
+        try {
+            const fullRequestData = prepareRequestBody({
+                ...actionData,
+                ...(auditTrailValues && { AuditTrailValues: auditTrailValues })
+            });
+
+            console.log("Executing activate with data:", fullRequestData);
+
+            const response = await makeApiCall(
+                endpoints.deactiveSchedulerActivate,
+                fullRequestData,
+                "ActivateSchedule"
+            );
+
+            if (response && response.AuditTrailLogin === false) {
+                showInfoDialog(response.LoginFailedMsg || t('scheduler.auditTrailLoginFailed'), "error");
+                return;
+            }
+
+            if (response && response.Rtn && response.Rtn.toLowerCase() === 'success') {
+                showInfoDialog(t('scheduler.taskActivatedSuccess'), "success");
+
+                // Navigate to Activated Task after successful activation
+                const scheduleId = actionData.sTaskID;
+                if (navigateFromDeactivatedToActivatedTask) {
+                    navigateFromDeactivatedToActivatedTask({
+                        scheduleId: scheduleId,
+                        message: 'Schedule activated successfully',
+                        highlightScheduleId: scheduleId,
+                        shouldScrollToSchedule: true
+                    });
+                } else {
+                    // Fallback: refresh current view
+                    await fetchDeactivatedSchedulerData();
+                }
+            } else {
+                showInfoDialog(
+                    response?.Message || response?.returnMsg || t('scheduler.actionFailed'),
+                    "error"
+                );
+            }
+        } catch (error) {
+            console.error('Activate failed:', error);
+            showInfoDialog(t('scheduler.activateFailed'), "error");
+        }
+    }, [makeApiCall, prepareRequestBody, t, showInfoDialog,
+        navigateFromDeactivatedToActivatedTask, fetchDeactivatedSchedulerData]);
+
+    const executeRetire = useCallback(async (actionData, auditTrailValues = null) => {
+        try {
+            const fullRequestData = prepareRequestBody({
+                ...actionData,
+                ...(auditTrailValues && { AuditTrailValues: auditTrailValues })
+            });
+
+            const response = await makeApiCall(
+                endpoints.deactiveSchedulerRetire,
+                fullRequestData,
+                "RetireSchedule"
+            );
+
+            if (response && response.AuditTrailLogin === false) {
+                showInfoDialog(response.LoginFailedMsg || t('scheduler.auditTrailLoginFailed'), "error");
+                return;
+            }
+
+            if (response && response.Rtn && response.Rtn.toLowerCase() === 'success') {
+                showInfoDialog(t('scheduler.taskRetiredSuccess'), "success");
+
+                // Refresh the Deactivated Task view after retire
+                if (navigateWithinDeactivatedTask) {
+                    navigateWithinDeactivatedTask({
+                        scheduleId: actionData.sTaskID
+                    });
+                } else {
+                    await fetchDeactivatedSchedulerData();
+                }
+            } else if (response && response.returnMsg) {
+                showInfoDialog(response.returnMsg, "error");
+            } else {
+                showInfoDialog(t('scheduler.actionFailed'), "error");
+            }
+        } catch (error) {
+            console.error('Retire failed:', error);
+            showInfoDialog(t('scheduler.retireFailed'), "error");
+        }
+    }, [makeApiCall, prepareRequestBody, t, fetchDeactivatedSchedulerData,
+        showInfoDialog, navigateWithinDeactivatedTask]);
+
     const closeInfoDialog = useCallback(() => {
         setInfoDialog(prev => ({
             ...prev,
             open: false
         }));
     }, []);
+
+    const showConfirmation = useCallback((title, message, onConfirm, actionType, buttonType = "yesno") => {
+        setConfirmDialogData({
+            title,
+            message,
+            onConfirm,
+            actionType,
+            buttonType
+        });
+        setShowConfirmDialog(true);
+    }, []);
+
+    // NAVIGATE TO INSTRUMENT LOCK - BYPASS RIGHTS CHECK VERSION
+    const navigateToInstrumentLock = useCallback((data) => {
+        console.log("🔄 NAVIGATE TO INSTRUMENT LOCK FROM DEACTIVATED TASK");
+        console.log("Data being passed:", data);
+
+        // Store the activation data globally (mimics jQuery's GActSchedulerData)
+        if (data.forActivation && data.activateData) {
+            window.GActSchedulerData = {
+                scheduleData: data.scheduleData,
+                checkResponse: data.checkResponse,
+                activateData: data.activateData,
+                shouldActivateAfterLock: true,
+                fromDeactivatedTask: true,
+                scheduleId: data.scheduleData?.L13ScheduleID
+            };
+            console.log('💾 Stored GActSchedulerData globally');
+        }
+
+        // Prepare the navigation data
+        const navigationData = {
+            scheduleData: data.scheduleData,
+            checkResponse: data.checkResponse,
+            actionType: data.actionType || 'lockActivate',
+            fromDeactivatedTask: true,
+            forActivation: data.forActivation || false,
+            originalScheduleId: data.scheduleData?.L13ScheduleID,
+            activateData: data.activateData
+        };
+
+        console.log("Navigation payload:", navigationData);
+
+        // Use the new navigation function
+        if (navigateFromDeactivatedToInstrumentLock) {
+            navigateFromDeactivatedToInstrumentLock(navigationData);
+        } else if (navigateToTab) {
+            navigateToTab('Lock Settings', 'Instrument Lock Settings', navigationData);
+        } else {
+            console.error("❌ No navigation functions available!");
+            showInfoDialog("Navigation function not available", "error");
+        }
+    }, [navigateFromDeactivatedToInstrumentLock, navigateToTab, showInfoDialog]);
+
+    // Add event listeners for lock completion
+    useEffect(() => {
+        // Listen for when we need to navigate back from Instrument Lock
+        const handleNavigateBackForActivation = (event) => {
+            console.log('🔄 Received navigateToDeactivatedForActivation event:', event.detail);
+
+            const { scheduleId, activateData, lockCompleted } = event.detail || {};
+
+            if (lockCompleted && scheduleId && activateData) {
+                console.log('✅ Lock completed, navigating back to DeactivatedTask to activate schedule:', scheduleId);
+
+                // Navigate back to DeactivatedTask
+                if (navigateWithinDeactivatedTask) {
+                    navigateWithinDeactivatedTask({
+                        scheduleId: scheduleId,
+                        lockCompleted: true,
+                        activateData: activateData
+                    });
+
+                    // After navigation, trigger activation
+                    setTimeout(() => {
+                        console.log('⚡ Triggering activation after lock...');
+                        // Check audit trail rights
+                        if (auditTrailRights.activate === 1) {
+                            setPendingAction('activate');
+                            setPendingActionData(activateData);
+                            setShowAudit(true);
+                        } else {
+                            executeActivate(activateData);
+                        }
+                    }, 500);
+                }
+            }
+        };
+
+        // Listen for postMessage from iframe/popup
+        const handlePostMessage = (event) => {
+            if (event.data && event.data.type === 'LOCK_COMPLETED_ACTIVATE_NOW') {
+                console.log('📬 Received postMessage for lock completion:', event.data);
+                const { scheduleId, activateData } = event.data;
+
+                if (scheduleId && activateData) {
+                    // Trigger activation
+                    if (auditTrailRights.activate === 1) {
+                        setPendingAction('activate');
+                        setPendingActionData(activateData);
+                        setShowAudit(true);
+                    } else {
+                        executeActivate(activateData);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('navigateToDeactivatedForActivation', handleNavigateBackForActivation);
+        window.addEventListener('message', handlePostMessage);
+
+        return () => {
+            window.removeEventListener('navigateToDeactivatedForActivation', handleNavigateBackForActivation);
+            window.removeEventListener('message', handlePostMessage);
+
+            // Clean up global variable on unmount
+            if (window.GActSchedulerData) {
+                window.GActSchedulerData = null;
+            }
+            // Clean up session storage
+            sessionStorage.removeItem('lockAndActivateFlow');
+        };
+    }, [navigateWithinDeactivatedTask, executeActivate, auditTrailRights.activate]);
+
+    // Test navigation function for debugging
+    const testNavigation = useCallback(() => {
+        console.log("🧪 Testing navigation...");
+
+        if (!selectedScheduler) {
+            showInfoDialog("Please select a schedule first", "warning");
+            return;
+        }
+
+        // Create test data
+        const testCheckResponse = {
+            nParsingCount: 1,
+            nParsingInstrOrderCount: 0,
+            nTaskCount: 1
+        };
+
+        navigateToInstrumentLock({
+            scheduleData: selectedScheduler,
+            checkResponse: testCheckResponse
+        });
+    }, [selectedScheduler, navigateToInstrumentLock, showInfoDialog]);
+
+    const handleActivateConfirm = useCallback(async () => {
+        if (!selectedScheduler) return;
+
+        try {
+            const checkRequestData = prepareRequestBody({
+                sTaskID: selectedScheduler.L13ScheduleID,
+                sTaskStatus: selectedScheduler.TaskStatus,
+                sPathTaskID: selectedScheduler.L52TaskID,
+                sInstrumentMappingID: selectedScheduler.L13InstrumentMappingID || selectedScheduler.L12InstrumentMappingID
+            });
+
+            console.log("📤 Sending checkManualTask API request:", checkRequestData);
+
+            const checkResponse = await makeApiCall(
+                endpoints.checkManualTask,
+                checkRequestData,
+                "CheckManualTask"
+            );
+
+            console.log("📥 checkManualTask API response:", checkResponse);
+
+            if (checkResponse && checkResponse.nTaskCount !== undefined) {
+                const activateData = {
+                    sClientName: selectedScheduler.L06ClientName,
+                    sTaskID: selectedScheduler.L13ScheduleID,
+                    sTaskStatus: selectedScheduler.TaskStatus,
+                    sEmpowerStatus: selectedScheduler.EmpowerStatus,
+                    sTaskName: selectedScheduler.L13TaskName,
+                    sSourcePath: selectedScheduler.L13SourcePath,
+                    sPathTaskID: selectedScheduler.L52TaskID,
+                    sInstrumentName: selectedScheduler.L11InstrumentAliasName || selectedScheduler.L11InstrumentName,
+                    sInstrumentMappingID: selectedScheduler.L13InstrumentMappingID || selectedScheduler.L12InstrumentMappingID
+                };
+
+                // ========== SCENARIO HANDLING ==========
+
+                // SCENARIO: nTaskCount === 1
+                if (checkResponse.nTaskCount === 1) {
+                    console.log("📊 SCENARIO: nTaskCount === 1");
+
+                    // Sub-scenario 1: nParsingInstrOrderCount >= 1 (Instrument already locked)
+                    if (checkResponse.nParsingInstrOrderCount >= 1) {
+                        console.log("📊 SCENARIO 1: Instrument already locked");
+
+                        showConfirmation(
+                            t('scheduler.confirmation'),
+                            t('scheduler.confirmActivateWithLockInfo'),
+                            () => {
+                                console.log("✅ User proceeding with activation (instrument already locked)");
+
+                                if (auditTrailRights.activate === 1) {
+                                    setPendingAction('activate');
+                                    setPendingActionData(activateData);
+                                    setShowAudit(true);
+                                } else {
+                                    executeActivate(activateData);
+                                }
+                            },
+                            "activate"
+                        );
+                    }
+                    // Sub-scenario 2: nParsingCount === 1 (Manual parsing instrument - needs lock)
+                    else if (checkResponse.nParsingCount === 1) {
+                        console.log("📊 SCENARIO 2: Manual parsing instrument - Lock & Activate option");
+
+                        setConfirmDialogData({
+                            title: t('scheduler.confirmation'),
+                            message: t('scheduler.lockInstrumentAndActivate'),
+                            onConfirm: (actionType) => {
+                                console.log("✅ User selected action:", actionType);
+
+                                if (actionType === 'lockActivate') {
+                                    // ========== LOCK & ACTIVATE FLOW ==========
+                                    console.log("🚀 Starting Lock & Activate flow");
+
+                                    // Prepare complete data for Instrument Lock
+                                    const lockSchedulerData = {
+                                        // Client information
+                                        clientId: selectedScheduler.L06ClientName,
+                                        L06ClientID: selectedScheduler.L06ClientName,
+
+                                        // Instrument information
+                                        instrumentId: selectedScheduler.L13InstrumentMappingID || selectedScheduler.L12InstrumentMappingID,
+                                        L11InstrumentID: selectedScheduler.L13InstrumentMappingID || selectedScheduler.L12InstrumentMappingID,
+                                        instrumentName: selectedScheduler.L11InstrumentAliasName,
+                                        dropdownInstrumentId: selectedScheduler.L13InstrumentMappingID || selectedScheduler.L12InstrumentMappingID,
+
+                                        // Path information
+                                        sourcePath: selectedScheduler.L13SourcePath,
+                                        L13SourcePath: selectedScheduler.L13SourcePath,
+
+                                        // Schedule information
+                                        L13ScheduleID: selectedScheduler.L13ScheduleID,
+                                        scheduleId: selectedScheduler.L13ScheduleID,
+                                        sScheduleID: selectedScheduler.L13ScheduleID,
+
+                                        // Task information
+                                        L52TaskID: selectedScheduler.L52TaskID,
+                                        sTaskID: selectedScheduler.L52TaskID,
+
+                                        // Additional metadata
+                                        fileName: selectedScheduler.L13TaskName,
+                                        templateId: '', // Will be auto-selected in InstrumentLock
+                                        fromScheduler: true,
+                                        fromLockActivate: true,
+                                        fromDeactivatedTask: true,
+                                        TaskType: 'DeActive'
+                                    };
+
+                                    const lockActivatePayload = {
+                                        scheduleData: lockSchedulerData,
+                                        checkResponse: checkResponse,
+                                        actionType: 'lockActivate',
+                                        activateData: activateData,
+                                        forActivation: true,
+                                        fromDeactivatedTask: true,
+                                        bypassRightsCheck: true
+                                    };
+
+                                    // Store in sessionStorage for persistence
+                                    sessionStorage.setItem('lockAndActivateFlow', JSON.stringify(lockActivatePayload));
+                                    sessionStorage.setItem('pendingActivationData', JSON.stringify({
+                                        scheduleData: lockSchedulerData,
+                                        activateData: activateData,
+                                        fromLockActivate: true
+                                    }));
+                                    sessionStorage.setItem('originalScheduleId', selectedScheduler.L13ScheduleID);
+
+                                    console.log('💾 Stored lock & activate data:', lockActivatePayload);
+
+                                    // Navigate to Instrument Lock Settings
+                                    navigateToInstrumentLock(lockActivatePayload);
+                                }
+                                else if (actionType === 'activateOnly') {
+                                    // Activate without lock
+                                    console.log("⚡ Activating without lock");
+
+                                    if (auditTrailRights.activate === 1) {
+                                        setPendingAction('activate');
+                                        setPendingActionData(activateData);
+                                        setShowAudit(true);
+                                    } else {
+                                        executeActivate(activateData);
+                                    }
+                                }
+                            },
+                            actionType: "threeButtons",
+                            buttonType: "lockActivateCancel"
+                        });
+                        setShowConfirmDialog(true);
+                    }
+                    // Sub-scenario 3: Simple activation (no parsing, no lock)
+                    else {
+                        console.log("📊 SCENARIO 3: Simple activation");
+
+                        showConfirmation(
+                            t('scheduler.confirmation'),
+                            t('scheduler.confirmActivate'),
+                            () => {
+                                console.log("✅ User proceeding with simple activation");
+
+                                if (auditTrailRights.activate === 1) {
+                                    setPendingAction('activate');
+                                    setPendingActionData(activateData);
+                                    setShowAudit(true);
+                                } else {
+                                    executeActivate(activateData);
+                                }
+                            },
+                            "activate"
+                        );
+                    }
+                }
+                // SCENARIO: nTaskCount === 0 (pending manual upload)
+                else if (checkResponse.nTaskCount === 0) {
+                    console.log("📊 SCENARIO: nTaskCount === 0 (pending manual upload)");
+
+                    showConfirmation(
+                        t('scheduler.confirmation'),
+                        t('scheduler.confirmActivateWithManual'),
+                        () => {
+                            console.log("✅ User proceeding with activation (with manual upload)");
+
+                            if (auditTrailRights.activate === 1) {
+                                setPendingAction('activate');
+                                setPendingActionData(activateData);
+                                setShowAudit(true);
+                            } else {
+                                executeActivate(activateData);
+                            }
+                        },
+                        "activate"
+                    );
+                }
+            }
+        } catch (error) {
+            console.error('Activate check failed:', error);
+            showInfoDialog(t('scheduler.activateFailed'), "error");
+        }
+    }, [
+        selectedScheduler,
+        makeApiCall,
+        prepareRequestBody,
+        t,
+        showConfirmation,
+        showInfoDialog,
+        auditTrailRights.activate,
+        navigateToInstrumentLock,
+        executeActivate
+    ]);
+
+    const handleRetireConfirm = useCallback(async () => {
+        if (!selectedScheduler) return;
+
+        try {
+            const checkRequestData = prepareRequestBody({
+                sTaskID: selectedScheduler.L13ScheduleID,
+                sTaskStatus: selectedScheduler.TaskStatus,
+                sPathTaskID: selectedScheduler.L52TaskID
+            });
+
+            const checkResponse = await makeApiCall(
+                endpoints.checkManualTask,
+                checkRequestData,
+                "CheckManualTask"
+            );
+
+            if (checkResponse && checkResponse.nTaskCount !== undefined) {
+                const alertText = checkResponse.nTaskCount === 1
+                    ? t('scheduler.confirmRetire')
+                    : t('scheduler.confirmRetireWithManual');
+
+                const retireData = {
+                    sClientName: selectedScheduler.L06ClientName,
+                    sTaskID: selectedScheduler.L13ScheduleID,
+                    sTaskStatus: selectedScheduler.TaskStatus,
+                    sEmpowerStatus: selectedScheduler.EmpowerStatus,
+                    sTaskName: selectedScheduler.L13TaskName,
+                    sSourcePath: selectedScheduler.L13SourcePath,
+                    sPathTaskID: selectedScheduler.L52TaskID
+                };
+
+                showConfirmation(
+                    t('scheduler.confirmation'),
+                    alertText,
+                    () => {
+                        // Check audit trail rights
+                        if (auditTrailRights.retire === 1) {
+                            setPendingAction('retire');
+                            setPendingActionData(retireData);
+                            setShowAudit(true);
+                        } else {
+                            executeRetire(retireData);
+                        }
+                    },
+                    "retire"
+                );
+            }
+        } catch (error) {
+            console.error('Retire check failed:', error);
+            showInfoDialog(t('scheduler.retireFailed'), "error");
+        }
+    }, [selectedScheduler, makeApiCall, prepareRequestBody, t, showConfirmation, showInfoDialog, auditTrailRights.retire]);
+
+    const handleAuditAuthorized = useCallback((auditData) => {
+        const auditTrailValues = auditData.AuditTrailValues;
+
+        if (!auditTrailValues) {
+            showInfoDialog("Audit trail data is missing", "error");
+            setShowAudit(false);
+            setPendingAction(null);
+            setPendingActionData(null);
+            return;
+        }
+
+        setShowAudit(false);
+
+        if (pendingAction === 'activate' && pendingActionData) {
+            executeActivate(pendingActionData, auditTrailValues);
+        } else if (pendingAction === 'retire' && pendingActionData) {
+            executeRetire(pendingActionData, auditTrailValues);
+        }
+
+        setPendingAction(null);
+        setPendingActionData(null);
+    }, [pendingAction, pendingActionData, executeActivate, executeRetire, showInfoDialog]);
+
+    const handleAuditClose = useCallback(() => {
+        setShowAudit(false);
+        setPendingAction(null);
+        setPendingActionData(null);
+    }, []);
+
+    const handleActivateClick = useCallback(() => {
+        if (!selectedScheduler) {
+            showInfoDialog(t('scheduler.selectRecord'), "warning");
+            return;
+        }
+        handleActivateConfirm();
+    }, [selectedScheduler, showInfoDialog, t, handleActivateConfirm]);
+
+    const handleRetireClick = useCallback(() => {
+        if (!selectedScheduler) {
+            showInfoDialog(t('scheduler.selectRecord'), "warning");
+            return;
+        }
+        handleRetireConfirm();
+    }, [selectedScheduler, showInfoDialog, t, handleRetireConfirm]);
+
+    const handleConfirmDialogClose = useCallback(() => {
+        setShowConfirmDialog(false);
+        setConfirmDialogData({
+            title: "",
+            message: "",
+            onConfirm: null,
+            actionType: ""
+        });
+    }, []);
+
+    const handleConfirmDialogConfirm = useCallback(() => {
+        if (confirmDialogData.onConfirm) {
+            confirmDialogData.onConfirm();
+        }
+        handleConfirmDialogClose();
+    }, [confirmDialogData, handleConfirmDialogClose]);
+
+    // TEMPORARY: BYPASS INSTRUMENT LOCK RIGHTS CHECK
+    // TODO: Remove this when proper rights checking is implemented
+    const debugInstrumentLockRights = () => {
+        console.log("🔍 DEBUG: Instrument Lock Rights Check BYPASSED");
+        console.log("All navigation to Instrument Lock is currently allowed without rights check");
+        alert("⚠️ INSTRUMENT LOCK RIGHTS CHECK BYPASSED\n\nAll navigation to Instrument Lock Settings is currently allowed without checking user rights.\n\nThis is temporary for testing. Proper rights checking needs to be implemented.");
+    };
+
+    // Load audit trail rights
+    useEffect(() => {
+        const loadAuditTrailRights = () => {
+            try {
+                const auditRightsData = sessionStorage.getItem('auditTrailRights');
+
+                if (auditRightsData) {
+                    try {
+                        const rights = JSON.parse(auditRightsData);
+                        const schedulerRights = rights.filter(item =>
+                            item.sScreenName && item.sScreenName.includes("Deactivated Task")
+                        );
+
+                        const activateRight = schedulerRights.find(item =>
+                            item.sTaskName && item.sTaskName.includes("Activate")
+                        );
+                        const retireRight = schedulerRights.find(item =>
+                            item.sTaskName && item.sTaskName.includes("Retire")
+                        );
+
+                        setAuditTrailRights({
+                            activate: activateRight ? (activateRight.nManualAuditTrail || 0) : 0,
+                            retire: retireRight ? (retireRight.nManualAuditTrail || 0) : 0
+                        });
+                    } catch (parseError) {
+                        setAuditTrailRights({ activate: 1, retire: 1 });
+                    }
+                } else {
+                    setAuditTrailRights({ activate: 1, retire: 1 });
+                }
+            } catch (error) {
+                setAuditTrailRights({ activate: 1, retire: 1 });
+            }
+        };
+
+        loadAuditTrailRights();
+    }, []);
+
+    // TEMPORARILY DISABLE INSTRUMENT LOCK RIGHTS CHECKING
+    // TODO: Remove this useEffect when proper rights checking is implemented
+    useEffect(() => {
+        console.log("⚠️ INSTRUMENT LOCK RIGHTS CHECKING DISABLED");
+        console.log("All navigation to Instrument Lock will be allowed");
+
+        // Force set rights to 'show' to bypass checks
+        sessionStorage.setItem('instrumentLockRights', 'show');
+        localStorage.setItem('instrumentLockRights', 'show');
+
+        // Also set a flag that we're bypassing rights
+        sessionStorage.setItem('bypassInstrumentLockRights', 'true');
+
+        return () => {
+            // Clean up on unmount
+            sessionStorage.removeItem('bypassInstrumentLockRights');
+        };
+    }, []);
+
+    // Navigation handling
+    useEffect(() => {
+        console.log('=== DeactivatedTask useEffect triggered ===');
+        console.log('Navigation data from props:', navigationData);
+        console.log('Context submission data:', getSubmissionData());
+
+        let scheduleId = null;
+
+        if (navigationData && navigationData.scheduleId) {
+            scheduleId = navigationData.scheduleId;
+        } else {
+            const submissionData = getSubmissionData();
+            if (submissionData && submissionData.targetTab === 'Deactivated Task') {
+                scheduleId = submissionData.data?.scheduleId;
+                if (clearNavigation) {
+                    clearNavigation();
+                }
+            }
+        }
+
+        if (scheduleId) {
+            setHighlightScheduleId(scheduleId);
+            setShouldScrollToSchedule(true);
+            fetchDeactivatedSchedulerData();
+        }
+    }, [navigationData, getSubmissionData, clearNavigation, fetchDeactivatedSchedulerData]);
+
+    // Initial data load
+    useEffect(() => {
+        fetchDeactivatedSchedulerData();
+    }, []);
+
+    useEffect(() => {
+        if (schedulerData.length > 0 && selectedRowId === 0 && !highlightScheduleId) {
+            // Auto-select first row when data is loaded and no specific schedule is highlighted
+            const firstRow = schedulerData[0];
+            setSelectedScheduler(firstRow);
+            setSelectedRowId(firstRow.id);
+            console.log('Auto-selected first row on data change:', firstRow.id);
+        }
+    }, [schedulerData, highlightScheduleId]);
+
+    useEffect(() => {
+        if (shouldScrollToSchedule && highlightScheduleId && schedulerData.length > 0) {
+            const scheduleRow = schedulerData.find(item =>
+                item.L13ScheduleID === highlightScheduleId
+            );
+
+            if (scheduleRow) {
+                setSelectedScheduler(scheduleRow);
+                setSelectedRowId(scheduleRow.id);
+                // showInfoDialog(`Schedule ${highlightScheduleId} deactivated successfully!`, "success");
+                console.log('Auto-selected schedule:', highlightScheduleId);
+            } else {
+                // If the highlighted schedule is not found, fall back to first row
+                const firstRow = schedulerData[0];
+                setSelectedScheduler(firstRow);
+                setSelectedRowId(firstRow.id);
+                console.log('Fallback to auto-selecting first row:', firstRow.id);
+            }
+
+            setShouldScrollToSchedule(false);
+        }
+    }, [schedulerData, highlightScheduleId, shouldScrollToSchedule, showInfoDialog]);
 
     const handleRowSelect = useCallback((row) => {
         setSelectedScheduler(row);
@@ -126,48 +2114,144 @@ const DeactivedTask = () => {
 
     const handleViewClick = useCallback(() => {
         if (!selectedScheduler) {
-            showInfoDialog(t('scheduler.selectRecordToView'), "warning");
-            return;
-        }
-        navigate(`/scheduler/view/${selectedScheduler.L13ScheduleID}`);
-    }, [selectedScheduler, navigate, showInfoDialog, t]);
-
-    const handleActivateClick = useCallback(() => {
-        if (!selectedScheduler) {
             showInfoDialog(t('scheduler.selectRecord'), "warning");
             return;
         }
-        setActivePopup("Activate Task");
-    }, [selectedScheduler, showInfoDialog, t]);
 
-    const handleRetireClick = useCallback(() => {
-        if (!selectedScheduler) {
-            showInfoDialog(t('scheduler.selectRecord'), "warning");
-            return;
-        }
-        setActivePopup("Retire Task");
-    }, [selectedScheduler, showInfoDialog, t]);
+        handleViewSchedule();
+    }, [selectedScheduler, showInfoDialog, t, handleViewSchedule]);
 
-    const handleExportClick = useCallback(async () => {
-        if (schedulerData.length === 0) {
-            showInfoDialog(t('scheduler.noRecordsToExport'), "warning");
-            return;
-        }
-        
-        try {
-            // Implement export logic
-            showInfoDialog(t('scheduler.exportSuccess'), "success");
-        } catch (error) {
-            showInfoDialog(t('scheduler.exportFailed'), "error");
-        }
-    }, [schedulerData, showInfoDialog, t]);
+    useEffect(() => {
+        const handleDataSchedulerNavigation = (event) => {
+            console.log('Received navigate-to-datascheduler event:', event.detail);
+            if (event.detail?.direct && navigateToTab) {
+                setTimeout(() => {
+                    navigateToTab('Scheduler', 'Data Scheduler', {
+                        viewMode: true,
+                        data: event.detail.data,
+                        type: 'deactivated'
+                    });
+                }, 100);
+            }
+        };
 
-    const handlePrintClick = useCallback(() => {
-        window.print();
+        window.addEventListener('navigate-to-datascheduler', handleDataSchedulerNavigation);
+
+        return () => {
+            window.removeEventListener('navigate-to-datascheduler', handleDataSchedulerNavigation);
+        };
+    }, [navigateToTab]);
+
+    // Listen for when instrument lock is completed
+    useEffect(() => {
+        const handleInstrumentLockCompleted = (event) => {
+            console.log('🔒 Received instrumentLockCompleted event:', event.detail);
+
+            const { scheduleId, activateData, lockSuccess, shouldActivate } = event.detail || {};
+
+            if (lockSuccess && scheduleId && activateData && shouldActivate) {
+                console.log('✅ Lock completed, now activating schedule:', scheduleId);
+
+                // Clear the stored data
+                sessionStorage.removeItem('originalScheduleId');
+                sessionStorage.removeItem('lockCompletedSuccessfully');
+
+                // Check audit trail rights
+                if (auditTrailRights.activate === 1) {
+                    setPendingAction('activate');
+                    setPendingActionData(activateData);
+                    setShowAudit(true);
+                } else {
+                    executeActivate(activateData);
+                }
+            }
+        };
+
+        window.addEventListener('instrumentLockCompleted', handleInstrumentLockCompleted);
+
+        return () => {
+            window.removeEventListener('instrumentLockCompleted', handleInstrumentLockCompleted);
+        };
+    }, [executeActivate, auditTrailRights.activate]);
+
+    // Cleanup effect
+    useEffect(() => {
+        return () => {
+            // Clean up on unmount
+            sessionStorage.removeItem('lockAndActivateData');
+            sessionStorage.removeItem('originalScheduleId');
+            sessionStorage.removeItem('lockCompletedSuccessfully');
+            sessionStorage.removeItem('lockResult');
+
+            // Clean global variable
+            if (window.GActSchedulerData) {
+                window.GActSchedulerData = null;
+            }
+        };
+    }, []);
+
+    // Add this useEffect in DeactivatedTask.jsx - after your existing useEffect for instrument lock
+    useEffect(() => {
+        // Listen for when instrument lock is completed and we need to navigate to Activated Task
+        const handleLockCompletedNavigate = (event) => {
+            console.log('🔒 Received lock completed event for navigation:', event.detail);
+
+            const { scheduleId, instrumentId, fromLock } = event.detail || {};
+
+            if (fromLock && scheduleId) {
+                console.log('✅ Lock completed, navigating to Activated Task for schedule:', scheduleId);
+
+                // Use the navigation function to go to Activated Task
+                if (navigateFromDeactivatedToActivatedTask) {
+                    navigateFromDeactivatedToActivatedTask({
+                        scheduleId: scheduleId,
+                        message: 'Instrument locked successfully. Schedule ready for activation.',
+                        highlightScheduleId: scheduleId,
+                        shouldScrollToSchedule: true,
+                        fromLock: true
+                    });
+                } else if (navigateToTab) {
+                    // Fallback navigation
+                    navigateToTab('Scheduler', 'View Edit Scheduler', {
+                        innerTab: 'Activated Task',
+                        scheduleId: scheduleId,
+                        highlightScheduleId: scheduleId,
+                        fromLock: true
+                    });
+                }
+            }
+        };
+
+        window.addEventListener('schedulerInstrumentLocked', handleLockCompletedNavigate);
+
+        return () => {
+            window.removeEventListener('schedulerInstrumentLocked', handleLockCompletedNavigate);
+        };
+    }, [navigateFromDeactivatedToActivatedTask, navigateToTab]);
+
+    // Update the cleanup effect in DeactivatedTask.jsx
+    useEffect(() => {
+        return () => {
+            // Clean up on unmount
+            sessionStorage.removeItem('lockAndActivateData');
+            sessionStorage.removeItem('originalScheduleId');
+            sessionStorage.removeItem('lockCompletedSuccessfully');
+            sessionStorage.removeItem('lockResult');
+
+            // Clean global variable
+            if (window.GActSchedulerData) {
+                window.GActSchedulerData = null;
+            }
+        };
+    }, []);
+
+    const handleImportClick = useCallback(() => {
+        setImportModalOpen(true);
     }, []);
 
     const handlePopupClose = useCallback(() => {
         setActivePopup(null);
+        setImportModalOpen(false);
         setAuditTrailData({
             username: "Administrator",
             password: "",
@@ -176,704 +2260,530 @@ const DeactivedTask = () => {
         });
     }, []);
 
+    const handleFileChange = useCallback((e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            if (['xls', 'xlsx'].includes(fileExtension)) {
+                setImportFile(file);
+            } else {
+                showInfoDialog(t('scheduler.invalidFileType'), "error");
+                e.target.value = '';
+            }
+        }
+    }, [showInfoDialog, t]);
+
+    const buildExportRequest = useCallback(() => {
+        const allRows = schedulerData.map(item => ({
+            ...item,
+            L13LiveArchive: item.L13LiveArchive ? "✓" : ""
+        }));
+
+        const headerDetails = [
+            t('label.taskId'),
+            t('scheduler.clientName'),
+            t('scheduler.storageName'),
+            t('scheduler.liveArchive'),
+            t('label.taskName'),
+            t('label.instrument'),
+            t('scheduler.sourcePath'),
+            t('scheduler.firstCycleStatus'),
+            t('scheduler.empowerStatus'),
+            t('scheduler.uncStatus'),
+            t('scheduler.taskStatus'),
+            t('scheduler.startDate'),
+            t('scheduler.endDate'),
+            t('scheduler.triggerTime'),
+            t('scheduler.scheduleMode'),
+            t('scheduler.nextScheduleDateTime'),
+            t('scheduler.lastScheduleDateTime'),
+            t('label.createdBy'),
+            t('label.createdOn'),
+            t('label.modifiedBy'),
+            t('label.modifiedOn')
+        ];
+
+        const allowKeys = [
+            "L13ScheduleID",
+            "L06ClientName",
+            "L09FTPAliasName",
+            "L13LiveArchive",
+            "L13TaskName",
+            "L11InstrumentAliasName",
+            "L13SourcePath",
+            "L52TaskCompleted",
+            "EmpowerStatus",
+            "L13UNCStatus",
+            "TaskStatus",
+            "StartDate",
+            "EndDate",
+            "TriggerTime",
+            "ScheduleMode",
+            "NextScheduleDate",
+            "LastScheduleDateTime",
+            "CreatedBy",
+            "CreatedDate",
+            "ModifiedBy",
+            "ModifiedDate"
+        ];
+
+        return {
+            sFileName: "DeactiveScheduler",
+            AllRows: allRows,
+            HeaderDetails: headerDetails,
+            AllowKeys: allowKeys,
+            sBrowserURL: window.location.origin,
+            ActiveUserDetails: prepareRequestBody().ActiveUserDetails,
+            ApplicationCode: "SDMS"
+        };
+    }, [schedulerData, t, prepareRequestBody]);
+
+    const handleExportClick = useCallback(() => {
+        if (schedulerData.length === 0) {
+            showInfoDialog(t('scheduler.noRecordsToExport'), "warning");
+            return;
+        }
+
+        handleExportCommon({
+            rows: schedulerData,
+            buildRequest: buildExportRequest,
+            postData,
+            setLoading,
+            setLoadingText,
+            setErrorDialog: ({ open, message, type }) => {
+                showInfoDialog(message, type);
+            },
+            t
+        });
+    }, [schedulerData, buildExportRequest, postData, showInfoDialog, t]);
+
+    const handlePrintClick = useCallback(() => {
+        if (!schedulerData || schedulerData.length === 0) {
+            showInfoDialog(t('scheduler.selectRecord'), "information");
+            return;
+        }
+
+        setDoPrint(true);
+    }, [schedulerData, showInfoDialog, t]);
+
+    const buildPrintRequest = useCallback(() => ({
+        sModuleName: "Deactivated Scheduler",
+        ActiveUserDetails: prepareRequestBody().ActiveUserDetails,
+        ApplicationCode: "SDMS",
+    }), [prepareRequestBody]);
+
+    const handleUploadSubmit = useCallback(async () => {
+        if (!importFile) {
+            showInfoDialog(t('scheduler.selectFileToUpload'), "warning");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setLoadingText(t('scheduler.uploading'));
+
+            const formData = new FormData();
+            formData.append('file', importFile);
+
+            const userDetails = getActiveUserDetails();
+            formData.append('sUsername', userDetails.sUsername || '');
+            formData.append('sSiteCode', userDetails.sSiteCode || '');
+            formData.append('sUserID', userDetails.sUserID || '');
+            formData.append('sTimeZoneID', userDetails.sTimeZoneID || '');
+            formData.append('ActiveUserDetails', JSON.stringify(userDetails));
+
+            const response = await fetch(endpoints.importScheduler, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Authorization': localStorage.getItem('token') || ''
+                }
+            });
+
+            const data = await response.json();
+
+            if (!data.Rtn) {
+                showInfoDialog(t('scheduler.importFailed'), "error");
+            } else if (data.Rtn.toLowerCase() === 'success' || data.Rtn.toLowerCase() === 'partial_success') {
+                if (data.Rtn.toLowerCase() === 'success') {
+                    showInfoDialog(t('scheduler.importSuccess'), "success");
+                }
+
+                await fetchDeactivatedSchedulerData();
+
+                if (data.ExportDataViewURL) {
+                    const win = window.open(data.ExportDataViewURL, '_blank');
+                    if (win) {
+                        win.focus();
+                    } else {
+                        alert(t('scheduler.allowPopups'));
+                    }
+                }
+            } else {
+                showInfoDialog(data.Message || t('scheduler.importFailed'), "error");
+            }
+
+            setImportModalOpen(false);
+            setImportFile(null);
+        } catch (error) {
+            showInfoDialog(t('scheduler.importFailed'), "error");
+        } finally {
+            setLoading(false);
+            setLoadingText("");
+        }
+    }, [importFile, getActiveUserDetails, fetchDeactivatedSchedulerData, t, showInfoDialog]);
+
+    const handleDownloadTemplate = useCallback(() => {
+        const userDetails = getActiveUserDetails();
+        const newurl = 'template/Import Schedule.xls'.replaceAll("/", "~");
+        const downloadFileURL = `[YOUR_BASE_URL]/Scheduler/ImportTemplateFileData/${userDetails.sSiteCode || ''}/${userDetails.sUserID || ''}/${newurl}`;
+
+        showInfoDialog(t('scheduler.templateDownloadStarted'), "success");
+
+        const win = window.open(downloadFileURL, '_blank');
+        if (win) {
+            win.focus();
+        } else {
+            alert(t('scheduler.allowPopups'));
+        }
+    }, [getActiveUserDetails, t, showInfoDialog]);
+
     const columns = useMemo(() => [
         {
             key: 'L11InstrumentAliasName',
-            label: t('scheduler.instrument'), // Translated
+            label: t('label.instrument'),
             width: 150,
-            render: (row,isSelected) => (
-                <div style={{ 
-                    fontSize: '12px', 
-                    color: '#374151',
-                    overflow: 'hidden',
-                   
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    fontWeight: selectedRowId === row.id ? 'bold' : 'normal'
-                }}>
-                    <span className={isSelected ? "font-bold":''}>{row.L11InstrumentAliasName}</span>
+            enableSearch: true,
+            render: (row, isSelected) => (
+                <div
+                    className={`text-[12px] font-['Verdana'] truncate text-gray-700 cursor-pointer ${isSelected ? 'font-bold' : ''}`}
+                    onClick={() => handleRowSelect(row)}
+                >
+                    {row.L11InstrumentAliasName}
                 </div>
             )
         },
         {
             key: 'L13ScheduleID',
-            label: t('scheduler.taskID'), // Translated
-            width: 90,
-            render: (row,isSelected) => (
-                <div style={{ 
-                    fontSize: '12px', 
-                    color: '#374151',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    fontWeight: selectedRowId === row.id ? 'bold' : 'normal'
-                }}>
-                    <span className={isSelected ? "font-bold":''}>{row.L13ScheduleID}</span>
+            label: t('label.taskId'),
+            width: 110,
+            enableSearch: true,
+            render: (row, isSelected) => (
+                <div
+                    className={`text-[12px] font-['Verdana'] truncate text-gray-700 cursor-pointer ${isSelected ? 'font-bold' : ''}`}
+                    onClick={() => handleRowSelect(row)}
+                >
+                    {row.L13ScheduleID}
                 </div>
             )
         },
         {
             key: 'L06ClientName',
-            label: t('scheduler.clientName'), // Translated
-            width: 150,
-            render: (row,isSelected) => (
-                <div style={{ 
-                    fontSize: '12px', 
-                    color: '#374151',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    fontWeight: selectedRowId === row.id ? 'bold' : 'normal'
-                }}>
-                  <span className={isSelected ? "font-bold":''}>{row.L06ClientName}</span>
+            label: t('scheduler.clientName'),
+            width: 130,
+            enableSearch: true,
+            render: (row, isSelected) => (
+                <div
+                    className={`text-[12px] font-['Verdana'] truncate text-gray-700 cursor-pointer ${isSelected ? 'font-bold' : ''}`}
+                    onClick={() => handleRowSelect(row)}
+                >
+                    {row.L06ClientName}
                 </div>
             )
         },
         {
             key: 'L09FTPAliasName',
-            label: t('scheduler.storageName'), // Translated
-            width: 100,
-            render: (row,isSelected) => (
-                <div style={{ 
-                    fontSize: '12px', 
-                    color: '#374151',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    fontWeight: selectedRowId === row.id ? 'bold' : 'normal'
-                }}>
-                    <span className={isSelected ? "font-bold":''}>{row.L09FTPAliasName}</span>
-                    
+            label: t('scheduler.storageName'),
+            width: 140,
+            enableSearch: true,
+            render: (row, isSelected) => (
+                <div
+                    className={`text-[12px] font-['Verdana'] truncate text-gray-700 cursor-pointer ${isSelected ? 'font-bold' : ''}`}
+                    onClick={() => handleRowSelect(row)}
+                >
+                    {row.L09FTPAliasName}
                 </div>
             )
         },
         {
             key: 'L13LiveArchive',
-            label: t('scheduler.liveArchive'), // Translated
+            label: t('scheduler.liveArchive'),
             width: 140,
-            render: (row,isSelected) => (
-                <div style={{ 
-                    fontSize: '12px', 
-                    color: '#374151',
-                    textAlign: 'center',
-                    fontWeight: selectedRowId === row.id ? 'bold' : 'normal'
-                }}>
-                    <span className={isSelected ? "font-bold":''}>{row.L13LiveArchive ? "✓" : ""}</span>
-                    
+            enableSearch: true,
+            render: (row, isSelected) => (
+                <div
+                    className={`text-[12px] font-['Verdana'] truncate text-gray-700 cursor-pointer text-center ${isSelected ? 'font-bold' : ''}`}
+                    onClick={() => handleRowSelect(row)}
+                >
+                    {row.L13LiveArchive ? "✓" : ""}
                 </div>
             )
         }
-    ], [selectedRowId, t]);
+    ], [t, handleRowSelect]);
 
     const renderSchedulerDetail = useCallback((scheduler) => (
-        <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            gap: '14px',
-            fontWeight: '600',
-            fontFamily:'Roboto, sans-serif',
-            fontSize: '12px',
-        }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.taskName')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.L13TaskName}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.sourcePath')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.L13SourcePath}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.firstCycleStatus')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.L52TaskCompleted}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.empowerStatus')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                  {scheduler.EmpowerStatus}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.uncStatus')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.L13UNCStatus ? t('scheduler.yes') : t('scheduler.no')} {/* Translated Yes/No */}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.taskStatus')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.TaskStatus}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.clientStatus')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.ClientStatus}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.instrumentStatus')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.InstrumentStatus}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.startDate')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.StartDate}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.endDate')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.EndDate || t('scheduler.notSet')}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.triggerTime')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.TriggerTime}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.scheduleMode')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.ScheduleMode}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.nextScheduleDateTime')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.NextScheduleDate || t('scheduler.notSet')}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.lastScheduleDateTime')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.LastScheduleDateTime}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.createdBy')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.CreatedBy}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.createdOn')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.CreatedDate}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.modifiedBy')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.ModifiedBy}
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '40%',
-                    fontWeight:'bold',
-                    color: '#4b5563'
-                }}>
-                    {t('scheduler.modifiedOn')} {/* Translated */}
-                </div>
-                <div style={{ 
-                    width: '60%',
-                    color: '#1f2937'
-                }}>
-                    {scheduler.ModifiedDate}
-                </div>
-            </div>
+        <div className="space-y-2">
+            <DetailRow label={t('label.taskName')} value={scheduler.L13TaskName} />
+            <DetailRow label={t('scheduler.sourcepath')} value={scheduler.L13SourcePath} />
+            <DetailRow label={t('scheduler.firstCycleStatus')} value={scheduler.L52TaskCompleted} />
+            <DetailRow label={t('scheduler.empowerStatus')} value={scheduler.EmpowerStatus} />
+            <DetailRow label={t('scheduler.uncStatus')} value={scheduler.L13UNCStatus ? t('button.yes') : t('button.no')} />
+            <DetailRow label={t('scheduler.taskStatus')} value={scheduler.TaskStatus} />
+            <DetailRow label={t('scheduler.clientstatus')} value={scheduler.ClientStatus} />
+            <DetailRow label={t('scheduler.instrumentstatus')} value={scheduler.InstrumentStatus} />
+            <DetailRow label={t('scheduler.startDate')} value={scheduler.StartDate} />
+            <DetailRow label={t('scheduler.endDate')} value={scheduler.EndDate || t('scheduler.notSet')} />
+            <DetailRow label={t('scheduler.triggerTime')} value={scheduler.TriggerTime} />
+            <DetailRow label={t('scheduler.scheduleMode')} value={scheduler.ScheduleMode || t('scheduler.notSet')} />
+            <DetailRow label={t('scheduler.nextScheduleDateTime')} value={scheduler.NextScheduleDate || t('scheduler.notSet')} />
+            <DetailRow label={t('scheduler.lastScheduleDateTime')} value={scheduler.LastScheduleDateTime || t('scheduler.notSet')} />
+            <DetailRow label={t('label.createdBy')} value={scheduler.CreatedBy} />
+            <DetailRow label={t('label.createdOn')} value={scheduler.CreatedDate} />
+            <DetailRow label={t('label.modifiedBy')} value={scheduler.ModifiedBy || t('scheduler.notSet')} />
+            <DetailRow label={t('label.modifiedOn')} value={scheduler.ModifiedDate || t('scheduler.notSet')} />
         </div>
     ), [t]);
 
-    if (loading) {
-        return (
-            <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                height: '100%' 
-            }}>
-                <div style={{ color: '#6b7280' }}>{t('scheduler.loading')}</div>
+    const DetailRow = ({ label, value }) => (
+        <div className="grid grid-cols-2 gap-4">
+            <div className="font-bold text-[12px] text-[#405F7D] font-roboto">
+                {label}
             </div>
-        );
-    }
+            <div className="font-bold text-[12px] text-[#353f49] font-roboto">
+                {value || "-"}
+            </div>
+        </div>
+    );
 
-    const ActionButton = ({ icon: Icon, label, disabled, onClick, className = "", variant = "default" }) => (
+    const ActionButton = ({ iconClass, label, disabled, onClick, variant = "default" }) => (
         <button
             onClick={onClick}
             disabled={disabled}
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 10px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                borderRadius: '4px',
-                border: 'none',
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap',
-                backgroundColor: disabled 
-                    ? '#f8fafc' 
+            className={`
+                flex items-center gap-1.5 px-3 py-2 text-[11px] font-roboto font-bold rounded border-none 
+                transition-all duration-200 whitespace-nowrap
+                hover:scale-[0.98] hover:opacity-90
+                ${disabled
+                    ? variant === 'primary'
+                        ? 'bg-[#2885fe7e] text-white cursor-not-allowed'
+                        : 'bg-[#f0f2f5dc] text-[#2885fecc] font-bold cursor-not-allowed'
                     : variant === 'primary'
-                        ? '#2883FE'
+                        ? 'bg-[#2883FE] text-white hover:bg-[#1c6fd8]'
                         : variant === 'danger'
-                            ? '#ef4444'
-                            : '#f1f5f9',
-                color: disabled 
-                    ? '#cbd5e1' 
-                    : variant === 'primary' || variant === 'danger'
-                        ? 'white'
-                        : '#2883FE'
-            }}
-            onMouseEnter={(e) => {
-                if (!disabled) {
-                    e.currentTarget.style.transform = 'scale(0.98)';
-                    e.currentTarget.style.opacity = '0.9';
-                    
-                    if (variant === 'default') {
-                        e.currentTarget.style.backgroundColor = '#E6F0FF';
-                    } else if (variant === 'primary') {
-                        e.currentTarget.style.backgroundColor = '#1c6fd8';
-                    } else if (variant === 'danger') {
-                        e.currentTarget.style.backgroundColor = '#dc2626';
-                    }
+                            ? 'bg-red-500 text-white hover:bg-red-600'
+                            : 'bg-[#f0f2f5] text-[#2883fe] font-bold '
                 }
-            }}
-            onMouseLeave={(e) => {
-                if (!disabled) {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.opacity = '1';
-                    
-                    if (variant === 'default') {
-                        e.currentTarget.style.backgroundColor = '#f1f5f9';
-                    } else if (variant === 'primary') {
-                        e.currentTarget.style.backgroundColor = '#2883FE';
-                    } else if (variant === 'danger') {
-                        e.currentTarget.style.backgroundColor = '#ef4444';
-                    }
-                }
-            }}
+            `}
         >
-            {Icon && <Icon style={{ width: '14px', height: '14px' }} />}
+            {iconClass && <i className={`fa ${iconClass} w-3 h-3`}></i>}
             <span>{label}</span>
         </button>
+
+
     );
 
     return (
-        <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        }}>
+        <div className="flex flex-col font-roboto bg-white w-full h-[80vh] overflow-hidden relative">
+
+
+
+
             {/* Error/Info Dialog */}
             {infoDialog.open && (
                 <Errordialog
                     message={infoDialog.message}
                     type={infoDialog.type}
                     onClose={closeInfoDialog}
+                    onConfirm={infoDialog.type === "confirmation" && handleConfirmDialogConfirm}
                 />
             )}
 
+            {/* Confirmation Dialog */}
+            {showConfirmDialog && (
+                <Errordialog
+                    message={confirmDialogData.message}
+                    type="confirmation"
+                    onClose={handleConfirmDialogClose}
+                    onConfirm={() => {
+                        // Handle different button types
+                        if (confirmDialogData.buttonType === "lockActivateCancel") {
+                            // This is handled by custom buttons in the dialog
+                            return;
+                        }
+                        // Default behavior for yes/no dialogs
+                        handleConfirmDialogConfirm();
+                    }}
+                    customButtons={confirmDialogData.buttonType === "lockActivateCancel" ? [
+                        {
+                            text: t('button.cancel'),
+                            onClick: () => {
+                                setShowConfirmDialog(false);
+                                setConfirmDialogData({
+                                    title: "",
+                                    message: "",
+                                    onConfirm: null,
+                                    actionType: ""
+                                });
+                            },
+                            className: "bg-gray-200 text-slate-700 border border-gray-300"
+                        },
+                        {
+                            text: t('button.activate'),
+                            onClick: () => {
+                                if (confirmDialogData.onConfirm) {
+                                    confirmDialogData.onConfirm('activateOnly');
+                                }
+                                setShowConfirmDialog(false);
+                            },
+                            className: "bg-blue-500 text-white"
+                        },
+                        {
+                            text: t('button.lockActivate'),
+                            onClick: () => {
+                                if (confirmDialogData.onConfirm) {
+                                    confirmDialogData.onConfirm('lockActivate');
+                                }
+                                setShowConfirmDialog(false);
+                            },
+                            className: "bg-green-500 text-white"
+                        }
+                    ] : undefined}
+                    okText={confirmDialogData.buttonType === "yesno" ? t('button.yes') : t('button.ok')}
+                    cancelText={confirmDialogData.buttonType === "yesno" ? t('button.no') : t('button.cancel')}
+                />
+            )}
+
+            {/* Audit Trail Modal */}
+            {showAudit && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
+                    <AuditTrail
+                        isOpen={showAudit}
+                        onClose={handleAuditClose}
+                        onAuthorized={handleAuditAuthorized}
+                        actionLabel={
+                            pendingAction === 'activate' ? 'Activate Task' :
+                                pendingAction === 'retire' ? 'Retire Task' :
+                                    'Schedule Action'
+                        }
+                        defaultReason={
+                            pendingAction === 'activate' ? "Activated" :
+                                pendingAction === 'retire' ? "Retired" :
+                                    "Modified"
+                        }
+                        disableReason={false}
+                    />
+                </div>
+            )}
+
+            {/* FullPageLoader */}
+            <FullPageLoader loading={loading} text={loadingText} />
+
             {/* Top Action Buttons */}
-            <div style={{ 
-                display: 'flex', 
-                justifyContent: 'flex-end', 
-                gap: '10px', 
-                padding: '10px',
-                background: 'white',
-                marginBottom: '0px',
-                marginTop: '2px',
-            }}>
+            <div className="flex justify-end pr-5 gap-2 pt-3">
                 <ActionButton
-                    icon={Eye}
+                    iconClass="fa-eye"
                     label={t('button.view')}
                     onClick={handleViewClick}
                 />
                 <ActionButton
-                    icon={Check}
+                    iconClass="fa-check"
                     label={t('button.activate')}
                     onClick={handleActivateClick}
                 />
                 <ActionButton
-                    icon={Ban}
+                    iconClass="fa-ban"
                     label={t('button.retire')}
                     onClick={handleRetireClick}
                 />
                 <ActionButton
-                    icon={Download}
+                    iconClass="glyphicon glyphicon-export"
                     label={t('button.export')}
                     onClick={handleExportClick}
                 />
                 <ActionButton
-                    icon={Printer}
+                    iconClass="glyphicon glyphicon-import"
+                    label={t('button.import')}
+                    onClick={handleImportClick}
+                />
+                <ActionButton
+                    iconClass="glyphicon glyphicon-print"
                     label={t('button.print')}
                     onClick={handlePrintClick}
                 />
             </div>
 
             {/* Main GridLayout with Details Panel */}
-            <div style={{ flex: 1,fontSize:"12px",fontFamily: 'roboto, sans-serif' }}>
+            <div className="flex-1 overflow-hidden p-1 ">
                 <GridLayout
                     columns={columns}
+                    height="100%"
+                    detailPanelWidth="46%"
                     data={schedulerData}
+                    getRowId={(row) => row.id}
                     renderDetailPanel={renderSchedulerDetail}
                     onRowClick={handleRowSelect}
-                    searchable={false}
-                    selectable={true}
-                    hidePagination={false}
-                  
+                    rowClassName={(row) =>
+                        row.id === selectedRowId
+                            ? "bg-blue-50 border-l-4 border-blue-600 font-semibold"
+                            : ""
+                    }
                 />
             </div>
 
-            {/* Custom Popup for Actions */}
-            {activePopup === "Activate Task" || activePopup === "Retire Task" ? (
+            {/* Print Component */}
+            {doPrint && (
+                <PrintTable
+                    columns={columns}
+                    rows={schedulerData}
+                    title={t('scheduler.deactivatedScheduler')}
+                    subtitle=""
+                    printRequest={buildPrintRequest()}
+                    onDone={() => setDoPrint(false)}
+                />
+            )}
+
+            {/* Import Modal */}
+            {importModalOpen && (
                 <CustomPopup
-                    isOpen={!!activePopup}
+                    isOpen={importModalOpen}
                     onClose={handlePopupClose}
-                    title={activePopup === "Activate Task" ? t('scheduler.activateTask') : t('scheduler.retireTask')}
+                    title={t('scheduler.importSchedule')}
                     content={
-                        <div style={{ 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            gap: '16px',
-                            padding: '8px'
-                        }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ 
-                                    fontSize: '14px', 
-                                    fontWeight: 600, 
-                                    color: '#374151' 
-                                }}>
-                                    {t('scheduler.username')} <span style={{ color: '#ef4444' }}>*</span>
+                        <div className="flex flex-col gap-4 p-2">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-sm font-semibold text-gray-700">
+                                    {t('scheduler.file')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
-                                    type="text"
-                                    value={auditTrailData.username}
-                                    disabled
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        fontSize: '14px',
-                                        color: '#374151',
-                                        backgroundColor: '#f9fafb',
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '4px'
-                                    }}
+                                    type="file"
+                                    onChange={handleFileChange}
+                                    accept=".xlsx,.xls"
+                                    className="w-full p-2 text-sm border border-gray-300 rounded outline-none"
                                 />
+                                <div className="text-xs text-gray-500">
+                                    {t('scheduler.activeNoteBrowseUploadXlsAndXlxs')}
+                                </div>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ 
-                                    fontSize: '14px', 
-                                    fontWeight: 600, 
-                                    color: '#374151' 
-                                }}>
-                                    {t('scheduler.password')} <span style={{ color: '#ef4444' }}>*</span>
-                                </label>
-                                <input
-                                    type="password"
-                                    value={auditTrailData.password}
-                                    onChange={(e) => setAuditTrailData(prev => ({ ...prev, password: e.target.value }))}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        fontSize: '14px',
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '4px',
-                                        outline: 'none'
-                                    }}
-                                    placeholder={t('scheduler.enterPassword')}
-                                />
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ 
-                                    fontSize: '14px', 
-                                    fontWeight: 600, 
-                                    color: '#374151' 
-                                }}>
-                                    {t('scheduler.reason')} <span style={{ color: '#ef4444' }}>*</span>
-                                </label>
-                                <select
-                                    value={auditTrailData.reason}
-                                    onChange={(e) => setAuditTrailData(prev => ({ ...prev, reason: e.target.value }))}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        fontSize: '14px',
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '4px',
-                                        outline: 'none'
-                                    }}
-                                >
-                                    <option value="">{t('scheduler.selectReason')}</option>
-                                    {activePopup === "Activate Task" ? (
-                                        <>
-                                            <option value="Activated">{t('scheduler.activated')}</option>
-                                            <option value="Deactivated">{t('scheduler.deactivated')}</option>
-                                            <option value="Modified">{t('scheduler.modified')}</option>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <option value="Retired">{t('scheduler.retired')}</option>
-                                            <option value="Decommissioned">{t('scheduler.decommissioned')}</option>
-                                            <option value="Replaced">{t('scheduler.replaced')}</option>
-                                        </>
-                                    )}
-                                </select>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ 
-                                    fontSize: '14px', 
-                                    fontWeight: 600, 
-                                    color: '#374151' 
-                                }}>
-                                    {t('scheduler.comments')} <span style={{ color: '#ef4444' }}>*</span>
-                                </label>
-                                <textarea
-                                    rows={3}
-                                    value={auditTrailData.comments}
-                                    onChange={(e) => setAuditTrailData(prev => ({ ...prev, comments: e.target.value }))}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        fontSize: '14px',
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '4px',
-                                        outline: 'none',
-                                        resize: 'none'
-                                    }}
-                                    placeholder={t('scheduler.enterComments')}
-                                />
-                            </div>
-
-                            <div style={{ 
-                                display: 'flex', 
-                                justifyContent: 'flex-end', 
-                                gap: '12px',
-                                paddingTop: '12px',
-                                marginTop: '8px',
-                                borderTop: '1px solid #e5e7eb'
-                            }}>
+                            <div className="flex justify-end gap-3 pt-3 mt-2 border-t border-gray-200">
                                 <button
-                                    onClick={() => {
-                                        if (activePopup === "Activate Task") {
-                                            showInfoDialog(t('scheduler.taskActivatedSuccess'), "success");
-                                        } else {
-                                            showInfoDialog(t('scheduler.taskRetiredSuccess'), "success");
-                                        }
-                                        handlePopupClose();
-                                    }}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        padding: '8px 16px',
-                                        fontSize: '14px',
-                                        fontWeight: 600,
-                                        color: 'white',
-                                        backgroundColor: activePopup === "Activate Task" ? '#3b82f6' : '#ef4444',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer'
-                                    }}
+                                    onClick={handleDownloadTemplate}
+                                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 border-none rounded cursor-pointer hover:bg-blue-700"
                                 >
-                                    {activePopup === "Activate Task" ? (
-                                        <>
-                                            <Check style={{ width: '16px', height: '16px' }} /> {t('button.submit')}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Ban style={{ width: '16px', height: '16px' }} /> {t('button.retire')}
-                                        </>
-                                    )}
+                                    <i className="fa fa-download"></i> {t('scheduler.getImportTemplate')}
                                 </button>
                                 <button
-                                    onClick={handlePopupClose}
-                                    style={{
-                                        padding: '8px 16px',
-                                        fontSize: '14px',
-                                        fontWeight: 600,
-                                        color: '#374151',
-                                        backgroundColor: 'white',
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer'
-                                    }}
+                                    onClick={handleUploadSubmit}
+                                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-white bg-green-500 border-none rounded cursor-pointer hover:bg-green-600"
                                 >
-                                    {t('button.close')}
+                                    <i className="fa fa-upload"></i> {t('scheduler.upload')}
                                 </button>
                             </div>
                         </div>
                     }
                     size="md"
                 />
-            ) : null}
+            )}
         </div>
     );
 };

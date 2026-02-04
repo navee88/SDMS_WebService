@@ -66,10 +66,12 @@ const AnimatedInput = forwardRef(({
             text-sm font-semibold
             outline-none
             transition-colors
+             ${disabled ? "cursor-not-allowed" : ""}
+            ${disabled ? "opacity-50" : ""}
             ${disabled
-              ? "bg-[#F7F7F7] border-gray-200 cursor-not-allowed"
+              ? "bg-[#F7F7F7] border-gray-200 "
               : hasError
-                ? "border-[#A94442] text-[#A94442]"
+                ? "border-[#EF4444] text-[#A94442]"
                 : isFocused
                   ? "border-[#2883FE] text-[#353F49]"
                   : borderColor

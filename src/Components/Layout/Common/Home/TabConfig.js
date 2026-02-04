@@ -51,12 +51,13 @@ import EditTask from "../../../Home/SubFolders/Scheduler/ViewEditScheduler/EditT
 import LocalFileDeleteScheduler from "../../../Home/SubFolders/Scheduler/LocalFileDeleteScheduler/LocalFileDeleteScheduler";
 import ServerFileDeleteScheduler from "../../../Home/SubFolders/Scheduler/ServerFileDeleteScheduler/ServerFileDeleteScheduler";
 
-//Added These 4 imports by kirubhakaran on 23-01-2026
-import SchedulerGlobalWrapper from '../../../../Context/SchedulerGlobalWrapper';
+//Added These 6 imports by kirubhakaran on 23-01-2026
 // import { DeactivatedTaskWrapper } from '../../../Home/SubFolders/Scheduler/ViewEditScheduler/DeactivatedTask';
-// import { InstrumentLockTagWrapper } from '../../../Home/SubFolders/LockSettings/InstrumentLockSettings/InstrumentLockTag';
-import DataSchedulerWrapper from '../../../Home/SubFolders/Scheduler/DataScheduler/DataSchedulerWrapper';
-import ActivatedTaskWrapper from '../../../Home/SubFolders/Scheduler/ViewEditScheduler/ActivatedTaskWrapper';
+import InstrumentLockTagWrapper from '../../../../Context/InstrumentLockTagWrapper';
+// import DataSchedulerWrapper from '../../../Home/SubFolders/Scheduler/DataScheduler/DataSchedulerWrapper';
+import ActivatedTaskWrapper from '../../../../Context/ActivatedTaskWrapper';
+import DeactivatedTaskWrapper from '../../../../Context/DeactivatedTaskWrapper';
+
 
 export const tabConfig = {
   //completed
@@ -65,31 +66,33 @@ export const tabConfig = {
     "Template View": { content: <TemplateView /> },
     "Data Logger": { content: <DataLogger /> },
   },
-    //completed
+  //completed
   SearchServerData: {
     "SearchServerData": { content: <SearchServerData /> }
   },
-    //completed
+  //completed
   InstrumentLockSettings: {
-    "Instrument Locks and Tags": { content: <InstrumentLockTag /> }, //Modified by kirubhakaran on 23-01-2026  chagned from  <InstrumentLockTag /> this to <InstrumentLockTagWrapper />
+    "Instrument Locks and Tags": { content: <InstrumentLockTagWrapper /> }, //Modified by kirubhakaran on 23-01-2026  chagned from  <InstrumentLockTag /> this to <InstrumentLockTagWrapper />
     "Data": { content: <InstrumentDataPage /> },
     "My Instruments": { content: <MyInstruments /> },
     "Other Instruments": { content: <OtherInstruments /> },
   },
-  DataScheduler:{
-    "Data Scheduler": { content: <SchedulerGlobalWrapper>
-          <DataScheduler />
-        </SchedulerGlobalWrapper> }, //Modified by kirubhakaran on 23-01-2026  chagned from  <DataScheduler /> this to <DataSchedulerWrapper />
+  DataScheduler: {
+    "Data Scheduler": {
+      content:
+        <DataScheduler />
+    },
   },
-  ViewEditScheduler:{
-    "Deactivated Task": { content: <DeactivatedTask /> },
-    "Activated Task": { content:  <SchedulerGlobalWrapper>
-                <ActivatedTask />
-            </SchedulerGlobalWrapper> }, //Modified by kirubhakaran on 23-01-2026 changed from <ActivatedTask /> this to <ActivatedTaskWrapper />},
+  ViewEditScheduler: {
+    "Deactivated Task": { content: <DeactivatedTaskWrapper /> },//Modified by kirubhakaran on 23-01-2026 changed from <DeactivatedTask /> this to <DeactivatedTaskWrapper />},
+    "Activated Task": {
+      content:
+        <ActivatedTaskWrapper />
+    }, //Modified by kirubhakaran on 23-01-2026 changed from <ActivatedTask /> this to <ActivatedTaskWrapper />},
     "Retired Task": { content: <RetiredTask /> },
     "Edit Task": { content: <EditTask /> },
   },
-    //completed
+  //completed
   MonitorScheduler: {
     "Upload Queue": { content: <UploadQueue /> },
     "Failed Queue": { content: <FailedQueue /> },
@@ -98,24 +101,24 @@ export const tabConfig = {
     "Download Monitor": { content: <DownloadMonitor /> },
   },
   //completed
-  LocalFileDeleteScheduler:{
+  LocalFileDeleteScheduler: {
     "Local File Delete Scheduler": { content: <LocalFileDeleteScheduler /> },
   },
-  ServerFileDeleteScheduler:{
+  ServerFileDeleteScheduler: {
     "Server File Delete Scheduler": { content: <ServerFileDeleteScheduler /> },
   },
-    //completed
-  DownloadScheduler:{
-    "Auto Download Configuration":{content:<AutoDownloadConfiguration/>},
-    "View Download Configuration":{content:<ViewDownloadConfiguration/>}
+  //completed
+  DownloadScheduler: {
+    "Auto Download Configuration": { content: <AutoDownloadConfiguration /> },
+    "View Download Configuration": { content: <ViewDownloadConfiguration /> }
 
   },
   //completed
-  ClientServiceMonitor:{
-    "Client Service Monitor":{content:<ClientServiceMonitor/>},
+  ClientServiceMonitor: {
+    "Client Service Monitor": { content: <ClientServiceMonitor /> },
   },
   //completed
-  BaseMaster:{
+  BaseMaster: {
     "Domain": { content: <Domain /> },
     "Client": { content: <Client /> },
     "Instrument": { content: <Instrument /> },
@@ -123,67 +126,67 @@ export const tabConfig = {
 
   },
   //completed
-  TagsAndTemplates:{
+  TagsAndTemplates: {
     "Tag Master": { content: <TagMaster /> },
     "Template Mapping": { content: <TemplateMapping /> },
   },
   //completed
-  ParentParserKey:{
+  ParentParserKey: {
     "Parser Key": { content: <ParserKey /> },
   },
   //completed
-  Configuration:{
+  Configuration: {
     "Server Configuration": { content: <ServerConfiguration /> },
     "Server Drive Configuration": { content: <ServerDriveConfiguration /> },
     "Storage Configuration": { content: <StorageConfiguration /> },
   },
   //completed
-  Rights:{
+  Rights: {
     "Storage User Mapping": { content: <StorageUserMapping /> },
   },
   //completed
-  UserManagement:{
+  UserManagement: {
     "User Group": { content: <UserGroup /> },
     "User Master": { content: <UserMaster /> },
     "User Rights": { content: <UserRights /> },
     "Online Users": { content: <OnlineUsers /> },
   },
   //completed
-  PasswordPolicy:{
+  PasswordPolicy: {
     "Password Policy": { content: <PasswordPolicy /> },//change to pages
   },
-    //completed
+  //completed
   AuditTrailHistory: {
     "Audit Trail History": { content: <AuditTrailHistory /> },
     "CFR Settings": { content: <CFRSettings /> },
   },
-    //completed
+  //completed
   DownloadLogs: {
     "Download Logs": { content: <DownloadLogs /> },
     "Download Error Logs": { content: <DownloadErrorLogs /> },
   },
-    //completed
+  //completed
   UploadLogs: {
     "Upload Logs": { content: <UploadLogs /> },
     "Upload Error Logs": { content: <UploadErrorLogs /> },
     "Manual Upload Logs": { content: <ManualUploadLogs /> },
   },
-    //completed
+  //completed
   RestoreLogs: {
     "Restore Logs": { content: <RestoreLogs /> },
     "Restore Error Logs": { content: <RestoreErrorLogs /> },
   },
-    //completed
-  ServerAndLocalFileDeleteLogs:{
-     "Server File Delete Logs": { content: <ServerFileDeleteLogs /> },
+  //completed
+  ServerAndLocalFileDeleteLogs: {
+    "Server File Delete Logs": { content: <ServerFileDeleteLogs /> },
     "Local File Delete Logs": { content: <LocalFileDeleteLogs /> },
   },
-    //completed
-  SchedulerConfigLogs:{
-    "Scheduler Config Logs":{content:<SchedulerConfigLogs />}
+  //completed
+  SchedulerConfigLogs: {
+    "Scheduler Config Logs": { content: <SchedulerConfigLogs /> }
   },
-    //completed
-  InstrumentLogs:{
-    "InstrumentLogs":{content:<InstrumentLogs/>}
+  //completed
+  InstrumentLogs: {
+    "InstrumentLogs": { content: <InstrumentLogs /> }
   },
 };
