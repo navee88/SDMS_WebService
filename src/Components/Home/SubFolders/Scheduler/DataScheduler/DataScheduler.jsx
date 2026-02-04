@@ -97,7 +97,7 @@ const SelectorDropdown = ({
     return (
         <div
             ref={dropdownRef}
-            className="absolute left-full top-0 ml-2 w-64 bg-white border border-gray-300 rounded-md overflow-hidden shadow-lg z-50"
+            className="w-64 bg-white border border-gray-300 rounded-md overflow-hidden shadow-lg z-50"
             onClick={(e) => e.stopPropagation()}
         >
             {/* Search Input */}
@@ -759,9 +759,9 @@ const TagMasterRow = ({
     const handleRadioChange = (newValue) => {
         console.log(`Tag ${index} radio changed to:`, newValue);
 
-        //      if (newValue === 'File' && !selectedDelimiters.length) {
-        //     setDelimiterError(true);
-        // }
+    //      if (newValue === 'File' && !selectedDelimiters.length) {
+    //     setDelimiterError(true);
+    // }
 
         if (onRowDataChange) {
             let newMetadata = tag.sTextData || '';
@@ -1557,9 +1557,6 @@ const DataScheduler = () => {
     const [navigationSource, setNavigationSource] = useState(null);
 
     const [isHandlingNavigation, setIsHandlingNavigation] = useState(false);
-    const [submitDialogSubMessage, setSubmitDialogSubMessage] = useState('');
-
-    const [delimiterEmptyError, setDelimiterEmptyError] = useState(false);
 
     // Ref for the scrollable container (The specific div that scrolls)
     const scrollContainerRef = useRef(null);
@@ -2055,16 +2052,11 @@ const DataScheduler = () => {
                 // Instrument is locked - show 2-button dialog
                 console.log("Instrument locked - showing 2-button dialog");
                 setIsManualParsingInstrument(false);  // FALSE = 2 buttons
-                // ADD SUBMESSAGE HERE
-                setSubmitDialogMessage("Do you want to Activate the Scheduler ?");
-                setSubmitDialogSubMessage("Instrument lock info: This instrument is already locked in parsing order.");
                 setShowSubmitDialog(true);
             } else {
                 // Instrument is not locked - show 3-button dialog
                 console.log("Instrument not locked - showing 3-button dialog");
                 setIsManualParsingInstrument(true);  // TRUE = 3 buttons
-                setSubmitDialogMessage("This schedule includes parsing; either lock the instrument or continue with the schedule activation without locking");
-                setSubmitDialogSubMessage(""); // Clear submessage for 3-button case
                 setShowSubmitDialog(true);
             }
         } catch (error) {
@@ -4800,18 +4792,13 @@ const DataScheduler = () => {
                 if (parsingOrderResponse.nParsingInstrOrderCount >= 1) {
                     // Instrument is already locked - show 2-button dialog
                     console.log("Instrument locked - showing 2-button dialog");
-                    // setSubmitDialogMessage("Do you want to Activate the Scheduler ? Instrument lock info: This instrument is already locked in parsing order.");
-                    setSubmitDialogMessage("Do you want to Activate the Scheduler ?");
-                    setSubmitDialogSubMessage("Instrument lock info: This instrument is already locked in parsing order.");
+                    setSubmitDialogMessage("Do you want to Activate the Scheduler ?\n\nInstrument lock info: This instrument is already locked in parsing order.");
                     setIsManualParsingInstrument(false);  // FALSE = 2 buttons                   
                     setShowSubmitDialog(true);
                 } else {
                     // Instrument not locked - show 3-button dialog
                     console.log("Instrument not locked - showing 3-button dialog");
                     setIsManualParsingInstrument(true);  // TRUE = 3 buttons
-                    // UPDATED WITH SUBMESSAGE
-                    setSubmitDialogMessage("This schedule includes parsing; either lock the instrument or continue with the schedule activation without locking");
-                    setSubmitDialogSubMessage(""); // Clear submessage for 3-button case
                     setShowSubmitDialog(true);
                 }
             }
@@ -4824,8 +4811,6 @@ const DataScheduler = () => {
             // For ALL other instruments (automatic) show 2-button dialog directly
             console.log("Automatic instrument - showing 2-button dialog directly");
             setIsManualParsingInstrument(false);
-            setSubmitDialogMessage("Do you want to Activate the Scheduler ?");
-            setSubmitDialogSubMessage(""); // Or any submessage you want for automatic instruments
             setShowSubmitDialog(true);
         }
 
@@ -5806,19 +5791,13 @@ const DataScheduler = () => {
                 if (parsingOrderResponse.nParsingInstrOrderCount >= 1) {
                     // Instrument is already locked - show 2-button dialog
                     console.log("Instrument locked - showing 2-button dialog");
-                    // setSubmitDialogMessage("Do you want to Activate the Scheduler ? Instrument lock info: This instrument is already locked in parsing order.");
-
-                    setSubmitDialogMessage("Do you want to Activate the Scheduler ?");
-                    setSubmitDialogSubMessage("Instrument lock info: This instrument is already locked in parsing order.");
-
+                    setSubmitDialogMessage("Do you want to Activate the Scheduler ?\n\nInstrument lock info: This instrument is already locked in parsing order.");
                     setIsManualParsingInstrument(false);  // FALSE = 2 buttons                   
                     setShowSubmitDialog(true);
                 } else {
                     // Instrument not locked - show 3-button dialog
                     console.log("Instrument not locked - showing 3-button dialog");
                     setIsManualParsingInstrument(true);  // TRUE = 3 buttons
-                    setSubmitDialogMessage("This schedule includes parsing; either lock the instrument or continue with the schedule activation without locking");
-                    setSubmitDialogSubMessage("");
                     setShowSubmitDialog(true);
                 }
             }
@@ -5826,8 +5805,6 @@ const DataScheduler = () => {
             // For ALL other instruments (automatic) show 2-button dialog directly
             console.log("Automatic instrument - showing 2-button dialog directly");
             setIsManualParsingInstrument(false);
-            setSubmitDialogMessage("Do you want to Activate the Scheduler ?");
-            setSubmitDialogSubMessage(""); // Or any submessage you want for automatic instruments
             setShowSubmitDialog(true);
         }
     };
@@ -6314,20 +6291,20 @@ const DataScheduler = () => {
 
                             {/* CREATE MODE: Show Submit & Reset */}
                             {!isViewMode && mode === 'create' && (
-                                <>                                    
-                                    <button
-                                        onClick={handleReset}
-                                        className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 border border-gray-200 px-4 py-2.5 rounded-[5px] text-sm font-medium transition-all duration-200"
-                                    >
-                                        <RefreshCw size={16} />
-                                        <span>Reset</span>
-                                    </button>
+                                <>
                                     <button
                                         onClick={handleSubmit}
                                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-[5px] shadow-md hover:shadow-lg flex items-center gap-2 text-sm font-medium transition-all duration-200"
                                     >
                                         <Check size={16} strokeWidth={3} />
                                         <span>Submit</span>
+                                    </button>
+                                    <button
+                                        onClick={handleReset}
+                                        className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 border border-gray-200 px-4 py-2.5 rounded-[5px] text-sm font-medium transition-all duration-200"
+                                    >
+                                        <RefreshCw size={16} />
+                                        <span>Reset</span>
                                     </button>
                                 </>
                             )}
@@ -8946,14 +8923,8 @@ const DataScheduler = () => {
                         message={submitDialogMessage || (isManualParsingInstrument
                             ? "This schedule includes parsing; either lock the instrument or continue with the schedule activation without locking"
                             : "Do you want to Activate the Scheduler ?")}
-                        subMessage={submitDialogSubMessage}
                         type="confirmation"
-                        onClose={() => {
-                            setShowSubmitDialog(false);
-                            setSubmitDialogSubMessage("");
-                            setSubmitDialogMessage("");
-                        }
-                        }
+                        onClose={() => setShowSubmitDialog(false)}
                         customButtons={isManualParsingInstrument
                             ? [
                                 // Manual parsing instrument: 3 buttons
