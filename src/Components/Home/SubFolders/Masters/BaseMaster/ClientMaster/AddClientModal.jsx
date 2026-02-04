@@ -148,7 +148,7 @@ const AddClientModal = ({
     clientName: form.clientName,
     clientAlias: form.clientAlias,
     status: form.active ? "Active" : "Deactive",
-    clientTypeID: form.clientTypeId,
+    clientTypeID: form.clientTypeId || "CT1",
     gatewayClient: form.gatewayClient,
     selectedInstruments,
   });
@@ -288,7 +288,7 @@ const AddClientModal = ({
       {t("masters.clienttype")} <span className="text-red-500">*</span>
     </label>
   }
-  value={form.clientTypeId}                 // ✅ ID
+  value={form.clientTypeId || "CT1"}                 // ✅ ID
   options={clientTypes.map((ct) => ({
     label: ct.name,
     value: ct.id,
