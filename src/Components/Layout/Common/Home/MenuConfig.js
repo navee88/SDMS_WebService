@@ -19,6 +19,9 @@ const Searchserverdata = lazy(() =>
 const InstrumentLockSettingsWrapper = lazy(() =>
   import("../../../../Context/InstrumentLockSettingsWrapper")
 );
+const InstrumentLockTagWrapper = lazy(() =>
+  import("../../../../Context/InstrumentLockTagWrapper")
+);
 
 // Scheduler
 const DataScheduler = lazy(() =>
@@ -108,15 +111,16 @@ export const menuConfig = [
     icon: <GiPadlock />,
     label: "Lock Settings",
     subItems: [
+      // { label: "Instrument Lock Settings", content: InstrumentLockTagWrapper  },
       { label: "Instrument Lock Settings", content: InstrumentLockSettingsWrapper },
     ],
   },
   {
-    icon: <RiCalendarScheduleLine />,
+    icon: <RiCalendarScheduleLine />, 
     label: "Scheduler",
     subItems: [
-      { label: "Data Scheduler", content: DataScheduler },
-      { label: "View Edit Scheduler", content: ViewEditScheduler },
+      { label: "Data Scheduler", content: DataScheduler   },
+      { label: "View Edit Scheduler", content: ViewEditScheduler   },
       { label: "Monitor Scheduler", content: MonitorScheduler },
       { label: "Local File Delete Scheduler", content: LocalFileDeleteScheduler },
       { label: "Server File Delete Scheduler", content: ServerFileDeleteScheduler },

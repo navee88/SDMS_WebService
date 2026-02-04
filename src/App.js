@@ -14,6 +14,7 @@ import Loginlayout from "./Components/Layout/Login/Loginlayout";
 import { LanguageProvider } from "./Context/LanguageContext";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LogFiltersProvider } from "./Context/LogFiltersContext"; //Added by Kirubhakaran on 13-01-2026
+import { SchedulerNavigationProvider } from "./Context/SchedulerNavigationContext";
 const Home = lazy(() => import('./Pages/Home/Home'));
 
 
@@ -125,9 +126,11 @@ function App() {
     <QueryClientProvider client={queryClient}> 
       <LanguageProvider>
         <LogFiltersProvider>  {/*Added by Kirubhakaran on 13-01-2026 */}
+          <SchedulerNavigationProvider> {/*Added by Kirubhakaran on 24-01-2026 */}
         <Router basename="/LogilabSDMS">
           <AnimatedRoutes />
         </Router>
+        </SchedulerNavigationProvider> {/*Added by Kirubhakaran on 24-01-2026 */}
         </LogFiltersProvider> {/*Added by Kirubhakaran on 13-01-2026 */}
       </LanguageProvider>
      </QueryClientProvider>
