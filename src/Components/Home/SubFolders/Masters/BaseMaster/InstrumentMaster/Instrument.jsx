@@ -73,6 +73,13 @@ const [pendingRetireRow, setPendingRetireRow] = useState(null);
       message: "",
       type: "information",
     });
+    const showSelectRowInfo = () => {
+  setErrorDialog({
+    open: true,
+    message: t("masters.selectrecord"), // or any key/message you want
+    type: "information",
+  });
+};
 
   const selectedRow = useMemo(
     () => rows.find((r) => r.id === selectedRowId),
@@ -320,7 +327,7 @@ const buildExportRequest = () => ({
     if (!rows || rows.length === 0) {
       setErrorDialog({
         open: true,
-        message: t("masters.selectrecord"),
+        message: t("errormsg.noresultsfound"),
         type: "information",
       });
       return;
@@ -435,8 +442,16 @@ const buildExportRequest = () => ({
         <ActionButton
           icon={FaEdit}
           label={t("button.edit")}
-          disabled={!selectedRow || isRetired}
-          onClick={() => loadInstrumentForEdit(selectedRow)}
+          disabled={ isRetired}
+          onClick={() => {
+    if (!selectedRow) {
+      showSelectRowInfo();
+      return;
+    }
+    if (isRetired) return;
+
+    loadInstrumentForEdit(selectedRow);
+  }}
 
         />
 
@@ -444,7 +459,15 @@ const buildExportRequest = () => ({
           icon={MdBlock}
           label={t("button.retire")}
           disabled={isRetired}
-          onClick={() => handleRetire(selectedRow)}
+          onClick={() => {
+    if (!selectedRow) {
+      showSelectRowInfo();
+      return;
+    }
+    if (isRetired) return;
+
+    handleRetire(selectedRow);
+  }}
         />
 
         {/* Export Button */}
@@ -532,6 +555,16 @@ const buildExportRequest = () => ({
   actionLabel="Retire"
   defaultReason="Activated"
 />
+{errorDialog.open && (
+  <Errordialog
+    message={errorDialog.message}
+    type={errorDialog.type}
+    onClose={() =>
+      setErrorDialog({ open: false, message: "", type: "information" })
+    }
+  />
+)}
+
 
 
 {isConfirmOpen && rowToRetire && (

@@ -496,6 +496,7 @@ if (response?.Rtn === "Success") {
             onClick={() => {
               if (!selectedRow) {
                 setErrorMessage(t("masters.selectrecord"));
+                setErrorDialogType("information")
                 setShowErrorDialog(true);
                 return;
               }
@@ -572,13 +573,14 @@ if (response?.Rtn === "Success") {
         {showConfirm && (
           <Errordialog
             type="confirmation"
+            titleTextColor ="text-[#1E4A6DF5]"
             message={
   pendingAction === "ACTIVE"
-    ? t("scheduler.confirmActivate")
+    ? t("scheduler.confirmActivateDownload")
     : pendingAction === "INACTIVE"
-    ? t("scheduler.confirmDeactivate")
+    ? t("scheduler.confirmDeactivateDownload")
     : pendingAction === "RETIRE"
-    ? t("scheduler.confirmRetire")
+    ? t("scheduler.confirmRetireDownload")
     : ""
 }
 
