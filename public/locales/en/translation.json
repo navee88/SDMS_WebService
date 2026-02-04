@@ -195,6 +195,7 @@
     "password": "Password",
     "domain": "Domain",
     "site": "Site",
+		"role":"Role",
     "language": "Language",
     "changepassword": "Change Password",
     "forgotpassword": "Forgot Password",

@@ -2,7 +2,6 @@
   "name": "sdms1",
   "version": "0.1.0",
   "private": true,
-  "homepage": "/LogilabSDMS",
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
@@ -39,7 +38,8 @@
     "usehooks-ts": "^3.1.1",
     "web-vitals": "^2.1.4",
     "xlsx": "^0.18.5",
-    "zod": "^4.1.13"
+    "zod": "^4.1.13",
+    "zustand": "^5.0.10"
   },
   "scripts": {
     "start": "react-scripts start",
