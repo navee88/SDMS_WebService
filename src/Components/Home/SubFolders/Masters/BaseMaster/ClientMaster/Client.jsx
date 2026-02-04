@@ -194,6 +194,7 @@ const Client = () => {
   };
 
   const buildInsertClientRequest = (clientData, auditData) => {
+    console.log("Building Insert Request for:", clientData); // 🔥 DEBUG
     const instruments =
       clientData.selectedInstruments?.length > 0
         ? buildInstrumentUnMappingByClient(clientData.selectedInstruments)
@@ -389,7 +390,7 @@ const handlePrint = () => {
   if (!rows || rows.length === 0) {
     setErrorDialog({
       open: true,
-      message: t("masters.selectrecord"),
+      message: t("errormsg.noresultsfound"),
       type: "information",
     });
     return;
@@ -593,7 +594,7 @@ const handleExport = () => {
       setLoadingText(t("common.loading"));
 
       const requestPayload = buildInsertClientRequest(clientData);
-
+      console.log("Insert Request Payload:", requestPayload); // 🔥 DEBUG
       const response = await postData(
         "basemaster/insertClient",
         requestPayload
