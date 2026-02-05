@@ -11,7 +11,7 @@ import {
 import FtpLayout from "../../../../Layout/Common/Home/Grid/FtpLayout";
 import CustomPopup from "../DataExplorer/PopupModal";
 import Errordialog from "../../../../Layout/Common/Errordialog";
-import { useServerDataApi, INITIAL_FILTER_STATE } from "../DataExplorer/useServerDataApi";
+import { useServerDataApi, INITIAL_FILTER_STATE } from "../ServerData/useServerDataApi";
 import ConfigModal from "./ConfigModal";
 import PopupContentResolver from "../DataExplorer/PopupContent";
 
@@ -90,8 +90,8 @@ export default function SearchServerData() {
   });
 
   const [savedFilters, setSavedFilters] = useLocalStorage(
-    "serverDataFilters",
-    INITIAL_FILTER_STATE
+    // "serverDataFilters",
+    // INITIAL_FILTER_STATE
   );
 
   const {
@@ -386,6 +386,8 @@ export default function SearchServerData() {
           leftPanelData={leftPanelData}
         />
       </div>
+
+       <div className="py-10"></div>   
 
       {/* MODALS */}
       {isConfigOpen && (
