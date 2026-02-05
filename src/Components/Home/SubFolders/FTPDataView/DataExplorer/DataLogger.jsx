@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useToggle, useLocalStorage } from "@uidotdev/usehooks";
+import { useToggle } from "@uidotdev/usehooks"; // Removed useLocalStorage
 import {
   Filter,
   RotateCcw,
@@ -16,12 +16,11 @@ import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import FtpLayout from "../../../../Layout/Common/Home/Grid/FtpLayout";
 import CustomPopup from "./PopupModal";
 import Errordialog from "../../../../Layout/Common/Errordialog";
-import { useServerDataApi, INITIAL_FILTER_STATE } from "./useServerDataApi";
+import { useServerDataApi, INITIAL_FILTER_STATE } from "../ServerData/useServerDataApi";
 import PopupContentResolver from "./PopupContent";
 import { getCurrentDate } from "./Constantdata";
 
-// --- SUB-COMPONENTS ---
-
+// --- SUB-COMPONENTS --- (unchanged)
 const SummaryItem = React.memo(({ label, value }) => {
   let displayValue = "---";
   if (value) {
@@ -71,7 +70,6 @@ const DatePicker = React.memo(({ label, value, onChange, max }) => (
   </div>
 ));
 
-// Restored ToggleSwitch for the "Auto Refresh" feature
 const ToggleSwitch = ({ label, checked, onChange }) => (
   <label className="flex items-center gap-3 cursor-pointer select-none">
     <span className="text-[13px] font-bold text-slate-600">{label}</span>
@@ -88,7 +86,6 @@ const ToggleSwitch = ({ label, checked, onChange }) => (
   </label>
 );
 
-// Restored BottomActionButton for the specific bar style
 const BottomActionButton = React.memo(({ icon: Icon, label, onClick, className = "" }) => (
   <button
     onClick={onClick}
@@ -103,8 +100,8 @@ const BottomActionButton = React.memo(({ icon: Icon, label, onClick, className =
 export default function DataLogger() {
   const [isFilterOpen, toggleFilter] = useToggle(true);
   
-  // Data State
-  const [savedFilters, setSavedFilters] = useLocalStorage("serverDataFilters", INITIAL_FILTER_STATE);
+  // REMOVED: const [savedFilters, setSavedFilters] = useLocalStorage("serverDataFilters", INITIAL_FILTER_STATE);
+  
   const {
     ftpGroups,
     clients,
@@ -131,7 +128,7 @@ export default function DataLogger() {
   const [fileParsedData, setFileParsedData] = useState([]);
   const [activePopup, setActivePopup] = useState(null);
   
-  // Action Bar States (Restored)
+  // Action Bar States
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [dataType, setDataType] = useState("BOTH");
   const [channel, setChannel] = useState("All");
@@ -139,7 +136,7 @@ export default function DataLogger() {
   const autoInstrumentSetRef = useRef(false);
   const initialLoadRef = useRef(false);
 
-  // --- COLUMN DEFINITIONS ---
+  // --- COLUMN DEFINITIONS --- (unchanged)
   const tagsColumns = useMemo(() => [
     { key: 'category', label: 'Category', width: 100 },
     { key: 'value', label: 'Value', width: 150 },
@@ -152,7 +149,7 @@ export default function DataLogger() {
     { key: 'fieldValue', label: 'Field Value', width: 250 },
   ], []);
 
-  // --- HANDLERS ---
+  // --- HANDLERS --- (unchanged except handleFilter & handleReset)
   const showDialog = useCallback((message, type = "error") => {
     setDialogData({ open: true, message, type });
   }, []);
@@ -184,51 +181,52 @@ export default function DataLogger() {
     setAppliedFilters((prev) => ({ ...prev, [field]: val }));
 
     if (field === "client") {
-        const clientObj = clients.find((c) => String(c.sClientName) === String(val));
-        const currentGroup = filterForm.storageGroup || (ftpGroups[0] ? ftpGroups[0].sFTPAliasName : "");
-        const ftpObj = ftpGroups.find((g) => g.sFTPAliasName === currentGroup);
+      const clientObj = clients.find((c) => String(c.sClientName) === String(val));
+      const currentGroup = filterForm.storageGroup || (ftpGroups[0] ? ftpGroups[0].sFTPAliasName : "");
+      const ftpObj = ftpGroups.find((g) => g.sFTPAliasName === currentGroup);
 
-        if (!clientObj || !ftpObj) return;
-        autoInstrumentSetRef.current = false;
-        
-        const newInstruments = await changeClientName(clientObj.sClientID, ftpObj.sFTPID, clientObj.sClientName);
-        
-        setFilterForm((prev) => {
-           if (clientObj.sClientName === "All") return { ...prev, client: val, instrument: "" };
-           if (!autoInstrumentSetRef.current && newInstruments?.length > 0) {
-             autoInstrumentSetRef.current = true;
-             setAppliedFilters((p) => ({ ...p, client: val, instrument: newInstruments[0].sInstrumentName }));
-             return { ...prev, client: val, instrument: newInstruments[0].sInstrumentName };
-           }
-           return { ...prev, client: val };
-        });
+      if (!clientObj || !ftpObj) return;
+      autoInstrumentSetRef.current = false;
+      
+      const newInstruments = await changeClientName(clientObj.sClientID, ftpObj.sFTPID, clientObj.sClientName);
+      
+      setFilterForm((prev) => {
+        if (clientObj.sClientName === "All") return { ...prev, client: val, instrument: "" };
+        if (!autoInstrumentSetRef.current && newInstruments?.length > 0) {
+          autoInstrumentSetRef.current = true;
+          setAppliedFilters((p) => ({ ...p, client: val, instrument: newInstruments[0].sInstrumentName }));
+          return { ...prev, client: val, instrument: newInstruments[0].sInstrumentName };
+        }
+        return { ...prev, client: val };
+      });
     }
 
     if (field === "instrument") {
-       const instObj = instruments.find((i) => i.sInstrumentName === val);
-       if (!instObj) return;
-       const mappedClientID = await getInstrumentmappedClientID(instObj.sInstrumentMappingID);
-       if (!mappedClientID) return;
-       const mappedClient = clients.find((c) => c.sClientID === mappedClientID);
-       if (!mappedClient) return;
-       
-       const currentGroup = filterForm.storageGroup || (ftpGroups[0] ? ftpGroups[0].sFTPAliasName : "");
-       const ftpObj = ftpGroups.find((g) => g.sFTPAliasName === currentGroup);
-       if(!ftpObj) return;
+      const instObj = instruments.find((i) => i.sInstrumentName === val);
+      if (!instObj) return;
+      const mappedClientID = await getInstrumentmappedClientID(instObj.sInstrumentMappingID);
+      if (!mappedClientID) return;
+      const mappedClient = clients.find((c) => c.sClientID === mappedClientID);
+      if (!mappedClient) return;
+      
+      const currentGroup = filterForm.storageGroup || (ftpGroups[0] ? ftpGroups[0].sFTPAliasName : "");
+      const ftpObj = ftpGroups.find((g) => g.sFTPAliasName === currentGroup);
+      if(!ftpObj) return;
 
-       autoInstrumentSetRef.current = true;
-       await changeClientName(mappedClient.sClientID, ftpObj.sFTPID, mappedClient.sClientName);
-       
-       setFilterForm((prev) => ({ ...prev, client: mappedClient.sClientName, instrument: val }));
-       setAppliedFilters((prev) => ({ ...prev, client: mappedClient.sClientName, instrument: val }));
+      autoInstrumentSetRef.current = true;
+      await changeClientName(mappedClient.sClientID, ftpObj.sFTPID, mappedClient.sClientName);
+      
+      setFilterForm((prev) => ({ ...prev, client: mappedClient.sClientName, instrument: val }));
+      setAppliedFilters((prev) => ({ ...prev, client: mappedClient.sClientName, instrument: val }));
     }
   }, [clients, ftpGroups, instruments, filterForm.storageGroup, changeClientName, getInstrumentmappedClientID, setLastCustomDates]);
 
+  // UPDATED: Removed setSavedFilters from handleReset
   const handleReset = useCallback(async () => {
     try {
       setFilterForm(INITIAL_FILTER_STATE);
       setAppliedFilters(INITIAL_FILTER_STATE);
-      setSavedFilters(INITIAL_FILTER_STATE);
+      // REMOVED: setSavedFilters(INITIAL_FILTER_STATE);
       setFileTagsData([]);
       setFileParsedData([]);
       setLeftPanelData(null);
@@ -239,11 +237,12 @@ export default function DataLogger() {
     } catch (error) {
       showDialog("Failed to reset application state: " + error.message, "error");
     }
-  }, [loadInitialData, setSavedFilters, showDialog]);
+  }, [loadInitialData, showDialog]);
 
+  // UPDATED: Removed setSavedFilters from handleFilter
   const handleFilter = useCallback(() => {
     applyLocalStorageFilters(filterForm);
-    setSavedFilters(filterForm);
+    // REMOVED: setSavedFilters(filterForm);
     setIsGridLoading(true);
     setIsLeftLoading(true);
     setLeftPanelData({
@@ -251,9 +250,9 @@ export default function DataLogger() {
       client: filterForm.client,
       instrument: filterForm.instrument,
     });
-  }, [filterForm, applyLocalStorageFilters, setSavedFilters]);
+  }, [filterForm, applyLocalStorageFilters]);
 
-  // Initial Data Load
+  // Initial Data Load (unchanged)
   useEffect(() => {
     if (!initialLoadRef.current) {
       initialLoadRef.current = true;
@@ -261,7 +260,7 @@ export default function DataLogger() {
     }
   }, [loadInitialData, showDialog]);
 
-  // Mock Grid Data Load
+  // Mock Grid Data Load (unchanged)
   useEffect(() => {
     setIsLeftLoading(true);
     setIsGridLoading(true);
@@ -294,11 +293,12 @@ export default function DataLogger() {
   }, []);
 
   const handleRefresh = useCallback(() => {
-      handleRowSelect(null);
-      setRefreshKey((prev) => prev + 1);
-      loadInitialData().catch(console.error);
+    handleRowSelect(null);
+    setRefreshKey((prev) => prev + 1);
+    loadInitialData().catch(console.error);
   }, [handleRowSelect, loadInitialData]);
 
+  // JSX (unchanged - no localStorage references in render)
   return (
     <div className="flex flex-col w-full font-sans rounded-md relative h-full bg-white">
       {isLoadingApi && (
@@ -310,7 +310,7 @@ export default function DataLogger() {
         </div>
       )}
 
-      {/* --- TOP FILTER BAR --- */}
+      {/* TOP FILTER BAR (unchanged) */}
       <div className="bg-[#f0f4f8] border-b border-gray-200">
         <div className="px-5 pt-4 pb-2 relative">
           {isFilterOpen ? (
@@ -378,25 +378,21 @@ export default function DataLogger() {
             </div>
           )}
 
-          {/* Toggle Arrow */}
-        <button
-          className="absolute right-4 -bottom-3 z-10 bg-[#f0f4f8] p-0.5 rounded shadow-sm cursor-pointer"
-          onClick={toggleFilter}
-        >
-          {isFilterOpen ? (
-            <LuChevronsUp className="w-4 h-4 text-blue-600" />
-          ) : (
-            <LuChevronsDown className="w-4 h-4 text-blue-600" />
-          )}
-        </button>
-         
+          <button
+            className="absolute right-4 -bottom-3 z-10 bg-[#f0f4f8] p-0.5 rounded shadow-sm cursor-pointer"
+            onClick={toggleFilter}
+          >
+            {isFilterOpen ? (
+              <LuChevronsUp className="w-4 h-4 text-blue-600" />
+            ) : (
+              <LuChevronsDown className="w-4 h-4 text-blue-600" />
+            )}
+          </button>
         </div>
       </div>
 
-      {/* --- MIDDLE ACTION BAR (Restored from Image/Original) --- */}
-      <div className="px-5 pt-2.5 bg-white  border-gray-100 flex items-center justify-between">
-        
-        {/* Left Side: Data Type & Channel */}
+      {/* MIDDLE ACTION BAR (unchanged) */}
+      <div className="px-5 pt-2.5 bg-white border-gray-100 flex items-center justify-between">
         <div className="flex items-end gap-6">
             <div className="w-44">
                 <AnimatedDropdown 
@@ -416,43 +412,38 @@ export default function DataLogger() {
             </div>
         </div>
 
-        {/* Right Side: Actions */}
         <div className="flex items-center gap-4">
-             <ToggleSwitch 
+           <ToggleSwitch 
                 label="Auto Refresh" 
                 checked={autoRefresh} 
                 onChange={setAutoRefresh} 
-             />
-             
-             {/* Divider if needed, or just gap */}
-             {/* <div className="h-5 w-px bg-slate-200 mx-1"></div> */}
-
-             <BottomActionButton 
+           />
+           
+           <BottomActionButton 
                 icon={ChartArea} 
                 label="Chart" 
                 onClick={() => setActivePopup("Chart")} 
-             />
-             <BottomActionButton 
+           />
+           <BottomActionButton 
                 icon={ArchiveRestore} 
                 label="Open Archive" 
                 onClick={() => setActivePopup("Open Archive")} 
-             />
-             <BottomActionButton 
+           />
+           <BottomActionButton 
                 icon={RefreshCw} 
                 label="Refresh" 
                 onClick={handleRefresh} 
-             />
-             <BottomActionButton 
+           />
+           <BottomActionButton 
                 icon={FileUp} 
                 label="Export" 
                 onClick={() => console.log("Export clicked")} 
-             />
+           />
         </div>
       </div>
 
-      {/* --- FTP LAYOUT (Scroll Implementation retained) --- */}
-      {/* Wrapper ensures correct scroll behavior from ServerData.jsx */}
-      <div className="py-3 mb-10">
+      {/* FTP LAYOUT (unchanged) */}
+      <div className="pt-3 z-0">
         <FtpLayout
           storageGroup={appliedFilters.storageGroup}
           rowData={gridData}
@@ -479,7 +470,7 @@ export default function DataLogger() {
 
       <div>user</div>
 
-      {/* --- POPUPS & MODALS --- */}
+      {/* POPUPS & MODALS (unchanged) */}
       <CustomPopup
         isOpen={!!activePopup}
         onClose={handlePopupClose}

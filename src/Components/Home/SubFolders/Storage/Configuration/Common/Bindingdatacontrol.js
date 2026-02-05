@@ -194,38 +194,38 @@ export const BDC_BindChildCombobox = (data, config = {}) => {
 
 
 
-// export function buildTreeData(data, {
-//   idKey = "id",
-//   parentKey = "parentid",
-//   textKey = "text"
-// } = {}) {
+export function buildTreeData(data, {
+  idKey = "id",
+  parentKey = "parentid",
+  textKey = "text"
+} = {}) {
 
-//   if (!Array.isArray(data) || data.length === 0) return [];
+  if (!Array.isArray(data) || data.length === 0) return [];
 
-//   const map = {};
-//   const tree = [];
+  const map = {};
+  const tree = [];
 
-//   // Create lookup map
-//   data.forEach(item => {
-//     map[item[idKey]] = {
-//       label: item[textKey],
-//       value: item[idKey],
-//       items: []
-//     };
-//   });
+  // Create lookup map
+  data.forEach(item => {
+    map[item[idKey]] = {
+      label: item[textKey],
+      value: item[idKey],
+      items: []
+    };
+  });
 
-//   // Build hierarchy
-//   data.forEach(item => {
-//     const parentId = item[parentKey];
-//     if (parentId && map[parentId]) {
-//       map[parentId].items.push(map[item[idKey]]);
-//     } else {
-//       tree.push(map[item[idKey]]);
-//     }
-//   });
+  // Build hierarchy
+  data.forEach(item => {
+    const parentId = item[parentKey];
+    if (parentId && map[parentId]) {
+      map[parentId].items.push(map[item[idKey]]);
+    } else {
+      tree.push(map[item[idKey]]);
+    }
+  });
 
-//   return tree;
-// }
+  return tree;
+}
 
 
 export const BDC_BindChildTree = ({

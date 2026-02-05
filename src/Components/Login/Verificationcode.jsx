@@ -145,7 +145,9 @@ function Verificationcode({ onClose, userData }) {
         sUserMailID: email,
         sUsername,
         sSiteCode,
-      });
+      },{
+			          "Authorization": "relogin"
+			      }, );
 
       const { bSendStatus, bSendCode } = response || {};
 
@@ -174,7 +176,9 @@ function Verificationcode({ onClose, userData }) {
         sUsername,
         sSiteCode,
         nVerificationCode: data.code,
-      });
+      },{
+			          "Authorization": "relogin"
+			      }, );
 
       const { Message, bValidCode } = response || {};
 

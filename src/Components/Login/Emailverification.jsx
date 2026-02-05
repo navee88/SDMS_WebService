@@ -113,7 +113,9 @@ const onSubmit = async (data) => {
       sUsername,
       sSiteCode,
       sUserMailID: data.email,
-    });
+    },{
+			          "Authorization": "relogin"
+			      }, );
 
     if (rateLimitRes?.UserStatus !== "Success") {
       showDialog(getErrorMessage(rateLimitRes?.UserStatus), "warning");
@@ -124,7 +126,9 @@ const onSubmit = async (data) => {
       sUsername,
       sSiteCode,
       sUserMailID: data.email,
-    });
+    },{
+			          "Authorization": "relogin"
+			      }, );
 
     if (sendCodeRes?.bSendCode === true) {
       onVerificationOpen?.();

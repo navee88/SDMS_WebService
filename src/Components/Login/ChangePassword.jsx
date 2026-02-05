@@ -112,7 +112,9 @@ function ChangePassword({ onNavigate }) {
             sSiteCode: cookieData.sSiteCode,
           };
 
-          const response = await postData("Login/PasswordMessage", payload);
+          const response = await postData("Login/PasswordMessage", payload,{
+			          "Authorization": "relogin"
+			      }, );
           if (Array.isArray(response) && response.length > 0) {
             setPolicy(response[0]);
           }
@@ -162,7 +164,9 @@ function ChangePassword({ onNavigate }) {
         PasswordExpiry: false,
       };
 
-      const response = await postData("Login/ChangePassword", payload);
+      const response = await postData("Login/ChangePassword", payload,{
+			          "Authorization": "relogin"
+			      }, );
 
       if (response?.oResObj?.bStatus) {
         setDialogData({

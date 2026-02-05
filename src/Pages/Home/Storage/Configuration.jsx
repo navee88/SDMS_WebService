@@ -31,7 +31,7 @@ export default function Configuration() {
     />
   </div>
 
-  <div className="flex-1 overflow-y-scroll overflow-x-hidden pb-20">
+  <div className="flex-1 overflow-y-hidden overflow-x-hidden pb-10">
     {currentTabs[selectedTab]?.content || null}
   </div>
 

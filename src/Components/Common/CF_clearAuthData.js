@@ -4,6 +4,6 @@ import { CF_cookieClear } from "./CF_cookie";
 
 export function CF_clearAuthData() {
   CF_sessionClear();
-  CF_localClear();
+  // CF_localClear();
   CF_cookieClear();
 }

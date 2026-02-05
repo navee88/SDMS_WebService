@@ -43,7 +43,7 @@ function detectOS(callback) {
   else if (platform?.includes("Linux")) finalize("Linux");
 
   else if (/Android/.test(userAgent)) finalize("Android");
-
+ 
   else if (/iPhone|iPad|iPod/.test(userAgent)) finalize("iOS");
   else finalize("Unknown");
 }

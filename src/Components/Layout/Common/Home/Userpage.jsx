@@ -208,16 +208,17 @@ const UsersPage = () => {
 
   const renderUserDetail = (user) => (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-4 text-[13px]">
-        <div className="font-semibold text-teal-700">User ID</div>
-        <div className="col-span-2">{user.id}</div>
-        
-        <div className="font-semibold text-teal-700">Email</div>
-        <div className="col-span-2">{user.email || <span className='text-red-500 block w-full text-center'>N/A</span>}</div>
-        
-        <div className="font-semibold text-teal-700">Profile Name</div>
-        <div className="col-span-2">{user.profileName}</div>
-      </div>
+    <div className="grid grid-cols-2 gap-4 text-[13px]">
+  <div className="font-semibold text-teal-700">User ID</div>
+  <div>-</div>
+
+  <div className="font-semibold text-teal-700">Email</div>
+  <div>-</div>
+
+  <div className="font-semibold text-teal-700">Profile Name</div>
+  <div>-</div>
+</div>
+
     </div>
   );
 
