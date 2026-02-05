@@ -90,8 +90,8 @@ export default function SearchServerData() {
   });
 
   const [savedFilters, setSavedFilters] = useLocalStorage(
-    // "serverDataFilters",
-    // INITIAL_FILTER_STATE
+    "serverDataFilters",
+    INITIAL_FILTER_STATE
   );
 
   const {
