@@ -1444,7 +1444,6 @@ const tagsColumns = useMemo(() => [
 
       {/* FILTER BAR */}
       <div className="bg-[#f0f4f8] px-4 pt-4 pb-2 relative rounded-t-md">
-        <h1>Checking GitHub</h1>
         {isFilterOpen ? (
           <div className="flex flex-wrap items-end gap-3.5 mb-2">
             <div className="w-60">
