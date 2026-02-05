@@ -182,8 +182,7 @@ const tagsColumns = useMemo(() => [
       render: (row, isSelected) => (
         <div className="flex w-full justify-start text-left">
           <span className={isSelected ? 'font-bold' : 'font-semibold'}>
-            {row.category},
-          
+            {row.category}
           </span>
         </div>
       )
