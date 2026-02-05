@@ -1,14 +1,26 @@
 // ServerData.jsx
-import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { useToggle, useWindowSize } from "@uidotdev/usehooks";
 import {
-  Filter, RotateCcw, RefreshCw, Settings, CheckSquare, MoreVertical, Loader2,Folder,FileText
+  Filter,
+  RotateCcw,
+  RefreshCw,
+  Settings,
+  CheckSquare,
+  MoreVertical,
+  Loader2,
+  Folder,
+  FileText,
 } from "lucide-react";
 
-import {
-  FaLink,
-} from "react-icons/fa";
+import { FaLink } from "react-icons/fa";
 
 import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import FtpLayout from "../../../../Layout/Common/Home/Grid/FtpLayout";
@@ -20,7 +32,9 @@ import PopupContentResolver from "../DataExplorer/PopupContent";
 import { LuChevronsDown, LuChevronsUp } from "react-icons/lu";
 
 import {
-  ACTION_ICONS, ALL_ACTION_ORDER, getCurrentDate
+  ACTION_ICONS,
+  ALL_ACTION_ORDER,
+  getCurrentDate,
 } from "../DataExplorer/Constantdata";
 import { TreegridMapping } from "./TreegridMapping";
 import UsersPage from "../../../../Layout/Common/Home/Userpage";
@@ -40,7 +54,10 @@ const SummaryItem = React.memo(({ label, value }) => {
   return (
     <div className="flex flex-col">
       <span className="text-[11px] text-slate-500 font-semibold">{label}</span>
-      <span className="text-[12px] text-slate-800 font-bold truncate" title={displayValue}>
+      <span
+        className="text-[12px] text-slate-800 font-bold truncate"
+        title={displayValue}
+      >
         {displayValue}
       </span>
     </div>
@@ -64,18 +81,20 @@ const PrimaryButton = React.memo(({ icon: Icon, label, onClick }) => (
   </button>
 ));
 
-const ActionButton = React.memo(({ icon: Icon, label, disabled, className = "" }) => (
-  <div
-    className={`flex items-center gap-1.5 px-2 py-2 text-[11px] font-bold rounded whitespace-nowrap transition-all ${
-      disabled
-        ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-        : "bg-[#f1f5f9] text-[#1d8cf8] hover:bg-blue-100 hover:scale-95 cursor-pointer"
-    } ${className}`}
-  >
-    <Icon className="w-3.5 h-3.5" />
-    <span>{label}</span>
-  </div>
-));
+const ActionButton = React.memo(
+  ({ icon: Icon, label, disabled, className = "" }) => (
+    <div
+      className={`flex items-center gap-1.5 px-2 py-2 text-[11px] font-bold rounded whitespace-nowrap transition-all ${
+        disabled
+          ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+          : "bg-[#f1f5f9] text-[#1d8cf8] hover:bg-blue-100 hover:scale-95 cursor-pointer"
+      } ${className}`}
+    >
+      <Icon className="w-3.5 h-3.5" />
+      <span>{label}</span>
+    </div>
+  ),
+);
 
 const DatePicker = React.memo(({ label, value, onChange, max }) => (
   <div className="flex flex-col w-full">
@@ -90,27 +109,31 @@ const DatePicker = React.memo(({ label, value, onChange, max }) => (
   </div>
 ));
 
-const ActionWrapper = React.memo(({ disabled, onClick, showDialog, isLoading, children }) => {
-  const handleClick = useCallback(() => {
-    if (isLoading) return;
-    if (disabled) {
-      showDialog("Selected menu item has been disabled.", "information");
-      return;
-    }
-    if (onClick) onClick();
-  }, [disabled, isLoading, onClick, showDialog]);
+const ActionWrapper = React.memo(
+  ({ disabled, onClick, showDialog, isLoading, children }) => {
+    const handleClick = useCallback(() => {
+      if (isLoading) return;
+      if (disabled) {
+        showDialog("Selected menu item has been disabled.", "information");
+        return;
+      }
+      if (onClick) onClick();
+    }, [disabled, isLoading, onClick, showDialog]);
 
-  return (
-    <div
-      onClick={handleClick}
-      className={`inline-block transition-all ${
-        isLoading ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:scale-95"
-      }`}
-    >
-      {children}
-    </div>
-  );
-});
+    return (
+      <div
+        onClick={handleClick}
+        className={`inline-block transition-all ${
+          isLoading
+            ? "cursor-not-allowed opacity-60"
+            : "cursor-pointer hover:scale-95"
+        }`}
+      >
+        {children}
+      </div>
+    );
+  },
+);
 
 // ─── MAIN COMPONENT ─────────────────────────────────────────────────────────────
 
@@ -122,15 +145,37 @@ export default function ServerData() {
   const [isMenuOpen, toggleMenu] = useToggle(false);
 
   const {
-    ftpGroups, clients, instruments, workflowStatuses,
-    loadInitialData, changeStorageGroup, changeClientName, getInstrumentmappedClientID,
-    getFromToDates, lastCustomDates, setLastCustomDates, isLoadingApi, isHiddenRetire,
-    saveConfiguration, getInitTreeData, getSelectTreeData,getFileProperties,openServerData,getFileTagsAndParsed,getMultiParsedFields,
+    ftpGroups,
+    clients,
+    instruments,
+    workflowStatuses,
+    loadInitialData,
+    changeStorageGroup,
+    changeClientName,
+    getInstrumentmappedClientID,
+    getFromToDates,
+    lastCustomDates,
+    setLastCustomDates,
+    isLoadingApi,
+    isHiddenRetire,
+    saveConfiguration,
+    getInitTreeData,
+    getSelectTreeData,
+    getFileProperties,
+    openServerData,
+    getFileTagsAndParsed,
+    getMultiParsedFields,
     // React Query Props
-    configData, isConfigLoading, refetchConfig 
+    configData,
+    isConfigLoading,
+    refetchConfig,
   } = useServerDataApi();
 
-  const [dialogData, setDialogData] = useState({ open: false, message: "", type: "" });
+  const [dialogData, setDialogData] = useState({
+    open: false,
+    message: "",
+    type: "",
+  });
   const [filterForm, setFilterForm] = useState(INITIAL_FILTER_STATE);
   const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTER_STATE);
 
@@ -146,15 +191,14 @@ export default function ServerData() {
   const [fileParsedData, setFileParsedData] = useState([]);
   const [activePopup, setActivePopup] = useState(null);
   const [visibleCount, setVisibleCount] = useState(9);
-  
-  const[defaultPath, setDefaultPath] = useState();
 
-  // For the Tree Header we need to set 
+  const [defaultPath, setDefaultPath] = useState();
+
+  // For the Tree Header we need to set
   const [treeNodeName, setTreeNodeName] = useState("");
 
   const [formErrors, setFormErrors] = useState({});
   const setActiveFolderId = TreegridMapping((state) => state.setActiveFolderId);
-  
 
   // ─── NEW STATES FOR PROCESSED DATA ──────────────────────────────────────────────
   const [treeNodes, setTreeNodes] = useState([]);
@@ -225,218 +269,305 @@ const tagsColumns = useMemo(() => [
     },
   ], []);
 
-  const parsedDataColumns = useMemo(() => [
-    { 
-      key: 'fieldName', 
-      label: 'Field Name', 
-      width: 150,
-      render: (row, isSelected) => (
-        <div className="flex w-full justify-start text-left">
-          <span className={isSelected ? 'font-bold' : 'font-semibold'}>
-            {row.fieldName}
-          </span>
-        </div>
-      )
-    },
-    { 
-      key: 'fieldValue', 
-      label: 'Field Value', 
-      width: 250,
-      render: (row, isSelected) => (
-        <div className="flex w-full justify-start text-left">
-          <span className={isSelected ? 'font-bold' : 'font-semibold'}>
-            {row.fieldValue}
-          </span>
-        </div>
-      )
-    },
-  ], []);
+  const parsedDataColumns = useMemo(
+    () => [
+      {
+        key: "fieldName",
+        label: "Field Name",
+        width: 150,
+        render: (row, isSelected) => (
+          <div className="flex w-full justify-start text-left">
+            <span className={isSelected ? "font-bold" : "font-semibold"}>
+              {row.fieldName}
+            </span>
+          </div>
+        ),
+      },
+      {
+        key: "fieldValue",
+        label: "Field Value",
+        width: 250,
+        render: (row, isSelected) => (
+          <div className="flex w-full justify-start text-left">
+            <span className={isSelected ? "font-bold" : "font-semibold"}>
+              {row.fieldValue}
+            </span>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
 
   const showDialog = useCallback((message, type = "error") => {
     setDialogData({ open: true, message, type });
   }, []);
 
-  const handleDialogClose = useCallback(() => setDialogData({ open: false, message: "", type: "" }), []);
+  const handleDialogClose = useCallback(
+    () => setDialogData({ open: false, message: "", type: "" }),
+    [],
+  );
   const handlePopupClose = useCallback(() => setActivePopup(null), []);
 
   // const instrumentOptions = useMemo(() => instruments.map((i) => i.label).filter(Boolean), [instruments]);
   // const instrumentOptions = useMemo(() => {
   //   return instruments.map((i) => `${i.label} [${i.value}]`);
-  // }, [instruments]); 
-  
+  // }, [instruments]);
+
   // ServerData.jsx
 
-// Helper to add invisible characters to duplicates so React can distinguish them
-const instrumentOptions = useMemo(() => {
-  const seenLabels = {};
-  
-  return instruments.map((inst) => {
-    const label = inst.label;
-    
-    // Check how many times we've seen this label
-    const count = seenLabels[label] || 0;
-    seenLabels[label] = count + 1;
+  // Helper to add invisible characters to duplicates so React can distinguish them
+  const instrumentOptions = useMemo(() => {
+    const seenLabels = {};
 
-    // Append 'Zero Width Space' characters based on count
-    // 1st time: "" (Normal)
-    // 2nd time: "\u200B" (Invisible)
-    // 3rd time: "\u200B\u200B" (Invisible)
-    const invisibleSuffix = '\u200B'.repeat(count);
-    
-    return label + invisibleSuffix;
-  });
-}, [instruments]);
+    return instruments.map((inst) => {
+      const label = inst.label;
 
-  const clientOptions = useMemo(() => (clients || []).map((c) => c.label).filter(Boolean), [clients]);
-  
+      // Check how many times we've seen this label
+      const count = seenLabels[label] || 0;
+      seenLabels[label] = count + 1;
+
+      // Append 'Zero Width Space' characters based on count
+      // 1st time: "" (Normal)
+      // 2nd time: "\u200B" (Invisible)
+      // 3rd time: "\u200B\u200B" (Invisible)
+      const invisibleSuffix = "\u200B".repeat(count);
+
+      return label + invisibleSuffix;
+    });
+  }, [instruments]);
+
+  const clientOptions = useMemo(
+    () => (clients || []).map((c) => c.label).filter(Boolean),
+    [clients],
+  );
+
   // const workflowOptions = useMemo(() => {
   //   const options = (workflowStatuses || []).map((w) => w.label);
-  //   return ["All", ...new Set(options)]; 
+  //   return ["All", ...new Set(options)];
   // }, [workflowStatuses]);
 
   // ServerData.jsx
 
-const workflowOptions = useMemo(() => {
-  // 1. Get raw labels from the API state
-  const apiLabels = (workflowStatuses || []).map((w) => w.label).filter(Boolean);
-  
-  // 2. Use a Set to deduplicate.
-  // We explicitly start with "All", then add the API labels. 
-  // If API also sends "All", the Set will ignore the second one.
-  const uniqueOptions = new Set(["All", ...apiLabels]);
+  const workflowOptions = useMemo(() => {
+    // 1. Get raw labels from the API state
+    const apiLabels = (workflowStatuses || [])
+      .map((w) => w.label)
+      .filter(Boolean);
 
-  // 3. Convert back to an array
-  return Array.from(uniqueOptions); 
-}, [workflowStatuses]);
+    // 2. Use a Set to deduplicate.
+    // We explicitly start with "All", then add the API labels.
+    // If API also sends "All", the Set will ignore the second one.
+    const uniqueOptions = new Set(["All", ...apiLabels]);
 
-
+    // 3. Convert back to an array
+    return Array.from(uniqueOptions);
+  }, [workflowStatuses]);
 
   // ─── INPUT CHANGE HANDLER ───────────────────────────────────────────────────────
-  const handleInputChange = useCallback(async (field, value) => {
-   let val = value;
-    if (value?.target?.value !== undefined) val = value.target.value;
-    else if (typeof value === "object" && value !== null) val = value.value || value.label || "";
+  const handleInputChange = useCallback(
+    async (field, value) => {
+      let val = value;
+      if (value?.target?.value !== undefined) val = value.target.value;
+      else if (typeof value === "object" && value !== null)
+        val = value.value || value.label || "";
 
-    if (formErrors[field]) {
-      setFormErrors((prev) => ({ ...prev, [field]: false }));
-    }
-
-    if (field === "storageGroup") {
-      const groupObj = ftpGroups.find((g) => g.label === val);
-      if (groupObj) {
-        const result = await changeStorageGroup(groupObj.value);
-        const newClient = result.clients.length > 0 ? result.clients[0].label : "";
-        let newInstrument = "";
-        if (newClient !== "All" && result.instruments.length > 0) {
-          newInstrument = result.instruments[0].label;
-        }
-
-        const newForm = { ...filterForm, storageGroup: val, client: newClient, instrument: newInstrument };
-        setFilterForm(newForm);
-        setAppliedFilters(newForm);
-      } else {
-        setFilterForm(prev => ({ ...prev, [field]: val }));
-        setAppliedFilters(prev => ({ ...prev, [field]: val }));
+      if (formErrors[field]) {
+        setFormErrors((prev) => ({ ...prev, [field]: false }));
       }
-      return;
-    }
 
-    if (field === "client") {
-      const clientObj = clients.find((c) => String(c.label) === String(val));
-      const currentGroup = filterForm.storageGroup || (ftpGroups[0] ? ftpGroups[0].label : "");
-      const ftpObj = ftpGroups.find((g) => g.label === currentGroup);
+      if (field === "storageGroup") {
+        const groupObj = ftpGroups.find((g) => g.label === val);
+        if (groupObj) {
+          const result = await changeStorageGroup(groupObj.value);
+          const newClient =
+            result.clients.length > 0 ? result.clients[0].label : "";
+          let newInstrument = "";
+          if (newClient !== "All" && result.instruments.length > 0) {
+            newInstrument = result.instruments[0].label;
+          }
 
-      setFilterForm((prev) => ({ ...prev, client: val }));
-      setAppliedFilters((prev) => ({ ...prev, client: val }));
-
-      if (val === "All") {
-        setFilterForm((prev) => ({ ...prev, instrument: "" }));
-        setAppliedFilters((prev) => ({ ...prev, instrument: "" }));
+          const newForm = {
+            ...filterForm,
+            storageGroup: val,
+            client: newClient,
+            instrument: newInstrument,
+          };
+          setFilterForm(newForm);
+          setAppliedFilters(newForm);
+        } else {
+          setFilterForm((prev) => ({ ...prev, [field]: val }));
+          setAppliedFilters((prev) => ({ ...prev, [field]: val }));
+        }
         return;
       }
 
-      if (!clientObj || !ftpObj) return;
+      if (field === "client") {
+        const clientObj = clients.find((c) => String(c.label) === String(val));
+        const currentGroup =
+          filterForm.storageGroup || (ftpGroups[0] ? ftpGroups[0].label : "");
+        const ftpObj = ftpGroups.find((g) => g.label === currentGroup);
 
-      autoInstrumentSetRef.current = false;
-      const newInstruments = await changeClientName(clientObj.value, ftpObj.value, clientObj.label);
+        setFilterForm((prev) => ({ ...prev, client: val }));
+        setAppliedFilters((prev) => ({ ...prev, client: val }));
 
-      if (!autoInstrumentSetRef.current && newInstruments?.length > 0) {
-        autoInstrumentSetRef.current = true;
-        const firstInst = newInstruments[0].label;
-        setFilterForm(prev => ({ ...prev, instrument: firstInst }));
-        setAppliedFilters(prev => ({ ...prev, instrument: firstInst }));
-      } else {
-        setFilterForm(prev => ({ ...prev, instrument: "" }));
-        setAppliedFilters(prev => ({ ...prev, instrument: "" }));
+        if (val === "All") {
+          setFilterForm((prev) => ({ ...prev, instrument: "" }));
+          setAppliedFilters((prev) => ({ ...prev, instrument: "" }));
+          return;
+        }
+
+        if (!clientObj || !ftpObj) return;
+
+        autoInstrumentSetRef.current = false;
+        const newInstruments = await changeClientName(
+          clientObj.value,
+          ftpObj.value,
+          clientObj.label,
+        );
+
+        if (!autoInstrumentSetRef.current && newInstruments?.length > 0) {
+          autoInstrumentSetRef.current = true;
+          const firstInst = newInstruments[0].label;
+          setFilterForm((prev) => ({ ...prev, instrument: firstInst }));
+          setAppliedFilters((prev) => ({ ...prev, instrument: firstInst }));
+        } else {
+          setFilterForm((prev) => ({ ...prev, instrument: "" }));
+          setAppliedFilters((prev) => ({ ...prev, instrument: "" }));
+        }
+        return;
       }
-      return;
-    }
 
-  if (field === "instrument") {
-      // 1. Set the Visible Label (The invisible chars won't show in the UI input)
-      setFilterForm((prev) => ({ ...prev, instrument: val }));
-      setAppliedFilters((prev) => ({ ...prev, instrument: val }));
+      if (field === "instrument") {
+        // 1. Set the Visible Label (The invisible chars won't show in the UI input)
+        setFilterForm((prev) => ({ ...prev, instrument: val }));
+        setAppliedFilters((prev) => ({ ...prev, instrument: val }));
 
-      // 2. Find the Index of the selected string in our Generated Options
-      // 'val' is the string coming from the dropdown (potentially with invisible chars)
-      const selectedIndex = instrumentOptions.indexOf(val);
+        // 2. Find the Index of the selected string in our Generated Options
+        // 'val' is the string coming from the dropdown (potentially with invisible chars)
+        const selectedIndex = instrumentOptions.indexOf(val);
 
-      // 3. Use that Index to get the REAL Instrument Object
-      if (selectedIndex !== -1 && instruments[selectedIndex]) {
-        const instObj = instruments[selectedIndex];
+        // 3. Use that Index to get the REAL Instrument Object
+        if (selectedIndex !== -1 && instruments[selectedIndex]) {
+          const instObj = instruments[selectedIndex];
 
-        // Now we have the correct unique ID (IM4 vs IM1)
-        const mappedClientID = await getInstrumentmappedClientID(instObj.value);
+          // Now we have the correct unique ID (IM4 vs IM1)
+          const mappedClientID = await getInstrumentmappedClientID(
+            instObj.value,
+          );
 
-        if (mappedClientID) {
-          const mappedClient = clients.find((c) => c.value === mappedClientID);
-          if (mappedClient) {
-            setFilterForm((prev) => ({ ...prev, client: mappedClient.label }));
-            setAppliedFilters((prev) => ({ ...prev, client: mappedClient.label }));
+          if (mappedClientID) {
+            const mappedClient = clients.find(
+              (c) => c.value === mappedClientID,
+            );
+            if (mappedClient) {
+              setFilterForm((prev) => ({
+                ...prev,
+                client: mappedClient.label,
+              }));
+              setAppliedFilters((prev) => ({
+                ...prev,
+                client: mappedClient.label,
+              }));
 
-            const currentGroupLabel = filterForm.storageGroup || (ftpGroups[0] ? ftpGroups[0].label : "");
-            const ftpObj = ftpGroups.find((g) => g.label === currentGroupLabel);
+              const currentGroupLabel =
+                filterForm.storageGroup ||
+                (ftpGroups[0] ? ftpGroups[0].label : "");
+              const ftpObj = ftpGroups.find(
+                (g) => g.label === currentGroupLabel,
+              );
 
-            if (ftpObj) {
-              await changeClientName(mappedClient.value, ftpObj.value, mappedClient.label);
+              if (ftpObj) {
+                await changeClientName(
+                  mappedClient.value,
+                  ftpObj.value,
+                  mappedClient.label,
+                );
+              }
             }
           }
         }
+        return;
       }
-      return;
-    }
 
-    if (field === "recordsDuration") {
-      if (val === "Custom Date") {
-        setFilterForm((prev) => ({ ...prev, recordsDuration: val, fromDate: lastCustomDates.fromDate, toDate: lastCustomDates.toDate }));
-        setAppliedFilters((prev) => ({ ...prev, recordsDuration: val, fromDate: lastCustomDates.fromDate, toDate: lastCustomDates.toDate }));
-      } else {
-        if (filterForm.recordsDuration === "Custom Date") {
-          setLastCustomDates({ fromDate: filterForm.fromDate, toDate: filterForm.toDate });
-        }
-        const range = getFromToDates(val);
-        if (range) {
-          setFilterForm((prev) => ({ ...prev, recordsDuration: val, fromDate: range.from, toDate: range.to }));
-          setAppliedFilters((prev) => ({ ...prev, recordsDuration: val, fromDate: range.from, toDate: range.to }));
+      if (field === "recordsDuration") {
+        if (val === "Custom Date") {
+          setFilterForm((prev) => ({
+            ...prev,
+            recordsDuration: val,
+            fromDate: lastCustomDates.fromDate,
+            toDate: lastCustomDates.toDate,
+          }));
+          setAppliedFilters((prev) => ({
+            ...prev,
+            recordsDuration: val,
+            fromDate: lastCustomDates.fromDate,
+            toDate: lastCustomDates.toDate,
+          }));
         } else {
-          setFilterForm((prev) => ({ ...prev, recordsDuration: val, fromDate: "", toDate: "" }));
-          setAppliedFilters((prev) => ({ ...prev, recordsDuration: val, fromDate: "", toDate: "" }));
+          if (filterForm.recordsDuration === "Custom Date") {
+            setLastCustomDates({
+              fromDate: filterForm.fromDate,
+              toDate: filterForm.toDate,
+            });
+          }
+          const range = getFromToDates(val);
+          if (range) {
+            setFilterForm((prev) => ({
+              ...prev,
+              recordsDuration: val,
+              fromDate: range.from,
+              toDate: range.to,
+            }));
+            setAppliedFilters((prev) => ({
+              ...prev,
+              recordsDuration: val,
+              fromDate: range.from,
+              toDate: range.to,
+            }));
+          } else {
+            setFilterForm((prev) => ({
+              ...prev,
+              recordsDuration: val,
+              fromDate: "",
+              toDate: "",
+            }));
+            setAppliedFilters((prev) => ({
+              ...prev,
+              recordsDuration: val,
+              fromDate: "",
+              toDate: "",
+            }));
+          }
         }
+        return;
       }
-      return;
-    }
 
-    if (field === "fromDate" || field === "toDate") {
-      setLastCustomDates((prev) => ({ ...prev, [field]: value.target.value }));
-    }
+      if (field === "fromDate" || field === "toDate") {
+        setLastCustomDates((prev) => ({
+          ...prev,
+          [field]: value.target.value,
+        }));
+      }
 
-    setFilterForm((prev) => ({ ...prev, [field]: val }));
-    setAppliedFilters((prev) => ({ ...prev, [field]: val }));
-  }, [clients, ftpGroups, instruments, filterForm, changeStorageGroup, changeClientName, getInstrumentmappedClientID, lastCustomDates, setLastCustomDates, getFromToDates]);
+      setFilterForm((prev) => ({ ...prev, [field]: val }));
+      setAppliedFilters((prev) => ({ ...prev, [field]: val }));
+    },
+    [
+      clients,
+      ftpGroups,
+      instruments,
+      filterForm,
+      changeStorageGroup,
+      changeClientName,
+      getInstrumentmappedClientID,
+      lastCustomDates,
+      setLastCustomDates,
+      getFromToDates,
+    ],
+  );
 
-
-
-const handleReset = useCallback(async () => {
+  const handleReset = useCallback(async () => {
     try {
       // 1. BACKUP: Save the current LocalStorage data to a variable
       const backupData = localStorage.getItem("U1");
@@ -467,7 +598,7 @@ const handleReset = useCallback(async () => {
       setIsLeftLoading(true);
 
       let resetState = INITIAL_FILTER_STATE;
-      
+
       if (response?.defaults) {
         resetState = {
           ...INITIAL_FILTER_STATE,
@@ -477,7 +608,7 @@ const handleReset = useCallback(async () => {
           taskStatus: response.defaults.taskStatus || "All",
           workflowStatus: response.defaults.workflowStatus || "All",
           recordsDuration: response.defaults.recordsDuration || "Current Date",
-          hideEmpty: configData["sys_HideFolderDefault"] === 0 
+          hideEmpty: configData["sys_HideFolderDefault"] === 0,
         };
       }
 
@@ -493,35 +624,49 @@ const handleReset = useCallback(async () => {
       } else {
         setLeftPanelData(null);
       }
-      
-      setRefreshKey((prev) => prev + 1);
 
+      setRefreshKey((prev) => prev + 1);
     } catch (error) {
       // If error, ensure we still restore the backup so we don't lose user data
       const backupData = localStorage.getItem("U1"); // Check if it was restored
-      if (!backupData && typeof backupData !== 'undefined') {
-         // Logic to ensure safety, though step 4 usually covers it
+      if (!backupData && typeof backupData !== "undefined") {
+        // Logic to ensure safety, though step 4 usually covers it
       }
-      showDialog("Failed to reset application state: " + error.message, "error");
+      showDialog(
+        "Failed to reset application state: " + error.message,
+        "error",
+      );
     }
   }, [loadInitialData, showDialog, configData]);
 
   const convertDateForApi = (isoDate) => {
     if (!isoDate) return "";
-    const [y, m, d] = isoDate.split('-');
+    const [y, m, d] = isoDate.split("-");
     return `${d}/${m}/${y}`;
   };
 
   // --- HELPER TO STRIP HTML TAGS (Same as in ServerDataTree) ---
-const cleanName = (name) => {
-  if (!name) return "";
-  return String(name).replace(/<[^>]*>?/gm, '').trim();
-};
+  const cleanName = (name) => {
+    if (!name) return "";
+    return String(name)
+      .replace(/<[^>]*>?/gm, "")
+      .trim();
+  };
 
   // ─── FILTER HANDLER (FIXED) ───────────────────────────────────────────────────────
   const handleFilter = useCallback(async () => {
-    const { client, instrument, taskStatus, recordsDuration, storageGroup, fromDate, toDate, workflowStatus, hideEmpty } = filterForm;
-   
+    const {
+      client,
+      instrument,
+      taskStatus,
+      recordsDuration,
+      storageGroup,
+      fromDate,
+      toDate,
+      workflowStatus,
+      hideEmpty,
+    } = filterForm;
+
     const newErrors = {};
     // if (!client) newErrors.client = true;
     if (!instrument) newErrors.instrument = true;
@@ -533,27 +678,28 @@ const cleanName = (name) => {
     }
     setFormErrors({});
 
-    const selectedGroupObj = ftpGroups.find(g => g.label === storageGroup);
-    const selectedClientObj = clients.find(c => c.label === client);
-    const selectedInstObj = instruments.find(i => i.label === instrument);
+    const selectedGroupObj = ftpGroups.find((g) => g.label === storageGroup);
+    const selectedClientObj = clients.find((c) => c.label === client);
+    const selectedInstObj = instruments.find((i) => i.label === instrument);
 
     const sFTPID = selectedGroupObj ? selectedGroupObj.value : "";
     const sClientID = selectedClientObj ? selectedClientObj.value : "";
     const sInstrumentID = selectedInstObj ? selectedInstObj.value : "";
 
     // 1. Map Task Status safely using an object lookup
-    const STATUS_MAP = { "Active": "A", "Deactive": "D", "Retire": "R" };
+    const STATUS_MAP = { Active: "A", Deactive: "D", Retire: "R" };
     const sTaskStatusValue = STATUS_MAP[taskStatus] || "";
 
-    const sRecordDuration = recordsDuration ? recordsDuration.replace(/\s+/g, "_") : "";
+    const sRecordDuration = recordsDuration
+      ? recordsDuration.replace(/\s+/g, "_")
+      : "";
     let sFrom = "";
     let sTo = "";
 
     if (recordsDuration === "Custom Date") {
       sFrom = convertDateForApi(fromDate);
       sTo = convertDateForApi(toDate);
-    } 
-    else {
+    } else {
       const range = getFromToDates(recordsDuration);
       if (range) {
         sFrom = convertDateForApi(range.from);
@@ -561,20 +707,24 @@ const cleanName = (name) => {
       }
     }
 
-    const selectedWorkflowObj = workflowStatuses.find(w => w.label === workflowStatus);
-    const nWorkflowStatusCode = selectedWorkflowObj ? selectedWorkflowObj.value : -1;
+    const selectedWorkflowObj = workflowStatuses.find(
+      (w) => w.label === workflowStatus,
+    );
+    const nWorkflowStatusCode = selectedWorkflowObj
+      ? selectedWorkflowObj.value
+      : -1;
     const nFolderHideFlag = hideEmpty ? 1 : 0;
 
     // 2. Create a COMMON parameters object (Single Source of Truth)
     const commonParams = {
-        sFTPID,
-        sClientID,
-        sInstrumentID,
-        nWorkflowStatusCode,
-        nFolderHideFlag,
-        sTaskStatusValue,
-        sFrom,
-        sTo
+      sFTPID,
+      sClientID,
+      sInstrumentID,
+      nWorkflowStatusCode,
+      nFolderHideFlag,
+      sTaskStatusValue,
+      sFrom,
+      sTo,
     };
 
     // 3. Set Active API Params directly from common object
@@ -588,35 +738,34 @@ const cleanName = (name) => {
     setActiveFolderId("");
 
     if (sFTPID) {
-    
-    // const not changed   
-    
-    const treeResponse = await getInitTreeData(sFTPID, sClientID);
-    let rootNodeName = "";
-    console.log("TreeResponse =>", treeResponse?.ServerDataTree[0]?.originalData?.NodeName)
-    if (treeResponse?.ServerDataTree?.length > 0) {
-      rootNodeName = treeResponse.ServerDataTree[0].NodeName ?? "";
-      setTreeNodeName(rootNodeName); 
-    }
+      // const not changed
 
-  // // 3. Update Zustand / Active State
-  // const cleanRoot = rootNodeName.replace(/<[^>]*>/g, '').trim();
+      const treeResponse = await getInitTreeData(sFTPID, sClientID);
+      let rootNodeName = "";
+      console.log(
+        "TreeResponse =>",
+        treeResponse?.ServerDataTree[0]?.originalData?.NodeName,
+      );
+      if (treeResponse?.ServerDataTree?.length > 0) {
+        rootNodeName = treeResponse.ServerDataTree[0].NodeName ?? "";
+        setTreeNodeName(rootNodeName);
+      }
 
-  // console.log("Clean Root Path=> ", cleanRoot);
+      // // 3. Update Zustand / Active State
+      // const cleanRoot = rootNodeName.replace(/<[^>]*>/g, '').trim();
 
-  // const startPath = cleanRoot 
+      // console.log("Clean Root Path=> ", cleanRoot);
 
-  // console.log("StartPath=>", startPath);
+      // const startPath = cleanRoot
 
-  
-     
+      // console.log("StartPath=>", startPath);
 
       // 4. Construct payload using common params + tree specific props
       const selectPayload = {
         sFTPID,
         sInstrumentClientMappingID: sInstrumentID,
         NodeName: rootNodeName,
-        ...commonParams 
+        ...commonParams,
       };
 
       console.log("Select Payload => ", selectPayload);
@@ -625,32 +774,32 @@ const cleanName = (name) => {
 
       setTreeNodes(processedResult.treeNodes || []);
 
-      
-
-      console.log("Tree Data", processedResult.treeNodes)
+      console.log("Tree Data", processedResult.treeNodes);
 
       if (processedResult) {
-        const cleanedGridData = (processedResult.gridData || []).map(item => ({
-        ...item,
-        Type: item.Type?.trim() || "",
-        "File Name": item["File Name"]?.trim() || "",
-        "Client Name": item["Client Name"]?.trim() || "",
-        "Task Type": item["Task Type"]?.trim() || "",
-        "Parser Status": item["Parser Status"]?.trim() || "NA",
-        "UpLoad Date": item["UpLoad Date"] || null,
-        "Size KB": Number(item["Size KB"] || 0),
-        VersionNo: Number(item.VersionNo || 1),
-      }));
+        const cleanedGridData = (processedResult.gridData || []).map(
+          (item) => ({
+            ...item,
+            Type: item.Type?.trim() || "",
+            "File Name": item["File Name"]?.trim() || "",
+            "Client Name": item["Client Name"]?.trim() || "",
+            "Task Type": item["Task Type"]?.trim() || "",
+            "Parser Status": item["Parser Status"]?.trim() || "NA",
+            "UpLoad Date": item["UpLoad Date"] || null,
+            "Size KB": Number(item["Size KB"] || 0),
+            VersionNo: Number(item.VersionNo || 1),
+          }),
+        );
 
-       if (processedResult.treeNodes && processedResult.treeNodes.length > 0) {
+        if (processedResult.treeNodes && processedResult.treeNodes.length > 0) {
           //  const rootLabel = processedResult.treeNodes[0].label;
           //  console.log("Label ", rootLabel)
           //  const cleanRoot = cleanName(rootLabel);
           //  console.log("Clean Label => ", cleanRoot);
           //  setActiveFolderId(cleanRoot);
-       }
-      //  setActiveFolderId(processedResult?.treeNodes[0]?.originalData?.NodeName);
-      setDefaultPath(processedResult?.treeNodes[0]?.originalData?.NodeName);
+        }
+        //  setActiveFolderId(processedResult?.treeNodes[0]?.originalData?.NodeName);
+        setDefaultPath(processedResult?.treeNodes[0]?.originalData?.NodeName);
         setProcessedGridData(cleanedGridData);
         setDisabledActions(processedResult.disabledActions || []);
       } else {
@@ -662,8 +811,14 @@ const cleanName = (name) => {
 
     const storagePayload = {
       ServerData: {
-        sClientID, sFTPID, sInstrumentID, sTaskStatusValue, sRecordDuration, sFrom, sTo
-      }
+        sClientID,
+        sFTPID,
+        sInstrumentID,
+        sTaskStatusValue,
+        sRecordDuration,
+        sFrom,
+        sTo,
+      },
     };
     localStorage.setItem("U1", JSON.stringify(storagePayload));
 
@@ -677,8 +832,16 @@ const cleanName = (name) => {
     setIsGridLoading(false);
     setIsLeftLoading(false);
   }, [
-    filterForm, ftpGroups, clients, instruments,
-    getInitTreeData, getSelectTreeData, showDialog, getFromToDates, workflowStatuses,setActiveFolderId
+    filterForm,
+    ftpGroups,
+    clients,
+    instruments,
+    getInitTreeData,
+    getSelectTreeData,
+    showDialog,
+    getFromToDates,
+    workflowStatuses,
+    setActiveFolderId,
   ]);
 
   // ─── INITIAL LOAD ───────────────────────────────────────────────────────────────
@@ -688,7 +851,7 @@ const cleanName = (name) => {
   //     try {
   //       // Wait for config to be ready (handled by isConfigLoading in UI mostly, but for logic we check data)
   //       // Note: configData is already available via hook, so we just use it.
-        
+
   //       const response = await loadInitialData();
   //       if (!mounted) return;
 
@@ -734,7 +897,7 @@ const cleanName = (name) => {
   //   return () => { mounted = false; };
   // }, [loadInitialData, showDialog, configData, isConfigLoading]);
 
-useEffect(() => {
+  useEffect(() => {
     let mounted = true;
 
     const init = async () => {
@@ -818,236 +981,260 @@ useEffect(() => {
   //   setFileParsedData([{ id: 1, fieldName: "FTP ID", fieldValue: row.id }]);
   // }, []);
 
-   const formatGridData = useCallback((rawGridData) => {
-    return (rawGridData || []).map(item => ({
-        ...item,
-        Type: (item.Type || item.sType || "").trim(),
-        "File Name": item["File Name"]?.trim() || "",
-        "Client Name": item["Client Name"]?.trim() || "",
-        "Task Type": item["Task Type"]?.trim() || "",
-        "Parser Status": item["Parser Status"]?.trim() || "NA",
-        "UpLoad Date": item["UpLoad Date"] || null,
-        "Size KB": Number(item["Size KB"] || 0),
-        VersionNo: Number(item.VersionNo || 1),
-        id: item.id || item.sRecordNo || ""
-      }));
+  const formatGridData = useCallback((rawGridData) => {
+    return (rawGridData || []).map((item) => ({
+      ...item,
+      Type: (item.Type || item.sType || "").trim(),
+      "File Name": item["File Name"]?.trim() || "",
+      "Client Name": item["Client Name"]?.trim() || "",
+      "Task Type": item["Task Type"]?.trim() || "",
+      "Parser Status": item["Parser Status"]?.trim() || "NA",
+      "UpLoad Date": item["UpLoad Date"] || null,
+      "Size KB": Number(item["Size KB"] || 0),
+      VersionNo: Number(item.VersionNo || 1),
+      id: item.id || item.sRecordNo || "",
+    }));
   }, []);
 
-const handleRowSelect = useCallback(async (row) => {
-  // 1. Always update local state for the UI
-  setSelectedRow(row);
-  
-  if (!row) {
-    setFileTagsData([]);
-    setFileParsedData([]);
-    setPropertiesData(null);
-    return;
-  }
+  const handleRowSelect = useCallback(
+    async (row) => {
+      // 1. Always update local state for the UI
+      setSelectedRow(row);
 
-  // --- EXISTING LOGIC FOR TAGS/PROPERTIES ---
-  setFileTagsData([{ id: 1, category: "Priority", value: "High", createdBy: "System" }]);
-  setFileParsedData([{ id: 1, fieldName: "FTP ID", fieldValue: row.id }]);
+      if (!row) {
+        setFileTagsData([]);
+        setFileParsedData([]);
+        setPropertiesData(null);
+        return;
+      }
 
-  setIsPropertiesLoading(true);
-  setPropertiesData(null);
+      // --- EXISTING LOGIC FOR TAGS/PROPERTIES ---
+      setFileTagsData([
+        { id: 1, category: "Priority", value: "High", createdBy: "System" },
+      ]);
+      setFileParsedData([{ id: 1, fieldName: "FTP ID", fieldValue: row.id }]);
 
-  const rawPath = row["File Path"] ?? ""; 
+      setIsPropertiesLoading(true);
+      setPropertiesData(null);
 
-  try {
-    const propertyPayload = {
-      sUTCCreatedOn: row["Created Date"] || "", 
-      sTaskID: row["TaskID"] || "",
-      sUploadOn: row["UpLoad Date"] || "",
-      sClientID: activeApiParams.sClientID || "",
-      sFileName: row["File Name"] || "",
-      nWorkflowStatusCode: activeApiParams.nWorkflowStatusCode || -1,
-      
-      // ----------------------------------------------------
-      // USE THE CLEANED ARRAY-JOINED PATH
-      // ----------------------------------------------------
-      sFilePath: rawPath, 
+      const rawPath = row["File Path"] ?? "";
 
-      sFrom: activeApiParams.sFrom || "",
-      sTo: activeApiParams.sTo || "",
-      sType: row["Type"] || "",
-      sRecordNo: row["id"] || row["RecordNo"] || "",
-      sFTPID: filterForm.storageGroup ? ftpGroups.find(g => g.label === filterForm.storageGroup)?.value : "",
-      sCreatedOn: row["Created Date"] || "",
-    };
+      try {
+        const propertyPayload = {
+          sUTCCreatedOn: row["Created Date"] || "",
+          sTaskID: row["TaskID"] || "",
+          sUploadOn: row["UpLoad Date"] || "",
+          sClientID: activeApiParams.sClientID || "",
+          sFileName: row["File Name"] || "",
+          nWorkflowStatusCode: activeApiParams.nWorkflowStatusCode || -1,
 
-    const response = await getFileProperties(propertyPayload);
-    
-    if (response) {
-      setPropertiesData(response);
-    }
-  } catch (error) {
-    console.error("Failed to fetch properties", error);
-  } finally {
-    setIsPropertiesLoading(false);
-  }
-}, [
-  activeApiParams, 
-  filterForm, 
-  ftpGroups, 
-  getFileProperties
-]);
+          // ----------------------------------------------------
+          // USE THE CLEANED ARRAY-JOINED PATH
+          // ----------------------------------------------------
+          sFilePath: rawPath,
 
-const handleRowDoubleClick = useCallback(async (row) => {
-    if (!row) return;
+          sFrom: activeApiParams.sFrom || "",
+          sTo: activeApiParams.sTo || "",
+          sType: row["Type"] || "",
+          sRecordNo: row["id"] || row["RecordNo"] || "",
+          sFTPID: filterForm.storageGroup
+            ? ftpGroups.find((g) => g.label === filterForm.storageGroup)?.value
+            : "",
+          sCreatedOn: row["Created Date"] || "",
+        };
 
+        const response = await getFileProperties(propertyPayload);
 
-    // 1. Identify File vs Folder
-    const rawType = row["Type"] || row["sType"] || "";
-    const fileType = rawType.toString().trim().toLowerCase();
+        if (response) {
+          setPropertiesData(response);
+        }
+      } catch (error) {
+        console.error("Failed to fetch properties", error);
+      } finally {
+        setIsPropertiesLoading(false);
+      }
+    },
+    [activeApiParams, filterForm, ftpGroups, getFileProperties],
+  );
 
-    // Fix: Robustly get the folder name
-    const rawName = row["File Name"] || row["sFileName"] || row["Name"] || "";
-    const clickedFolderName = cleanName(rawName);
+  const handleRowDoubleClick = useCallback(
+    async (row) => {
+      if (!row) return;
 
-    if (!clickedFolderName) {
-       console.error("Error: Could not determine folder name", row);
-       return; 
-    }
+      // 1. Identify File vs Folder
+      const rawType = row["Type"] || row["sType"] || "";
+      const fileType = rawType.toString().trim().toLowerCase();
 
-    if (fileType === "folder" || fileType === "directory") {
-      setLoadingScope("middle");
-      setIsGridLoading(true);
-    setSelectedRow(null);
-      let newPathString = "";
-      const rowTaskId = (row["TaskID"] || row["sTaskID"] || "").trim();
+      // Fix: Robustly get the folder name
+      const rawName = row["File Name"] || row["sFileName"] || row["Name"] || "";
+      const clickedFolderName = cleanName(rawName);
 
-      // =========================================================
-      // STEP 1: GET THE LIVE PATH FROM ZUSTAND
-      // =========================================================
-      // This contains the path you navigated to via Tree (e.g., ".../IC07/New folder/New folder2")
-      const currentStorePath = TreegridMapping.getState().activeFolderId;
+      if (!clickedFolderName) {
+        console.error("Error: Could not determine folder name", row);
+        return;
+      }
 
-      // =========================================================
-      // STEP 2: CALCULATE NEXT PATH
-      // =========================================================
-      
-      // LOGIC: If we have a valid path in the Store, we MUST append to it.
-      // We only check the 'Root Tree Nodes' if the Store is empty/root.
-      
-      if (currentStorePath && currentStorePath.length > 0) {
+      if (fileType === "folder" || fileType === "directory") {
+        setLoadingScope("middle");
+        setIsGridLoading(true);
+        setSelectedRow(null);
+        let newPathString = "";
+        const rowTaskId = (row["TaskID"] || row["sTaskID"] || "").trim();
+
+        // =========================================================
+        // STEP 1: GET THE LIVE PATH FROM ZUSTAND
+        // =========================================================
+        // This contains the path you navigated to via Tree (e.g., ".../IC07/New folder/New folder2")
+        const currentStorePath = TreegridMapping.getState().activeFolderId;
+
+        // =========================================================
+        // STEP 2: CALCULATE NEXT PATH
+        // =========================================================
+
+        // LOGIC: If we have a valid path in the Store, we MUST append to it.
+        // We only check the 'Root Tree Nodes' if the Store is empty/root.
+
+        if (currentStorePath && currentStorePath.length > 0) {
           // CASE A: DEEP NAVIGATION (Trust the Store)
           // We are already inside a path. Just append the clicked folder.
-          
+
           // Remove trailing slash to be safe
-          const cleanBase = currentStorePath.replace(/\/+$/, ""); 
+          const cleanBase = currentStorePath.replace(/\/+$/, "");
           newPathString = `${cleanBase}/${clickedFolderName}`;
-          
+
           console.log("Appending to Store Path:", newPathString);
-      } 
-      else {
+        } else {
           // CASE B: INITIAL/ROOT NAVIGATION (Store is empty or we are at start)
           // Here we use the TaskID check to ensure we pick the correct Root Folder.
-          
+
           const matchedNode = treeNodes.find((node) => {
-            const treeId = (node.originalData?.sTaskID || node.value || node.id || "").trim();
+            const treeId = (
+              node.originalData?.sTaskID ||
+              node.value ||
+              node.id ||
+              ""
+            ).trim();
             return treeId && treeId === rowTaskId;
           });
 
           if (matchedNode) {
-             // Found specific root node
-             newPathString = cleanName(matchedNode.originalData?.NodeName || matchedNode.label);
+            // Found specific root node
+            newPathString = cleanName(
+              matchedNode.originalData?.NodeName || matchedNode.label,
+            );
           } else {
-             // Fallback if not found in tree list (e.g. searching/filtering)
-             // Use Default Path or just the folder name
-             const fallbackBase = defaultPath || filterForm.storageGroup || "";
-             const cleanBase = fallbackBase.replace(/\/+$/, "");
-             
-             if (cleanBase) {
-                 newPathString = `${cleanBase}/${clickedFolderName}`;
-             } else {
-                 newPathString = clickedFolderName;
-             }
-          }
-      }
+            // Fallback if not found in tree list (e.g. searching/filtering)
+            // Use Default Path or just the folder name
+            const fallbackBase = defaultPath || filterForm.storageGroup || "";
+            const cleanBase = fallbackBase.replace(/\/+$/, "");
 
-      // =========================================================
-      // STEP 3: API CALL
-      // =========================================================
-      const apiNodeName = `<span>${newPathString}`;
-      const globalGroupID = ftpGroups.find(g => g.label === filterForm.storageGroup)?.value || "";
-      const sFTPID = row["TaskID"] || row["sTaskID"] || globalGroupID;
-
-      const payload = {
-        ...activeApiParams,
-        sFTPID: String(sFTPID || "").trim(),
-        sInstrumentClientMappingID: activeApiParams.sInstrumentID || "",
-        NodeName: apiNodeName,
-        sClientID: activeApiParams.sClientID || "", 
-        nWorkflowStatusCode: activeApiParams.nWorkflowStatusCode ?? -1,
-      };
-
-      try {
-        const processedResult = await getSelectTreeData(payload);
-
-        if (processedResult) {
-          // 1. Update Grid
-          const cleanedGridData = formatGridData(processedResult.gridData);
-          setProcessedGridData(cleanedGridData); 
-          setDisabledActions(processedResult.disabledActions || []);
-          
-          // 2. CRITICAL: UPDATE ZUSTAND
-          // This saves the new long path so the *next* click appends to it correctly.
-          TreegridMapping.getState().setActiveFolderId(newPathString);
-          
-          // 3. Cache Data
-          if (processedResult.treeNodes && processedResult.treeNodes.length > 0) {
-             cacheFolderData(newPathString, processedResult.treeNodes);
-          } else {
-             cacheFolderData(newPathString, []);
+            if (cleanBase) {
+              newPathString = `${cleanBase}/${clickedFolderName}`;
+            } else {
+              newPathString = clickedFolderName;
+            }
           }
         }
-      } catch (error) {
-        console.error("Error drilling down:", error);
-        showDialog("Failed to load folder contents", "error");
-      } finally {
-        setIsGridLoading(false);
-      }
-    } 
-    else {
-      // --- File Opening Logic ---
-      let fileLink = row["WebLink"] || row["DownloadLink"] || row["sDownloadLink"];
-      
-      if (!fileLink && propertiesData) {
-        fileLink = propertiesData.sWebLink || propertiesData.DownloadLink;
-      }
-      
-      if (fileLink) {
-          window.open(fileLink, "_blank", "noopener,noreferrer");
+
+        // =========================================================
+        // STEP 3: API CALL
+        // =========================================================
+        const apiNodeName = `<span>${newPathString}`;
+        const globalGroupID =
+          ftpGroups.find((g) => g.label === filterForm.storageGroup)?.value ||
+          "";
+        const sFTPID = row["TaskID"] || row["sTaskID"] || globalGroupID;
+
+        const payload = {
+          ...activeApiParams,
+          sFTPID: String(sFTPID || "").trim(),
+          sInstrumentClientMappingID: activeApiParams.sInstrumentID || "",
+          NodeName: apiNodeName,
+          sClientID: activeApiParams.sClientID || "",
+          nWorkflowStatusCode: activeApiParams.nWorkflowStatusCode ?? -1,
+        };
+
+        try {
+          const processedResult = await getSelectTreeData(payload);
+
+          if (processedResult) {
+            // 1. Update Grid
+            const cleanedGridData = formatGridData(processedResult.gridData);
+            setProcessedGridData(cleanedGridData);
+            setDisabledActions(processedResult.disabledActions || []);
+
+            // 2. CRITICAL: UPDATE ZUSTAND
+            // This saves the new long path so the *next* click appends to it correctly.
+            TreegridMapping.getState().setActiveFolderId(newPathString);
+
+            // 3. Cache Data
+            if (
+              processedResult.treeNodes &&
+              processedResult.treeNodes.length > 0
+            ) {
+              cacheFolderData(newPathString, processedResult.treeNodes);
+            } else {
+              cacheFolderData(newPathString, []);
+            }
+          }
+        } catch (error) {
+          console.error("Error drilling down:", error);
+          showDialog("Failed to load folder contents", "error");
+        } finally {
+          setIsGridLoading(false);
+        }
       } else {
-          showDialog("No viewable link available for this file.", "information");
+        // --- File Opening Logic ---
+        let fileLink =
+          row["WebLink"] || row["DownloadLink"] || row["sDownloadLink"];
+
+        if (!fileLink && propertiesData) {
+          fileLink = propertiesData.sWebLink || propertiesData.DownloadLink;
+        }
+
+        if (fileLink) {
+          window.open(fileLink, "_blank", "noopener,noreferrer");
+        } else {
+          showDialog(
+            "No viewable link available for this file.",
+            "information",
+          );
+        }
       }
-    }
-  }, [
-    activeApiParams, 
-    filterForm, 
-    ftpGroups, 
-    getSelectTreeData, 
-    showDialog, 
-    propertiesData, 
-    formatGridData, 
-    // treeNodes, // We can remove treeNodes from dependency to prevent re-creation mid-navigation
-    defaultPath 
-  ]); 
+    },
+    [
+      activeApiParams,
+      filterForm,
+      ftpGroups,
+      getSelectTreeData,
+      showDialog,
+      propertiesData,
+      formatGridData,
+      // treeNodes, // We can remove treeNodes from dependency to prevent re-creation mid-navigation
+      defaultPath,
+    ],
+  );
 
-const handleRefresh = useCallback((scope = "middle") => {
-    handleRowSelect(null);
-    setLoadingScope(scope);
-    setRefreshKey((prev) => prev + 1);
-  }, [handleRowSelect]);
+  const handleRefresh = useCallback(
+    (scope = "middle") => {
+      handleRowSelect(null);
+      setLoadingScope(scope);
+      setRefreshKey((prev) => prev + 1);
+    },
+    [handleRowSelect],
+  );
 
-  const handleActionClick = useCallback((actionName) => {
-    if (actionName === "Parser Status") {
-      setFileParsedData([]);
-      return;
-    }
-    setActivePopup(actionName);
-    if (isMenuOpen) toggleMenu(false);
-  }, [isMenuOpen, toggleMenu]);
+  const handleActionClick = useCallback(
+    (actionName) => {
+      if (actionName === "Parser Status") {
+        setFileParsedData([]);
+        return;
+      }
+      setActivePopup(actionName);
+      if (isMenuOpen) toggleMenu(false);
+    },
+    [isMenuOpen, toggleMenu],
+  );
 
   useEffect(() => {
     if (loadingScope === "both") {
@@ -1059,134 +1246,183 @@ const handleRefresh = useCallback((scope = "middle") => {
     }
   }, [loadingScope]);
 
+  const fileInfoData = useMemo(() => {
+    const row = selectedRow || {};
+    const hasRow = !!selectedRow;
+    const props = propertiesData || {};
 
+    const val = (v) => (v ? v : "");
 
-const fileInfoData = useMemo(() => {
-  const row = selectedRow || {};
-  const hasRow = !!selectedRow;
-  const props = propertiesData || {};
+    // Helper: Strictly returns empty if no row is selected
+    const getVal = (apiKey, rowKey) => {
+      if (!hasRow) return "";
+      if (isPropertiesLoading) return "Loading...";
+      return val(props[apiKey]) || val(row[rowKey]) || "";
+    };
 
-  const val = (v) => (v ? v : "");
+    return [
+      {
+        id: "filename",
+        label: "Filename",
+        highlight: true,
+        value: getVal("sFileName", "File Name"),
+      },
+      {
+        id: "size",
+        label: "Size",
+        // FIX: Guard the entire expression with hasRow
+        value: hasRow
+          ? props.sSize || (row["Size KB"] ? `${row["Size KB"]} KB` : "")
+          : "",
+      },
+      {
+        id: "contains",
+        label: "Contains",
+        // FIX: Guard the entire expression with hasRow
+        value: hasRow
+          ? props.sContains || getVal("sClientName", "Client Name")
+          : "",
+      },
+      {
+        id: "Login Username",
+        label: "Login Username",
+        value: getVal("sUsername", "Login User"),
+      },
+      {
+        id: "Client Name",
+        label: "Client Name",
+        value: getVal("sClientName", "Client Name"),
+      },
+      {
+        id: "Status",
+        label: "Status",
+        value: getVal("sUserStatus", "Status"),
+      },
+      {
+        id: "parserStatus",
+        label: "Parser Status",
+        customValue: hasRow ? (
+          <span
+            className={`px-2 py-0.5 rounded text-xs font-medium w-max ${
+              row["Parser Status"] === "Completed"
+                ? "bg-green-100 text-green-700"
+                : "bg-yellow-100 text-yellow-700"
+            }`}
+          >
+            {val(row["Parser Status"])}
+          </span>
+        ) : (
+          ""
+        ),
+      },
+      {
+        id: "Created On",
+        label: "Created On",
+        // FIX: Guard the entire expression with hasRow
+        value: hasRow
+          ? props.sCreatedOn ||
+            props.sUTCCreatedOn ||
+            (row["Created Date"] ? formatDisplayDate(row["Created Date"]) : "")
+          : "",
+      },
+      {
+        id: "Modified On",
+        label: "Modified On",
+        value: hasRow
+          ? props.sModifiedOn ||
+            (row["Modified Date"]
+              ? formatDisplayDate(row["Modified Date"])
+              : "")
+          : "",
+      },
+      {
+        id: "Task Type",
+        label: "Task Type",
+        value: getVal("sTaskType", "Task Type"),
+      },
+      {
+        id: "Source Path",
+        label: "Source Path",
+        value: getVal("sFilePath", "Source Path"),
+      },
+      {
+        id: "Checksum",
+        label: "Checksum",
+        value: getVal("sCheckSum", "Check Sum"),
+      },
+      {
+        id: "share",
+        label: "Share Link",
+        customValue: hasRow ? (
+          <div className="flex items-center gap-2 text-blue-600 cursor-pointer hover:underline text-sm">
+            <FaLink /> <span>Generate Link</span>
+          </div>
+        ) : (
+          ""
+        ),
+      },
+    ];
+  }, [selectedRow, propertiesData, isPropertiesLoading]);
 
-  // Helper: Strictly returns empty if no row is selected
-  const getVal = (apiKey, rowKey) => {
-    if (!hasRow) return ""; 
-    if (isPropertiesLoading) return "Loading...";
-    return val(props[apiKey]) || val(row[rowKey]) || "";
-  };
+  // ServerData.jsx
 
-  return [
-    { 
-      id: 'filename', label: "Filename", highlight: true,
-      value: getVal("sFileName", "File Name") 
-    },
-    { 
-      id: 'size', label: "Size", 
-      // FIX: Guard the entire expression with hasRow
-      value: hasRow ? (props.sSize || (row["Size KB"] ? `${row["Size KB"]} KB` : "")) : "" 
-    },
-    { 
-      id: 'contains', label: "Contains", 
-      // FIX: Guard the entire expression with hasRow
-      value: hasRow ? (props.sContains || getVal("sClientName", "Client Name")) : "" 
-    },
-    { 
-      id: 'Login Username', label: "Login Username", 
-      value: getVal("sUsername", "Login User") 
-    },
-    { 
-      id: 'Client Name', label: "Client Name",
-      value: getVal("sClientName", "Client Name") 
-    },
-    { 
-      id: 'Status', label: "Status", 
-      value: getVal("sUserStatus", "Status") 
-    },
-    { 
-      id: 'parserStatus', label: "Parser Status",
-      customValue: hasRow ? (
-        <span className={`px-2 py-0.5 rounded text-xs font-medium w-max ${
-          row["Parser Status"] === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-        }`}>
-          {val(row["Parser Status"])}
-        </span>
-      ) : "" 
-    },
-    { 
-      id: 'Created On', label: "Created On", 
-      // FIX: Guard the entire expression with hasRow
-      value: hasRow ? (props.sCreatedOn || props.sUTCCreatedOn || (row["Created Date"] ? formatDisplayDate(row["Created Date"]) : "")) : ""
-    },
-    { 
-      id: 'Modified On', label: "Modified On", 
-      value: hasRow ? (props.sModifiedOn || (row["Modified Date"] ? formatDisplayDate(row["Modified Date"]) : "")) : ""
-    },
-    { 
-      id: 'Task Type', label: "Task Type", 
-      value: getVal("sTaskType", "Task Type") 
-    },
-    { 
-      id: 'Source Path', label: "Source Path", 
-      value: getVal("sFilePath", "Source Path") 
-    },
-    { 
-      id: 'Checksum', label: "Checksum", 
-      value: getVal("sCheckSum", "Check Sum") 
-    },
-    {
-      id: 'share', label: "Share Link",
-      customValue: hasRow ? (
-        <div className="flex items-center gap-2 text-blue-600 cursor-pointer hover:underline text-sm">
-          <FaLink /> <span>Generate Link</span>
-        </div>
-      ) : ""
-    }
-  ];
-}, [selectedRow, propertiesData, isPropertiesLoading]);
- 
-// ServerData.jsx
+  const handleTreeFolderSelect = useCallback(
+    (apiResult) => {
+      console.log("PARENT RECEIVED DATA FROM TREE:", apiResult);
+      setLoadingScope("middle");
+      setSelectedRow(null);
 
-const handleTreeFolderSelect = useCallback((apiResult) => {
-  console.log("PARENT RECEIVED DATA FROM TREE:", apiResult);
-    setLoadingScope("middle");
-    setSelectedRow(null); 
-    
-    // ---------------------------------------------------------
-    // STEP 1: FORCE CLEAR SELECTION
-    // This ensures the grid does not "remember" the previous index
-    // and keeps the new list unselected.
-    // ---------------------------------------------------------
-    // setSelectedRow(null); 
-    setFileTagsData([]);
-    setFileParsedData([]);
+      // ---------------------------------------------------------
+      // STEP 1: FORCE CLEAR SELECTION
+      // This ensures the grid does not "remember" the previous index
+      // and keeps the new list unselected.
+      // ---------------------------------------------------------
+      // setSelectedRow(null);
+      setFileTagsData([]);
+      setFileParsedData([]);
 
-    // Step 2: Update the Grid Data
-    if (apiResult && apiResult.gridData) {
+      // Step 2: Update the Grid Data
+      if (apiResult && apiResult.gridData) {
         const cleanedData = formatGridData(apiResult.gridData);
         setProcessedGridData(cleanedData);
-        
+
         if (apiResult.disabledActions) {
-           setDisabledActions(apiResult.disabledActions);
+          setDisabledActions(apiResult.disabledActions);
         }
-        
+
         if (apiResult.NodeName) {
-           setTreeNodeName(apiResult.NodeName); 
+          setTreeNodeName(apiResult.NodeName);
         }
-    } else {
+      } else {
         setProcessedGridData([]);
-    }
-}, [formatGridData]);
+      }
+    },
+    [formatGridData],
+  );
 
   // ─── ACTION VISIBILITY & DISABLE LOGIC ──────────────────────────────────────────
-  const getIsActionDisabled = useCallback((actionName) => {
-    if (disabledActions.includes(actionName.toLowerCase())) return true;
-    if (selectedRow) return !["Open", "Restore", "Folder Download", "File Upload", "Folder Upload"].includes(actionName);
-    if (hasFiltered) return !["Open", "Restore"].includes(actionName);
-    return ["Version History", "Work Complete", "Tag"].includes(actionName);
-  }, [selectedRow, hasFiltered, disabledActions]);
+  const getIsActionDisabled = useCallback(
+    (actionName) => {
+      if (disabledActions.includes(actionName.toLowerCase())) return true;
+      if (selectedRow)
+        return ![
+          "Open",
+          "Restore",
+          "Folder Download",
+          "File Upload",
+          "Folder Upload",
+        ].includes(actionName);
+      if (hasFiltered) return !["Open", "Restore"].includes(actionName);
+      return ["Version History", "Work Complete", "Tag"].includes(actionName);
+    },
+    [selectedRow, hasFiltered, disabledActions],
+  );
 
   // Use configData instead of configState
-  const enabledActions = useMemo(() => ALL_ACTION_ORDER.filter((a) => configData[a]), [configData]);
+  const enabledActions = useMemo(
+    () => ALL_ACTION_ORDER.filter((a) => configData[a]),
+    [configData],
+  );
   const visibleActions = enabledActions.slice(0, visibleCount);
   const overflowActions = enabledActions.slice(visibleCount);
 
@@ -1208,6 +1444,7 @@ const handleTreeFolderSelect = useCallback((apiResult) => {
 
       {/* FILTER BAR */}
       <div className="bg-[#f0f4f8] px-4 pt-4 pb-2 relative rounded-t-md">
+        <h1>Checking GitHub</h1>
         {isFilterOpen ? (
           <div className="flex flex-wrap items-end gap-3.5 mb-2">
             <div className="w-60">
@@ -1273,7 +1510,13 @@ const handleTreeFolderSelect = useCallback((apiResult) => {
               <AnimatedDropdown
                 label="Records Duration"
                 value={filterForm.recordsDuration}
-                options={["Current Date", "Last 7 Days", "Last 30 Days", "Last 1 Year", "Custom Date"]}
+                options={[
+                  "Current Date",
+                  "Last 7 Days",
+                  "Last 30 Days",
+                  "Last 1 Year",
+                  "Custom Date",
+                ]}
                 onChange={(val) => handleInputChange("recordsDuration", val)}
                 isSearchable
               />
@@ -1282,80 +1525,168 @@ const handleTreeFolderSelect = useCallback((apiResult) => {
             {filterForm.recordsDuration === "Custom Date" && (
               <>
                 <div className="w-52 pb-4">
-                  <DatePicker label="From" value={filterForm.fromDate} onChange={(e) => handleInputChange("fromDate", e)} max={getCurrentDate()} />
+                  <DatePicker
+                    label="From"
+                    value={filterForm.fromDate}
+                    onChange={(e) => handleInputChange("fromDate", e)}
+                    max={getCurrentDate()}
+                  />
                 </div>
                 <div className="w-52 pb-4">
-                  <DatePicker label="To" value={filterForm.toDate} onChange={(e) => handleInputChange("toDate", e)} max={getCurrentDate()} />
+                  <DatePicker
+                    label="To"
+                    value={filterForm.toDate}
+                    onChange={(e) => handleInputChange("toDate", e)}
+                    max={getCurrentDate()}
+                  />
                 </div>
               </>
             )}
 
             {configData["sys_HideFolderVisibility"] == 1 && (
               <label className="flex items-center gap-2 cursor-pointer select-none pb-4">
-                <span className="text-xs font-bold text-slate-600">Hide Empty Folder</span>
+                <span className="text-xs font-bold text-slate-600">
+                  Hide Empty Folder
+                </span>
                 <div
-                  onClick={() => handleInputChange("hideEmpty", !filterForm.hideEmpty)}
+                  onClick={() =>
+                    handleInputChange("hideEmpty", !filterForm.hideEmpty)
+                  }
                   className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                    filterForm.hideEmpty ? "bg-blue-500 border-blue-500" : "bg-white border-slate-300"
+                    filterForm.hideEmpty
+                      ? "bg-blue-500 border-blue-500"
+                      : "bg-white border-slate-300"
                   }`}
                 >
-                  {filterForm.hideEmpty && <CheckSquare className="w-3 h-3 text-white" />}
+                  {filterForm.hideEmpty && (
+                    <CheckSquare className="w-3 h-3 text-white" />
+                  )}
                 </div>
               </label>
             )}
 
             <div className="flex items-end gap-2 pb-2">
-              <PrimaryButton icon={Filter} label="Filter" onClick={handleFilter} />
-              <PrimaryButton icon={RotateCcw} label="Reset" onClick={handleReset} />
-              <PrimaryButton icon={RefreshCw} label="Refresh" onClick={() => handleRefresh("both")} />
-              <PrimaryButton icon={Settings} label="Configuration" onClick={toggleConfig} />
+              <PrimaryButton
+                icon={Filter}
+                label="Filter"
+                onClick={handleFilter}
+              />
+              <PrimaryButton
+                icon={RotateCcw}
+                label="Reset"
+                onClick={handleReset}
+              />
+              <PrimaryButton
+                icon={RefreshCw}
+                label="Refresh"
+                onClick={() => handleRefresh("both")}
+              />
+              <PrimaryButton
+                icon={Settings}
+                label="Configuration"
+                onClick={toggleConfig}
+              />
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-6 gap-3 py-2 px-1">
-            <SummaryItem label="Storage Group" value={appliedFilters.storageGroup} />
+            <SummaryItem
+              label="Storage Group"
+              value={appliedFilters.storageGroup}
+            />
             <SummaryItem label="Client" value={appliedFilters.client} />
             <SummaryItem label="Instrument" value={appliedFilters.instrument} />
-            <SummaryItem label="From" value={formatDisplayDate(appliedFilters.fromDate)} />
-            <SummaryItem label="To" value={formatDisplayDate(appliedFilters.toDate)} />
+            <SummaryItem
+              label="From"
+              value={formatDisplayDate(appliedFilters.fromDate)}
+            />
+            <SummaryItem
+              label="To"
+              value={formatDisplayDate(appliedFilters.toDate)}
+            />
           </div>
         )}
 
-        <button className="absolute right-4 -bottom-3 bg-[#f0f4f8] p-0.5 rounded shadow-sm cursor-pointer" onClick={toggleFilter}>
-          {isFilterOpen ? <LuChevronsUp className="w-4 h-4 text-blue-600" /> : <LuChevronsDown className="w-4 h-4 text-blue-600" />}
+        <button
+          className="absolute right-4 -bottom-3 bg-[#f0f4f8] p-0.5 rounded shadow-sm cursor-pointer"
+          onClick={toggleFilter}
+        >
+          {isFilterOpen ? (
+            <LuChevronsUp className="w-4 h-4 text-blue-600" />
+          ) : (
+            <LuChevronsDown className="w-4 h-4 text-blue-600" />
+          )}
         </button>
       </div>
 
       {/* ACTION BAR */}
       <div className="bg-white mt-2.5 ms-1">
-        <div ref={actionContainerRef} className="flex items-center flex-wrap gap-2 justify-start relative">
+        <div
+          ref={actionContainerRef}
+          className="flex items-center flex-wrap gap-2 justify-start relative"
+        >
           <div className="invisible absolute pointer-events-none flex gap-2">
             {enabledActions.map((a, i) => (
-              <div key={`measure-${a}`} ref={(el) => (buttonRefs.current[i] = el)}>
+              <div
+                key={`measure-${a}`}
+                ref={(el) => (buttonRefs.current[i] = el)}
+              >
                 <ActionButton icon={ACTION_ICONS[a]} label={a} />
               </div>
             ))}
           </div>
           {visibleActions.map((a) => (
-            <ActionWrapper key={a} disabled={getIsActionDisabled(a)} isLoading={isLoadingApi} showDialog={showDialog} onClick={() => handleActionClick(a)}>
-              <ActionButton icon={ACTION_ICONS[a]} label={a} disabled={getIsActionDisabled(a)} />
+            <ActionWrapper
+              key={a}
+              disabled={getIsActionDisabled(a)}
+              isLoading={isLoadingApi}
+              showDialog={showDialog}
+              onClick={() => handleActionClick(a)}
+            >
+              <ActionButton
+                icon={ACTION_ICONS[a]}
+                label={a}
+                disabled={getIsActionDisabled(a)}
+              />
             </ActionWrapper>
           ))}
           <div className="h-4 w-px bg-slate-200 mx-1"></div>
-          <ActionWrapper disabled={false} isLoading={isLoadingApi} showDialog={showDialog} onClick={() => handleRefresh("middle")}>
-            <ActionButton icon={RefreshCw} label="Refresh" disabled={isLoadingApi} />
+          <ActionWrapper
+            disabled={false}
+            isLoading={isLoadingApi}
+            showDialog={showDialog}
+            onClick={() => handleRefresh("middle")}
+          >
+            <ActionButton
+              icon={RefreshCw}
+              label="Refresh"
+              disabled={isLoadingApi}
+            />
           </ActionWrapper>
           {overflowActions.length > 0 && (
             <div className="relative">
-              <button onClick={toggleMenu} className="p-1.5 rounded z-0 bg-[#f1f5f9] hover:bg-blue-100 text-[#1d8cf8]">
+              <button
+                onClick={toggleMenu}
+                className="p-1.5 rounded z-0 bg-[#f1f5f9] hover:bg-blue-100 text-[#1d8cf8]"
+              >
                 <MoreVertical className="w-4 h-4" />
               </button>
               {isMenuOpen && (
                 <div className="absolute z-50 right-0 top-full mt-1 w-48 bg-white rounded-md shadow-xl py-1 border border-slate-100">
                   {overflowActions.map((a) => (
-                    <ActionWrapper key={a} disabled={getIsActionDisabled(a)} showDialog={showDialog} onClick={() => handleActionClick(a)}>
-                      <div className={`w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 ${getIsActionDisabled(a) ? "text-slate-300 cursor-not-allowed" : "text-slate-700 cursor-pointer"}`}>
-                        {React.createElement(ACTION_ICONS[a], { className: "w-3.5 h-3.5" })} {a}
+                    <ActionWrapper
+                      key={a}
+                      disabled={getIsActionDisabled(a)}
+                      showDialog={showDialog}
+                      onClick={() => handleActionClick(a)}
+                    >
+                      <div
+                        className={`w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 ${getIsActionDisabled(a) ? "text-slate-300 cursor-not-allowed" : "text-slate-700 cursor-pointer"}`}
+                      >
+                        {React.createElement(ACTION_ICONS[a], {
+                          className: "w-3.5 h-3.5",
+                        })}{" "}
+                        {a}
                       </div>
                     </ActionWrapper>
                   ))}
@@ -1374,50 +1705,71 @@ const handleTreeFolderSelect = useCallback((apiResult) => {
           rowData={processedGridData}
           columns={[
             {
-    key: "File Name",
-    label: "Name",
-    width: 280,
-    enableSearch: true,
-    render: (row) => {
-      const isFolder = row.Type?.trim().toLowerCase() === "folder";
-      return (
-        <div className="flex items-center gap-2">
-          {isFolder ? (
-            <span ><Folder  className="w-[18px] h-[18px] text-blue-500"/></span>
-          ) : (
-            <span className="text-blue-500 text-lg w-4.5 h-4.5"><FileText /></span>
-          )}
-          <span className="font-medium truncate" title={row["File Name"]}>
-            {row["File Name"]?.trim() || "Unnamed"}
-          </span>
-        </div>
-      );
-    }
-  },
-            { key: "VersionNo", label: "Version No", width: 150,  enableSearch: true, },
-            { key: "UpLoad Date", label: "Upload On", width: 150,
-               enableSearch: true,
-        inputType: 'date', 
-      isDate: true,  
-      render: (row) => {
-    return <span>{row["UpLoad Date"] || row["UpLoad Date UTC"]}</span>;
-
-  }
-
-             },
-            { key: "parserStatus", label: "Parser Status", width: 120, enableSearch: true, hidden: !configData["Parser Status"] },
+              key: "File Name",
+              label: "Name",
+              width: 280,
+              enableSearch: true,
+              render: (row) => {
+                const isFolder = row.Type?.trim().toLowerCase() === "folder";
+                return (
+                  <div className="flex items-center gap-2">
+                    {isFolder ? (
+                      <span>
+                        <Folder className="w-[18px] h-[18px] text-blue-500" />
+                      </span>
+                    ) : (
+                      <span className="text-blue-500 text-lg w-4.5 h-4.5">
+                        <FileText />
+                      </span>
+                    )}
+                    <span
+                      className="font-medium truncate"
+                      title={row["File Name"]}
+                    >
+                      {row["File Name"]?.trim() || "Unnamed"}
+                    </span>
+                  </div>
+                );
+              },
+            },
+            {
+              key: "VersionNo",
+              label: "Version No",
+              width: 150,
+              enableSearch: true,
+            },
+            {
+              key: "UpLoad Date",
+              label: "Upload On",
+              width: 150,
+              enableSearch: true,
+              inputType: "date",
+              isDate: true,
+              render: (row) => {
+                return (
+                  <span>{row["UpLoad Date"] || row["UpLoad Date UTC"]}</span>
+                );
+              },
+            },
+            {
+              key: "parserStatus",
+              label: "Parser Status",
+              width: 120,
+              enableSearch: true,
+              hidden: !configData["Parser Status"],
+            },
           ]}
           onRowSelect={handleRowSelect}
           onRowDoubleClick={handleRowDoubleClick}
           selectedRow={selectedRow}
           refreshKey={refreshKey}
-          tagsData={detailsState.tagsData || []} 
+          tagsData={detailsState.tagsData || []}
           tagsColumns={tagsColumns}
-         parsedData={detailsState.parsedData || []}
+          parsedData={detailsState.parsedData || []}
           parsedDataColumns={parsedDataColumns}
           multiFieldsData={detailsState.multiFieldsData || []}
           multiFieldsColumns={detailsState.multiFieldsColumns || []}
-          configState={configData} 
+          configState={configData}
           isMiddleLoading={isGridLoading}
           isLeftLoading={isLeftLoading}
           showParserColumn={configData["Parser Status"]}
@@ -1433,18 +1785,38 @@ const handleTreeFolderSelect = useCallback((apiResult) => {
           apiCallbacks={{
             onFileView: openServerData,
             onGetTags: getFileTagsAndParsed,
-            onGetMultiFields: getMultiParsedFields
+            onGetMultiFields: getMultiParsedFields,
           }}
         />
       </div>
 
       {/* MODALS */}
-      {isConfigOpen && <ConfigModal currentVisibility={configData} onSave={handleConfigSave} onClose={toggleConfig} showDialog={showDialog} />}
-      <CustomPopup isOpen={!!activePopup} onClose={handlePopupClose} title={activePopup || ""} content={<PopupContentResolver type={activePopup} onClose={handlePopupClose} />} closeOnOverlayClick={false} />
-      {dialogData.open && <Errordialog message={dialogData.message} type={dialogData.type} onClose={handleDialogClose} />}
-          
-       {/* <UsersPage />    */}
+      {isConfigOpen && (
+        <ConfigModal
+          currentVisibility={configData}
+          onSave={handleConfigSave}
+          onClose={toggleConfig}
+          showDialog={showDialog}
+        />
+      )}
+      <CustomPopup
+        isOpen={!!activePopup}
+        onClose={handlePopupClose}
+        title={activePopup || ""}
+        content={
+          <PopupContentResolver type={activePopup} onClose={handlePopupClose} />
+        }
+        closeOnOverlayClick={false}
+      />
+      {dialogData.open && (
+        <Errordialog
+          message={dialogData.message}
+          type={dialogData.type}
+          onClose={handleDialogClose}
+        />
+      )}
 
+      {/* <UsersPage />    */}
     </div>
   );
 }
