@@ -706,10 +706,9 @@ const StorageConfigForm = ({ initialData, onSubmit, onClose, isEditMode }) => {
       {/* Active/Inactive Confirmation Dialog */}
     {showActiveConfirm && (
   <Errordialog
-    message="messages.confirmActivation" 
+    message="messages.confirmActivation"
     type="confirm"
     onClose={handleConfirmActivateNo}
-    
     // Pass keys in the 'text' property
     customButtons={[
       {

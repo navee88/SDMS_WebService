@@ -1,5 +1,6 @@
 import DataLogger from "../../../Home/SubFolders/FTPDataView/DataExplorer/DataLogger";
-import ServerData from "../../../Home/SubFolders/FTPDataView/DataExplorer/ServerData";
+import ServerData from "../../../Home/SubFolders/FTPDataView/ServerData/ServerData";
+
 import TemplateView from "../../../Home/SubFolders/FTPDataView/DataExplorer/TemplateView";
 import SearchServerData from "../../../Home/SubFolders/FTPDataView/SearchServerData/SearchServerData";
 import MyInstruments from "../../../Home/SubFolders/LockSettings/InstrumentLockSettings/MyInstruments";
@@ -50,6 +51,7 @@ import RetiredTask from "../../../Home/SubFolders/Scheduler/ViewEditScheduler/Re
 import EditTask from "../../../Home/SubFolders/Scheduler/ViewEditScheduler/EditTask";
 import LocalFileDeleteScheduler from "../../../Home/SubFolders/Scheduler/LocalFileDeleteScheduler/LocalFileDeleteScheduler";
 import ServerFileDeleteScheduler from "../../../Home/SubFolders/Scheduler/ServerFileDeleteScheduler/ServerFileDeleteScheduler";
+import UserRoleMapping from "../../../Home/SubFolders/UserManagementFolder/UserManagement/UserRoleMapping";
 
 //Added These 6 imports by kirubhakaran on 23-01-2026
 // import { DeactivatedTaskWrapper } from '../../../Home/SubFolders/Scheduler/ViewEditScheduler/DeactivatedTask';
@@ -145,9 +147,10 @@ export const tabConfig = {
     "Storage User Mapping": { content: <StorageUserMapping /> },
   },
   //completed
-  UserManagement: {
-    "User Group": { content: <UserGroup /> },
-    "User Master": { content: <UserMaster /> },
+  UserManagement:{
+    // "User Group": { content: <UserGroup /> },
+    // "User Master": { content: <UserMaster /> },
+    "UserRoleMapping":{content:<UserRoleMapping/>},
     "User Rights": { content: <UserRights /> },
     "Online Users": { content: <OnlineUsers /> },
   },

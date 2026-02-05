@@ -146,7 +146,7 @@ const UserRights = () => {
             
             console.log('Fetching rights for group ID:', groupID, 'Length:', groupID.length);
             
-            const response = await postData("User/UserRightsGrid", passObjDet);
+            const response = await postData("Usm/UserRightsGrid", passObjDet);
             
             if (!response) {
                 setRightsData([]);
@@ -219,9 +219,78 @@ const UserRights = () => {
         }
     }, [postData, showInfoDialog, t, updateCheckboxStates]);
 
+     const fetchUserRole = useCallback(async () => {
+        setLoading(true);
+        setFullPageLoading(true);
+        try {
+            // Get user details using CF_activeUserdetails
+            const userDetails = CF_activeUserdetails();
+            
+            const passObjDet = {
+                sSiteCode: 'all',
+                ActiveUserDetails: userDetails.ActiveUserDetails,
+                ApplicationCode: userDetails.ApplicationCode
+            };
+            
+            const response = await postData("User/getRoles", passObjDet);
+            debugger;
+            if (!response) {
+                setUserGroups([]);
+                showInfoDialog(t('Auditpopup.somethingwentwrong') || 'Failed to fetch user groups', "error");
+                return;
+            }
+            
+            let groupsData = response;
+            if (typeof response === 'string' && response.length > 50) {
+                try {
+                    // If response is encrypted, try to decrypt it
+                    const decrypted = atob(response);
+                    groupsData = JSON.parse(decrypted);
+                } catch (decryptError) {
+                    console.error('Failed to decrypt response:', decryptError);
+                }
+            }
+            
+            if (groupsData && groupsData.oResObj) {
+                groupsData = groupsData.oResObj;
+            }
+            
+            if (!Array.isArray(groupsData)) {
+                groupsData = [];
+            }
+            
+            if (groupsData.length > 0) {
+                // Format options for AnimatedDropdown
+                const formattedGroups = groupsData.map((group) => ({
+                    id: group.sUserGroupID || '',
+                    name: group.sUserGroupName || ''
+                })).filter(group => group.id && group.name);
+                
+                console.log('Formatted groups for dropdown:', formattedGroups);
+                setUserGroups(formattedGroups);
+                
+             
+            } else {
+                setUserGroups([]);
+            }
+        } catch (error) {
+            console.error('Error fetching groups:', error);
+            showInfoDialog(
+                t('Auditpopup.somethingwentwrong') || 'Failed to fetch user groups.',
+                "error"
+            );
+        } finally {
+            setLoading(false);
+            setFullPageLoading(false);
+        }
+    }, [postData, showInfoDialog, t, fetchUserRights]);
+
+
+
     const fetchUserGroups = useCallback(async () => {
         setLoading(true);
         setFullPageLoading(true);
+        fetchUserRole();
         try {
             // Get user details using CF_activeUserdetails
             const userDetails = CF_activeUserdetails();
@@ -231,10 +300,10 @@ const UserRights = () => {
                 ApplicationCode: userDetails.ApplicationCode
             };
             
-            const response = await postData("User/UserRightsCombo", passObjDet);
-            
+            const response = await postData("Usm/UserRightsCombo", passObjDet);
+            debugger;
             if (!response) {
-                setUserGroups([]);
+                // setUserGroups([]);
                 showInfoDialog(t('Auditpopup.somethingwentwrong') || 'Failed to fetch user groups', "error");
                 return;
             }
@@ -266,8 +335,9 @@ const UserRights = () => {
                 })).filter(group => group.id && group.name);
                 
                 console.log('Formatted groups for dropdown:', formattedGroups);
-                setUserGroups(formattedGroups);
-                
+                // setUserGroups(formattedGroups);
+            
+               
                 if (formattedGroups.length > 0) {
                     const firstGroupID = formattedGroups[0].id;
                     console.log('Setting first group ID:', firstGroupID, 'Length:', firstGroupID.length);
@@ -275,7 +345,7 @@ const UserRights = () => {
                     await fetchUserRights(firstGroupID);
                 }
             } else {
-                setUserGroups([]);
+                // setUserGroups([]);
             }
         } catch (error) {
             console.error('Error fetching groups:', error);
@@ -289,6 +359,12 @@ const UserRights = () => {
         }
     }, [postData, showInfoDialog, t, fetchUserRights]);
 
+
+    // 
+
+    // 
+    
+    
     useEffect(() => {
         const sessionID = sessionStorage.getItem('sSessionID');
         const userID = sessionStorage.getItem('sUserID');
@@ -498,7 +574,7 @@ const UserRights = () => {
             
             console.log('Saving with group ID:', selectedGroup, 'Length:', selectedGroup.length);
             
-            const response = await postData("User/UserRightsSaveButtonclick", passObjDet);
+            const response = await postData("Usm/UserRightsSaveButtonclick", passObjDet);
             
             if (!response) {
                 showInfoDialog(t('Auditpopup.somethingwentwrong') || 'Failed to save user rights', "error");

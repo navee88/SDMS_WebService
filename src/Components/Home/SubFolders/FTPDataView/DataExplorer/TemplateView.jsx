@@ -18,7 +18,7 @@ import AnimatedDropdown from "../../../../Layout/Common/AnimatedDropdown";
 import FtpLayout from "../../../../Layout/Common/Home/Grid/FtpLayout";
 import CustomPopup from "./PopupModal";
 import Errordialog from "../../../../Layout/Common/Errordialog";
-import { useServerDataApi, INITIAL_FILTER_STATE } from "./useServerDataApi";
+import { useServerDataApi, INITIAL_FILTER_STATE } from "../ServerData/useServerDataApi";
 import ConfigModal from "./Templatesample/ConfigModal";
 import UsersPage from "../../../../Layout/Common/Home/Userpage";
 import PopupContentResolver from "./PopupContent";
@@ -125,8 +125,8 @@ export default function TemplateView() {
   const [isMenuOpen, toggleMenu] = useToggle(false);
 
   const [savedFilters, setSavedFilters] = useLocalStorage(
-    "serverDataFilters",
-    INITIAL_FILTER_STATE
+    // "serverDataFilters",
+    // INITIAL_FILTER_STATE
   );
 
   const {
@@ -697,7 +697,7 @@ export default function TemplateView() {
          </div>
 
       {/* FTP LAYOUT */}
-      <div className="py-3 mb-10">
+      <div className="pt-3 z-0">
         <FtpLayout
           storageGroup={appliedFilters.storageGroup}
           rowData={gridData}

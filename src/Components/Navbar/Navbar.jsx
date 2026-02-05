@@ -196,7 +196,7 @@ function Navbar() {
         return (
             <AboutContent 
                 onClose={handleCloseModal} 
-                updateTitle={updateModalTitle} // Pass the function here
+                updateTitle={updateModalTitle}
                 updateWidth={updateModalWidth}
             />
         );

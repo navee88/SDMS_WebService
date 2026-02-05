@@ -17,6 +17,7 @@ export default function CF_activeUserdetails() {
   };
   return {
     ActiveUserDetails,
-    ApplicationCode: "SDMS"
+    ApplicationCode: "SDMS",
+    appname:"SDMS"
   };
 }

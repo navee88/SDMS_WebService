@@ -3299,6 +3299,7 @@ const ActivatedTask = ({ navigationData, onClearNavigation, onNavigateAway }) =>
                             ? "bg-blue-50 border-l-4 border-blue-600 font-semibold"
                             : ""
                     }
+                    externalSelectedId={selectedRowId}
                 />
             </div>
 

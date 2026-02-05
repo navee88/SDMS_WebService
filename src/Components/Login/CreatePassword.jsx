@@ -69,7 +69,9 @@ function CreatePassword({ onNavigate }) {
         const response = await postData("Login/PasswordMessage", {
           sUsername: cookieData.sUsername,
           sSiteCode: cookieData.sSiteCode,
-        });
+        },{
+			          "Authorization": "relogin"
+			      }, );
 
         if (Array.isArray(response) && response.length > 0) {
           setPolicy(response[0]);
@@ -130,7 +132,9 @@ function CreatePassword({ onNavigate }) {
         PasswordExpiry: true,
       };
 
-      const response = await postData("Login/ChangePassword", payload);
+      const response = await postData("Login/ChangePassword", payload,{
+			          "Authorization": "relogin"
+			      }, );
 
       if (response?.oResObj?.bStatus) {
         showDialog(t('login.passwordcreatedsuccessfully'), "success");

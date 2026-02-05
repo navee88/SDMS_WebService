@@ -45,7 +45,7 @@
 import React, { useState } from "react";
 import TabsHeader from "../../../Components/Layout/Common/Home/TabsHeader";
 
-import ServerData from "../../../Components/Home/SubFolders/FTPDataView/DataExplorer/ServerData";
+import ServerData from "../../../Components/Home/SubFolders/FTPDataView/ServerData/ServerData";
 import TemplateView from "../../../Components/Home/SubFolders/FTPDataView/DataExplorer/TemplateView";
 import DataLogger from "../../../Components/Home/SubFolders/FTPDataView/DataExplorer/DataLogger";
 
@@ -66,7 +66,7 @@ const DataExplorer = () => {
         setSelectedTab={setSelectedTab}
       />
 
-      <div className="flex-1 overflow-y-scroll overflow-x-hidden pb-20">
+      <div className="flex-1 overflow-y-scroll overflow-x-hidden mb-10">
         {tabs.map((tab, index) => {
           const Component = tab.component;
           return (
