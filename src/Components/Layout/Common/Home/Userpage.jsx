@@ -252,6 +252,7 @@ const UsersPage = () => {
   onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
 />
 <h1>Hello world</h1>
+<h2>Hello Stream</h2>
     </div>
   );
 };
