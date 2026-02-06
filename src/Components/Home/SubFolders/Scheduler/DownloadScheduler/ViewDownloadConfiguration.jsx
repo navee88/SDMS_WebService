@@ -345,6 +345,8 @@ const capitalizeFirst = (str = "") =>
   /* ---------- HANDLER FOR AUDITTRAIL SUBMIT ---------- */
 console.log("selected row",selectedRow)
   const handleAuthorized = async (auditPayload) => {
+    const prevSelectedId = selectedRow?.L101DownloadTaskID;
+
     try {
       setShowAudit(false);
       setLoading(true);
@@ -434,7 +436,13 @@ if (response?.Rtn === "Success") {
     }));
 
     setData(updatedData);
-    setSelectedRow(updatedData[0] || null);
+
+const sameRow = updatedData.find(
+  (row) => row.L101DownloadTaskID === prevSelectedId
+);
+
+setSelectedRow(sameRow || updatedData[0] || null);
+
   } else {
     // fallback (should rarely happen)
     setData((prev) =>

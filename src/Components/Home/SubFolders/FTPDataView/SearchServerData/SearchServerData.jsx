@@ -11,9 +11,13 @@ import {
 import FtpLayout from "../../../../Layout/Common/Home/Grid/FtpLayout";
 import CustomPopup from "../DataExplorer/PopupModal";
 import Errordialog from "../../../../Layout/Common/Errordialog";
-import { useServerDataApi, INITIAL_FILTER_STATE } from "../ServerData/useServerDataApi";
+import { useServerDataApi, INITIAL_FILTER_STATE } from "./useServerDataApi";
 import ConfigModal from "./ConfigModal";
 import PopupContentResolver from "../DataExplorer/PopupContent";
+import FileFilterModal from "./FileFilterModal";
+import TagFilterModal from "./TagFilterModal";
+import ParameterFilterModal from "./ParameterFilterModal";
+
 
 import {
   ACTION_ICONS,
@@ -81,13 +85,12 @@ export default function SearchServerData() {
   const { width } = useWindowSize();
   const [isFilterOpen, toggleFilter] = useToggle(true);
   const [isConfigOpen, toggleConfig] = useToggle(false);
+  const [showFileFilterModal, setShowFileFilterModal] = useState(false);
+const [showParameterFilterModal, setShowParameterFilterModal] = useState(false); // Add this line
+const [showTagFilterModal, setShowTagFilterModal] = useState(false);
 
   // Search Modes
-  const [searchBy, setSearchBy] = useState({
-    file: true,
-    tag: false,
-    parameter: false,
-  });
+  const [searchBy, setSearchBy] = useState("file"); // "file" | "tag" | "parameter"
 
   const [savedFilters, setSavedFilters] = useLocalStorage(
     "serverDataFilters",
@@ -121,6 +124,58 @@ export default function SearchServerData() {
   const initialLoadRef = useRef(false);
 
   // --- COLUMN DEFINITIONS ---
+const generateFileInfoData = useCallback((row) => {
+  const isRowSelected = !!row;
+  
+  // Helper function - returns empty string when no row is selected
+  const getVal = (key, fallback = '') => {
+    if (!isRowSelected) return ''; // Empty string for no selection
+    return row[key] || fallback;
+  };
+  
+  // Always return the structure, even when no row is selected
+  return [
+    { id: 1, label: 'File Name', value: getVal('username') },
+    { id: 2, label: 'Size', value: getVal('fileSize', '38.00 KB') },
+    { id: 3, label: 'Contains', value: getVal('contains', '8 Files') },
+    { id: 4, label: 'Login Username', value: isRowSelected ? 'CORPAGARAM\\kishorkumar' : '' },
+    { id: 5, label: 'Client Name', value: getVal('client', 'AGD54') },
+    { id: 6, label: 'Status', value: getVal('status') },
+    { id: 7, label: 'Parser Status', value: getVal('parserStatus') },
+    { id: 8, label: 'Created On', value: getVal('createdOn', '2026-02-04 17:10:35') },
+    { id: 9, label: 'Modified On', value: getVal('modifiedOn') },
+    { id: 10, label: 'Task Type', value: getVal('TasksName', 'Scheduler Task') },
+    { id: 11, label: 'Source Path', value: getVal('sourcePath', 'D:\\SDMS\\Scheduler_path\\IN001\\sample2') },
+    { id: 12, label: 'Checksum', value: '' },
+    { id: 13, label: 'Share Link', value: '' },
+  ];
+}, []);
+// Update the handleRowSelect function to generate file info
+const handleRowSelect = useCallback((row) => {
+  setSelectedRow(row);
+  
+  if (!row) {
+    setFileTagsData([]);
+    setFileParsedData([]);
+    return;
+  }
+  
+  // Update tags data
+  setFileTagsData([{ 
+    id: 1, 
+    category: "File Type", 
+    value: row.fileType === "folder" ? "Folder" : "File", 
+    createdBy: "System",
+    createdOn: new Date().toLocaleDateString()
+  }]);
+  
+  // Update parsed data
+  setFileParsedData([{ 
+    id: 1, 
+    fieldName: "Filename", 
+    fieldValue: row.username 
+  }]);
+}, []);
   const tagsColumns = useMemo(() => [
     { key: 'category', label: 'Category', width: 100 },
     { key: 'value', label: 'Value', width: 150 },
@@ -135,7 +190,7 @@ export default function SearchServerData() {
 
   // --- HANDLERS ---
   const handleSearchByToggle = useCallback((type) => {
-    setSearchBy((prev) => ({ ...prev, [type]: !prev[type] }));
+    setSearchBy(type);
   }, []);
 
   const showDialog = useCallback((message, type = "error") => {
@@ -150,7 +205,16 @@ export default function SearchServerData() {
     setActivePopup(null);
   }, []);
 
-  const handleFilter = useCallback(() => {
+// Update the handleFilter function
+const handleFilter = useCallback(() => {
+  if (searchBy === "file") {
+    setShowFileFilterModal(true);
+  } else if (searchBy === "tag") {
+    setShowTagFilterModal(true);
+  } else if (searchBy === "parameter") {
+    setShowParameterFilterModal(true); // Add this for parameter mode
+  } else {
+    // Your existing filter logic for when none of the above
     applyLocalStorageFilters(filterForm);
     setSavedFilters(filterForm);
     setHasFiltered(true);
@@ -163,7 +227,108 @@ export default function SearchServerData() {
       client: filterForm.client,
       instrument: filterForm.instrument,
     });
+  }
+}, [searchBy, filterForm, applyLocalStorageFilters, setSavedFilters]);
+
+// Add this state near the other modal states
+
+
+// Add handler for tag filter submit
+const handleTagFilterSubmit = useCallback((filterData) => {
+  console.log("Tag filter data:", filterData);
+  // Process tag filter data as needed
+  
+  // Close the modal
+  setShowTagFilterModal(false);
+}, []);
+
+// Add this with your other handler functions
+const handleParameterFilterSubmit = useCallback((filterData) => {
+  console.log("Parameter filter data:", filterData);
+  // Process parameter filter data as needed
+  
+  // Here you can convert the parameter filter data to your filterForm structure
+  const newFilterForm = {
+    ...filterForm,
+    // Map parameter filter fields to your filter structure
+    recordsDuration: filterData.recordsDuration,
+    // Add any other mappings specific to parameter filtering
+  };
+  
+  // Apply the filters
+  applyLocalStorageFilters(newFilterForm);
+  setSavedFilters(newFilterForm);
+  setHasFiltered(true);
+  setLoadingScope("both");
+  setIsGridLoading(true);
+  setIsLeftLoading(true);
+  
+  // Close the modal
+  setShowParameterFilterModal(false);
+}, [filterForm, applyLocalStorageFilters, setSavedFilters]);
+
+
+
+  const handleFileFilterSubmit = useCallback((filterData) => {
+    // Handle the filter data from the modal
+    console.log("Filter data:", filterData);
+    
+    // You can convert the modal data to your filterForm structure if needed
+    const newFilterForm = {
+      ...filterForm,
+      // Map modal fields to your filter structure
+      recordsDuration: filterData.recordsDuration,
+      dateCategory: filterData.dateCategory,
+      client: filterData.clientName === "All" ? "" : filterData.clientName,
+      instrument: filterData.instrument === "All" ? "" : filterData.instrument,
+    };
+    
+    // Apply the filters
+    applyLocalStorageFilters(newFilterForm);
+    setSavedFilters(newFilterForm);
+    setHasFiltered(true);
+    setLoadingScope("both");
+    setIsGridLoading(true);
+    setIsLeftLoading(true);
+    
+    // Close the modal
+    setShowFileFilterModal(false);
   }, [filterForm, applyLocalStorageFilters, setSavedFilters]);
+  useEffect(() => {
+  if (loadingScope === "both") {
+    setIsLeftLoading(true);
+    setIsGridLoading(true);
+  } else {
+    setIsGridLoading(true);
+    setIsLeftLoading(false);
+  }
+
+  const mockData = ftpGroups.map((group, index) => ({
+    id: index + 1,
+    username: group.sFTPAliasName || `${group.sFTPID}.pdf`,
+    fullName: "System",
+    profileName: appliedFilters.client && appliedFilters.client !== "All"
+      ? appliedFilters.client
+      : "System",
+    client: appliedFilters.client && appliedFilters.client !== "All"
+      ? appliedFilters.client
+      : "Default Client",
+    TasksName: "Upload",
+    taskType: "Upload",
+    parserStatus: index % 3 === 0 ? "Parsed" : index % 3 === 1 ? "Pending" : "Failed",
+    versionNo: `v${(index % 5) + 1}.${(index % 10)}`,
+    uploadDate: new Date(Date.now() - index * 86400000).toLocaleDateString(),
+    fileType: index % 4 === 0 ? "folder" : "file", // Simulate some folders
+  }));
+
+  const timer = setTimeout(() => {
+    setGridData(mockData);
+    setIsGridLoading(false);
+    setIsLeftLoading(false);
+  }, 800);
+
+  return () => clearTimeout(timer);
+}, [refreshKey, ftpGroups, appliedFilters, loadingScope]);
 
   useEffect(() => {
     if (!initialLoadRef.current) {
@@ -174,16 +339,6 @@ export default function SearchServerData() {
     }
   }, [loadInitialData, showDialog]);
 
-  const handleRowSelect = useCallback((row) => {
-    setSelectedRow(row);
-    if (!row) {
-      setFileTagsData([]);
-      setFileParsedData([]);
-      return;
-    }
-    setFileTagsData([{ id: 1, category: "Priority", value: "High", createdBy: "System" }]);
-    setFileParsedData([{ id: 1, fieldName: "FTP ID", fieldValue: row.id }]);
-  }, []);
 
   const handleRefresh = useCallback(
     (scope = "middle") => {
@@ -254,7 +409,7 @@ export default function SearchServerData() {
   );
 
   return (
-    <div className="flex flex-col w-full font-sans rounded-md relative h-full">
+    <div className="flex flex-col w-full font-sans rounded-md relative">
       {isLoadingApi && (
         <div className="fixed inset-0 bg-black/10 flex items-center justify-center z-50">
           <div className="rounded-sm flex items-center gap-4">
@@ -266,57 +421,57 @@ export default function SearchServerData() {
 
     
      {/* --- ROW 1: COMBINED FILTER CONTROLS --- */}
-<div className="bg-white mt-2.5 mx-1 flex items-center justify-between px-4 h-12">
-  
-  {/* Left Side: Saved Filter Dropdown */}
-  <div className="flex items-center gap-3">
-    <label className="text-gray-600 text-sm font-medium whitespace-nowrap">Saved Filter</label>
-    <div className="w-60">
-      <AnimatedDropdown 
-        /* Add your props here */
-      />
-    </div>
-  </div>
+      <div className="bg-white mt-2.5 mx-1 flex items-center justify-between px-4 h-12">
+        
+        {/* Left Side: Saved Filter Dropdown */}
+        <div className="flex items-center gap-3">
+          <label className="text-gray-600 text-sm font-medium whitespace-nowrap">Saved Filter</label>
+          <div className="w-60">
+            <AnimatedDropdown 
+              /* Add your props here */
+            />
+          </div>
+        </div>
 
-  {/* Right Side: Toggles & Actions */}
-  <div className="flex items-center gap-6">
-    {/* Filter Info Toggle */}
-    <div 
-      className="flex items-center gap-1 cursor-pointer hover:opacity-80 select-none border-r border-slate-300 pr-4"
-      onClick={toggleFilter}
-    >
-      <span className="text-[13px] font-medium text-blue-600">Filter Info »</span>
-    </div>
+        {/* Right Side: Toggles & Actions */}
+        <div className="flex items-center gap-6">
+          {/* Filter Info Toggle */}
+          <div 
+            className="flex items-center gap-1 cursor-pointer hover:opacity-80 select-none border-r border-slate-300 pr-4"
+            onClick={toggleFilter}
+          >
+            <span className="text-[13px] font-medium text-blue-600">Filter Info »</span>
+          </div>
 
-    {/* Search Mode Toggles */}
-    <div className="flex items-center gap-4">
-      <ToggleSwitch 
-        label="By File" 
-        checked={searchBy.file} 
-        onChange={() => handleSearchByToggle("file")} 
-      />
-      <ToggleSwitch 
-        label="By Tag" 
-        checked={searchBy.tag} 
-        onChange={() => handleSearchByToggle("tag")} 
-      />
-      <ToggleSwitch 
-        label="By Parameter" 
-        checked={searchBy.parameter} 
-        onChange={() => handleSearchByToggle("parameter")} 
-      />
-    </div>
+          {/* Search Mode Toggles */}
+          <div className="flex items-center gap-4">
+            <ToggleSwitch 
+              label="By File" 
+              checked={searchBy === "file"} 
+              onChange={() => handleSearchByToggle("file")} 
+            />
+            <ToggleSwitch 
+              label="By Tag" 
+              checked={searchBy === "tag"} 
+              onChange={() => handleSearchByToggle("tag")} 
+            />
+            <ToggleSwitch 
+              label="By Parameter" 
+              checked={searchBy === "parameter"} 
+              onChange={() => handleSearchByToggle("parameter")} 
+            />
+          </div>
 
-    {/* Filter Button */}
-    <button
-      onClick={handleFilter}
-      className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-[13px] font-medium rounded transition-all shadow-sm whitespace-nowrap"
-    >
-      <Filter className="w-4 h-4" />
-      <span>Filter</span>
-    </button>
-  </div>
-</div>
+          {/* Filter Button */}
+          <button
+            onClick={handleFilter}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-[13px] font-medium rounded transition-all shadow-sm whitespace-nowrap"
+          >
+            <Filter className="w-4 h-4" />
+            <span>Filter</span>
+          </button>
+        </div>
+      </div>
 
 
       {/* --- ROW 2: ACTION BAR (UNDER TOGGLES) --- */}
@@ -353,41 +508,114 @@ export default function SearchServerData() {
       </div>
 
       {/* FTP LAYOUT */}
-      <div className="py-3 mb-10 h-full">
-        <FtpLayout
-          storageGroup={appliedFilters.storageGroup}
-          rowData={gridData}
-          columns={[
-            { key: "username", label: "Filename", width: 150 },
-            { key: "profileName", label: "Client", width: 150 },
-            { key: "TasksName", label: "Task Type", width: 150 },
-            {
-              key: "parserStatus",
-              label: "Parser Status",
-              width: 120,
-              enableSearch: true,
-               hidden: !configState["Parser Status"],
-            },
-          ]}
-          onRowSelect={handleRowSelect}
-          refreshKey={refreshKey}
-          tagsData={fileTagsData}
-          tagsColumns={tagsColumns}
-          parsedData={fileParsedData}
-          parsedDataColumns={parsedDataColumns}
-          configState={configState}
-          isMiddleLoading={isGridLoading}
-          isLeftLoading={isLeftLoading}
-          showParserColumn={configState["Parser Status"]}
-          showRightPanel={true}
-          showLeftPanel={false}
-          onRefresh={() => handleRefresh("middle")}
-          showDialog={showDialog}
-          leftPanelData={leftPanelData}
-        />
-      </div>
-
-       <div className="py-10"></div>   
+      {/* FTP LAYOUT */}
+<div className="py-3 mb-10">
+  <FtpLayout
+    storageGroup={appliedFilters.storageGroup}
+    rowData={gridData}
+    columns={[
+      {
+        key: "select",
+        label: "Select",
+        width: 50,
+        render: (row) => (
+          <div className="flex items-center justify-center">
+            <input
+              type="checkbox"
+              checked={selectedRow?.id === row.id}
+              onChange={() => handleRowSelect(row)}
+              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+            />
+          </div>
+        ),
+      },
+      {
+        key: "username",
+        label: "File Name",
+        width: 100,
+        enableSearch: true,
+        render: (row) => {
+          const isFolder = row.fileType === "folder" || row.username.includes("/");
+          return (
+            <div className="flex items-center gap-2">
+              {isFolder ? (
+                <span className="text-yellow-500">
+                  <i className="fa fa-folder text-lg"></i>
+                </span>
+              ) : (
+                <span className="text-blue-500">
+                  <i className="fa fa-file text-lg"></i>
+                </span>
+              )}
+              <span
+                className="font-medium truncate"
+                title={row.username}
+              >
+                {row.username?.trim() || "Unnamed"}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        key: "versionNo",
+        label: "Version No",
+        width: 50,
+        enableSearch: true,
+        render: (row) => (
+          <span>{row.versionNo || "1.0"}</span>
+        ),
+      },
+      {
+        key: "uploadDate",
+        label: "Upload On",
+        width: 70,
+        enableSearch: true,
+        inputType: "date",
+        isDate: true,
+        render: (row) => {
+          const uploadDate = row.uploadDate || new Date().toLocaleDateString();
+          return <span>{uploadDate}</span>;
+        },
+      },
+      {
+        key: "parserStatus",
+        label: "Parser Status",
+        width: 120,
+        enableSearch: true,
+        hidden: !configState["Parser Status"],
+        render: (row) => (
+          <span className={`px-2 py-1 rounded text-xs font-semibold ${
+            row.parserStatus === "Parsed" 
+              ? "bg-green-100 text-green-800" 
+              : row.parserStatus === "Pending"
+              ? "bg-yellow-100 text-yellow-800"
+              : "bg-gray-100 text-gray-800"
+          }`}>
+            {row.parserStatus || "Not Parsed"}
+          </span>
+        ),
+      },
+    ]}
+    onRowSelect={handleRowSelect}
+    refreshKey={refreshKey}
+    tagsData={fileTagsData}
+    tagsColumns={tagsColumns}
+    parsedData={fileParsedData}
+    parsedDataColumns={parsedDataColumns}
+    // Add fileInfoData prop
+    fileInfoData={generateFileInfoData(selectedRow)}
+    configState={configState}
+    isMiddleLoading={isGridLoading}
+    isLeftLoading={isLeftLoading}
+    showParserColumn={configState["Parser Status"]}
+    showRightPanel={true}
+    showLeftPanel={false}
+    onRefresh={() => handleRefresh("middle")}
+    showDialog={showDialog}
+    leftPanelData={leftPanelData}
+  />
+</div>
 
       {/* MODALS */}
       {isConfigOpen && (
@@ -399,6 +627,28 @@ export default function SearchServerData() {
         />
       )}
 
+      {/* FILE FILTER MODAL - MOVED TO THE CORRECT POSITION */}
+      {showFileFilterModal && (
+        <FileFilterModal
+          isOpen={showFileFilterModal}
+          onClose={() => setShowFileFilterModal(false)}
+          onSubmit={handleFileFilterSubmit}
+        />
+      )}
+{showTagFilterModal && (
+  <TagFilterModal
+    isOpen={showTagFilterModal}
+    onClose={() => setShowTagFilterModal(false)}
+    onSubmit={handleTagFilterSubmit}
+  />
+)}
+{showParameterFilterModal && (
+  <ParameterFilterModal
+    isOpen={showParameterFilterModal}
+    onClose={() => setShowParameterFilterModal(false)}
+    onSubmit={handleParameterFilterSubmit}
+  />
+)}
       <CustomPopup
         isOpen={!!activePopup}
         onClose={handlePopupClose}
