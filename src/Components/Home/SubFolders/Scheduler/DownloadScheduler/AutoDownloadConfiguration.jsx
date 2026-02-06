@@ -394,7 +394,7 @@ export default function AutoDownloadConfiguration() {
     const trimmed = path.trim();
 
     // LOCAL path: C:\Folder\SubFolder
-    const localPathRegex = /^[a-zA-Z]:\\(?:[^<>:"/\\|?*\r\n]+\\?)*$/;
+    const localPathRegex = /^[A-Za-z]:\\(?:[a-zA-Z0-9 _\-\.#&()@,=+%`~!$^;{}[\]-]+\\)*[a-zA-Z0-9 _\-\.#&()@,=+%`~!$^;{}[\]-]*$/;
 
     // UNC path: \\SERVER\Share or \\SERVER\Share\Folder
     const uncPathRegex =

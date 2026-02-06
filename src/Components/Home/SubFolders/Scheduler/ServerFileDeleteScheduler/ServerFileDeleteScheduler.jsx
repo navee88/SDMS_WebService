@@ -373,7 +373,7 @@ const handleFilter = () => {
   /* ------------------ AUTHORIZE ------------------ */
   const handleAuthorize = () => {
     const selectedRows = filteredData.filter((row) => row.selected);
-    if (!selectedRow) {
+    if (!selectedRow || selectedRows.length === 0) {
       setInfoDialog({
         open: true,
         message: t("masters.selectrecord"),

@@ -258,7 +258,7 @@ const renderDetailPanel = (row) => (
   <div className="space-y-3 p-4">
     <DetailRow label={t("label.createdOn")} value={row.createdOn} />
     <DetailRow label={t("label.modifiedOn")} value={row.modifiedOn} />
-    <DetailRow label={t("label.fileConvert")} value={row.usePdfToCsv || "-"} />
+    <DetailRow label={t("scheduler.fileConvert")} value={row.usePdfToCsv || "-"} />
   </div>
 );
 

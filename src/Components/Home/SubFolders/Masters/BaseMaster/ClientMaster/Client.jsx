@@ -194,7 +194,6 @@ const Client = () => {
   };
 
   const buildInsertClientRequest = (clientData, auditData) => {
-    console.log("Building Insert Request for:", clientData); // 🔥 DEBUG
     const instruments =
       clientData.selectedInstruments?.length > 0
         ? buildInstrumentUnMappingByClient(clientData.selectedInstruments)
