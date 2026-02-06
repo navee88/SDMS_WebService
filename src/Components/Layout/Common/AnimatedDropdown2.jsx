@@ -37,9 +37,20 @@ const AnimatedDropdown = ({
   const searchInputRef = useRef(null);
   const optionsRefs = useRef([]);
   // const hasError = required && showError && !value;
+  // const hasError = errorOnEmptyOnly
+  //   ? (required && showError && !value)  // Original behavior (only when empty)
+  //   : showError;  // New behavior (whenever showError is true)
+
+
   const hasError = errorOnEmptyOnly
-    ? (required && showError && !value)  // Original behavior (only when empty)
-    : showError;  // New behavior (whenever showError is true)
+    ? (required && showError && (
+        // For multi-select: check if array is empty
+        isMulti
+            ? (!Array.isArray(value) || value.length === 0)
+            : (!value && value !== 0)  // For single select
+    ))
+    : showError;  // Show error whenever showError is true
+    
   //need to change
   const isNoneSelected =
     isMulti &&

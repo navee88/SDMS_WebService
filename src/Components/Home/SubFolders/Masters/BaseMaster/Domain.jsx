@@ -412,7 +412,7 @@ const Domain = () => {
     const columns = useMemo(() => [
         {
             key: 'sDomainName',
-            label: t('masters.domainname'),
+            label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{  t('masters.domainname') || "Domain Name"}</span>,
             width: 150,
             enableSearch: true,
             render: (row, isSelected) => (
@@ -426,7 +426,7 @@ const Domain = () => {
         },
         {
             key: 'sCategories',
-            label: t('masters.category'),
+            label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{  t('masters.category') || "Category"}</span>,
             width: 120,
             enableSearch: true,
             render: (row, isSelected) => (
@@ -440,7 +440,7 @@ const Domain = () => {
         },
         {
             key: 'sDomainStatus',
-            label: t('masters.domainstatus'),
+            label: <span className="text-[12px] font-roboto text-[#353f49] font-bold">{  t('masters.domainstatus') || "Domain Status"}</span>,
             width: 150,
             enableSearch: true,
             render: (row, isSelected) => (

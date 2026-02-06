@@ -34,7 +34,8 @@ const EditTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [doPrint, setDoPrint] = useState(false);
 
-    const { navigateToDataScheduler, navigateToTab } = useSchedulerNavigation();
+    const { navigateToDataScheduler, navigateToTab, navigationState } = useSchedulerNavigation();
+
 
     const [confirmDialogData, setConfirmDialogData] = useState({
         title: "",
@@ -56,6 +57,9 @@ const EditTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
     const { getSubmissionData, clearNavigation } = useSchedulerNavigation();
     const [highlightScheduleId, setHighlightScheduleId] = useState(null);
     const [shouldScrollToSchedule, setShouldScrollToSchedule] = useState(false);
+
+    const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
 
     const endpoints = {
         editSchedulerView: "Scheduler/EditSchedulerView",
@@ -278,29 +282,99 @@ const EditTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
     }, []);
 
     // Navigation handling
+    // useEffect(() => {
+    //     console.log('=== EditTask useEffect triggered ===');
+    //     console.log('Navigation data from props:', navigationData);
+    //     console.log('Context submission data:', getSubmissionData());
+
+    //     let scheduleId = null;
+
+    //     if (navigationData && navigationData.scheduleId) {
+    //         scheduleId = navigationData.scheduleId;
+    //     } else {
+    //         const submissionData = getSubmissionData();
+    //         if (submissionData && submissionData.targetTab === 'Edit Task') {
+    //             scheduleId = submissionData.data?.scheduleId;
+    //             clearNavigation();
+    //         }
+    //     }
+
+    //     if (scheduleId) {
+    //         setHighlightScheduleId(scheduleId);
+    //         setShouldScrollToSchedule(true);
+    //         fetchEditSchedulerData();
+    //     } else if (schedulerData.length === 0) {
+    //         // Only fetch if we don't have data yet
+    //         fetchEditSchedulerData();
+    //     }
+    // }, [navigationData]);
+
+
+    // useEffect(() => {
+    //     if (navigationState?.data?.fromDataScheduler &&
+    //         navigationState?.data?.scheduleUpdated) {
+
+    //         console.log('✅ Schedule update detected in EditTask');
+
+    //         setSuccessMessage(navigationState.data.message);
+    //         setShowSuccessDialog(true);
+
+    //         // Remove the loadScheduleData call or define it properly
+    //         // if (navigationState.data.scheduleId) {
+    //         //     loadScheduleData(navigationState.data.scheduleId);
+    //         // }
+
+    //         setTimeout(() => {
+    //             clearNavigation();
+    //         }, 500);
+    //     }
+    // }, [navigationState, clearNavigation]);
+
     useEffect(() => {
-        console.log('=== EditTask useEffect triggered ===');
-        console.log('Navigation data from props:', navigationData);
-        console.log('Context submission data:', getSubmissionData());
+        if (navigationState?.data?.fromDataScheduler &&
+            navigationState?.data?.scheduleUpdated) {
 
-        let scheduleId = null;
+            console.log('✅ Schedule update detected in EditTask');
 
-        if (navigationData && navigationData.scheduleId) {
-            scheduleId = navigationData.scheduleId;
-        } else {
-            const submissionData = getSubmissionData();
-            if (submissionData && submissionData.targetTab === 'Edit Task') {
-                scheduleId = submissionData.data?.scheduleId;
-                clearNavigation();
-            }
-        }
+            // Show success message
+            setSuccessMessage(navigationState.data.message || "Scheduler Updated Successfully");
+            setShowSuccessDialog(true);
 
-        if (scheduleId) {
-            setHighlightScheduleId(scheduleId);
-            setShouldScrollToSchedule(true);
+            // Refresh grid data
             fetchEditSchedulerData();
+
+            // Clear navigation
+            setTimeout(() => {
+                if (clearNavigation) {
+                    clearNavigation();
+                }
+            }, 500);
         }
-    }, [navigationData, getSubmissionData, clearNavigation, fetchEditSchedulerData]);
+    }, [navigationState, clearNavigation, fetchEditSchedulerData]);
+
+    useEffect(() => {
+        console.log('EditTask - checking for refresh trigger');
+
+        const submissionData = getSubmissionData();
+        console.log('Submission data:', submissionData);
+
+        if (submissionData?.data?.showSuccess) {  // ← KEY: Check for showSuccess flag
+            // Show success message
+            showInfoDialog("Scheduler Updated Successfully", "success");
+
+            // Refresh the grid data
+            fetchEditSchedulerData();
+
+            // Clear the navigation
+            clearNavigation();
+        }
+
+        if (submissionData?.data?.fromCancel) {
+            // Came back from cancel, just refresh
+            fetchEditSchedulerData();
+            clearNavigation();
+        }
+    }, [getSubmissionData, clearNavigation, fetchEditSchedulerData, showInfoDialog]);
 
     // Initial data load
     useEffect(() => {
@@ -357,28 +431,174 @@ const EditTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
     }, [selectedScheduler, showInfoDialog, t]);
 
     // Handle Edit Schedule
-    const handleEditClick = useCallback(() => {
+    // const handleEditClick = useCallback(() => {
+    //     if (!selectedScheduler) {
+    //         showInfoDialog(t('scheduler.selectRecord'), "warning");
+    //         return;
+    //     }
+
+    //     // Check audit trail rights
+    //     if (auditTrailRights.edit === 1) {
+    //         // Store action data and show audit trail
+    //         setPendingAction('edit');
+    //         setPendingActionData({
+    //             scheduleId: selectedScheduler.L13ScheduleID,
+    //             scheduleName: selectedScheduler.L13TaskName
+    //         });
+    //         setShowAudit(true);
+    //     } else {
+    //         // No audit trail required, proceed directly
+    //         executeEdit();
+    //     }
+    // }, [selectedScheduler, showInfoDialog, t, auditTrailRights.edit]);
+
+
+    const handleEditClick = useCallback(async () => {
         if (!selectedScheduler) {
             showInfoDialog(t('scheduler.selectRecord'), "warning");
             return;
         }
 
-        // Check audit trail rights
-        if (auditTrailRights.edit === 1) {
-            // Store action data and show audit trail
-            setPendingAction('edit');
-            setPendingActionData({
-                scheduleId: selectedScheduler.L13ScheduleID,
-                scheduleName: selectedScheduler.L13TaskName
-            });
-            setShowAudit(true);
-        } else {
-            // No audit trail required, proceed directly
-            executeEdit();
+        try {
+            setLoading(true);
+            setLoadingText(t('scheduler.loading'));
+
+            // FIRST API CALL - Get edit data (like jQuery's EditSchedulerEditBtnclick)
+            const editRequestData = {
+                bExist: true,
+                process: "",
+                L13TaskID: selectedScheduler.L13ScheduleID.trim(),
+                ...CF_activeUserdetails()
+            };
+
+            console.log('📤 Sending Edit request to get data:', editRequestData);
+
+            const response = await postData(
+                'Scheduler/DataSchedulerSave',
+                editRequestData
+            );
+
+            console.log('📥 Edit API Response:', response);
+
+            // Check audit trail login
+            if (response && response.AuditTrailLogin === false) {
+                showInfoDialog(response.LoginFailedMsg || t('scheduler.auditTrailLoginFailed'), "error");
+                return;
+            }
+
+            if (response && (response.ViewDatas || response.ViewLoad)) {
+                console.log('✅ Edit data received, navigating...');
+
+                // Navigate to Data Scheduler with edit data
+                const navigationPayload = {
+                    viewMode: false,
+                    isEdit: true,
+                    scheduleId: selectedScheduler.L13ScheduleID,
+                    viewData: response,
+                    timestamp: Date.now(),
+                    fromEditTask: true,
+                    sourceComponent: 'EditTask',
+                    innerTab: 'Edit Task',
+                    process: "edit" // Add process flag
+                };
+
+                console.log('🚀 Calling navigateToDataScheduler with edit mode');
+
+                // Clear any existing navigation first
+                if (clearNavigation) {
+                    clearNavigation();
+                }
+
+                // Navigate to Data Scheduler
+                setTimeout(() => {
+                    navigateToDataScheduler(navigationPayload);
+                }, 50);
+
+            } else {
+                const errorMsg = response?.Message || response?.returnMsg || t('scheduler.editFailed');
+                console.error('❌ Edit API failed:', errorMsg);
+                showInfoDialog(errorMsg, "error");
+            }
+        } catch (error) {
+            console.error('❌ Edit schedule error:', error);
+            showInfoDialog(t('scheduler.editFailed'), "error");
+        } finally {
+            setLoading(false);
+            setLoadingText("");
         }
-    }, [selectedScheduler, showInfoDialog, t, auditTrailRights.edit]);
+    }, [selectedScheduler, postData, t, showInfoDialog, navigateToDataScheduler, clearNavigation]);
+
 
     // Fix the handleViewSchedule function
+    // const handleViewSchedule = useCallback(async () => {
+    //     if (!selectedScheduler) return;
+
+    //     try {
+    //         setLoading(true);
+    //         setLoadingText(t('scheduler.loading'));
+
+    //         const viewRequestData = prepareRequestBody({
+    //             L13TaskID: selectedScheduler.L13ScheduleID,
+    //             bExist: true,
+    //             process: ""
+    //         });
+
+    //         console.log('📤 Sending View request:', viewRequestData);
+
+    //         const response = await makeApiCall(
+    //             endpoints.viewSchedule,
+    //             viewRequestData,
+    //             "ViewSchedule"
+    //         );
+
+    //         console.log('📥 View API Response:', response);
+
+    //         if (response && (response.ViewDatas || response.ViewLoad)) {
+    //             console.log('✅ View data received, navigating...');
+
+    //             const navigationPayload = {
+    //                 viewMode: true,
+    //                 isEdit: false, // View mode
+    //                 scheduleId: selectedScheduler.L13ScheduleID,
+    //                 viewData: response,
+    //                 timestamp: Date.now(),
+    //                 fromEditTask: true,
+    //                 sourceComponent: 'EditTask',
+    //                 sourceTab: 'Edit Task'
+    //             };
+
+    //             console.log('🚀 Calling navigateToDataScheduler with:', navigationPayload);
+
+    //             // **IMPORTANT: Clear any existing navigation first**
+    //             if (clearNavigation) {
+    //                 clearNavigation();
+    //             }
+
+    //             // Then navigate after a tiny delay
+    //             setTimeout(() => {
+    //                 navigateToDataScheduler(navigationPayload);
+
+    //                 if (navigateToTab) {
+    //                     navigateToTab('Scheduler', 'Data Scheduler', navigationPayload);
+    //                 }
+    //             }, 50);
+
+    //         } else {
+    //             const errorMsg = response?.Message ||
+    //                 response?.returnMsg ||
+    //                 t('scheduler.viewFailed');
+    //             console.error('❌ View API failed:', errorMsg);
+    //             showInfoDialog(errorMsg, "error");
+    //         }
+    //     } catch (error) {
+    //         console.error('❌ View schedule error:', error);
+    //         showInfoDialog(t('scheduler.viewFailed'), "error");
+    //     } finally {
+    //         setLoading(false);
+    //         setLoadingText("");
+    //     }
+    // }, [selectedScheduler, makeApiCall, prepareRequestBody, t, navigateToDataScheduler, navigateToTab, showInfoDialog, clearNavigation]);
+
     const handleViewSchedule = useCallback(async () => {
         if (!selectedScheduler) return;
 
@@ -405,9 +625,10 @@ const EditTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
             if (response && (response.ViewDatas || response.ViewLoad)) {
                 console.log('✅ View data received, navigating...');
 
+                // Use the same structure as Edit button
                 const navigationPayload = {
                     viewMode: true,
-                    isEdit: false, // View mode
+                    isEdit: false,
                     scheduleId: selectedScheduler.L13ScheduleID,
                     viewData: response,
                     timestamp: Date.now(),
@@ -418,37 +639,105 @@ const EditTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
 
                 console.log('🚀 Calling navigateToDataScheduler with:', navigationPayload);
 
-                // **IMPORTANT: Clear any existing navigation first**
+                // Clear any existing navigation first
                 if (clearNavigation) {
                     clearNavigation();
                 }
 
-                // Then navigate after a tiny delay
+                // Use navigateToDataScheduler instead of navigateToTab
                 setTimeout(() => {
                     navigateToDataScheduler(navigationPayload);
-
-                    if (navigateToTab) {
-                        navigateToTab('Scheduler', 'Data Scheduler', navigationPayload);
-                    }
                 }, 50);
 
             } else {
-                const errorMsg = response?.Message ||
-                    response?.returnMsg ||
-                    t('scheduler.viewFailed');
-                console.error('❌ View API failed:', errorMsg);
+                const errorMsg = response?.Message || response?.returnMsg || t('scheduler.viewFailed');
+                console.error('View API failed:', errorMsg);
                 showInfoDialog(errorMsg, "error");
             }
         } catch (error) {
-            console.error('❌ View schedule error:', error);
+            console.error('View schedule error:', error);
             showInfoDialog(t('scheduler.viewFailed'), "error");
         } finally {
             setLoading(false);
             setLoadingText("");
         }
-    }, [selectedScheduler, makeApiCall, prepareRequestBody, t, navigateToDataScheduler, navigateToTab, showInfoDialog, clearNavigation]);
+    }, [selectedScheduler, makeApiCall, prepareRequestBody, t, navigateToDataScheduler, showInfoDialog, clearNavigation]);
 
     // Execute edit after audit or directly
+    // const executeEdit = useCallback(async (auditTrailValues = null) => {
+    //     try {
+    //         setLoading(true);
+    //         setLoadingText(t('scheduler.loading'));
+
+    //         const editRequestData = prepareRequestBody({
+    //             L13TaskID: selectedScheduler.L13ScheduleID,
+    //             bExist: true,
+    //             process: "",
+    //             ...(auditTrailValues && { AuditTrailValues: auditTrailValues })
+    //         });
+
+    //         console.log('📤 Sending Edit request:', editRequestData);
+
+    //         const response = await makeApiCall(
+    //             endpoints.viewSchedule,
+    //             editRequestData,
+    //             "EditSchedule"
+    //         );
+
+    //         console.log('📥 Edit API Response:', response);
+
+    //         // Check audit trail login
+    //         if (response && response.AuditTrailLogin === false) {
+    //             showInfoDialog(response.LoginFailedMsg || t('scheduler.auditTrailLoginFailed'), "error");
+    //             return;
+    //         }
+
+    //         if (response && (response.ViewDatas || response.ViewLoad)) {
+    //             console.log('✅ Edit data received, navigating...');
+
+    //             const navigationPayload = {
+    //                 viewMode: false,
+    //                 isEdit: true,
+    //                 scheduleId: selectedScheduler.L13ScheduleID,
+    //                 viewData: response,
+    //                 timestamp: Date.now(),
+    //                 fromEditTask: true,
+    //                 sourceComponent: 'EditTask',
+    //                 innerTab: 'Edit Task'
+    //             };
+
+    //             console.log('🚀 Calling navigateToDataScheduler with:', navigationPayload);
+
+    //             // **IMPORTANT: Clear any existing navigation first**
+    //             if (clearNavigation) {
+    //                 clearNavigation();
+    //             }
+
+    //             // Then navigate after a tiny delay
+    //             setTimeout(() => {
+    //                 navigateToDataScheduler(navigationPayload);
+
+    //                 if (navigateToTab) {
+    //                     navigateToTab('Scheduler', 'Data Scheduler', navigationPayload);
+    //                 }
+    //             }, 50);
+
+    //         } else {
+    //             const errorMsg = response?.Message ||
+    //                 response?.returnMsg ||
+    //                 t('scheduler.editFailed');
+    //             console.error('❌ Edit API failed:', errorMsg);
+    //             showInfoDialog(errorMsg, "error");
+    //         }
+    //     } catch (error) {
+    //         console.error('❌ Edit schedule error:', error);
+    //         showInfoDialog(t('scheduler.editFailed'), "error");
+    //     } finally {
+    //         setLoading(false);
+    //         setLoadingText("");
+    //     }
+    // }, [selectedScheduler, makeApiCall, prepareRequestBody, t, navigateToDataScheduler, navigateToTab, showInfoDialog, clearNavigation]);
+
     const executeEdit = useCallback(async (auditTrailValues = null) => {
         try {
             setLoading(true);
@@ -480,6 +769,7 @@ const EditTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
             if (response && (response.ViewDatas || response.ViewLoad)) {
                 console.log('✅ Edit data received, navigating...');
 
+                // FIX: Use the same structure as View button
                 const navigationPayload = {
                     viewMode: false,
                     isEdit: true,
@@ -493,24 +783,18 @@ const EditTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
 
                 console.log('🚀 Calling navigateToDataScheduler with:', navigationPayload);
 
-                // **IMPORTANT: Clear any existing navigation first**
+                // Clear any existing navigation first
                 if (clearNavigation) {
                     clearNavigation();
                 }
 
-                // Then navigate after a tiny delay
+                // Use navigateToDataScheduler instead of navigateToTab
                 setTimeout(() => {
                     navigateToDataScheduler(navigationPayload);
-
-                    if (navigateToTab) {
-                        navigateToTab('Scheduler', 'Data Scheduler', navigationPayload);
-                    }
                 }, 50);
 
             } else {
-                const errorMsg = response?.Message ||
-                    response?.returnMsg ||
-                    t('scheduler.editFailed');
+                const errorMsg = response?.Message || response?.returnMsg || t('scheduler.editFailed');
                 console.error('❌ Edit API failed:', errorMsg);
                 showInfoDialog(errorMsg, "error");
             }
@@ -521,7 +805,8 @@ const EditTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
             setLoading(false);
             setLoadingText("");
         }
-    }, [selectedScheduler, makeApiCall, prepareRequestBody, t, navigateToDataScheduler, navigateToTab, showInfoDialog, clearNavigation]);
+    }, [selectedScheduler, makeApiCall, prepareRequestBody, t, navigateToDataScheduler, showInfoDialog, clearNavigation]);
+
 
     // Handle audit trail authorized
     const handleAuditAuthorized = useCallback((auditData) => {
@@ -551,6 +836,31 @@ const EditTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
         setPendingActionData(null);
     }, []);
 
+    // Add this useEffect in EditTask:
+    useEffect(() => {
+        console.log('EditTask - checking for refresh trigger');
+
+        const submissionData = getSubmissionData();
+        console.log('Submission data:', submissionData);
+
+        if (submissionData?.data?.showSuccess) {
+            // Show success message
+            showInfoDialog("Scheduler Updated Successfully", "success");
+
+            // Refresh the grid data
+            fetchEditSchedulerData();
+
+            // Clear the navigation
+            clearNavigation();
+        }
+
+        if (submissionData?.data?.fromCancel) {
+            // Came back from cancel, just refresh
+            fetchEditSchedulerData();
+            clearNavigation();
+        }
+    }, [getSubmissionData, clearNavigation, fetchEditSchedulerData, showInfoDialog]);
+
     useEffect(() => {
         const handleDataSchedulerNavigation = (event) => {
             console.log('Received navigate-to-datascheduler event:', event.detail);
@@ -572,6 +882,40 @@ const EditTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
             window.removeEventListener('navigate-to-datascheduler', handleDataSchedulerNavigation);
         };
     }, [navigateToTab]);
+
+
+
+    // useEffect(() => {
+    //     // Optional: Validate task when component loads
+    //     const validateTask = async () => {
+    //         const taskId = selectedTaskId;
+
+    //         if (taskId) {
+    //             const validatePayload = {
+    //                 ...CF_activeUserdetails(),
+    //                 bExist: true,
+    //                 process: "",
+    //                 L13TaskID: taskId
+    //             };
+
+    //             try {
+    //                 // Import or define DataSchedulerupdate at the top
+    //                 // import { DataSchedulerupdate } from '../../servicecall';
+
+    //                 const response = await DataSchedulerupdate(validatePayload);
+    //                 if (!response.oResObj.bStatus) {
+    //                     console.error("Task validation failed");
+    //                 }
+    //             } catch (error) {
+    //                 console.error("Validation error:", error);
+    //             }
+    //         }
+    //     };
+
+    //     // validateTask(); // Uncomment if you want validation
+    // }, []); // Remove selectedTaskId from dependencies
+
+
 
     const handleImportClick = useCallback(() => {
         setImportModalOpen(true);
@@ -1057,6 +1401,25 @@ const EditTask = ({ navigationData, onClearNavigation, onNavigateAway }) => {
                     }
                     size="md"
                 />
+            )}
+            {showSuccessDialog && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 shadow-xl max-w-md">
+                        <div className="flex items-center mb-4">
+                            <svg className="w-6 h-6 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <h3 className="text-lg font-semibold">Success</h3>
+                        </div>
+                        <p className="text-gray-700 mb-4">{successMessage}</p>
+                        <button
+                            onClick={() => setShowSuccessDialog(false)}
+                            className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                        >
+                            OK
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );
