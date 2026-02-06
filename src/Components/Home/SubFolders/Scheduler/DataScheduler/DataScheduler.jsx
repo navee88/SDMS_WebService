@@ -8,7 +8,7 @@ import Popup from '../../../../Layout/Common/Popup';
 import Errordialog from '../../../../Layout/Common/Errordialog';
 import { t } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import AnimatedDropdown from '../../../../Layout/Common/AnimatedDropdown2';
+import AnimatedDropdown from '../../../../Layout/Common/AnimatedMultiSelect';
 import AuditTrail from '../../../../Layout/Common/AuditTrail';
 import FullPageLoader from "../../../../Layout/Common/FullPageLoader";
 import { useSchedulerNavigation } from '../../../../../Context/SchedulerNavigationContext';
