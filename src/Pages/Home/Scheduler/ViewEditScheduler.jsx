@@ -315,3 +315,254 @@ useEffect(() => {
   );
 }
  
+
+// Athira new ---------------------------------------------
+
+
+// import React, { useState, useEffect } from "react";
+// import TabsHeader from "../../../Components/Layout/Common/Home/TabsHeader";
+// import { tabConfig } from ".././../../Components/Layout/Common/Home/TabConfig";
+// import { useSchedulerNavigation } from '../../../Context/SchedulerNavigationContext';
+
+// export default function ViewEditScheduler({ navigationData }) {
+//   const [page, setPage] = useState("ViewEditScheduler");
+//   const [selectedTab, setSelectedTab] = useState(0);
+//   const [innerNavigationData, setInnerNavigationData] = useState(null);
+  
+//   const { 
+//     navigationState, 
+//     clearNavigation,
+//     getSubmissionData
+//   } = useSchedulerNavigation();
+
+//   // Function to find tab index by label
+//   const findTabIndexByLabel = (label) => {
+//     const pageTabsObj = tabConfig[page] || {};
+//     const tabs = Object.keys(pageTabsObj);
+//     return tabs.findIndex(tab => tab === label);
+//   };
+
+//   // // CRITICAL: Listen for instrument lock completion events
+//   // useEffect(() => {
+//   //   const handleInstrumentLockCompleted = (event) => {
+//   //     console.log('🎯 ViewEditScheduler received instrument-lock-completed event:', event.detail);
+      
+//   //     const { 
+//   //       scheduleId, 
+//   //       fromInstrumentLock, 
+//   //       shouldNavigateToActivatedTask,
+//   //       highlightScheduleId,
+//   //       activateData 
+//   //     } = event.detail || {};
+      
+//   //     if (fromInstrumentLock && shouldNavigateToActivatedTask && scheduleId) {
+//   //       console.log('🚀 Navigating to Activated Task from Instrument Lock');
+        
+//   //       // Switch to Activated Task tab
+//   //       const activatedTaskIndex = findTabIndexByLabel('Activated Task');
+//   //       if (activatedTaskIndex !== -1) {
+//   //         setSelectedTab(activatedTaskIndex);
+          
+//   //         // Prepare navigation data for Activated Task component
+//   //         const innerData = {
+//   //           scheduleId: scheduleId,
+//   //           highlightScheduleId: highlightScheduleId || scheduleId,
+//   //           shouldScrollToSchedule: true,
+//   //           fromInstrumentLock: true,
+//   //           activateData: activateData,
+//   //           message: 'Instrument locked successfully. Schedule ready for activation.',
+//   //           timestamp: Date.now()
+//   //         };
+          
+//   //         setInnerNavigationData(innerData);
+//   //         console.log('✅ Navigation data set for Activated Task:', innerData);
+//   //       }
+//   //     }
+//   //   };
+    
+//   //   window.addEventListener('instrument-lock-completed', handleInstrumentLockCompleted);
+    
+//   //   return () => {
+//   //     window.removeEventListener('instrument-lock-completed', handleInstrumentLockCompleted);
+//   //   };
+//   // }, []);
+
+//   // // CRITICAL: Listen for navigation from context
+//   // useEffect(() => {
+//   //   const handleContextNavigation = () => {
+//   //     console.log('🔍 Checking for context navigation in ViewEditScheduler');
+      
+//   //     const submissionData = getSubmissionData();
+//   //     console.log('Context submission data:', submissionData);
+      
+//   //     if (submissionData?.data) {
+//   //       // Check if this is from Instrument Lock
+//   //       if (submissionData.data.fromInstrumentLock) {
+//   //         console.log('📍 Navigation from Instrument Lock detected');
+          
+//   //         const activatedTaskIndex = findTabIndexByLabel('Activated Task');
+//   //         if (activatedTaskIndex !== -1) {
+//   //           setSelectedTab(activatedTaskIndex);
+//   //           setInnerNavigationData({
+//   //             ...submissionData.data,
+//   //             fromInstrumentLock: true
+//   //           });
+            
+//   //           if (clearNavigation) {
+//   //             setTimeout(() => {
+//   //               clearNavigation();
+//   //             }, 100);
+//   //           }
+//   //         }
+//   //       }
+//   //       // Check for inner tab navigation
+//   //       else if (submissionData.data?.innerTab) {
+//   //         const innerTab = submissionData.data.innerTab;
+//   //         const tabIndex = findTabIndexByLabel(innerTab);
+          
+//   //         if (tabIndex !== -1) {
+//   //           console.log(`Setting tab to ${innerTab} at index ${tabIndex}`);
+//   //           setSelectedTab(tabIndex);
+//   //           setInnerNavigationData(submissionData.data);
+            
+//   //           if (clearNavigation) {
+//   //             setTimeout(() => {
+//   //               clearNavigation();
+//   //             }, 100);
+//   //           }
+//   //         }
+//   //       }
+//   //     }
+//   //   };
+    
+//   //   // Check on mount
+//   //   handleContextNavigation();
+    
+//   //   // Also listen for navigation state changes
+//   //   const checkInterval = setInterval(handleContextNavigation, 500);
+    
+//   //   return () => {
+//   //     clearInterval(checkInterval);
+//   //   };
+//   // }, [getSubmissionData, clearNavigation, page]);
+
+//   // Handle direct navigation data from props
+//   useEffect(() => {
+//     if (navigationData) {
+//       console.log('Processing direct navigation data:', navigationData);
+      
+//       // Check for navigation from Instrument Lock
+//       if (navigationData.fromInstrumentLock || 
+//           (navigationData.fromDeactivatedTask && navigationData.lockCompleted)) {
+        
+//         console.log('🚀 Direct navigation from Instrument Lock/DeactivatedTask');
+//         const activatedTaskIndex = findTabIndexByLabel('Activated Task');
+        
+//         if (activatedTaskIndex !== -1) {
+//           setSelectedTab(activatedTaskIndex);
+          
+//           const innerData = {
+//             ...navigationData,
+//             fromInstrumentLock: true,
+//             timestamp: Date.now()
+//           };
+//           setInnerNavigationData(innerData);
+//         }
+//       }
+//       // Check if navigation is targeting a specific inner tab
+//       else if (navigationData.innerTab) {
+//         const tabName = navigationData.innerTab;
+//         const tabIndex = findTabIndexByLabel(tabName);
+        
+//         if (tabIndex !== -1) {
+//           console.log(`Setting tab to ${tabName} at index ${tabIndex}`);
+//           setSelectedTab(tabIndex);
+//           setInnerNavigationData(navigationData);
+//         }
+//       }
+//     }
+//   }, [navigationData]);
+
+//   // Handle tab selection manually
+//   const handleTabSelect = (index) => {
+//     console.log(`Tab manually selected: ${index}`);
+    
+//     // Get tab name for reference
+//     const pageTabsObj = tabConfig[page] || {};
+//     const tabs = Object.keys(pageTabsObj);
+//     const selectedTabName = tabs[index];
+    
+//     console.log(`Switching to tab: ${selectedTabName}`);
+    
+//     setSelectedTab(index);
+    
+//     // Clear navigation data when manually switching tabs
+//     // But only if we're not currently processing a navigation
+//     if (!innerNavigationData?.fromInstrumentLock) {
+//       setInnerNavigationData(null);
+//     }
+    
+//     // Dispatch manual tab change event
+//     window.dispatchEvent(new CustomEvent('manual-tab-change', {
+//       detail: {
+//         parentTabKey: 'Scheduler',
+//         childTabKey: 'View Edit Scheduler',
+//         innerTab: selectedTabName,
+//         isManualClick: true
+//       }
+//     }));
+//   };
+
+//   // Get the current component with navigation data
+//   const getCurrentContent = () => {
+//     const pageTabsObj = tabConfig[page] || {};
+//     const tabs = Object.keys(pageTabsObj);
+//     const currentTab = tabs[selectedTab];
+    
+//     if (!currentTab) return null;
+    
+//     const contentConfig = pageTabsObj[currentTab];
+    
+//     // Only pass navigation data if we have it
+//     if (contentConfig.content && innerNavigationData) {
+//       console.log(`Rendering ${currentTab} with navigation data:`, innerNavigationData);
+      
+//       return React.cloneElement(contentConfig.content, {
+//         navigationData: innerNavigationData,
+//         onClearNavigation: () => {
+//           console.log('🧹 Clearing navigation data in ViewEditScheduler');
+//           setInnerNavigationData(null);
+//         }
+//       });
+//     }
+    
+//     console.log(`Rendering ${currentTab} without navigation data`);
+//     return contentConfig.content;
+//   };
+
+//   const pageTabsObj = tabConfig[page] || {};
+//   const currentTabs = Object.keys(pageTabsObj).map(label => ({
+//     label,
+//     content: pageTabsObj[label].content,
+//   }));
+
+
+
+//   return (
+//     <div className="flex flex-col overflow-hidden bg-white h-full">
+//       <div className="flex-none z-10 bg-white">
+//         <TabsHeader 
+//           tabs={currentTabs} 
+//           selectedTab={selectedTab} 
+//           setSelectedTab={handleTabSelect}
+//           parentTabKey="Scheduler"
+//           className="shadow-sm"
+//         />
+//       </div>
+
+//       <div className="flex-1 overflow-y-hidden overflow-x-hidden">
+//         {getCurrentContent()}
+//       </div>
+//     </div>
+//   );
+// }

@@ -234,9 +234,11 @@ function Errordialog({
       defaultButtonColor = "bg-green-500 text-white";
       break;
     case "error":
-      headerColor = "bg-[#f0ad4e]";
+      // headerColor = "bg-[#f0ad4e]";
+      headerColor = "bg-red-400";
       title = t("Auditpopup.error");
-      defaultButtonColor = "bg-[#f0ad4e] text-white";
+      // defaultButtonColor = "bg-[#f0ad4e] text-white";
+      defaultButtonColor = "bg-red-400 text-white";
       break;
     case "information":
       headerColor = "bg-[#60c1de]";
